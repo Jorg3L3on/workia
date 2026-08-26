@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -83,6 +83,10 @@ export const LoginForm = () => {
     router.refresh();
   };
 
+  const handleFormSubmit = (event: FormEvent<HTMLFormElement>) => {
+    void handleSubmit(handleLogin)(event);
+  };
+
   return (
     <div className="login-badge-shadow w-full">
       <div className="login-badge" data-testid="login-badge">
@@ -111,11 +115,7 @@ export const LoginForm = () => {
             Entra con tu cuenta para continuar con tu gente.
           </p>
 
-          <form
-            className="space-y-5"
-            onSubmit={handleSubmit(handleLogin)}
-            noValidate
-          >
+          <form className="space-y-5" onSubmit={handleFormSubmit} noValidate>
             <div>
               <label htmlFor="email" className={fieldLabelClassName}>
                 Correo electrónico
