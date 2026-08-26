@@ -3,9 +3,9 @@
 import { useId, useMemo } from "react";
 
 import {
-  dayToWeekPulseX,
-  formatWeekdayLabel,
-  getWeekdayIndex,
+  dayToPulseX,
+  daysInCalendarMonth,
+  formatPayrollDateLabel,
 } from "@/components/auth/work-pulse-geometry";
 import { cn } from "@/lib/utils";
 
@@ -14,45 +14,41 @@ type WorkPulseProps = {
   now?: Date;
 };
 
-const WEEK_DAYS = 7;
-const NODE_DAYS = [1, 4] as const;
+const PAYROLL_NODE_DAYS = [1, 16] as const;
 
-/** Work-week timeline — amber node marks today, mirroring micasa's fortnight pulse. */
+/** Payroll-cycle timeline — amber node = today, matching micasa's fortnight pulse. */
 export const WorkPulse = ({ className, now = new Date() }: WorkPulseProps) => {
   const reactId = useId();
-  const gradientId = `workPulseGrad-${reactId.replace(/:/g, "")}`;
+  const gradientId = `payrollGrad-${reactId.replace(/:/g, "")}`;
 
-  const { todayIndex, todayLabel, ticks } = useMemo(() => {
-    const today = getWeekdayIndex(now);
+  const { day, daysInMonth, todayLabel, ticks } = useMemo(() => {
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+    const currentDay = now.getDate();
+    const days = daysInCalendarMonth(year, month);
     const tickDays: number[] = [];
 
-    for (let day = 1; day <= WEEK_DAYS; day += 1) {
-      if (
-        day === today ||
-        NODE_DAYS.includes(day as (typeof NODE_DAYS)[number])
-      ) {
+    for (let d = 1; d <= days; d += 1) {
+      if (d === currentDay || PAYROLL_NODE_DAYS.includes(d as 1 | 16)) {
         continue;
       }
-      tickDays.push(day);
+      tickDays.push(d);
     }
 
     return {
-      todayIndex: today,
-      todayLabel: formatWeekdayLabel(now),
+      day: currentDay,
+      daysInMonth: days,
+      todayLabel: formatPayrollDateLabel(now),
       ticks: tickDays,
     };
   }, [now]);
 
-  const todayX = dayToWeekPulseX(todayIndex, WEEK_DAYS);
+  const todayX = dayToPulseX(day, daysInMonth);
 
   return (
-    <div
-      className={cn(className)}
-      role="img"
-      aria-label={`Today: ${todayLabel}`}
-    >
+    <div className={cn(className)} role="img" aria-label={`Hoy: ${todayLabel}`}>
       <div className="mb-3.5 flex items-baseline justify-between">
-        <span className="text-xs text-[#8b899a]">This week</span>
+        <span className="text-xs text-[#8b899a]">Nómina</span>
         <span className="font-mono text-xs font-medium text-[#f4f3f8]">
           {todayLabel}
         </span>
@@ -79,12 +75,12 @@ export const WorkPulse = ({ className, now = new Date() }: WorkPulseProps) => {
           strokeWidth="1.5"
           opacity="0.55"
         />
-        {ticks.map((day) => {
-          const cx = dayToWeekPulseX(day, WEEK_DAYS);
-          const major = day === 7;
+        {ticks.map((tickDay) => {
+          const cx = dayToPulseX(tickDay, daysInMonth);
+          const major = tickDay % 5 === 0;
           return (
             <rect
-              key={day}
+              key={tickDay}
               x={cx - 0.5}
               y={major ? 17 : 18.5}
               width={1}
@@ -93,10 +89,10 @@ export const WorkPulse = ({ className, now = new Date() }: WorkPulseProps) => {
             />
           );
         })}
-        {NODE_DAYS.map((day) => (
+        {PAYROLL_NODE_DAYS.map((nodeDay) => (
           <circle
-            key={day}
-            cx={dayToWeekPulseX(day, WEEK_DAYS)}
+            key={nodeDay}
+            cx={dayToPulseX(nodeDay, daysInMonth)}
             cy={20}
             r={3.2}
             fill={`url(#${gradientId})`}
@@ -123,9 +119,9 @@ export const WorkPulse = ({ className, now = new Date() }: WorkPulseProps) => {
         />
       </svg>
       <div className="mt-1.5 flex justify-between">
-        <span className="text-[10px] text-[#55535f]">Mon</span>
-        <span className="text-[10px] text-[#55535f]">Thu</span>
-        <span className="text-[10px] text-[#55535f]">Sun</span>
+        <span className="text-[10px] text-[#55535f]">1</span>
+        <span className="text-[10px] text-[#55535f]">16</span>
+        <span className="text-[10px] text-[#55535f]">{daysInMonth}</span>
       </div>
     </div>
   );

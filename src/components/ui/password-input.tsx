@@ -39,7 +39,9 @@ export const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
         <button
           type="button"
           tabIndex={0}
-          aria-label={showPassword ? "Hide password" : "Show password"}
+          aria-label={
+            showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
+          }
           onClick={handleTogglePassword}
           onKeyDown={handleToggleKeyDown}
           className="absolute top-1/2 right-3 -translate-y-1/2 rounded-md p-1 text-[#8b899a] transition-colors hover:text-[#f4f3f8] focus-visible:ring-2 focus-visible:ring-[rgba(124,110,255,0.55)] focus-visible:outline-none"

@@ -18,17 +18,17 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "workia",
-  description: "Next.js app with shadcn/ui, Drizzle, Auth.js, and RBAC",
+  description: "Plataforma de recursos humanos — personas, nómina y talento.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html
-      lang="en"
+      lang="es"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col bg-background text-foreground">
+      <body className="bg-background text-foreground flex min-h-full flex-col">
         <Providers>{children}</Providers>
       </body>
     </html>

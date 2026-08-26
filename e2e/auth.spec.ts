@@ -10,10 +10,13 @@ test("home page renders sign in action", async ({ page }) => {
 test("login page renders credential form", async ({ page }) => {
   await page.goto("/login");
 
-  await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
-  await expect(page.getByText("Welcome back")).toBeVisible();
-  await expect(page.getByLabel("Email")).toBeVisible();
-  await expect(page.getByLabel("Password")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Iniciar sesión" }),
+  ).toBeVisible();
+  await expect(page.getByText("Bienvenido de vuelta")).toBeVisible();
+  await expect(page.getByText("Tu gente,")).toBeVisible();
+  await expect(page.getByLabel("Correo electrónico")).toBeVisible();
+  await expect(page.getByLabel("Contraseña")).toBeVisible();
 });
 
 test("protected app route redirects to login", async ({ page }) => {

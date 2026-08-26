@@ -12,8 +12,8 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { cn } from "@/lib/utils";
 
 const loginSchema = z.object({
-  email: z.string().email("Enter a valid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
+  email: z.string().email("Ingresa un correo válido"),
+  password: z.string().min(8, "La contraseña debe tener al menos 8 caracteres"),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
@@ -51,7 +51,7 @@ export const LoginForm = () => {
     });
 
     if (result?.error) {
-      setError("Invalid email or password.");
+      setError("Correo o contraseña incorrectos.");
       return;
     }
 
@@ -62,9 +62,9 @@ export const LoginForm = () => {
   return (
     <div className="flex h-full flex-col">
       <div className="mb-8">
-        <p className="mb-1.5 text-xs text-[#8b899a]">Access your account</p>
+        <p className="mb-1.5 text-xs text-[#8b899a]">Acceder a tu cuenta</p>
         <h1 className="text-2xl font-semibold tracking-tight text-[#f4f3f8]">
-          Sign in
+          Iniciar sesión
         </h1>
       </div>
 
@@ -75,13 +75,13 @@ export const LoginForm = () => {
       >
         <div className="mb-[18px]">
           <label htmlFor="email" className={fieldLabelClassName}>
-            Email
+            Correo electrónico
           </label>
           <input
             id="email"
             type="email"
             autoComplete="email"
-            placeholder="you@company.com"
+            placeholder="nombre@empresa.com"
             aria-invalid={Boolean(errors.email)}
             className={fieldInputClassName}
             {...register("email")}
@@ -95,7 +95,7 @@ export const LoginForm = () => {
 
         <div className="mb-[18px]">
           <label htmlFor="password" className={fieldLabelClassName}>
-            Password
+            Contraseña
           </label>
           <PasswordInput
             id="password"
@@ -134,7 +134,7 @@ export const LoginForm = () => {
             className="pointer-events-none absolute inset-y-0 -left-[60%] w-2/5 skew-x-[-20deg] bg-linear-to-r from-transparent via-white/35 to-transparent transition-[left] duration-700 group-hover:left-[130%]"
           />
           <span className="relative">
-            {isSubmitting ? "Signing in..." : "Sign in"}
+            {isSubmitting ? "Iniciando sesión..." : "Iniciar sesión"}
           </span>
         </button>
       </form>
@@ -144,12 +144,12 @@ export const LoginForm = () => {
       </div>
 
       <p className="text-center text-[13px] text-[#8b899a]">
-        Need an account?{" "}
+        ¿No tienes cuenta?{" "}
         <Link
           href="/register"
           className="font-medium text-[#f4f3f8] no-underline [border-bottom:1px_solid_rgba(255,255,255,0.25)] hover:[border-color:#f4f3f8]"
         >
-          Create one
+          Crear cuenta
         </Link>
       </p>
 
@@ -158,14 +158,14 @@ export const LoginForm = () => {
           href="/privacy"
           className="text-[#55535f] no-underline hover:text-[#8b899a]"
         >
-          Privacy
+          Aviso de privacidad
         </Link>
         <span aria-hidden>·</span>
         <Link
           href="/terms"
           className="text-[#55535f] no-underline hover:text-[#8b899a]"
         >
-          Terms
+          Términos de uso
         </Link>
       </div>
     </div>

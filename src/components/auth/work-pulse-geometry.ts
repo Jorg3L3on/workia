@@ -1,16 +1,15 @@
-/** Geometry helpers for the login work-week pulse visualization. */
+/** Geometry helpers for the login payroll (nómina) pulse visualization. */
 
-export const dayToWeekPulseX = (dayIndex: number, totalDays = 7): number =>
-  4 + ((dayIndex - 1) / Math.max(totalDays - 1, 1)) * 292;
+export const daysInCalendarMonth = (year: number, month1to12: number): number =>
+  new Date(year, month1to12, 0).getDate();
 
-export const formatWeekdayLabel = (date: Date): string => {
-  const weekday = date.toLocaleDateString("en-US", { weekday: "short" });
+export const dayToPulseX = (day: number, daysInMonth: number): number =>
+  4 + ((day - 1) / Math.max(daysInMonth - 1, 1)) * 292;
+
+export const formatPayrollDateLabel = (date: Date): string => {
   const day = date.getDate();
-  const month = date.toLocaleDateString("en-US", { month: "short" });
-  return `${weekday} ${day} ${month}`;
-};
-
-export const getWeekdayIndex = (date: Date): number => {
-  const day = date.getDay();
-  return day === 0 ? 7 : day;
+  const month = date
+    .toLocaleDateString("es-MX", { month: "short" })
+    .replace(".", "");
+  return `${day} ${month}`;
 };

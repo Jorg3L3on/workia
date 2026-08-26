@@ -55,22 +55,22 @@ export const LoginStage = ({ children, className }: LoginStageProps) => {
             <Link
               href="/"
               className="inline-flex items-center gap-2.5 font-semibold tracking-tight text-[#f4f3f8]"
-              aria-label="workia home"
+              aria-label="workia inicio"
             >
-              <WorkiaMark className="h-8 w-8" />
+              <WorkiaMark />
               <span className="text-base">workia</span>
             </Link>
 
             <div className="min-[781px]:mt-10">
               <p className="mb-3.5 text-[11px] font-semibold tracking-[0.14em] text-[#55535f] uppercase">
-                Welcome back
+                Bienvenido de vuelta
               </p>
-              <p className="max-w-[260px] text-[26px] leading-[1.25] font-semibold tracking-tight text-[#f4f3f8]">
-                Your work,{" "}
+              <p className="max-w-[280px] text-[26px] leading-[1.25] font-semibold tracking-tight text-[#f4f3f8]">
+                Tu gente,{" "}
                 <em className="bg-linear-to-br from-[#4FACFE] to-[#8B5CF6] bg-clip-text text-transparent not-italic">
-                  flowing
+                  persona
                 </em>{" "}
-                seamlessly.
+                a persona.
               </p>
             </div>
 
