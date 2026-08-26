@@ -11,22 +11,19 @@ export default function Home() {
             workia
           </h1>
           <p className="text-lg text-muted-foreground">
-            Next.js 16, shadcn/ui, Drizzle ORM, and PostgreSQL with RBAC.
+            Next.js 16, shadcn/ui, Drizzle, Auth.js, and RBAC — single tenant.
           </p>
         </div>
 
         <div className="flex flex-col gap-3 sm:flex-row">
           <Button asChild>
-            <Link href="/admin/rbac">View RBAC Admin</Link>
+            <Link href="/login">Sign in</Link>
           </Button>
           <Button asChild variant="outline">
-            <a
-              href="https://nextjs.org/docs"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Next.js Docs
-            </a>
+            <Link href="/app">Open app</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/admin">Admin</Link>
           </Button>
         </div>
       </main>

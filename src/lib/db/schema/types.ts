@@ -180,15 +180,18 @@ export const DEFAULT_USERS = [
     email: "admin@workia.local",
     name: "System Admin",
     roleSlug: "super_admin" as RoleSlug,
+    password: "Workia123!",
   },
   {
     email: "editor@workia.local",
     name: "Content Editor",
     roleSlug: "editor" as RoleSlug,
+    password: "Workia123!",
   },
   {
     email: "viewer@workia.local",
     name: "Read Only User",
     roleSlug: "viewer" as RoleSlug,
+    password: "Workia123!",
   },
 ];

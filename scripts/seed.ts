@@ -1,4 +1,5 @@
 import { config } from "dotenv";
+import bcrypt from "bcryptjs";
 
 config({ path: ".env.local" });
 config();
@@ -73,13 +74,22 @@ const seed = async () => {
   }
 
   for (const user of DEFAULT_USERS) {
+    const passwordHash = await bcrypt.hash(user.password, 12);
+
     await db
       .insert(users)
       .values({
         email: user.email,
         name: user.name,
+        passwordHash,
       })
-      .onConflictDoNothing({ target: users.email });
+      .onConflictDoUpdate({
+        target: users.email,
+        set: {
+          name: user.name,
+          passwordHash,
+        },
+      });
 
     const [createdUser] = await db
       .select({ id: users.id })
@@ -100,6 +110,7 @@ const seed = async () => {
   }
 
   console.log("RBAC seed completed.");
+  console.log("Demo password for seeded users: Workia123!");
 };
 
 seed().catch((error) => {

@@ -1,7 +1,4 @@
-import Link from "next/link";
-
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -40,21 +37,15 @@ const AdminRbacPage = async () => {
     : [];
 
   return (
-    <div className="min-h-full bg-background text-foreground">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 p-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-1">
-            <h1 className="text-2xl font-semibold tracking-tight">
-              RBAC Administration
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Role-based access control powered by Drizzle and PostgreSQL.
-            </p>
-          </div>
-          <Button asChild variant="outline">
-            <Link href="/">Back to home</Link>
-          </Button>
-        </div>
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
+      <div className="space-y-1">
+        <h1 className="text-2xl font-semibold tracking-tight">
+          RBAC Administration
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          Role-based access control powered by Drizzle and PostgreSQL.
+        </p>
+      </div>
 
         <div className="grid gap-4 md:grid-cols-3">
           <Card>
@@ -209,7 +200,6 @@ const AdminRbacPage = async () => {
             </Card>
           </TabsContent>
         </Tabs>
-      </div>
     </div>
   );
 };

@@ -10,12 +10,7 @@ import {
 } from "@/lib/db/schema";
 import type { PermissionSlug, RoleSlug } from "@/lib/db/schema/types";
 
-export class AuthorizationError extends Error {
-  constructor(message = "Insufficient permissions") {
-    super(message);
-    this.name = "AuthorizationError";
-  }
-}
+export { AuthorizationError } from "./errors";
 
 const getUserPermissionSlugs = async (userId: string): Promise<Set<string>> => {
   const rows = await db
