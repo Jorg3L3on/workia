@@ -10,7 +10,9 @@ import {
 } from "@/lib/db/schema";
 import type { PermissionSlug, RoleSlug } from "@/lib/db/schema/types";
 
-export { AuthorizationError } from "./errors";
+import { AuthorizationError } from "./errors";
+
+export { AuthorizationError };
 
 const getUserPermissionSlugs = async (userId: string): Promise<Set<string>> => {
   const rows = await db
