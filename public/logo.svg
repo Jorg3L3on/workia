@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="workia-ribbon-gradient" x1="15%" y1="10%" x2="85%" y2="90%">
+      <stop offset="0%" stop-color="#4FACFE"/>
+      <stop offset="50%" stop-color="#6B8CF8"/>
+      <stop offset="100%" stop-color="#8B5CF6"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="#16181D"/>
+  <path
+    d="M 128 368 C 128 368 148 160 196 160 C 224 160 236 280 256 296 C 276 280 288 160 316 160 C 364 160 384 368 384 368"
+    stroke="url(#workia-ribbon-gradient)"
+    stroke-width="48"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    fill="none"
+  />
+</svg>

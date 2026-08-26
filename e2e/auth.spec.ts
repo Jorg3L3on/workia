@@ -10,7 +10,8 @@ test("home page renders sign in action", async ({ page }) => {
 test("login page renders credential form", async ({ page }) => {
   await page.goto("/login");
 
-  await expect(page.getByText("Sign in to workia")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
+  await expect(page.getByText("Welcome back")).toBeVisible();
   await expect(page.getByLabel("Email")).toBeVisible();
   await expect(page.getByLabel("Password")).toBeVisible();
 });
