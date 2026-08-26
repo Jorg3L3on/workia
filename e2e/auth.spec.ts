@@ -11,10 +11,9 @@ test("login page renders credential form", async ({ page }) => {
   await page.goto("/login");
 
   await expect(
-    page.getByRole("heading", { name: "Iniciar sesión" }),
+    page.getByRole("heading", { name: "Bienvenido a workia" }),
   ).toBeVisible();
-  await expect(page.getByText("Bienvenido de vuelta")).toBeVisible();
-  await expect(page.getByText("Tu gente,")).toBeVisible();
+  await expect(page.getByText("ID · RRHH")).toBeVisible();
   await expect(page.getByLabel("Correo electrónico")).toBeVisible();
   await expect(page.getByLabel("Contraseña")).toBeVisible();
 });

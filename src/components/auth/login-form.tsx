@@ -1,13 +1,14 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import Link from "next/link";
-import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { signIn } from "next-auth/react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
+import { LoginBadgeStub } from "@/components/auth/login-badge-stub";
+import { WorkiaMark } from "@/components/brand/workia-mark";
 import { PasswordInput } from "@/components/ui/password-input";
 import { cn } from "@/lib/utils";
 
@@ -18,17 +19,20 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
-const fieldInputClassName = cn(
-  "flex h-auto w-full rounded-xl border border-white/[0.09] bg-white/[0.04] px-3.5 py-3 text-sm text-[#f4f3f8] shadow-none outline-none",
-  "placeholder:text-[#55535f]",
-  "focus-visible:border-[rgba(124,110,255,0.55)] focus-visible:bg-white/[0.055] focus-visible:ring-4 focus-visible:ring-[rgba(124,110,255,0.12)]",
-);
+const fieldLabelClassName =
+  "mb-2 block font-mono text-[10.5px] font-medium tracking-[0.09em] text-[color:var(--login-ink-faint)] uppercase";
 
-const fieldLabelClassName = "mb-2 block text-xs font-medium text-[#8b899a]";
+const fieldInputClassName = cn(
+  "w-full border-0 border-b-[1.5px] border-[color:var(--login-line-strong)] bg-transparent px-0.5 py-2.5 text-[14.5px] text-[color:var(--login-ink)] shadow-none outline-none",
+  "placeholder:text-[color:var(--login-ink-faint)]",
+  "focus-visible:border-transparent focus-visible:ring-0",
+);
 
 export const LoginForm = () => {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [isStamped, setIsStamped] = useState(false);
+  const stampTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const {
     register,
     handleSubmit,
@@ -41,8 +45,17 @@ export const LoginForm = () => {
     },
   });
 
+  useEffect(() => {
+    return () => {
+      if (stampTimeoutRef.current) {
+        clearTimeout(stampTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const handleLogin = async (values: LoginFormValues) => {
     setError(null);
+    setIsStamped(false);
 
     const result = await signIn("credentials", {
       email: values.email,
@@ -55,118 +68,121 @@ export const LoginForm = () => {
       return;
     }
 
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+
+    if (!reduceMotion) {
+      setIsStamped(true);
+      stampTimeoutRef.current = setTimeout(() => {
+        setIsStamped(false);
+      }, 1100);
+    }
+
     router.push("/app");
     router.refresh();
   };
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="mb-8">
-        <p className="mb-1.5 text-xs text-[#8b899a]">Acceder a tu cuenta</p>
-        <h1 className="text-2xl font-semibold tracking-tight text-[#f4f3f8]">
-          Iniciar sesión
-        </h1>
-      </div>
+    <div className="login-badge-shadow w-full">
+      <div className="login-badge" data-testid="login-badge">
+        <div className="login-badge-slot" aria-hidden />
 
-      <form
-        className="flex flex-col"
-        onSubmit={handleSubmit(handleLogin)}
-        noValidate
-      >
-        <div className="mb-[18px]">
-          <label htmlFor="email" className={fieldLabelClassName}>
-            Correo electrónico
-          </label>
-          <input
-            id="email"
-            type="email"
-            autoComplete="email"
-            placeholder="nombre@empresa.com"
-            aria-invalid={Boolean(errors.email)}
-            className={fieldInputClassName}
-            {...register("email")}
-          />
-          {errors.email ? (
-            <p className="mt-1.5 text-sm text-red-400" role="alert">
-              {errors.email.message}
-            </p>
-          ) : null}
-        </div>
-
-        <div className="mb-[18px]">
-          <label htmlFor="password" className={fieldLabelClassName}>
-            Contraseña
-          </label>
-          <PasswordInput
-            id="password"
-            autoComplete="current-password"
-            aria-invalid={Boolean(errors.password)}
-            className={fieldInputClassName}
-            {...register("password")}
-          />
-          {errors.password ? (
-            <p className="mt-1.5 text-sm text-red-400" role="alert">
-              {errors.password.message}
-            </p>
-          ) : null}
-        </div>
-
-        {error ? (
-          <div className="mb-3 text-sm text-red-400" role="alert">
-            {error}
+        <div className="px-[30px] pt-2 pb-1 max-[400px]:px-[22px]">
+          <div className="mb-[22px] flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <WorkiaMark />
+              <span className="text-[17px] font-bold tracking-[-0.01em] text-[color:var(--login-ink)]">
+                workia
+              </span>
+            </div>
+            <span
+              className="rounded border border-[color:var(--login-line)] px-2.5 py-1 font-mono text-[11px] tracking-[0.05em] text-[color:var(--login-ink-faint)]"
+              aria-hidden
+            >
+              ID · RRHH
+            </span>
           </div>
-        ) : null}
 
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className={cn(
-            "group relative mt-1.5 w-full overflow-hidden rounded-full border-0 bg-linear-to-r from-[#4FACFE] to-[#8B5CF6] px-4 py-3.5 text-sm font-semibold text-white",
-            "shadow-[0_8px_24px_-8px_rgba(79,172,254,0.55)] transition-[transform,box-shadow,filter] duration-200",
-            "hover:-translate-y-px hover:shadow-[0_12px_28px_-8px_rgba(139,92,246,0.65)] hover:brightness-110",
-            "active:translate-y-0",
-            "focus-visible:ring-2 focus-visible:ring-[#8B5CF6]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#060914] focus-visible:outline-none",
-            "disabled:pointer-events-none disabled:opacity-60",
-          )}
-        >
-          <span
-            aria-hidden
-            className="pointer-events-none absolute inset-y-0 -left-[60%] w-2/5 skew-x-[-20deg] bg-linear-to-r from-transparent via-white/35 to-transparent transition-[left] duration-700 group-hover:left-[130%]"
-          />
-          <span className="relative">
-            {isSubmitting ? "Iniciando sesión..." : "Iniciar sesión"}
-          </span>
-        </button>
-      </form>
+          <h1 className="mb-1.5 text-[22px] font-semibold tracking-[-0.015em] text-[color:var(--login-ink)] sm:text-[25px]">
+            Bienvenido a workia
+          </h1>
+          <p className="mb-[26px] text-[13.5px] leading-normal text-[color:var(--login-ink-muted)]">
+            Entra con tu cuenta para continuar con tu gente.
+          </p>
 
-      <div className="my-[22px] flex items-center gap-2.5" aria-hidden>
-        <div className="h-px flex-1 bg-white/[0.09]" />
-      </div>
+          <form
+            className="space-y-5"
+            onSubmit={handleSubmit(handleLogin)}
+            noValidate
+          >
+            <div>
+              <label htmlFor="email" className={fieldLabelClassName}>
+                Correo electrónico
+              </label>
+              <div className="login-input-line">
+                <input
+                  id="email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="nombre@empresa.com"
+                  aria-invalid={Boolean(errors.email)}
+                  className={fieldInputClassName}
+                  {...register("email")}
+                />
+              </div>
+              {errors.email ? (
+                <p className="mt-1.5 text-sm text-red-400" role="alert">
+                  {errors.email.message}
+                </p>
+              ) : null}
+            </div>
 
-      <p className="text-center text-[13px] text-[#8b899a]">
-        ¿No tienes cuenta?{" "}
-        <Link
-          href="/register"
-          className="font-medium text-[#f4f3f8] no-underline [border-bottom:1px_solid_rgba(255,255,255,0.25)] hover:[border-color:#f4f3f8]"
-        >
-          Crear cuenta
-        </Link>
-      </p>
+            <div>
+              <label htmlFor="password" className={fieldLabelClassName}>
+                Contraseña
+              </label>
+              <div className="login-input-line">
+                <PasswordInput
+                  id="password"
+                  autoComplete="current-password"
+                  aria-invalid={Boolean(errors.password)}
+                  className={cn(fieldInputClassName, "pr-9")}
+                  {...register("password")}
+                />
+              </div>
+              {errors.password ? (
+                <p className="mt-1.5 text-sm text-red-400" role="alert">
+                  {errors.password.message}
+                </p>
+              ) : null}
+            </div>
 
-      <div className="mt-auto flex justify-center gap-2 pt-6 text-[11px] text-[#55535f]">
-        <Link
-          href="/privacy"
-          className="text-[#55535f] no-underline hover:text-[#8b899a]"
-        >
-          Aviso de privacidad
-        </Link>
-        <span aria-hidden>·</span>
-        <Link
-          href="/terms"
-          className="text-[#55535f] no-underline hover:text-[#8b899a]"
-        >
-          Términos de uso
-        </Link>
+            {error ? (
+              <div className="text-sm text-red-400" role="alert">
+                {error}
+              </div>
+            ) : null}
+
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              data-stamped={isStamped ? "true" : "false"}
+              className="login-stamp-btn mt-1.5 min-h-11 w-full rounded-lg px-0 py-3.5 text-[15px] font-semibold tracking-[0.01em] transition-[transform,box-shadow] duration-150 focus-visible:ring-2 focus-visible:ring-[color:var(--login-accent-violet)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--login-badge-a)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-80"
+            >
+              <span className="login-stamp-label transition-opacity duration-200">
+                {isSubmitting && !isStamped
+                  ? "Iniciando sesión..."
+                  : "Iniciar sesión"}
+              </span>
+              <span className="login-stamp-mark" aria-hidden>
+                ✓ &nbsp;ACCESO
+              </span>
+            </button>
+          </form>
+        </div>
+
+        <LoginBadgeStub />
       </div>
     </div>
   );

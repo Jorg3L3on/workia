@@ -44,7 +44,7 @@ export const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
           }
           onClick={handleTogglePassword}
           onKeyDown={handleToggleKeyDown}
-          className="absolute top-1/2 right-3 -translate-y-1/2 rounded-md p-1 text-[#8b899a] transition-colors hover:text-[#f4f3f8] focus-visible:ring-2 focus-visible:ring-[rgba(124,110,255,0.55)] focus-visible:outline-none"
+          className="absolute top-1/2 right-0 -translate-y-1/2 rounded-md p-1 text-[color:var(--login-ink-faint)] transition-colors hover:text-[color:var(--login-ink)] focus-visible:ring-2 focus-visible:ring-[color:var(--login-accent-blue)] focus-visible:outline-none"
         >
           {showPassword ? (
             <EyeOff className="size-4" aria-hidden />
