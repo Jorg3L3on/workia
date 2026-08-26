@@ -1,181 +1,120 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
+import { signOut } from "next-auth/react";
 
-import { NavMain } from "@/components/nav-main"
-import { NavProjects } from "@/components/nav-projects"
-import { NavUser } from "@/components/nav-user"
-import { TeamSwitcher } from "@/components/team-switcher"
+import { NavMain } from "@/components/nav-main";
+import { NavProjects } from "@/components/nav-projects";
+import { NavUser } from "@/components/nav-user";
+import { TeamSwitcher } from "@/components/team-switcher";
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
   SidebarRail,
-} from "@/components/ui/sidebar"
-import { GalleryVerticalEndIcon, AudioLinesIcon, TerminalIcon, TerminalSquareIcon, BotIcon, BookOpenIcon, Settings2Icon, FrameIcon, PieChartIcon, MapIcon } from "lucide-react"
+} from "@/components/ui/sidebar";
+import {
+  AudioLinesIcon,
+  BookOpenIcon,
+  BotIcon,
+  FrameIcon,
+  GalleryVerticalEndIcon,
+  MapIcon,
+  PieChartIcon,
+  Settings2Icon,
+  TerminalIcon,
+  TerminalSquareIcon,
+} from "lucide-react";
 
-// This is sample data.
 const data = {
-  user: {
-    name: "Workia User",
-    email: "user@workia.app",
-    avatar: "",
-  },
   teams: [
     {
-      name: "Workia",
-      logo: (
-        <GalleryVerticalEndIcon
-        />
-      ),
+      name: "workia",
+      logo: <GalleryVerticalEndIcon className="size-4" />,
       plan: "Enterprise",
     },
     {
-      name: "Acme Corp.",
-      logo: (
-        <AudioLinesIcon
-        />
-      ),
+      name: "workia Corp.",
+      logo: <AudioLinesIcon className="size-4" />,
       plan: "Startup",
     },
     {
-      name: "Evil Corp.",
-      logo: (
-        <TerminalIcon
-        />
-      ),
+      name: "Demo",
+      logo: <TerminalIcon className="size-4" />,
       plan: "Free",
     },
   ],
   navMain: [
     {
-      title: "Playground",
-      url: "#",
-      icon: (
-        <TerminalSquareIcon
-        />
-      ),
+      title: "Inicio",
+      url: "/app",
+      icon: <TerminalSquareIcon />,
       isActive: true,
       items: [
-        {
-          title: "History",
-          url: "#",
-        },
-        {
-          title: "Starred",
-          url: "#",
-        },
-        {
-          title: "Settings",
-          url: "#",
-        },
+        { title: "Resumen", url: "/app" },
+        { title: "Actividad", url: "#" },
+        { title: "Preferencias", url: "#" },
       ],
     },
     {
-      title: "Models",
+      title: "Personas",
       url: "#",
-      icon: (
-        <BotIcon
-        />
-      ),
+      icon: <BotIcon />,
       items: [
-        {
-          title: "Genesis",
-          url: "#",
-        },
-        {
-          title: "Explorer",
-          url: "#",
-        },
-        {
-          title: "Quantum",
-          url: "#",
-        },
+        { title: "Empleados", url: "#" },
+        { title: "Equipos", url: "#" },
+        { title: "Organigrama", url: "#" },
       ],
     },
     {
-      title: "Documentation",
+      title: "Documentación",
       url: "#",
-      icon: (
-        <BookOpenIcon
-        />
-      ),
+      icon: <BookOpenIcon />,
       items: [
-        {
-          title: "Introduction",
-          url: "#",
-        },
-        {
-          title: "Get Started",
-          url: "#",
-        },
-        {
-          title: "Tutorials",
-          url: "#",
-        },
-        {
-          title: "Changelog",
-          url: "#",
-        },
+        { title: "Introducción", url: "#" },
+        { title: "Primeros pasos", url: "#" },
+        { title: "Guías", url: "#" },
       ],
     },
     {
-      title: "Settings",
+      title: "Configuración",
       url: "#",
-      icon: (
-        <Settings2Icon
-        />
-      ),
+      icon: <Settings2Icon />,
       items: [
-        {
-          title: "General",
-          url: "#",
-        },
-        {
-          title: "Team",
-          url: "#",
-        },
-        {
-          title: "Billing",
-          url: "#",
-        },
-        {
-          title: "Limits",
-          url: "#",
-        },
+        { title: "General", url: "#" },
+        { title: "Equipo", url: "#" },
+        { title: "Facturación", url: "#" },
       ],
     },
   ],
   projects: [
-    {
-      name: "Design Engineering",
-      url: "#",
-      icon: (
-        <FrameIcon
-        />
-      ),
-    },
-    {
-      name: "Sales & Marketing",
-      url: "#",
-      icon: (
-        <PieChartIcon
-        />
-      ),
-    },
-    {
-      name: "Travel",
-      url: "#",
-      icon: (
-        <MapIcon
-        />
-      ),
-    },
+    { name: "Ingeniería", url: "#", icon: <FrameIcon /> },
+    { name: "Ventas y marketing", url: "#", icon: <PieChartIcon /> },
+    { name: "Operaciones", url: "#", icon: <MapIcon /> },
   ],
-}
+};
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+type AppSidebarProps = React.ComponentProps<typeof Sidebar> & {
+  user: {
+    name: string;
+    email: string;
+    avatar: string;
+  };
+};
+
+export function AppSidebar({ user, ...props }: AppSidebarProps) {
+  const handleSignOut = async () => {
+    await signOut({ callbackUrl: "/" });
+  };
+
+  const initials = user.name
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
@@ -186,9 +125,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavProjects projects={data.projects} />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser user={{ ...user, initials }} onSignOut={handleSignOut} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
-  )
+  );
 }
