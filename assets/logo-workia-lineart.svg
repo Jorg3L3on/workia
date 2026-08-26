@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="workia-gradient" x1="0%" y1="50%" x2="100%" y2="50%">
+      <stop offset="0%" stop-color="#4FACFE"/>
+      <stop offset="100%" stop-color="#8B5CF6"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="#16181D"/>
+  <path
+    d="M 136 360 L 196 152 L 256 296 L 316 152 L 376 360"
+    stroke="url(#workia-gradient)"
+    stroke-width="10"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <circle cx="136" cy="360" r="14" fill="url(#workia-gradient)"/>
+  <circle cx="196" cy="152" r="14" fill="url(#workia-gradient)"/>
+  <circle cx="256" cy="296" r="14" fill="url(#workia-gradient)"/>
+  <circle cx="316" cy="152" r="14" fill="url(#workia-gradient)"/>
+  <circle cx="376" cy="360" r="14" fill="url(#workia-gradient)"/>
+</svg>
