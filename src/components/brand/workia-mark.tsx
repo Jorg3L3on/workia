@@ -12,9 +12,12 @@ export const WorkiaMark = ({ className }: WorkiaMarkProps) => {
     <Image
       src="/logo.png"
       alt=""
-      width={32}
-      height={32}
-      className={cn("size-8 shrink-0 rounded-[9px] object-contain", className)}
+      width={40}
+      height={40}
+      className={cn(
+        "size-10 shrink-0 rounded-[11px] object-contain shadow-[0_4px_12px_-4px_rgba(79,172,254,0.45)]",
+        className,
+      )}
       unoptimized
       priority
     />
