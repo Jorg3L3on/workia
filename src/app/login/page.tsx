@@ -1,9 +1,10 @@
 import { LoginForm } from "@/components/auth/login-form";
+import { LoginStage } from "@/components/auth/login-stage";
 
 export default function LoginPage() {
   return (
-    <div className="flex min-h-full flex-1 items-center justify-center bg-background p-6">
+    <LoginStage>
       <LoginForm />
-    </div>
+    </LoginStage>
   );
 }
