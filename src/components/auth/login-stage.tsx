@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-import { WorkflowRibbon } from "@/components/auth/workflow-ribbon";
+import { WorkPulse } from "@/components/auth/work-pulse";
 import { WorkiaMark } from "@/components/brand/workia-mark";
 import { cn } from "@/lib/utils";
 
@@ -74,7 +74,7 @@ export const LoginStage = ({ children, className }: LoginStageProps) => {
               </p>
             </div>
 
-            <WorkflowRibbon className="max-[780px]:mt-0 min-[781px]:mt-10" />
+            <WorkPulse className="max-[780px]:mt-0 min-[781px]:mt-10" />
           </aside>
 
           <div className="relative flex flex-col px-7 py-8 max-[780px]:pt-8 sm:px-11 sm:py-12">
