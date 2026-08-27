@@ -2,13 +2,7 @@ export type PermissionAction =
   "read" | "create" | "update" | "delete" | "manage";
 
 export type PermissionResource =
-export type PermissionResource =
-  | "users"
-  | "roles"
-  | "permissions"
-  | "content"
-  | "settings"
-  | "people";
+  "users" | "roles" | "permissions" | "content" | "settings" | "people";
 
 export type PermissionSlug = `${PermissionResource}:${PermissionAction}`;
 
