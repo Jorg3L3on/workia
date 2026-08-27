@@ -2,7 +2,13 @@ export type PermissionAction =
   "read" | "create" | "update" | "delete" | "manage";
 
 export type PermissionResource =
-  "users" | "roles" | "permissions" | "content" | "settings";
+export type PermissionResource =
+  | "users"
+  | "roles"
+  | "permissions"
+  | "content"
+  | "settings"
+  | "people";
 
 export type PermissionSlug = `${PermissionResource}:${PermissionAction}`;
 
@@ -118,6 +124,34 @@ export const PERMISSIONS: Array<{
     action: "update",
     description: "Change application settings",
   },
+  {
+    slug: "people:read",
+    name: "Read People",
+    resource: "people",
+    action: "read",
+    description: "View people records",
+  },
+  {
+    slug: "people:create",
+    name: "Create People",
+    resource: "people",
+    action: "create",
+    description: "Create new people records",
+  },
+  {
+    slug: "people:update",
+    name: "Update People",
+    resource: "people",
+    action: "update",
+    description: "Edit existing people records",
+  },
+  {
+    slug: "people:delete",
+    name: "Delete People",
+    resource: "people",
+    action: "delete",
+    description: "Remove people records",
+  },
 ];
 
 export const ROLES = [
@@ -144,6 +178,10 @@ export const ROLES = [
       "content:delete",
       "settings:read",
       "settings:update",
+      "people:read",
+      "people:create",
+      "people:update",
+      "people:delete",
     ] satisfies PermissionSlug[],
   },
   {
@@ -155,13 +193,20 @@ export const ROLES = [
       "content:create",
       "content:update",
       "settings:read",
+      "people:read",
+      "people:create",
+      "people:update",
     ] satisfies PermissionSlug[],
   },
   {
     slug: "viewer",
     name: "Viewer",
     description: "Read-only access to content and settings",
-    permissions: ["content:read", "settings:read"] satisfies PermissionSlug[],
+    permissions: [
+      "content:read",
+      "settings:read",
+      "people:read",
+    ] satisfies PermissionSlug[],
   },
 ] as const;
 

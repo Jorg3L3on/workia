@@ -104,6 +104,24 @@ const seed = async () => {
   }
 
   console.log("RBAC seed completed.");
+
+  const { people } = await import("@/lib/db/schema");
+
+  const existingPeople = await db
+    .select({ id: people.id })
+    .from(people)
+    .limit(1);
+
+  if (existingPeople.length === 0) {
+    await db.insert(people).values({
+      givenName: "Persona",
+      familyName: "Demo",
+      email: "persona.demo@ejemplo.local",
+      status: "activa",
+    });
+    console.log("Demo person seed completed (Persona Demo).");
+  }
+
   console.log("Demo password for seeded users: Workia123!");
 };
 
