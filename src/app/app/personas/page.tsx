@@ -44,7 +44,7 @@ const PersonasPage = async ({ searchParams }: PersonasPageProps) => {
           </p>
           <h1 className="text-2xl font-semibold tracking-tight">Personas</h1>
           <p className="text-muted-foreground text-sm">
-            Cada persona vive aquí — base para contratos y resguardo después.
+            Expediente de empleados con datos de empresa e identificadores.
           </p>
         </div>
         {canCreate ? (
@@ -75,7 +75,7 @@ const PersonasPage = async ({ searchParams }: PersonasPageProps) => {
               defaultValue={q ?? ""}
               id="q"
               name="q"
-              placeholder="Nombre, apellidos o correo"
+              placeholder="Nombre, RFC, CURP o correo"
             />
           </div>
         </div>
@@ -109,7 +109,7 @@ const PersonasPage = async ({ searchParams }: PersonasPageProps) => {
             </p>
             <p className="text-muted-foreground mt-1 text-sm">
               {canCreate
-                ? "Da de alta a alguien para que contratos y resguardo tengan a quién ligar."
+                ? "Da de alta a alguien para empezar el expediente."
                 : "Cuando existan registros, los verás aquí."}
             </p>
             {canCreate && !q && !status ? (
@@ -125,7 +125,7 @@ const PersonasPage = async ({ searchParams }: PersonasPageProps) => {
             <TableHeader>
               <TableRow>
                 <TableHead>Nombre</TableHead>
-                <TableHead>Correo</TableHead>
+                <TableHead>RFC</TableHead>
                 <TableHead>Relación</TableHead>
                 <TableHead className="text-right">Expediente</TableHead>
               </TableRow>
@@ -137,7 +137,7 @@ const PersonasPage = async ({ searchParams }: PersonasPageProps) => {
                     {formatPersonName(person)}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {person.email ?? "—"}
+                    {person.rfc ?? "—"}
                   </TableCell>
                   <TableCell>
                     <Badge
