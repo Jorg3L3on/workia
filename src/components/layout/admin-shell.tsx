@@ -3,11 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
-import {
-  LayoutDashboardIcon,
-  LogOutIcon,
-  ShieldIcon,
-} from "lucide-react";
+import { LayoutDashboardIcon, LogOutIcon, ShieldIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -52,7 +48,7 @@ export const AdminShell = ({ children }: AdminShellProps) => {
   return (
     <SidebarProvider>
       <Sidebar collapsible="icon">
-        <SidebarHeader className="border-b border-sidebar-border p-4">
+        <SidebarHeader className="border-sidebar-border border-b p-4">
           <Link className="font-semibold tracking-tight" href="/admin">
             workia admin
           </Link>
@@ -64,7 +60,10 @@ export const AdminShell = ({ children }: AdminShellProps) => {
               <SidebarMenu>
                 {adminNavItems.map((item) => (
                   <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton asChild isActive={pathname === item.href}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={pathname === item.href}
+                    >
                       <Link href={item.href}>
                         <item.icon />
                         <span>{item.title}</span>
@@ -76,7 +75,7 @@ export const AdminShell = ({ children }: AdminShellProps) => {
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
-        <SidebarFooter className="border-t border-sidebar-border p-2">
+        <SidebarFooter className="border-sidebar-border border-t p-2">
           <Button
             className="w-full justify-start"
             variant="ghost"
@@ -89,9 +88,9 @@ export const AdminShell = ({ children }: AdminShellProps) => {
         </SidebarFooter>
       </Sidebar>
       <main className="flex min-h-full flex-1 flex-col">
-        <header className="flex h-14 items-center gap-2 border-b border-border px-4">
+        <header className="border-border flex h-14 items-center gap-2 border-b px-4">
           <SidebarTrigger />
-          <span className="text-sm text-muted-foreground">Administration</span>
+          <span className="text-muted-foreground text-sm">Administration</span>
         </header>
         <div className="flex-1 p-6">{children}</div>
       </main>

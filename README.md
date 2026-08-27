@@ -1,6 +1,6 @@
 # workia
 
-A [Next.js](https://nextjs.org) app with shadcn/ui, Drizzle ORM, PostgreSQL, Auth.js, and RBAC — single tenant.
+A [Next.js](https://nextjs.org) app with shadcn/ui, Drizzle ORM, PostgreSQL, Auth.js, and RBAC — single tenant. The authenticated app surface uses the [shadcn/ui sidebar-07](https://ui.shadcn.com/blocks/sidebar) block — a collapsible sidebar with nested navigation.
 
 ## Tech stack
 
@@ -28,16 +28,16 @@ cp .env.example .env.local
 
 Required variables:
 
-| Variable | Description |
-| --- | --- |
+| Variable       | Description                  |
+| -------------- | ---------------------------- |
 | `DATABASE_URL` | PostgreSQL connection string |
-| `AUTH_SECRET` | Auth.js secret (32+ chars) |
+| `AUTH_SECRET`  | Auth.js secret (32+ chars)   |
 
 Optional:
 
-| Variable | Description |
-| --- | --- |
-| `AUTH_GOOGLE_ID` | Google OAuth client ID |
+| Variable             | Description                |
+| -------------------- | -------------------------- |
+| `AUTH_GOOGLE_ID`     | Google OAuth client ID     |
 | `AUTH_GOOGLE_SECRET` | Google OAuth client secret |
 
 Generate `AUTH_SECRET`:
@@ -59,44 +59,44 @@ npm run db:seed
 npm run dev
 ```
 
-| URL | Description |
-| --- | --- |
-| http://localhost:3000 | Marketing home |
-| http://localhost:3000/login | Sign in |
-| http://localhost:3000/app | End-user app (auth required) |
-| http://localhost:3000/admin | Admin back-office (admin permissions) |
+| URL                         | Description                                  |
+| --------------------------- | -------------------------------------------- |
+| http://localhost:3000       | Marketing home                               |
+| http://localhost:3000/login | Sign in                                      |
+| http://localhost:3000/app   | End-user app with sidebar-07 (auth required) |
+| http://localhost:3000/admin | Admin back-office (admin permissions)        |
 
 ### Demo credentials
 
 After seeding:
 
-| Email | Password | Role |
-| --- | --- | --- |
-| `admin@workia.local` | `Workia123!` | Super Admin |
-| `editor@workia.local` | `Workia123!` | Editor |
-| `viewer@workia.local` | `Workia123!` | Viewer |
+| Email                 | Password     | Role        |
+| --------------------- | ------------ | ----------- |
+| `admin@workia.local`  | `Workia123!` | Super Admin |
+| `editor@workia.local` | `Workia123!` | Editor      |
+| `viewer@workia.local` | `Workia123!` | Viewer      |
 
 ## Scripts
 
-| Command | Description |
-| --- | --- |
-| `npm run dev` | Start development server |
-| `npm run build` | Production build |
-| `npm run start` | Serve production build |
-| `npm run lint` | ESLint |
-| `npm run typecheck` | TypeScript check |
-| `npm run test` | Vitest unit tests |
-| `npm run test:e2e` | Playwright E2E tests |
-| `npm run format` | Prettier write |
-| `npm run db:push` | Push Drizzle schema |
-| `npm run db:seed` | Seed RBAC + demo users |
+| Command             | Description              |
+| ------------------- | ------------------------ |
+| `npm run dev`       | Start development server |
+| `npm run build`     | Production build         |
+| `npm run start`     | Serve production build   |
+| `npm run lint`      | ESLint                   |
+| `npm run typecheck` | TypeScript check         |
+| `npm run test`      | Vitest unit tests        |
+| `npm run test:e2e`  | Playwright E2E tests     |
+| `npm run format`    | Prettier write           |
+| `npm run db:push`   | Push Drizzle schema      |
+| `npm run db:seed`   | Seed RBAC + demo users   |
 
 ## Architecture
 
 ```
 /              Public home
 /login         Auth.js sign-in
-/app/*         End-user app (authenticated)
+/app/*         End-user app with sidebar-07 (authenticated)
 /admin/*       Back-office (admin permissions via RBAC)
 /api/auth/*    Auth.js handlers
 ```
@@ -118,9 +118,12 @@ Logs are emitted as JSON via **pino** and appear in Vercel Runtime Logs — no p
 src/
   app/
     admin/          # Back-office
-    app/            # End-user app
+    app/            # End-user app (sidebar-07 layout)
     login/          # Sign-in page
     api/auth/       # Auth.js routes
+  components/
+    app-sidebar.tsx # sidebar-07 shell
+    nav-*.tsx       # sidebar navigation sections
   auth.ts           # Auth.js config
   proxy.ts          # Route protection
   env.ts            # Typed environment

@@ -19,8 +19,10 @@ export default async function AdminPage() {
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
       <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Admin overview</h1>
-        <p className="text-sm text-muted-foreground">
+        <h1 className="text-2xl font-semibold tracking-tight">
+          Admin overview
+        </h1>
+        <p className="text-muted-foreground text-sm">
           Signed in as {session.user.email}
         </p>
       </div>

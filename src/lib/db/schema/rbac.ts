@@ -59,9 +59,7 @@ export const rolePermissions = pgTable(
       .notNull()
       .references(() => permissions.id, { onDelete: "cascade" }),
   },
-  (table) => [
-    primaryKey({ columns: [table.roleId, table.permissionId] }),
-  ],
+  (table) => [primaryKey({ columns: [table.roleId, table.permissionId] })],
 );
 
 export const userRoles = pgTable(
@@ -90,16 +88,19 @@ export const permissionsRelations = relations(permissions, ({ many }) => ({
   rolePermissions: many(rolePermissions),
 }));
 
-export const rolePermissionsRelations = relations(rolePermissions, ({ one }) => ({
-  role: one(roles, {
-    fields: [rolePermissions.roleId],
-    references: [roles.id],
+export const rolePermissionsRelations = relations(
+  rolePermissions,
+  ({ one }) => ({
+    role: one(roles, {
+      fields: [rolePermissions.roleId],
+      references: [roles.id],
+    }),
+    permission: one(permissions, {
+      fields: [rolePermissions.permissionId],
+      references: [permissions.id],
+    }),
   }),
-  permission: one(permissions, {
-    fields: [rolePermissions.permissionId],
-    references: [permissions.id],
-  }),
-}));
+);
 
 export const userRolesRelations = relations(userRoles, ({ one }) => ({
   user: one(users, {

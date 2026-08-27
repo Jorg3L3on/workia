@@ -45,11 +45,17 @@ export const authConfig = {
           .limit(1);
 
         if (!user?.passwordHash) {
-          logger.warn({ email }, "Sign-in failed: user not found or no password");
+          logger.warn(
+            { email },
+            "Sign-in failed: user not found or no password",
+          );
           return null;
         }
 
-        const isValidPassword = await bcrypt.compare(password, user.passwordHash);
+        const isValidPassword = await bcrypt.compare(
+          password,
+          user.passwordHash,
+        );
 
         if (!isValidPassword) {
           logger.warn({ email }, "Sign-in failed: invalid password");

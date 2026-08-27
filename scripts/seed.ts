@@ -7,16 +7,10 @@ config();
 const seed = async () => {
   const { eq } = await import("drizzle-orm");
   const { db } = await import("@/lib/db");
-  const {
-    permissions,
-    rolePermissions,
-    roles,
-    userRoles,
-    users,
-  } = await import("@/lib/db/schema");
-  const { DEFAULT_USERS, PERMISSIONS, ROLES } = await import(
-    "@/lib/db/schema/types"
-  );
+  const { permissions, rolePermissions, roles, userRoles, users } =
+    await import("@/lib/db/schema");
+  const { DEFAULT_USERS, PERMISSIONS, ROLES } =
+    await import("@/lib/db/schema/types");
 
   console.log("Seeding RBAC data...");
 

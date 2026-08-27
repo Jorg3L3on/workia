@@ -58,7 +58,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
 
       await assignDefaultRole(user.id);
-      logger.info({ userId: user.id }, "Assigned default viewer role to new user");
+      logger.info(
+        { userId: user.id },
+        "Assigned default viewer role to new user",
+      );
     },
     signIn: async ({ user, account }) => {
       if (user.id) {

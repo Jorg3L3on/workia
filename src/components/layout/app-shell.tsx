@@ -1,50 +1,85 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { signOut } from "next-auth/react";
-import { HomeIcon, LogOutIcon } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import { Separator } from "@/components/ui/separator";
+import {
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
 
 type AppShellProps = {
   children: React.ReactNode;
+  user: {
+    name?: string | null;
+    email?: string | null;
+    image?: string | null;
+  };
 };
 
-export const AppShell = ({ children }: AppShellProps) => {
-  const pathname = usePathname();
+const getPageTitle = (pathname: string) => {
+  if (pathname === "/app") {
+    return "Inicio";
+  }
 
-  const handleSignOut = async () => {
-    await signOut({ callbackUrl: "/" });
-  };
+  const segment = pathname.split("/").filter(Boolean).at(-1);
+  if (!segment) {
+    return "App";
+  }
+
+  return segment.charAt(0).toUpperCase() + segment.slice(1);
+};
+
+export const AppShell = ({ children, user }: AppShellProps) => {
+  const pathname = usePathname();
+  const pageTitle = getPageTitle(pathname);
 
   return (
-    <div className="flex min-h-full flex-col bg-background">
-      <header className="flex h-14 items-center justify-between border-b border-border px-4">
-        <nav className="flex items-center gap-4">
-          <Link className="font-semibold tracking-tight" href="/app">
-            workia
-          </Link>
-          <Link
-            className={`text-sm ${pathname === "/app" ? "text-foreground" : "text-muted-foreground"}`}
-            href="/app"
-          >
-            <span className="inline-flex items-center gap-1">
-              <HomeIcon className="size-4" />
-              Home
-            </span>
-          </Link>
-        </nav>
-        <div className="flex items-center gap-2">
-          <ThemeToggle />
-          <Button variant="ghost" size="sm" onClick={handleSignOut} type="button">
-            <LogOutIcon className="size-4" />
-            Sign out
-          </Button>
-        </div>
-      </header>
-      <main className="flex-1 p-6">{children}</main>
-    </div>
+    <SidebarProvider>
+      <AppSidebar
+        user={{
+          name: user.name ?? "Usuario",
+          email: user.email ?? "",
+          avatar: user.image ?? "",
+        }}
+      />
+      <SidebarInset>
+        <header className="flex h-16 shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
+          <div className="flex flex-1 items-center gap-2 px-4">
+            <SidebarTrigger className="-ml-1" />
+            <Separator
+              orientation="vertical"
+              className="mr-2 data-[orientation=vertical]:h-4"
+            />
+            <Breadcrumb>
+              <BreadcrumbList>
+                <BreadcrumbItem className="hidden md:block">
+                  <BreadcrumbLink href="/app">workia</BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator className="hidden md:block" />
+                <BreadcrumbItem>
+                  <BreadcrumbPage>{pageTitle}</BreadcrumbPage>
+                </BreadcrumbItem>
+              </BreadcrumbList>
+            </Breadcrumb>
+          </div>
+          <div className="px-4">
+            <ThemeToggle />
+          </div>
+        </header>
+        <div className="flex flex-1 flex-col gap-4 p-4 md:p-6">{children}</div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 };

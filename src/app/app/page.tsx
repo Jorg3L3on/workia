@@ -32,7 +32,7 @@ export default async function AppPage() {
           <CardDescription>{session.user.email}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Roles: {roles.length > 0 ? roles.join(", ") : "No roles assigned"}
           </p>
           <Button asChild variant="outline">

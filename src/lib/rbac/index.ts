@@ -20,10 +20,7 @@ const getUserPermissionSlugs = async (userId: string): Promise<Set<string>> => {
     .from(userRoles)
     .innerJoin(roles, eq(userRoles.roleId, roles.id))
     .innerJoin(rolePermissions, eq(roles.id, rolePermissions.roleId))
-    .innerJoin(
-      permissions,
-      eq(rolePermissions.permissionId, permissions.id),
-    )
+    .innerJoin(permissions, eq(rolePermissions.permissionId, permissions.id))
     .where(eq(userRoles.userId, userId));
 
   return new Set(rows.map((row) => row.slug));
@@ -179,7 +176,10 @@ export const revokeRoleFromUser = async (
 export const getRolePermissionMatrix = async () => {
   const [allRoles, allPermissions, assignments] = await Promise.all([
     db.select().from(roles).orderBy(roles.name),
-    db.select().from(permissions).orderBy(permissions.resource, permissions.action),
+    db
+      .select()
+      .from(permissions)
+      .orderBy(permissions.resource, permissions.action),
     db
       .select({
         roleId: rolePermissions.roleId,

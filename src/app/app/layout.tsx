@@ -6,7 +6,7 @@ type AppLayoutProps = {
 };
 
 export default async function AppLayout({ children }: AppLayoutProps) {
-  await requireAuth();
+  const session = await requireAuth();
 
-  return <AppShell>{children}</AppShell>;
+  return <AppShell user={session.user}>{children}</AppShell>;
 }
