@@ -55,9 +55,20 @@ describe("createPersonAction", () => {
     const { createPersonAction } = await import("@/lib/people/actions");
 
     const formData = new FormData();
-    formData.set("givenName", "Persona");
-    formData.set("familyName", "Demo");
+    formData.set("nombres", "Persona");
+    formData.set("apellidoPaterno", "Demo");
+    formData.set("apellidoMaterno", "");
     formData.set("email", "");
+    formData.set("telefono", "");
+    formData.set("fechaNacimiento", "");
+    formData.set("fechaIngreso", "");
+    formData.set("areaId", "");
+    formData.set("positionId", "");
+    formData.set("managerId", "");
+    formData.set("siteId", "");
+    formData.set("rfc", "");
+    formData.set("curp", "");
+    formData.set("nss", "");
     formData.set("status", "activa");
 
     const result = await createPersonAction({}, formData);
@@ -73,20 +84,33 @@ describe("createPersonAction", () => {
     const { createPersonAction } = await import("@/lib/people/actions");
 
     const formData = new FormData();
-    formData.set("givenName", "Persona");
-    formData.set("familyName", "Demo");
+    formData.set("nombres", "Persona");
+    formData.set("apellidoPaterno", "Demo");
+    formData.set("apellidoMaterno", "");
     formData.set("email", "persona.demo@ejemplo.local");
+    formData.set("telefono", "");
+    formData.set("fechaNacimiento", "");
+    formData.set("fechaIngreso", "2024-01-15");
+    formData.set("areaId", "");
+    formData.set("positionId", "");
+    formData.set("managerId", "");
+    formData.set("rfc", "XAXX010101000");
+    formData.set("curp", "");
+    formData.set("nss", "");
     formData.set("status", "activa");
 
     await expect(createPersonAction({}, formData)).rejects.toThrow(
       "NEXT_REDIRECT",
     );
 
-    expect(createPersonMock).toHaveBeenCalledWith({
-      givenName: "Persona",
-      familyName: "Demo",
-      email: "persona.demo@ejemplo.local",
-      status: "activa",
-    });
+    expect(createPersonMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        nombres: "Persona",
+        apellidoPaterno: "Demo",
+        rfc: "XAXX010101000",
+        status: "activa",
+      }),
+      "user-1",
+    );
   });
 });

@@ -1,7 +1,8 @@
-import { and, asc, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, isNull, or, sql } from "drizzle-orm";
 
+import { buildChanges, recordAuditEvent, snapshotPerson } from "@/lib/audit";
 import { db } from "@/lib/db";
-import { people } from "@/lib/db/schema";
+import { areas, people, positions, sites } from "@/lib/db/schema";
 import type { PersonStatus } from "@/lib/db/schema/people";
 
 import type { PersonFormValues } from "./schema";
@@ -9,20 +10,53 @@ import type { PersonFormValues } from "./schema";
 export type ListPeopleOptions = {
   query?: string;
   status?: PersonStatus;
+  includeDeleted?: boolean;
 };
 
+export type PersonWithRelations = Awaited<
+  ReturnType<typeof getPersonWithRelations>
+>;
+
+const normalizeOptional = (value?: string | null) =>
+  value?.trim() ? value.trim() : null;
+
+const toPersonValues = (input: PersonFormValues) => ({
+  nombres: input.nombres.trim(),
+  apellidoPaterno: input.apellidoPaterno.trim(),
+  apellidoMaterno: normalizeOptional(input.apellidoMaterno),
+  email: normalizeOptional(input.email),
+  telefono: normalizeOptional(input.telefono),
+  fechaNacimiento: normalizeOptional(input.fechaNacimiento),
+  fechaIngreso: normalizeOptional(input.fechaIngreso),
+  areaId: normalizeOptional(input.areaId),
+  positionId: normalizeOptional(input.positionId),
+  managerId: normalizeOptional(input.managerId),
+  siteId: normalizeOptional(input.siteId),
+  rfc: normalizeOptional(input.rfc),
+  curp: normalizeOptional(input.curp),
+  nss: normalizeOptional(input.nss),
+  status: input.status,
+});
+
 export const listPeople = async (options: ListPeopleOptions = {}) => {
-  const { query, status } = options;
+  const { query, status, includeDeleted } = options;
 
   const filters = [];
+
+  if (!includeDeleted) {
+    filters.push(isNull(people.deletedAt));
+  }
 
   if (query?.trim()) {
     const pattern = `%${query.trim()}%`;
     filters.push(
       or(
-        ilike(people.givenName, pattern),
-        ilike(people.familyName, pattern),
+        ilike(people.nombres, pattern),
+        ilike(people.apellidoPaterno, pattern),
+        ilike(people.apellidoMaterno, pattern),
         ilike(people.email, pattern),
+        ilike(people.rfc, pattern),
+        ilike(people.curp, pattern),
       ),
     );
   }
@@ -44,48 +78,210 @@ export const listPeople = async (options: ListPeopleOptions = {}) => {
     .where(whereClause)
     .orderBy(
       desc(people.updatedAt),
-      asc(people.familyName),
-      asc(people.givenName),
+      asc(people.apellidoPaterno),
+      asc(people.nombres),
     );
 };
 
-export const getPersonById = async (id: string) => {
+export const listActivePeopleForSelect = async (excludeId?: string) => {
+  const rows = await db
+    .select({
+      id: people.id,
+      nombres: people.nombres,
+      apellidoPaterno: people.apellidoPaterno,
+      apellidoMaterno: people.apellidoMaterno,
+    })
+    .from(people)
+    .where(and(isNull(people.deletedAt), eq(people.status, "activa")))
+    .orderBy(asc(people.apellidoPaterno), asc(people.nombres));
+
+  return excludeId ? rows.filter((row) => row.id !== excludeId) : rows;
+};
+
+export const getPersonById = async (id: string, includeDeleted = false) => {
+  const filters = [eq(people.id, id)];
+
+  if (!includeDeleted) {
+    filters.push(isNull(people.deletedAt));
+  }
+
   const [person] = await db
     .select()
     .from(people)
-    .where(eq(people.id, id))
+    .where(filters.length === 1 ? filters[0] : and(...filters))
     .limit(1);
 
   return person ?? null;
 };
 
-export const createPerson = async (input: PersonFormValues) => {
-  const [created] = await db
-    .insert(people)
-    .values({
-      givenName: input.givenName,
-      familyName: input.familyName,
-      email: input.email?.trim() ? input.email.trim() : null,
-      status: input.status,
-    })
-    .returning();
+export const getPersonWithRelations = async (id: string) => {
+  const person = await getPersonById(id);
+
+  if (!person) {
+    return null;
+  }
+
+  const [area, position, manager, site] = await Promise.all([
+    person.areaId
+      ? db
+          .select({ id: areas.id, name: areas.name })
+          .from(areas)
+          .where(eq(areas.id, person.areaId))
+          .limit(1)
+          .then((rows) => rows[0] ?? null)
+      : Promise.resolve(null),
+    person.positionId
+      ? db
+          .select({ id: positions.id, name: positions.name })
+          .from(positions)
+          .where(eq(positions.id, person.positionId))
+          .limit(1)
+          .then((rows) => rows[0] ?? null)
+      : Promise.resolve(null),
+    person.managerId
+      ? db
+          .select({
+            id: people.id,
+            nombres: people.nombres,
+            apellidoPaterno: people.apellidoPaterno,
+            apellidoMaterno: people.apellidoMaterno,
+          })
+          .from(people)
+          .where(eq(people.id, person.managerId))
+          .limit(1)
+          .then((rows) => rows[0] ?? null)
+      : Promise.resolve(null),
+    person.siteId
+      ? db
+          .select({ id: sites.id, name: sites.name, kind: sites.kind })
+          .from(sites)
+          .where(eq(sites.id, person.siteId))
+          .limit(1)
+          .then((rows) => rows[0] ?? null)
+      : Promise.resolve(null),
+  ]);
+
+  return { ...person, area, position, manager, site };
+};
+
+export const createPerson = async (
+  input: PersonFormValues,
+  actorUserId?: string | null,
+) => {
+  const values = toPersonValues(input);
+
+  const [created] = await db.insert(people).values(values).returning();
+
+  await recordAuditEvent({
+    actorUserId,
+    resourceType: "person",
+    resourceId: created.id,
+    action: "create",
+    payload: {
+      after: snapshotPerson(created),
+      summary: `Alta de persona: ${created.nombres} ${created.apellidoPaterno}`,
+    },
+  });
 
   return created;
 };
 
-export const updatePerson = async (id: string, input: PersonFormValues) => {
+export const updatePerson = async (
+  id: string,
+  input: PersonFormValues,
+  actorUserId?: string | null,
+) => {
+  const existing = await getPersonById(id, true);
+
+  if (!existing || existing.deletedAt) {
+    return null;
+  }
+
+  const before = snapshotPerson(existing);
+  const values = toPersonValues(input);
+
   const [updated] = await db
     .update(people)
-    .set({
-      givenName: input.givenName,
-      familyName: input.familyName,
-      email: input.email?.trim() ? input.email.trim() : null,
-      status: input.status,
-    })
+    .set(values)
     .where(eq(people.id, id))
     .returning();
 
-  return updated ?? null;
+  if (!updated) {
+    return null;
+  }
+
+  const after = snapshotPerson(updated);
+  const changes = buildChanges(before, after, [
+    "nombres",
+    "apellidoPaterno",
+    "apellidoMaterno",
+    "email",
+    "telefono",
+    "fechaNacimiento",
+    "fechaIngreso",
+    "areaId",
+    "positionId",
+    "managerId",
+    "siteId",
+    "rfc",
+    "curp",
+    "nss",
+    "status",
+  ]);
+
+  let action: "update" | "baja" | "reactivate" = "update";
+
+  if (existing.status !== updated.status) {
+    action = updated.status === "baja" ? "baja" : "reactivate";
+  }
+
+  await recordAuditEvent({
+    actorUserId,
+    resourceType: "person",
+    resourceId: id,
+    action,
+    payload: { before, after, changes },
+  });
+
+  return updated;
+};
+
+export const softDeletePerson = async (
+  id: string,
+  actorUserId?: string | null,
+) => {
+  const existing = await getPersonById(id, true);
+
+  if (!existing || existing.deletedAt) {
+    return null;
+  }
+
+  const before = snapshotPerson(existing);
+  const deletedAt = new Date();
+
+  const [updated] = await db
+    .update(people)
+    .set({ deletedAt })
+    .where(eq(people.id, id))
+    .returning();
+
+  if (!updated) {
+    return null;
+  }
+
+  await recordAuditEvent({
+    actorUserId,
+    resourceType: "person",
+    resourceId: id,
+    action: "delete",
+    payload: {
+      before,
+      after: snapshotPerson(updated),
+      summary: "Borrado lógico del expediente",
+    },
+  });
+
+  return updated;
 };
 
 export const countPeopleByStatus = async () => {
@@ -95,6 +291,7 @@ export const countPeopleByStatus = async () => {
       count: sql<number>`cast(count(*) as int)`,
     })
     .from(people)
+    .where(isNull(people.deletedAt))
     .groupBy(people.status);
 
   return rows.reduce<Record<PersonStatus, number>>(

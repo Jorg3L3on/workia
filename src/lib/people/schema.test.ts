@@ -5,9 +5,20 @@ import { personFormSchema } from "@/lib/people/schema";
 describe("personFormSchema", () => {
   it("accepts valid minimum expediente fields", () => {
     const parsed = personFormSchema.safeParse({
-      givenName: "Persona",
-      familyName: "Demo",
+      nombres: "Persona",
+      apellidoPaterno: "Demo",
+      apellidoMaterno: "",
       email: "",
+      telefono: "",
+      fechaNacimiento: "",
+      fechaIngreso: "",
+      areaId: "",
+      positionId: "",
+      managerId: "",
+      siteId: "",
+      rfc: "",
+      curp: "",
+      nss: "",
       status: "activa",
     });
 
@@ -16,9 +27,20 @@ describe("personFormSchema", () => {
 
   it("rejects missing names", () => {
     const parsed = personFormSchema.safeParse({
-      givenName: "",
-      familyName: "Demo",
+      nombres: "",
+      apellidoPaterno: "Demo",
+      apellidoMaterno: "",
       email: "",
+      telefono: "",
+      fechaNacimiento: "",
+      fechaIngreso: "",
+      areaId: "",
+      positionId: "",
+      managerId: "",
+      siteId: "",
+      rfc: "",
+      curp: "",
+      nss: "",
       status: "activa",
     });
 
@@ -27,9 +49,20 @@ describe("personFormSchema", () => {
 
   it("rejects invalid email", () => {
     const parsed = personFormSchema.safeParse({
-      givenName: "Persona",
-      familyName: "Demo",
+      nombres: "Persona",
+      apellidoPaterno: "Demo",
+      apellidoMaterno: "",
       email: "no-es-correo",
+      telefono: "",
+      fechaNacimiento: "",
+      fechaIngreso: "",
+      areaId: "",
+      positionId: "",
+      managerId: "",
+      siteId: "",
+      rfc: "",
+      curp: "",
+      nss: "",
       status: "activa",
     });
 
@@ -46,5 +79,15 @@ describe("people permissions catalog", () => {
     expect(slugs).toContain("people:create");
     expect(slugs).toContain("people:update");
     expect(slugs).toContain("people:delete");
+  });
+
+  it("includes audit and catalog permissions", async () => {
+    const { PERMISSIONS } = await import("@/lib/db/schema/types");
+    const slugs = PERMISSIONS.map((permission) => permission.slug);
+
+    expect(slugs).toContain("audit:read");
+    expect(slugs).toContain("areas:read");
+    expect(slugs).toContain("positions:read");
+    expect(slugs).toContain("sites:read");
   });
 });

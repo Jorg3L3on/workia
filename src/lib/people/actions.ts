@@ -5,9 +5,15 @@ import { redirect } from "next/navigation";
 
 import { AuthorizationError } from "@/lib/rbac";
 
-import { createPerson, getPersonById, updatePerson } from "./index";
+import {
+  createPerson,
+  getPersonById,
+  softDeletePerson,
+  updatePerson,
+} from "./index";
 import {
   requirePeopleCreate,
+  requirePeopleDelete,
   requirePeopleRead,
   requirePeopleUpdate,
 } from "./auth";
@@ -23,9 +29,20 @@ const isPersonActionState = (
 ): value is PersonActionState => "fieldErrors" in value || "error" in value;
 
 const formDataToValues = (formData: FormData): PersonFormValues => ({
-  givenName: String(formData.get("givenName") ?? ""),
-  familyName: String(formData.get("familyName") ?? ""),
+  nombres: String(formData.get("nombres") ?? ""),
+  apellidoPaterno: String(formData.get("apellidoPaterno") ?? ""),
+  apellidoMaterno: String(formData.get("apellidoMaterno") ?? ""),
   email: String(formData.get("email") ?? ""),
+  telefono: String(formData.get("telefono") ?? ""),
+  fechaNacimiento: String(formData.get("fechaNacimiento") ?? ""),
+  fechaIngreso: String(formData.get("fechaIngreso") ?? ""),
+  areaId: String(formData.get("areaId") ?? ""),
+  positionId: String(formData.get("positionId") ?? ""),
+  managerId: String(formData.get("managerId") ?? ""),
+  siteId: String(formData.get("siteId") ?? ""),
+  rfc: String(formData.get("rfc") ?? ""),
+  curp: String(formData.get("curp") ?? ""),
+  nss: String(formData.get("nss") ?? ""),
   status: String(
     formData.get("status") ?? "activa",
   ) as PersonFormValues["status"],
@@ -56,12 +73,24 @@ const parsePersonForm = (
   return parsed.data;
 };
 
+const revalidatePersonPaths = (personId?: string) => {
+  revalidatePath("/app/personas");
+  revalidatePath("/app");
+  revalidatePath("/app/auditoria");
+
+  if (personId) {
+    revalidatePath(`/app/personas/${personId}`);
+  }
+};
+
 export const createPersonAction = async (
   _prevState: PersonActionState,
   formData: FormData,
 ): Promise<PersonActionState> => {
+  let session;
+
   try {
-    await requirePeopleCreate();
+    session = await requirePeopleCreate();
   } catch (error) {
     if (error instanceof AuthorizationError) {
       return { error: "No tienes permiso para dar de alta personas." };
@@ -76,10 +105,9 @@ export const createPersonAction = async (
     return parsed;
   }
 
-  const created = await createPerson(parsed);
+  const created = await createPerson(parsed, session.user.id);
 
-  revalidatePath("/app/personas");
-  revalidatePath("/app");
+  revalidatePersonPaths(created.id);
   redirect(`/app/personas/${created.id}`);
 };
 
@@ -88,8 +116,10 @@ export const updatePersonAction = async (
   _prevState: PersonActionState,
   formData: FormData,
 ): Promise<PersonActionState> => {
+  let session;
+
   try {
-    await requirePeopleUpdate();
+    session = await requirePeopleUpdate();
   } catch (error) {
     if (error instanceof AuthorizationError) {
       return { error: "No tienes permiso para editar personas." };
@@ -110,12 +140,35 @@ export const updatePersonAction = async (
     return parsed;
   }
 
-  await updatePerson(personId, parsed);
+  await updatePerson(personId, parsed, session.user.id);
 
-  revalidatePath("/app/personas");
-  revalidatePath(`/app/personas/${personId}`);
-  revalidatePath("/app");
+  revalidatePersonPaths(personId);
   redirect(`/app/personas/${personId}?saved=1`);
+};
+
+export const deletePersonAction = async (personId: string): Promise<void> => {
+  let session;
+
+  try {
+    session = await requirePeopleDelete();
+  } catch (error) {
+    if (error instanceof AuthorizationError) {
+      redirect(`/app/personas/${personId}?error=delete-forbidden`);
+    }
+
+    redirect("/login");
+  }
+
+  const existing = await getPersonById(personId);
+
+  if (!existing) {
+    redirect("/app/personas?error=not-found");
+  }
+
+  await softDeletePerson(personId, session.user.id);
+
+  revalidatePersonPaths();
+  redirect("/app/personas");
 };
 
 export const assertPeopleListAccess = async () => requirePeopleRead();

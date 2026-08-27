@@ -7,10 +7,20 @@ config();
 const seed = async () => {
   const { eq } = await import("drizzle-orm");
   const { db } = await import("@/lib/db");
-  const { permissions, rolePermissions, roles, userRoles, users } =
-    await import("@/lib/db/schema");
+  const {
+    areas,
+    permissions,
+    people,
+    positions,
+    rolePermissions,
+    roles,
+    sites,
+    userRoles,
+    users,
+  } = await import("@/lib/db/schema");
   const { DEFAULT_USERS, PERMISSIONS, ROLES } =
     await import("@/lib/db/schema/types");
+  const { recordAuditEvent } = await import("@/lib/audit");
 
   console.log("Seeding RBAC data...");
 
@@ -105,21 +115,187 @@ const seed = async () => {
 
   console.log("RBAC seed completed.");
 
-  const { people } = await import("@/lib/db/schema");
+  let operacionesId: string | undefined;
+  let sucursalNorteId: string | undefined;
+  let coordinadorId: string | undefined;
+
+  const existingOperaciones = await db
+    .select({ id: areas.id })
+    .from(areas)
+    .where(eq(areas.name, "Operaciones"))
+    .limit(1);
+
+  if (existingOperaciones.length === 0) {
+    const [operaciones] = await db
+      .insert(areas)
+      .values({ name: "Operaciones", active: true })
+      .returning({ id: areas.id });
+
+    operacionesId = operaciones.id;
+
+    await recordAuditEvent({
+      resourceType: "area",
+      resourceId: operaciones.id,
+      action: "create",
+      source: "seed",
+      payload: { summary: "Área demo: Operaciones" },
+    });
+
+    const [sucursalNorte] = await db
+      .insert(areas)
+      .values({
+        name: "Sucursal Norte",
+        parentAreaId: operaciones.id,
+        active: true,
+      })
+      .returning({ id: areas.id });
+
+    sucursalNorteId = sucursalNorte.id;
+
+    await recordAuditEvent({
+      resourceType: "area",
+      resourceId: sucursalNorte.id,
+      action: "create",
+      source: "seed",
+      payload: { summary: "Área demo: Sucursal Norte" },
+    });
+
+    console.log("Demo areas seed completed (Operaciones → Sucursal Norte).");
+  } else {
+    operacionesId = existingOperaciones[0].id;
+
+    const existingSucursal = await db
+      .select({ id: areas.id })
+      .from(areas)
+      .where(eq(areas.name, "Sucursal Norte"))
+      .limit(1);
+
+    sucursalNorteId = existingSucursal[0]?.id;
+  }
+
+  const targetAreaId = sucursalNorteId ?? operacionesId;
+
+  const existingPosition = await db
+    .select({ id: positions.id })
+    .from(positions)
+    .where(eq(positions.name, "Coordinador Demo"))
+    .limit(1);
+
+  if (existingPosition.length === 0 && targetAreaId) {
+    const [position] = await db
+      .insert(positions)
+      .values({
+        name: "Coordinador Demo",
+        areaId: targetAreaId,
+        active: true,
+      })
+      .returning({ id: positions.id });
+
+    coordinadorId = position.id;
+
+    await recordAuditEvent({
+      resourceType: "position",
+      resourceId: position.id,
+      action: "create",
+      source: "seed",
+      payload: { summary: "Puesto demo: Coordinador Demo" },
+    });
+
+    console.log("Demo position seed completed.");
+  } else {
+    coordinadorId = existingPosition[0]?.id;
+  }
+
+  let demoSucursalSiteId: string | undefined;
+
+  const existingCorporativo = await db
+    .select({ id: sites.id })
+    .from(sites)
+    .where(eq(sites.name, "Corporativo Demo"))
+    .limit(1);
+
+  if (existingCorporativo.length === 0) {
+    const [corporativo] = await db
+      .insert(sites)
+      .values({ name: "Corporativo Demo", kind: "corporativo" })
+      .returning({ id: sites.id });
+
+    await recordAuditEvent({
+      resourceType: "site",
+      resourceId: corporativo.id,
+      action: "create",
+      source: "seed",
+      payload: { summary: "Ubicación demo: Corporativo Demo" },
+    });
+
+    console.log("Demo site seed completed (Corporativo Demo).");
+  }
+
+  const existingSucursal = await db
+    .select({ id: sites.id })
+    .from(sites)
+    .where(eq(sites.name, "Sucursal Demo Norte"))
+    .limit(1);
+
+  if (existingSucursal.length === 0) {
+    const [sucursal] = await db
+      .insert(sites)
+      .values({ name: "Sucursal Demo Norte", kind: "sucursal" })
+      .returning({ id: sites.id });
+
+    demoSucursalSiteId = sucursal.id;
+
+    await recordAuditEvent({
+      resourceType: "site",
+      resourceId: sucursal.id,
+      action: "create",
+      source: "seed",
+      payload: { summary: "Ubicación demo: Sucursal Demo Norte" },
+    });
+
+    console.log("Demo site seed completed (Sucursal Demo Norte).");
+  } else {
+    demoSucursalSiteId = existingSucursal[0].id;
+  }
 
   const existingPeople = await db
-    .select({ id: people.id })
+    .select({ id: people.id, siteId: people.siteId })
     .from(people)
     .limit(1);
 
   if (existingPeople.length === 0) {
-    await db.insert(people).values({
-      givenName: "Persona",
-      familyName: "Demo",
-      email: "persona.demo@ejemplo.local",
-      status: "activa",
+    const [demoPerson] = await db
+      .insert(people)
+      .values({
+        nombres: "Persona",
+        apellidoPaterno: "Demo",
+        email: "persona.demo@ejemplo.local",
+        fechaIngreso: "2024-01-15",
+        areaId: targetAreaId ?? null,
+        positionId: coordinadorId ?? null,
+        siteId: demoSucursalSiteId ?? null,
+        status: "activa",
+      })
+      .returning({ id: people.id });
+
+    await recordAuditEvent({
+      resourceType: "person",
+      resourceId: demoPerson.id,
+      action: "create",
+      source: "seed",
+      payload: {
+        summary: "Persona demo de expediente",
+      },
     });
+
     console.log("Demo person seed completed (Persona Demo).");
+  } else if (!existingPeople[0].siteId && demoSucursalSiteId) {
+    await db
+      .update(people)
+      .set({ siteId: demoSucursalSiteId })
+      .where(eq(people.id, existingPeople[0].id));
+
+    console.log("Assigned Sucursal Demo Norte to Persona Demo.");
   }
 
   console.log("Demo password for seeded users: Workia123!");

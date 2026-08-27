@@ -16,3 +16,6 @@ export const requirePeopleCreate = async () =>
 
 export const requirePeopleUpdate = async () =>
   requirePeoplePermission("people:update");
+
+export const requirePeopleDelete = async () =>
+  requirePeoplePermission("people:delete");

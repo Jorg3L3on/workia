@@ -3,7 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { HomeIcon, UsersIcon } from "lucide-react";
+import {
+  FolderTreeIcon,
+  HomeIcon,
+  ScrollTextIcon,
+  UsersIcon,
+} from "lucide-react";
 
 import { WorkiaMark } from "@/components/brand/workia-mark";
 import { NavUser } from "@/components/nav-user";
@@ -46,6 +51,8 @@ type AppShellProps = {
 const navItems = [
   { title: "Inicio", href: "/app", icon: HomeIcon },
   { title: "Personas", href: "/app/personas", icon: UsersIcon },
+  { title: "Catálogo", href: "/app/catalogo", icon: FolderTreeIcon },
+  { title: "Auditoría", href: "/app/auditoria", icon: ScrollTextIcon },
 ] as const;
 
 const getPageTitle = (pathname: string) => {
@@ -55,6 +62,14 @@ const getPageTitle = (pathname: string) => {
 
   if (pathname.startsWith("/app/personas")) {
     return "Personas";
+  }
+
+  if (pathname.startsWith("/app/catalogo")) {
+    return "Catálogo";
+  }
+
+  if (pathname.startsWith("/app/auditoria")) {
+    return "Auditoría";
   }
 
   const segment = pathname.split("/").filter(Boolean).at(-1);
@@ -82,7 +97,10 @@ export const AppShell = ({ children, user }: AppShellProps) => {
 
   return (
     <div className="workia-shell relative flex min-h-full flex-col">
-      <div className="workia-shell-grain pointer-events-none absolute inset-0 z-0" aria-hidden />
+      <div
+        className="workia-shell-grain pointer-events-none absolute inset-0 z-0"
+        aria-hidden
+      />
 
       <SidebarProvider className="relative z-10 flex min-h-full w-full">
         <Sidebar collapsible="icon" className="border-sidebar-border border-r">
@@ -92,7 +110,9 @@ export const AppShell = ({ children, user }: AppShellProps) => {
               href="/app"
             >
               <WorkiaMark className="size-7" />
-              <span className="truncate group-data-[collapsible=icon]:hidden">workia</span>
+              <span className="truncate group-data-[collapsible=icon]:hidden">
+                workia
+              </span>
             </Link>
             <div
               className="workia-credential-slot mx-1 mt-3 group-data-[collapsible=icon]:hidden"

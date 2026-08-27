@@ -2,7 +2,16 @@ export type PermissionAction =
   "read" | "create" | "update" | "delete" | "manage";
 
 export type PermissionResource =
-  "users" | "roles" | "permissions" | "content" | "settings" | "people";
+  | "users"
+  | "roles"
+  | "permissions"
+  | "content"
+  | "settings"
+  | "people"
+  | "audit"
+  | "areas"
+  | "positions"
+  | "sites";
 
 export type PermissionSlug = `${PermissionResource}:${PermissionAction}`;
 
@@ -144,7 +153,98 @@ export const PERMISSIONS: Array<{
     name: "Delete People",
     resource: "people",
     action: "delete",
-    description: "Remove people records",
+    description: "Logically delete people records",
+  },
+  {
+    slug: "audit:read",
+    name: "Read Audit",
+    resource: "audit",
+    action: "read",
+    description: "View audit event history",
+  },
+  {
+    slug: "areas:read",
+    name: "Read Areas",
+    resource: "areas",
+    action: "read",
+    description: "View organizational areas",
+  },
+  {
+    slug: "areas:create",
+    name: "Create Areas",
+    resource: "areas",
+    action: "create",
+    description: "Create organizational areas",
+  },
+  {
+    slug: "areas:update",
+    name: "Update Areas",
+    resource: "areas",
+    action: "update",
+    description: "Edit organizational areas",
+  },
+  {
+    slug: "areas:delete",
+    name: "Delete Areas",
+    resource: "areas",
+    action: "delete",
+    description: "Logically delete organizational areas",
+  },
+  {
+    slug: "positions:read",
+    name: "Read Positions",
+    resource: "positions",
+    action: "read",
+    description: "View job positions",
+  },
+  {
+    slug: "positions:create",
+    name: "Create Positions",
+    resource: "positions",
+    action: "create",
+    description: "Create job positions",
+  },
+  {
+    slug: "positions:update",
+    name: "Update Positions",
+    resource: "positions",
+    action: "update",
+    description: "Edit job positions",
+  },
+  {
+    slug: "positions:delete",
+    name: "Delete Positions",
+    resource: "positions",
+    action: "delete",
+    description: "Logically delete job positions",
+  },
+  {
+    slug: "sites:read",
+    name: "Read Sites",
+    resource: "sites",
+    action: "read",
+    description: "View work locations",
+  },
+  {
+    slug: "sites:create",
+    name: "Create Sites",
+    resource: "sites",
+    action: "create",
+    description: "Create work locations",
+  },
+  {
+    slug: "sites:update",
+    name: "Update Sites",
+    resource: "sites",
+    action: "update",
+    description: "Edit work locations",
+  },
+  {
+    slug: "sites:delete",
+    name: "Delete Sites",
+    resource: "sites",
+    action: "delete",
+    description: "Logically delete work locations",
   },
 ];
 
@@ -176,6 +276,19 @@ export const ROLES = [
       "people:create",
       "people:update",
       "people:delete",
+      "audit:read",
+      "areas:read",
+      "areas:create",
+      "areas:update",
+      "areas:delete",
+      "positions:read",
+      "positions:create",
+      "positions:update",
+      "positions:delete",
+      "sites:read",
+      "sites:create",
+      "sites:update",
+      "sites:delete",
     ] satisfies PermissionSlug[],
   },
   {
@@ -190,6 +303,9 @@ export const ROLES = [
       "people:read",
       "people:create",
       "people:update",
+      "areas:read",
+      "positions:read",
+      "sites:read",
     ] satisfies PermissionSlug[],
   },
   {
@@ -200,6 +316,9 @@ export const ROLES = [
       "content:read",
       "settings:read",
       "people:read",
+      "areas:read",
+      "positions:read",
+      "sites:read",
     ] satisfies PermissionSlug[],
   },
 ] as const;
