@@ -13,7 +13,7 @@ type ProvidersProps = {
 export const Providers = ({ children }: ProvidersProps) => {
   return (
     <SessionProvider>
-      <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+      <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
         <TooltipProvider>
           {children}
           <Toaster richColors closeButton />
