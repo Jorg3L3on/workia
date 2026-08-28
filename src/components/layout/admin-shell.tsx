@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { signOut } from "next-auth/react";
+import { submitSignOutForm } from "@/lib/auth/client-sign-out";
 import { LayoutDashboardIcon, LogOutIcon, ShieldIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -42,7 +42,7 @@ export const AdminShell = ({ children }: AdminShellProps) => {
   const pathname = usePathname();
 
   const handleSignOut = async () => {
-    await signOut({ callbackUrl: "/" });
+    await submitSignOutForm({ redirectTo: "/" });
   };
 
   return (
@@ -77,13 +77,14 @@ export const AdminShell = ({ children }: AdminShellProps) => {
         </SidebarContent>
         <SidebarFooter className="border-sidebar-border border-t p-2">
           <Button
+            aria-label="Cerrar sesión"
             className="w-full justify-start"
             variant="ghost"
             onClick={handleSignOut}
             type="button"
           >
             <LogOutIcon className="size-4" />
-            Sign out
+            Cerrar sesión
           </Button>
         </SidebarFooter>
       </Sidebar>
