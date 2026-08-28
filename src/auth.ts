@@ -4,6 +4,7 @@ import { DrizzleAdapter } from "@auth/drizzle-adapter";
 
 import { authConfig } from "@/auth.config";
 import { env } from "@/env";
+import { clearLogoutLatchOnServer } from "@/lib/auth/logout-latch-server";
 import { db } from "@/lib/db";
 import {
   accounts,
@@ -64,6 +65,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       );
     },
     signIn: async ({ user, account }) => {
+      await clearLogoutLatchOnServer();
+
       if (user.id) {
         await assignDefaultRole(user.id);
       }

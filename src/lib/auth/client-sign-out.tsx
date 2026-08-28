@@ -1,5 +1,7 @@
 "use client";
 
+import { applyLogoutLatchInDocument } from "@/lib/auth/logout-latch";
+
 export const SIGN_OUT_PATH = "/logout";
 export const SIGN_OUT_FORM_ID = "workia-sign-out-form";
 export const DEFAULT_SIGN_OUT_REDIRECT = "/login";
@@ -16,6 +18,8 @@ type SignOutFormProps = {
  * never reaches the document cookie jar.
  */
 export const submitNativeSignOutForm = (form?: HTMLFormElement | null) => {
+  applyLogoutLatchInDocument();
+
   const target =
     form instanceof HTMLFormElement
       ? form

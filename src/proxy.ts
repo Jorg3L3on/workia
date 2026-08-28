@@ -1,27 +1,28 @@
 import { auth } from "@/auth";
+import {
+  requestHasLogoutLatch,
+  resolveAuthRouting,
+  resolveLatchedProxyResponse,
+} from "@/lib/auth/proxy-guard";
 
 export default auth((request) => {
-  const { nextUrl } = request;
-  const isLoggedIn = Boolean(request.auth);
-  const pathname = nextUrl.pathname;
-
-  const isProtectedRoute =
-    pathname.startsWith("/admin") || pathname.startsWith("/app");
-  const isAuthRoute = pathname.startsWith("/login");
-
-  if (isAuthRoute && isLoggedIn) {
-    return Response.redirect(new URL("/app", nextUrl));
+  if (requestHasLogoutLatch(request)) {
+    return resolveLatchedProxyResponse(request);
   }
 
-  if (isProtectedRoute && !isLoggedIn) {
-    const loginUrl = new URL("/login", nextUrl);
-    loginUrl.searchParams.set("callbackUrl", pathname);
-    return Response.redirect(loginUrl);
-  }
-
-  return undefined;
+  return resolveAuthRouting({
+    pathname: request.nextUrl.pathname,
+    nextUrl: request.nextUrl,
+    isLoggedIn: Boolean(request.auth),
+  });
 });
 
 export const config = {
-  matcher: ["/admin/:path*", "/app/:path*", "/login"],
+  matcher: [
+    "/admin/:path*",
+    "/app/:path*",
+    "/login",
+    "/api/auth/session",
+    "/api/auth/session/",
+  ],
 };

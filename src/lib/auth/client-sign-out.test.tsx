@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "@testing-library/react";
 
+import { LOGOUT_LATCH_COOKIE_NAME } from "@/lib/auth/logout-latch";
 import {
   DEFAULT_SIGN_OUT_REDIRECT,
   SIGN_OUT_FORM_ID,
@@ -13,6 +14,7 @@ import {
 describe("SignOutForm", () => {
   afterEach(() => {
     document.body.innerHTML = "";
+    document.cookie = `${LOGOUT_LATCH_COOKIE_NAME}=; Path=/; Max-Age=0`;
     vi.restoreAllMocks();
   });
 
@@ -46,7 +48,23 @@ describe("SignOutForm", () => {
 describe("submitNativeSignOutForm", () => {
   afterEach(() => {
     document.body.innerHTML = "";
+    document.cookie = `${LOGOUT_LATCH_COOKIE_NAME}=; Path=/; Max-Age=0`;
     vi.restoreAllMocks();
+  });
+
+  it("sets the logout latch on document.cookie before native submit", () => {
+    let cookieWhenSubmitRan = "";
+    const submitSpy = vi
+      .spyOn(HTMLFormElement.prototype, "submit")
+      .mockImplementation(() => {
+        cookieWhenSubmitRan = document.cookie;
+      });
+
+    render(<SignOutForm />);
+    submitNativeSignOutForm();
+
+    expect(cookieWhenSubmitRan).toContain(`${LOGOUT_LATCH_COOKIE_NAME}=1`);
+    expect(submitSpy).toHaveBeenCalledOnce();
   });
 
   it("uses HTMLFormElement.prototype.submit, not requestSubmit", () => {
