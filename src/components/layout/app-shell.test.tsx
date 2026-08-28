@@ -34,7 +34,7 @@ vi.mock("@/components/theme-toggle", () => ({
 import { AppShell } from "@/components/layout/app-shell";
 
 describe("AppShell", () => {
-  it("submits Auth.js signout via form POST helper when Cerrar sesión is selected", async () => {
+  it("submits Workia sign-out via form POST helper when Cerrar sesión is selected", async () => {
     submitSignOutFormMock.mockResolvedValue(undefined);
 
     render(
