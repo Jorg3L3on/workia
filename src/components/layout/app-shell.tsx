@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import {
+  FileTextIcon,
   FolderTreeIcon,
   HomeIcon,
   ScrollTextIcon,
@@ -51,6 +52,7 @@ type AppShellProps = {
 const navItems = [
   { title: "Inicio", href: "/app", icon: HomeIcon },
   { title: "Personas", href: "/app/personas", icon: UsersIcon },
+  { title: "Contratos", href: "/app/contratos", icon: FileTextIcon },
   { title: "Catálogo", href: "/app/catalogo", icon: FolderTreeIcon },
   { title: "Auditoría", href: "/app/auditoria", icon: ScrollTextIcon },
 ] as const;
@@ -64,6 +66,10 @@ const getPageTitle = (pathname: string) => {
     return "Personas";
   }
 
+  if (pathname.startsWith("/app/contratos")) {
+    return "Contratos";
+  }
+
   if (pathname.startsWith("/app/catalogo")) {
     return "Catálogo";
   }
@@ -74,7 +80,7 @@ const getPageTitle = (pathname: string) => {
 
   const segment = pathname.split("/").filter(Boolean).at(-1);
   if (!segment) {
-    return "App";
+    return "Inicio";
   }
 
   return segment.charAt(0).toUpperCase() + segment.slice(1);
