@@ -2,11 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
-import {
-  SIGN_OUT_FORM_ID,
-  SIGN_OUT_PATH,
-  SignOutForm,
-} from "@/lib/auth/client-sign-out";
+import { SIGN_OUT_PATH, SignOutForm } from "@/lib/auth/client-sign-out";
 
 vi.mock("@/hooks/use-mobile", () => ({
   useIsMobile: () => false,
@@ -20,9 +16,7 @@ vi.mock("@/components/nav-user", () => ({
   NavUser: () => (
     <>
       <SignOutForm />
-      <button type="submit" form={SIGN_OUT_FORM_ID}>
-        Cerrar sesión
-      </button>
+      <button type="button">Cerrar sesión</button>
     </>
   ),
 }));

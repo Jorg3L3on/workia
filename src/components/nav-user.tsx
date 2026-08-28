@@ -2,8 +2,8 @@
 
 import {
   DEFAULT_SIGN_OUT_REDIRECT,
-  SIGN_OUT_FORM_ID,
   SignOutForm,
+  handleNativeSignOutSelect,
 } from "@/lib/auth/client-sign-out";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -30,14 +30,6 @@ type NavUserProps = {
     initials?: string;
   };
   signOutRedirectTo?: string;
-};
-
-const handleSignOutSelect = (event: Event) => {
-  event.preventDefault();
-  const form = document.getElementById(SIGN_OUT_FORM_ID);
-  if (form instanceof HTMLFormElement) {
-    form.requestSubmit();
-  }
 };
 
 export function NavUser({
@@ -93,7 +85,7 @@ export function NavUser({
             <DropdownMenuSeparator />
             <DropdownMenuItem
               aria-label="Cerrar sesión"
-              onSelect={handleSignOutSelect}
+              onSelect={handleNativeSignOutSelect}
             >
               <LogOutIcon aria-hidden />
               Cerrar sesión

@@ -2,7 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { SIGN_OUT_FORM_ID, SignOutForm } from "@/lib/auth/client-sign-out";
+import {
+  SignOutForm,
+  submitNativeSignOutForm,
+} from "@/lib/auth/client-sign-out";
 import { LayoutDashboardIcon, LogOutIcon, ShieldIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -41,6 +44,10 @@ type AdminShellProps = {
 export const AdminShell = ({ children }: AdminShellProps) => {
   const pathname = usePathname();
 
+  const handleCerrarSesionClick = () => {
+    submitNativeSignOutForm();
+  };
+
   return (
     <SidebarProvider>
       <Sidebar collapsible="icon">
@@ -77,8 +84,8 @@ export const AdminShell = ({ children }: AdminShellProps) => {
             aria-label="Cerrar sesión"
             className="w-full justify-start"
             variant="ghost"
-            type="submit"
-            form={SIGN_OUT_FORM_ID}
+            type="button"
+            onClick={handleCerrarSesionClick}
           >
             <LogOutIcon className="size-4" />
             Cerrar sesión
