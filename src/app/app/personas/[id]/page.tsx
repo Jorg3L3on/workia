@@ -3,12 +3,17 @@ import { notFound } from "next/navigation";
 import { PencilIcon } from "lucide-react";
 
 import { AuditEventList } from "@/components/audit/audit-event-list";
+import { PersonContractsSection } from "@/components/contracts/person-contracts-section";
 import { DeletePersonButton } from "@/components/people/delete-person-button";
 import { PersonForm } from "@/components/people/person-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { listAuditEvents } from "@/lib/audit";
 import { listActiveAreas, listActivePositions } from "@/lib/catalog";
+import {
+  listActiveContractTemplates,
+  listContractsByPerson,
+} from "@/lib/contracts";
 import {
   getPersonWithRelations,
   listActivePeopleForSelect,
@@ -23,11 +28,26 @@ import { userHasPermission } from "@/lib/rbac";
 import { listActiveSites } from "@/lib/sites";
 import { siteKindLabels } from "@/lib/sites/schema";
 
+const buildSiteLabel = (
+  site?: { name: string; kind: "corporativo" | "sucursal" } | null,
+) => {
+  if (!site) {
+    return "";
+  }
+
+  return `${site.name} (${siteKindLabels[site.kind]})`;
+};
+
 export const dynamic = "force-dynamic";
 
 type PersonaDetailPageProps = {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ edit?: string; saved?: string }>;
+  searchParams: Promise<{
+    edit?: string;
+    saved?: string;
+    contract?: string;
+    emit?: string;
+  }>;
 };
 
 const PersonaDetailPage = async ({
@@ -36,28 +56,36 @@ const PersonaDetailPage = async ({
 }: PersonaDetailPageProps) => {
   const session = await requirePeopleRead();
   const { id } = await params;
-  const { edit, saved } = await searchParams;
+  const { edit, saved, contract, emit } = await searchParams;
 
   const [
     person,
     canUpdate,
     canDelete,
     canReadAudit,
+    canReadContracts,
+    canCreateContracts,
     areas,
     positions,
     sites,
     managers,
     auditEvents,
+    personContracts,
+    contractTemplates,
   ] = await Promise.all([
     getPersonWithRelations(id),
     userHasPermission(session.user.id, "people:update"),
     userHasPermission(session.user.id, "people:delete"),
     userHasPermission(session.user.id, "audit:read"),
+    userHasPermission(session.user.id, "contracts:read"),
+    userHasPermission(session.user.id, "contracts:create"),
     listActiveAreas(),
     listActivePositions(),
     listActiveSites(),
     listActivePeopleForSelect(id),
     listAuditEvents({ resourceType: "person", resourceId: id, limit: 50 }),
+    listContractsByPerson(id),
+    listActiveContractTemplates(),
   ]);
 
   if (!person) {
@@ -107,6 +135,15 @@ const PersonaDetailPage = async ({
             role="status"
           >
             Cambios guardados.
+          </p>
+        ) : null}
+
+        {contract === "created" ? (
+          <p
+            className="text-sm font-medium text-[color:var(--workia-accent-violet)]"
+            role="status"
+          >
+            Contrato emitido y guardado en el expediente.
           </p>
         ) : null}
 
@@ -188,12 +225,38 @@ const PersonaDetailPage = async ({
               </Link>
             </Button>
           ) : null}
+          {canCreateContracts && canReadContracts ? (
+            <Button asChild variant="outline">
+              <Link href={`/app/personas/${person.id}?emit=1`}>
+                Emitir contrato
+              </Link>
+            </Button>
+          ) : null}
           {canDelete ? <DeletePersonButton personId={person.id} /> : null}
           <Button asChild variant="ghost">
             <Link href="/app/personas">Volver al listado</Link>
           </Button>
         </div>
       </div>
+
+      {canReadContracts ? (
+        <PersonContractsSection
+          canCreate={canCreateContracts}
+          contracts={personContracts}
+          personContext={{
+            nombres: person.nombres,
+            apellidoPaterno: person.apellidoPaterno,
+            apellidoMaterno: person.apellidoMaterno,
+            puesto: person.position?.name ?? null,
+            area: person.area?.name ?? null,
+            sucursal: buildSiteLabel(person.site),
+            rfc: person.rfc,
+          }}
+          personId={person.id}
+          showEmitForm={emit === "1"}
+          templates={contractTemplates}
+        />
+      ) : null}
 
       {canReadAudit ? (
         <div className="workia-pass-card overflow-hidden">

@@ -11,7 +11,9 @@ export type PermissionResource =
   | "audit"
   | "areas"
   | "positions"
-  | "sites";
+  | "sites"
+  | "contracts"
+  | "contract_templates";
 
 export type PermissionSlug = `${PermissionResource}:${PermissionAction}`;
 
@@ -246,6 +248,62 @@ export const PERMISSIONS: Array<{
     action: "delete",
     description: "Logically delete work locations",
   },
+  {
+    slug: "contracts:read",
+    name: "Read Contracts",
+    resource: "contracts",
+    action: "read",
+    description: "View employment contracts",
+  },
+  {
+    slug: "contracts:create",
+    name: "Create Contracts",
+    resource: "contracts",
+    action: "create",
+    description: "Create employment contracts",
+  },
+  {
+    slug: "contracts:update",
+    name: "Update Contracts",
+    resource: "contracts",
+    action: "update",
+    description: "Edit and renew employment contracts",
+  },
+  {
+    slug: "contracts:delete",
+    name: "Delete Contracts",
+    resource: "contracts",
+    action: "delete",
+    description: "Logically delete employment contracts",
+  },
+  {
+    slug: "contract_templates:read",
+    name: "Read Contract Templates",
+    resource: "contract_templates",
+    action: "read",
+    description: "View contract templates",
+  },
+  {
+    slug: "contract_templates:create",
+    name: "Create Contract Templates",
+    resource: "contract_templates",
+    action: "create",
+    description: "Create contract templates",
+  },
+  {
+    slug: "contract_templates:update",
+    name: "Update Contract Templates",
+    resource: "contract_templates",
+    action: "update",
+    description: "Edit contract templates",
+  },
+  {
+    slug: "contract_templates:delete",
+    name: "Delete Contract Templates",
+    resource: "contract_templates",
+    action: "delete",
+    description: "Deactivate or delete contract templates",
+  },
 ];
 
 export const ROLES = [
@@ -289,6 +347,14 @@ export const ROLES = [
       "sites:create",
       "sites:update",
       "sites:delete",
+      "contracts:read",
+      "contracts:create",
+      "contracts:update",
+      "contracts:delete",
+      "contract_templates:read",
+      "contract_templates:create",
+      "contract_templates:update",
+      "contract_templates:delete",
     ] satisfies PermissionSlug[],
   },
   {
@@ -306,6 +372,12 @@ export const ROLES = [
       "areas:read",
       "positions:read",
       "sites:read",
+      "contracts:read",
+      "contracts:create",
+      "contracts:update",
+      "contract_templates:read",
+      "contract_templates:create",
+      "contract_templates:update",
     ] satisfies PermissionSlug[],
   },
   {
@@ -319,29 +391,43 @@ export const ROLES = [
       "areas:read",
       "positions:read",
       "sites:read",
+      "contracts:read",
+      "contract_templates:read",
     ] satisfies PermissionSlug[],
   },
 ] as const;
 
 export type RoleSlug = (typeof ROLES)[number]["slug"];
 
+/** Shared demo password for local/dev seeded accounts — never log in production. */
+export const DEMO_PASSWORD = "Workia123!";
+
 export const DEFAULT_USERS = [
   {
     email: "admin@workia.local",
     name: "System Admin",
     roleSlug: "super_admin" as RoleSlug,
-    password: "Workia123!",
+    password: DEMO_PASSWORD,
   },
   {
     email: "editor@workia.local",
     name: "Content Editor",
     roleSlug: "editor" as RoleSlug,
-    password: "Workia123!",
+    password: DEMO_PASSWORD,
   },
   {
     email: "viewer@workia.local",
     name: "Read Only User",
     roleSlug: "viewer" as RoleSlug,
-    password: "Workia123!",
+    password: DEMO_PASSWORD,
   },
 ];
+
+export const DEMO_RRHH_FALLBACK = {
+  email: "rrhh@workia.local",
+  name: "Elena Demo",
+  nombres: "Elena",
+  apellidoPaterno: "Demo",
+  apellidoMaterno: "Ejemplo",
+  roleSlug: "admin" as RoleSlug,
+} as const;

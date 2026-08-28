@@ -9,7 +9,9 @@ describe("TodayDashboard", () => {
       <TodayDashboard
         activePeopleCount={0}
         canManagePeople
+        canReadContracts
         canReadPeople
+        renewalItems={[]}
         urgentCount={0}
       />,
     );
@@ -24,16 +26,44 @@ describe("TodayDashboard", () => {
     expect(screen.getByText("Sin equipo pendiente")).toBeTruthy();
   });
 
-  it("shows urgent badge when items are due today", () => {
+  it("shows urgent badge and renewal items when contracts are due", () => {
     render(
       <TodayDashboard
         activePeopleCount={2}
         canManagePeople={false}
+        canReadContracts
         canReadPeople
-        urgentCount={3}
+        renewalItems={[
+          {
+            contract: {
+              id: "c1",
+              personId: "p1",
+              type: "determinado",
+              startDate: "2025-01-01",
+              endDate: "2026-09-01",
+              noticeWindow: "1",
+              templateId: null,
+              templateName: "Demo",
+              generatedText: "texto",
+              status: "vigente",
+              previousContractId: null,
+              deletedAt: null,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            },
+            personName: "Ana Demo",
+            personId: "p1",
+            areaName: "RRHH",
+            endDate: "2026-09-01",
+            noticeWindow: "1",
+          },
+        ]}
+        urgentCount={1}
       />,
     );
 
-    expect(screen.getByText("3 urgentes")).toBeTruthy();
+    expect(screen.getByText("1 urgente")).toBeTruthy();
+    expect(screen.getByText("Ana Demo")).toBeTruthy();
+    expect(screen.getByText("1 pendiente")).toBeTruthy();
   });
 });

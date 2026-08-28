@@ -8,12 +8,19 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import type { RenewalTrayItem } from "@/lib/contracts";
+import {
+  contractNoticeWindowLabels,
+  formatContractDate,
+} from "@/lib/contracts/schema";
 
 export type TodayDashboardProps = {
   activePeopleCount: number;
   urgentCount: number;
   canManagePeople: boolean;
   canReadPeople: boolean;
+  canReadContracts: boolean;
+  renewalItems: RenewalTrayItem[];
 };
 
 type AttentionSectionProps = {
@@ -22,7 +29,9 @@ type AttentionSectionProps = {
   emptyTitle: string;
   emptyDescription: string;
   icon: React.ComponentType<{ className?: string }>;
+  pendingCount: number;
   urgent?: boolean;
+  children?: React.ReactNode;
 };
 
 const AttentionSection = ({
@@ -31,7 +40,9 @@ const AttentionSection = ({
   emptyTitle,
   emptyDescription,
   icon: Icon,
+  pendingCount,
   urgent = false,
+  children,
 }: AttentionSectionProps) => {
   return (
     <section
@@ -49,14 +60,20 @@ const AttentionSection = ({
           <p className="text-muted-foreground text-sm">{description}</p>
         </div>
         <Badge className="shrink-0" variant="secondary">
-          0 pendientes
+          {pendingCount} pendiente{pendingCount === 1 ? "" : "s"}
         </Badge>
       </div>
 
-      <div className="workia-empty-state px-4 py-5 text-center">
-        <p className="text-sm font-medium">{emptyTitle}</p>
-        <p className="text-muted-foreground mt-1 text-sm">{emptyDescription}</p>
-      </div>
+      {pendingCount === 0 ? (
+        <div className="workia-empty-state px-4 py-5 text-center">
+          <p className="text-sm font-medium">{emptyTitle}</p>
+          <p className="text-muted-foreground mt-1 text-sm">
+            {emptyDescription}
+          </p>
+        </div>
+      ) : (
+        children
+      )}
     </section>
   );
 };
@@ -66,8 +83,11 @@ export const TodayDashboard = ({
   urgentCount,
   canManagePeople,
   canReadPeople,
+  canReadContracts,
+  renewalItems,
 }: TodayDashboardProps) => {
   const isCalm = urgentCount === 0;
+  const contractPendingCount = canReadContracts ? renewalItems.length : 0;
 
   return (
     <div className="flex flex-col gap-6">
@@ -82,8 +102,7 @@ export const TodayDashboard = ({
             </h1>
             <p className="text-muted-foreground max-w-2xl text-sm sm:text-base">
               Vencimientos de contrato y resguardo de equipo aparecerán aquí
-              cuando existan esos flujos. Por ahora revisa el expediente de
-              personas.
+              cuando requieran tu atención.
             </p>
           </div>
           {isCalm ? (
@@ -135,18 +154,49 @@ export const TodayDashboard = ({
 
       <div className="grid gap-4 lg:grid-cols-2">
         <AttentionSection
-          description="Contratos que vencen pronto o hoy — listos para la bandeja de renovaciones."
-          emptyDescription="Cuando exista el ciclo de contratos, verás aquí lo que vence y requiere decisión."
+          description="Contratos que vencen pronto — listos para la bandeja de renovaciones."
+          emptyDescription="No hay contratos en ventana de aviso según su configuración."
           emptyTitle="Sin vencimientos por ahora"
           icon={CalendarClockIcon}
+          pendingCount={contractPendingCount}
           title="Contratos por vencer"
-          urgent={false}
-        />
+          urgent={contractPendingCount > 0}
+        >
+          {canReadContracts ? (
+            <ul className="space-y-2">
+              {renewalItems.slice(0, 5).map((item) => (
+                <li
+                  key={item.contract.id}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm"
+                >
+                  <div>
+                    <p className="font-medium">{item.personName}</p>
+                    <p className="text-muted-foreground text-xs">
+                      Vence {formatContractDate(item.endDate)} ·{" "}
+                      {contractNoticeWindowLabels[item.noticeWindow]}
+                    </p>
+                  </div>
+                  <Button asChild size="sm" variant="outline">
+                    <Link href="/app/contratos">Atender</Link>
+                  </Button>
+                </li>
+              ))}
+              {renewalItems.length > 5 ? (
+                <Button asChild className="w-full" size="sm" variant="ghost">
+                  <Link href="/app/contratos">
+                    Ver {renewalItems.length - 5} más en Contratos
+                  </Link>
+                </Button>
+              ) : null}
+            </ul>
+          ) : null}
+        </AttentionSection>
         <AttentionSection
           description="Entregas o devoluciones de equipo sin cerrar — listas para resguardo."
           emptyDescription="Cuando exista resguardo de equipo, verás aquí lo pendiente de entregar o recibir."
           emptyTitle="Sin equipo pendiente"
           icon={LaptopIcon}
+          pendingCount={0}
           title="Equipo pendiente"
         />
       </div>

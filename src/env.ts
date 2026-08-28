@@ -23,6 +23,9 @@ export const env = createEnv({
     AUTH_SECRET: z.string().min(32),
     AUTH_GOOGLE_ID: z.string().optional(),
     AUTH_GOOGLE_SECRET: z.string().optional(),
+    DEMO_RRHH_EMAIL: z.string().email().optional(),
+    DEMO_RRHH_PASSWORD: z.string().min(8).optional(),
+    DEMO_RRHH_NAME: z.string().min(1).optional(),
     NODE_ENV: z
       .enum(["development", "test", "production"])
       .default("development"),
@@ -33,6 +36,9 @@ export const env = createEnv({
     AUTH_SECRET: authSecret,
     AUTH_GOOGLE_ID: process.env.AUTH_GOOGLE_ID,
     AUTH_GOOGLE_SECRET: process.env.AUTH_GOOGLE_SECRET,
+    DEMO_RRHH_EMAIL: process.env.DEMO_RRHH_EMAIL,
+    DEMO_RRHH_PASSWORD: process.env.DEMO_RRHH_PASSWORD,
+    DEMO_RRHH_NAME: process.env.DEMO_RRHH_NAME,
     NODE_ENV: process.env.NODE_ENV,
   },
   emptyStringAsUndefined: true,

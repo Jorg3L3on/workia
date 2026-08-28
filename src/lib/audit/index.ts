@@ -144,3 +144,26 @@ export const snapshotSite = (site: Record<string, unknown>) => ({
   kind: site.kind,
   deletedAt: site.deletedAt,
 });
+
+export const snapshotContract = (contract: Record<string, unknown>) => ({
+  personId: contract.personId,
+  type: contract.type,
+  startDate: contract.startDate,
+  endDate: contract.endDate,
+  noticeWindow: contract.noticeWindow,
+  templateId: contract.templateId,
+  templateName: contract.templateName,
+  generatedText: contract.generatedText,
+  status: contract.status,
+  previousContractId: contract.previousContractId,
+  deletedAt: contract.deletedAt,
+});
+
+export const snapshotContractTemplate = (
+  template: Record<string, unknown>,
+) => ({
+  name: template.name,
+  body: template.body,
+  active: template.active,
+  deletedAt: template.deletedAt,
+});
