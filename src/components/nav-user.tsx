@@ -75,7 +75,13 @@ export function NavUser({
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={onSignOut} aria-label="Cerrar sesión">
+            <DropdownMenuItem
+              aria-label="Cerrar sesión"
+              onSelect={(event) => {
+                event.preventDefault();
+                void onSignOut?.();
+              }}
+            >
               <LogOutIcon aria-hidden />
               Cerrar sesión
             </DropdownMenuItem>

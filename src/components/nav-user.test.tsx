@@ -1,5 +1,9 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+afterEach(() => {
+  cleanup();
+});
 
 vi.mock("@/components/ui/sidebar", () => ({
   SidebarMenu: ({ children }: { children: React.ReactNode }) => (
@@ -38,12 +42,20 @@ vi.mock("@/components/ui/dropdown-menu", () => ({
   ),
   DropdownMenuItem: ({
     children,
-    onClick,
+    onSelect,
+    ...props
   }: {
     children: React.ReactNode;
-    onClick?: () => void;
-  }) => (
-    <button type="button" onClick={onClick}>
+    onSelect?: (event: { preventDefault: () => void }) => void;
+  } & React.ComponentProps<"button">) => (
+    <button
+      type="button"
+      {...props}
+      onClick={() => {
+        const event = { preventDefault: vi.fn() };
+        onSelect?.(event);
+      }}
+    >
       {children}
     </button>
   ),
@@ -70,5 +82,25 @@ describe("NavUser", () => {
     expect(screen.queryByText("Log out")).toBeNull();
     expect(screen.getAllByText("Elena Demo").length).toBeGreaterThan(0);
     expect(screen.getAllByText("rrhh@workia.local").length).toBeGreaterThan(0);
+  });
+
+  it("invokes onSignOut when Cerrar sesión is selected", () => {
+    const onSignOut = vi.fn();
+
+    render(
+      <NavUser
+        user={{
+          name: "Elena Demo",
+          email: "rrhh@workia.local",
+          avatar: "",
+          initials: "ED",
+        }}
+        onSignOut={onSignOut}
+      />,
+    );
+
+    fireEvent.click(screen.getByLabelText("Cerrar sesión"));
+
+    expect(onSignOut).toHaveBeenCalledOnce();
   });
 });
