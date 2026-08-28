@@ -5,6 +5,7 @@ import { SIGN_OUT_FORM_ID, SIGN_OUT_PATH } from "@/lib/auth/client-sign-out";
 
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
 });
 
 vi.mock("@/components/ui/sidebar", () => ({
@@ -44,11 +45,27 @@ vi.mock("@/components/ui/dropdown-menu", () => ({
   ),
   DropdownMenuItem: ({
     children,
-    asChild,
+    onSelect,
+    ...props
   }: {
     children: React.ReactNode;
-    asChild?: boolean;
-  }) => (asChild ? <>{children}</> : <div>{children}</div>),
+    onSelect?: (event: Event) => void;
+  } & React.ComponentProps<"button">) => (
+    <button
+      type="button"
+      {...props}
+      onClick={() => {
+        const event = new Event("select");
+        const preventDefault = vi.fn();
+        Object.defineProperty(event, "preventDefault", {
+          value: preventDefault,
+        });
+        onSelect?.(event);
+      }}
+    >
+      {children}
+    </button>
+  ),
 }));
 
 import { NavUser } from "@/components/nav-user";
@@ -74,7 +91,7 @@ describe("NavUser", () => {
     expect(screen.getAllByText("rrhh@workia.local").length).toBeGreaterThan(0);
   });
 
-  it("uses a mounted native POST form for Cerrar sesión", () => {
+  it("keeps a mounted native POST form outside the dropdown menu", () => {
     render(
       <NavUser
         user={{
@@ -90,9 +107,28 @@ describe("NavUser", () => {
     expect(form).toBeInstanceOf(HTMLFormElement);
     expect((form as HTMLFormElement).method.toLowerCase()).toBe("post");
     expect((form as HTMLFormElement).action).toContain(SIGN_OUT_PATH);
+  });
 
-    const signOutButton = screen.getByLabelText("Cerrar sesión");
-    expect(signOutButton.getAttribute("type")).toBe("submit");
-    expect(signOutButton.getAttribute("form")).toBe(SIGN_OUT_FORM_ID);
+  it("calls requestSubmit on the mounted form when Cerrar sesión is selected", () => {
+    const requestSubmitSpy = vi
+      .spyOn(HTMLFormElement.prototype, "requestSubmit")
+      .mockImplementation(() => {});
+
+    render(
+      <NavUser
+        user={{
+          name: "Elena Demo",
+          email: "rrhh@workia.local",
+          avatar: "",
+          initials: "ED",
+        }}
+      />,
+    );
+
+    fireEvent.click(screen.getByLabelText("Cerrar sesión"));
+
+    const form = document.getElementById(SIGN_OUT_FORM_ID);
+    expect(requestSubmitSpy).toHaveBeenCalledOnce();
+    expect(requestSubmitSpy.mock.instances[0]).toBe(form);
   });
 });

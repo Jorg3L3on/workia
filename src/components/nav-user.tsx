@@ -32,6 +32,14 @@ type NavUserProps = {
   signOutRedirectTo?: string;
 };
 
+const handleSignOutSelect = (event: Event) => {
+  event.preventDefault();
+  const form = document.getElementById(SIGN_OUT_FORM_ID);
+  if (form instanceof HTMLFormElement) {
+    form.requestSubmit();
+  }
+};
+
 export function NavUser({
   user,
   signOutRedirectTo = DEFAULT_SIGN_OUT_REDIRECT,
@@ -83,16 +91,12 @@ export function NavUser({
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <button
-                type="submit"
-                form={SIGN_OUT_FORM_ID}
-                className="hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground relative flex w-full cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none"
-                aria-label="Cerrar sesión"
-              >
-                <LogOutIcon aria-hidden />
-                Cerrar sesión
-              </button>
+            <DropdownMenuItem
+              aria-label="Cerrar sesión"
+              onSelect={handleSignOutSelect}
+            >
+              <LogOutIcon aria-hidden />
+              Cerrar sesión
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
