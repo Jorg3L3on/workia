@@ -3,10 +3,10 @@ export type AuthCookieClearSpec = {
   secure: boolean;
 };
 
-const EXPIRES_EPOCH = new Date(0);
-
 const AUTH_COOKIE_NAME_PATTERN =
   /^(?:__Secure-|__Host-)?(?:authjs|next-auth)\./;
+
+export const AUTH_COOKIE_TOMBSTONE_VALUE = "deleted";
 
 export const KNOWN_AUTH_COOKIE_NAMES = [
   "__Secure-authjs.session-token",
@@ -50,15 +50,14 @@ export const collectAuthCookiesToClear = (
   }));
 };
 
-export const serializeExpiredAuthCookie = (
+/** Overwrites an Auth.js cookie with a non-empty tombstone Auth.js cannot parse. */
+export const serializeTombstoneAuthCookie = (
   name: string,
   secure: boolean,
 ): string => {
   const parts = [
-    `${name}=`,
+    `${name}=${AUTH_COOKIE_TOMBSTONE_VALUE}`,
     "Path=/",
-    `Expires=${EXPIRES_EPOCH.toUTCString()}`,
-    "Max-Age=0",
     "HttpOnly",
   ];
 
@@ -71,14 +70,14 @@ export const serializeExpiredAuthCookie = (
   return parts.join("; ");
 };
 
-export const appendExpiredAuthCookies = (
+export const appendTombstoneAuthCookies = (
   headers: Headers,
   specs: AuthCookieClearSpec[],
 ) => {
   for (const spec of specs) {
     headers.append(
       "Set-Cookie",
-      serializeExpiredAuthCookie(spec.name, spec.secure),
+      serializeTombstoneAuthCookie(spec.name, spec.secure),
     );
   }
 };

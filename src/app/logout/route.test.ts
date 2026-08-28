@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import { POST } from "@/app/logout/route";
+import { AUTH_COOKIE_TOMBSTONE_VALUE } from "@/lib/auth/clear-auth-cookies";
 
 describe("POST /logout", () => {
-  it("returns 200 HTML with no-store cache and expires secure session cookies", async () => {
+  it("returns 200 HTML with no-store cache, tombstone session cookie, and Clear-Site-Data", async () => {
     const formData = new FormData();
     formData.set("redirectTo", "/login");
 
@@ -21,28 +22,30 @@ describe("POST /logout", () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get("cache-control")).toContain("no-store");
+    expect(response.headers.get("clear-site-data")).toBe('"cookies"');
 
     const setCookieHeaders = response.headers.getSetCookie();
     expect(setCookieHeaders.length).toBeLessThanOrEqual(5);
     expect(setCookieHeaders.length).toBeGreaterThan(0);
 
-    const sessionHeader = setCookieHeaders.find((header) =>
+    const sessionHeaders = setCookieHeaders.filter((header) =>
       header.startsWith("__Secure-authjs.session-token="),
     );
 
-    expect(sessionHeader).toBe(
-      "__Secure-authjs.session-token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0; HttpOnly; Secure; SameSite=Lax",
+    expect(sessionHeaders).toHaveLength(1);
+    expect(sessionHeaders[0]).toBe(
+      "__Secure-authjs.session-token=deleted; Path=/; HttpOnly; Secure; SameSite=Lax",
     );
-    expect(
-      setCookieHeaders.some(
-        (header) =>
-          header.startsWith("__Secure-authjs.session-token=") &&
-          !header.includes("jwt-value"),
-      ),
-    ).toBe(true);
+    expect(sessionHeaders[0]).toContain(
+      `__Secure-authjs.session-token=${AUTH_COOKIE_TOMBSTONE_VALUE}`,
+    );
+    expect(sessionHeaders[0]).not.toContain("jwt-value");
+    expect(sessionHeaders[0]).not.toMatch(/=;/);
 
     const html = await response.text();
     expect(html).toContain('meta http-equiv="refresh"');
+    expect(html).toContain('content="1;url=/login"');
+    expect(html).toContain("setTimeout");
     expect(html).toContain("location.replace");
     expect(html).toContain("/login");
   });
@@ -64,6 +67,7 @@ describe("POST /logout", () => {
 
     expect(response.status).toBe(403);
     expect(response.headers.getSetCookie()).toEqual([]);
+    expect(response.headers.get("clear-site-data")).toBeNull();
   });
 
   it("falls back to / when redirectTo is unsafe", async () => {
@@ -83,7 +87,8 @@ describe("POST /logout", () => {
     const html = await response.text();
 
     expect(response.status).toBe(200);
-    expect(html).toContain('content="0;url=/"');
+    expect(html).toContain('content="1;url=/"');
+    expect(html).toContain("setTimeout");
     expect(html).toContain('location.replace("/")');
   });
 });
