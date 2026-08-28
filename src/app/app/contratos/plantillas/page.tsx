@@ -1,7 +1,14 @@
 import Link from "next/link";
 import { PlusIcon } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
+import { ClickableTableRow } from "@/components/list/clickable-table-row";
+import { ListRowAction } from "@/components/list/list-row-action";
+import { ListStatusBadge } from "@/components/list/list-status-badge";
+import {
+  ListEmptyState,
+  ListTableShell,
+  listTableDensityClassName,
+} from "@/components/list/list-table-shell";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -98,16 +105,14 @@ const PlantillasPage = async ({ searchParams }: PlantillasPageProps) => {
         </p>
       ) : null}
 
-      <div className="workia-pass-card overflow-hidden">
+      <ListTableShell>
         {templates.length === 0 ? (
-          <div className="workia-empty-state m-4 px-4 py-8 text-center">
-            <p className="text-sm font-medium">Sin plantillas</p>
-            <p className="text-muted-foreground mt-1 text-sm">
-              Crea una plantilla para emitir contratos desde el expediente.
-            </p>
-          </div>
+          <ListEmptyState
+            description="Crea una plantilla para emitir contratos desde el expediente."
+            title="Sin plantillas"
+          />
         ) : (
-          <Table>
+          <Table className={listTableDensityClassName}>
             <TableHeader>
               <TableRow>
                 <TableHead>Nombre</TableHead>
@@ -117,27 +122,33 @@ const PlantillasPage = async ({ searchParams }: PlantillasPageProps) => {
             </TableHeader>
             <TableBody>
               {templates.map((template) => (
-                <TableRow key={template.id}>
+                <ClickableTableRow
+                  key={template.id}
+                  ariaLabel={`Editar plantilla ${template.name}`}
+                  href={`/app/contratos/plantillas/${template.id}`}
+                >
                   <TableCell className="font-medium">{template.name}</TableCell>
                   <TableCell>
-                    <Badge variant={template.active ? "default" : "secondary"}>
+                    <ListStatusBadge
+                      tone={template.active ? "active" : "inactive"}
+                    >
                       {template.active ? "Activa" : "Inactiva"}
-                    </Badge>
+                    </ListStatusBadge>
                   </TableCell>
                   <TableCell className="text-right">
-                    <Link
-                      className="workia-accent-text text-sm font-medium hover:underline"
+                    <ListRowAction
+                      aria-label={`Editar plantilla ${template.name}`}
                       href={`/app/contratos/plantillas/${template.id}`}
                     >
                       Editar
-                    </Link>
+                    </ListRowAction>
                   </TableCell>
-                </TableRow>
+                </ClickableTableRow>
               ))}
             </TableBody>
           </Table>
         )}
-      </div>
+      </ListTableShell>
     </div>
   );
 };

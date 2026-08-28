@@ -5,7 +5,12 @@ import {
   type AuditAction,
   type AuditResourceType,
 } from "@/lib/audit/types";
-import { Badge } from "@/components/ui/badge";
+
+import { ListStatusBadge } from "@/components/list/list-status-badge";
+import {
+  ListEmptyState,
+  listTableDensityClassName,
+} from "@/components/list/list-table-shell";
 import {
   Table,
   TableBody,
@@ -68,15 +73,11 @@ export const AuditEventList = ({
   emptyMessage = "Sin eventos de auditoría.",
 }: AuditEventListProps) => {
   if (events.length === 0) {
-    return (
-      <div className="workia-empty-state m-4 px-4 py-8 text-center">
-        <p className="text-sm font-medium">{emptyMessage}</p>
-      </div>
-    );
+    return <ListEmptyState title={emptyMessage} />;
   }
 
   return (
-    <Table>
+    <Table className={listTableDensityClassName}>
       <TableHeader>
         <TableRow>
           <TableHead>Cuándo</TableHead>
@@ -89,10 +90,10 @@ export const AuditEventList = ({
       <TableBody>
         {events.map((event) => (
           <TableRow key={event.id}>
-            <TableCell className="text-sm whitespace-nowrap">
+            <TableCell className="whitespace-nowrap tabular-nums">
               {formatOccurredAt(event.occurredAt)}
             </TableCell>
-            <TableCell className="text-sm">
+            <TableCell>
               <div className="font-medium">{event.actorName ?? "Sistema"}</div>
               {event.actorEmail ? (
                 <div className="text-muted-foreground text-xs">
@@ -100,17 +101,17 @@ export const AuditEventList = ({
                 </div>
               ) : null}
             </TableCell>
-            <TableCell className="text-sm">
-              <Badge variant="outline">
+            <TableCell>
+              <ListStatusBadge tone="neutral">
                 {auditResourceTypeLabels[
                   event.resourceType as AuditResourceType
                 ] ?? event.resourceType}
-              </Badge>
+              </ListStatusBadge>
             </TableCell>
-            <TableCell className="text-sm">
+            <TableCell>
               {auditActionLabels[event.action as AuditAction] ?? event.action}
             </TableCell>
-            <TableCell className="text-muted-foreground max-w-md text-xs">
+            <TableCell className="text-muted-foreground max-w-md text-xs whitespace-normal">
               {renderChanges(event.payload)}
             </TableCell>
           </TableRow>

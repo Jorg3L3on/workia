@@ -1,5 +1,11 @@
 import { AreaTreeView } from "@/components/catalog/area-tree-view";
-import { Badge } from "@/components/ui/badge";
+import { CatalogRowDeleteButton } from "@/components/catalog/catalog-row-delete-button";
+import { ListStatusBadge } from "@/components/list/list-status-badge";
+import {
+  ListEmptyState,
+  ListTableShell,
+  listTableDensityClassName,
+} from "@/components/list/list-table-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,7 +20,6 @@ import {
 import {
   createAreaAction,
   createPositionAction,
-  deleteAreaAction,
   deletePositionAction,
 } from "@/lib/catalog/actions";
 import { requireAreasRead, requirePositionsRead } from "@/lib/catalog/auth";
@@ -45,24 +50,22 @@ const CatalogoPage = async ({ searchParams }: CatalogoPageProps) => {
     siteRows,
     canCreateArea,
     canCreatePosition,
-    canDeleteArea,
     canDeletePosition,
     canCreateSite,
     canDeleteSite,
   ] = await Promise.all([
-    listAreas({ includeDeleted: true }),
-    listPositions({ includeDeleted: true }),
-    listSites({ includeDeleted: true }),
+    listAreas(),
+    listPositions(),
+    listSites(),
     userHasPermission(session.user.id, "areas:create"),
     userHasPermission(session.user.id, "positions:create"),
-    userHasPermission(session.user.id, "areas:delete"),
     userHasPermission(session.user.id, "positions:delete"),
     userHasPermission(session.user.id, "sites:create"),
     userHasPermission(session.user.id, "sites:delete"),
   ]);
 
   const areaTree = buildAreaTree(areas);
-  const activeAreas = areas.filter((area) => !area.deletedAt && area.active);
+  const activeAreas = areas.filter((area) => area.active);
 
   return (
     <div className="flex flex-col gap-6">
@@ -158,8 +161,8 @@ const CatalogoPage = async ({ searchParams }: CatalogoPageProps) => {
             </p>
           </div>
 
-          <div className="overflow-hidden rounded-lg border">
-            <Table>
+          <ListTableShell>
+            <Table className={listTableDensityClassName}>
               <TableHeader>
                 <TableRow>
                   <TableHead>Puesto</TableHead>
@@ -170,9 +173,9 @@ const CatalogoPage = async ({ searchParams }: CatalogoPageProps) => {
               </TableHeader>
               <TableBody>
                 {positions.length === 0 ? (
-                  <TableRow>
-                    <TableCell className="text-muted-foreground" colSpan={4}>
-                      Sin puestos registrados.
+                  <TableRow className="hover:bg-transparent">
+                    <TableCell colSpan={canDeletePosition ? 4 : 3}>
+                      <ListEmptyState title="Sin puestos registrados." />
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -188,28 +191,26 @@ const CatalogoPage = async ({ searchParams }: CatalogoPageProps) => {
                         </TableCell>
                         <TableCell>{area?.name ?? "—"}</TableCell>
                         <TableCell>
-                          {position.deletedAt ? (
-                            <Badge variant="outline">Borrado</Badge>
-                          ) : position.active ? (
-                            <Badge>Activo</Badge>
+                          {position.active ? (
+                            <ListStatusBadge tone="active">
+                              Activo
+                            </ListStatusBadge>
                           ) : (
-                            <Badge variant="secondary">Inactivo</Badge>
+                            <ListStatusBadge tone="inactive">
+                              Inactivo
+                            </ListStatusBadge>
                           )}
                         </TableCell>
                         {canDeletePosition ? (
                           <TableCell className="text-right">
-                            {!position.deletedAt ? (
-                              <form
-                                action={deletePositionAction.bind(
-                                  null,
-                                  position.id,
-                                )}
-                              >
-                                <Button size="sm" type="submit" variant="ghost">
-                                  Borrar
-                                </Button>
-                              </form>
-                            ) : null}
+                            <CatalogRowDeleteButton
+                              action={deletePositionAction.bind(
+                                null,
+                                position.id,
+                              )}
+                              itemLabel="puesto"
+                              itemName={position.name}
+                            />
                           </TableCell>
                         ) : null}
                       </TableRow>
@@ -218,7 +219,7 @@ const CatalogoPage = async ({ searchParams }: CatalogoPageProps) => {
                 )}
               </TableBody>
             </Table>
-          </div>
+          </ListTableShell>
 
           {canCreatePosition ? (
             <form
@@ -267,26 +268,6 @@ const CatalogoPage = async ({ searchParams }: CatalogoPageProps) => {
         </section>
       </div>
 
-      {canDeleteArea ? (
-        <section className="workia-pass-card space-y-3 p-5">
-          <h2 className="text-base font-semibold">Borrado lógico de áreas</h2>
-          <div className="flex flex-wrap gap-2">
-            {areas
-              .filter((area) => !area.deletedAt)
-              .map((area) => (
-                <form
-                  action={deleteAreaAction.bind(null, area.id)}
-                  key={area.id}
-                >
-                  <Button size="sm" type="submit" variant="outline">
-                    Borrar {area.name}
-                  </Button>
-                </form>
-              ))}
-          </div>
-        </section>
-      ) : null}
-
       <section className="workia-pass-card space-y-4 p-5">
         <div>
           <h2 className="text-base font-semibold">Ubicaciones</h2>
@@ -296,8 +277,8 @@ const CatalogoPage = async ({ searchParams }: CatalogoPageProps) => {
           </p>
         </div>
 
-        <div className="overflow-hidden rounded-lg border">
-          <Table>
+        <ListTableShell>
+          <Table className={listTableDensityClassName}>
             <TableHeader>
               <TableRow>
                 <TableHead>Nombre</TableHead>
@@ -308,9 +289,9 @@ const CatalogoPage = async ({ searchParams }: CatalogoPageProps) => {
             </TableHeader>
             <TableBody>
               {siteRows.length === 0 ? (
-                <TableRow>
-                  <TableCell className="text-muted-foreground" colSpan={4}>
-                    Sin ubicaciones registradas.
+                <TableRow className="hover:bg-transparent">
+                  <TableCell colSpan={canDeleteSite ? 4 : 3}>
+                    <ListEmptyState title="Sin ubicaciones registradas." />
                   </TableCell>
                 </TableRow>
               ) : (
@@ -319,21 +300,15 @@ const CatalogoPage = async ({ searchParams }: CatalogoPageProps) => {
                     <TableCell className="font-medium">{site.name}</TableCell>
                     <TableCell>{siteKindLabels[site.kind]}</TableCell>
                     <TableCell>
-                      {site.deletedAt ? (
-                        <Badge variant="outline">Borrada</Badge>
-                      ) : (
-                        <Badge>Activa</Badge>
-                      )}
+                      <ListStatusBadge tone="active">Activa</ListStatusBadge>
                     </TableCell>
                     {canDeleteSite ? (
                       <TableCell className="text-right">
-                        {!site.deletedAt ? (
-                          <form action={deleteSiteAction.bind(null, site.id)}>
-                            <Button size="sm" type="submit" variant="ghost">
-                              Borrar
-                            </Button>
-                          </form>
-                        ) : null}
+                        <CatalogRowDeleteButton
+                          action={deleteSiteAction.bind(null, site.id)}
+                          itemLabel="ubicación"
+                          itemName={site.name}
+                        />
                       </TableCell>
                     ) : null}
                   </TableRow>
@@ -341,7 +316,7 @@ const CatalogoPage = async ({ searchParams }: CatalogoPageProps) => {
               )}
             </TableBody>
           </Table>
-        </div>
+        </ListTableShell>
 
         {canCreateSite ? (
           <form action={createSiteAction} className="space-y-3 border-t pt-4">
