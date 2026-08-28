@@ -1,4 +1,5 @@
 import { AreaTreeView } from "@/components/catalog/area-tree-view";
+import { CatalogRowDeleteButton } from "@/components/catalog/catalog-row-delete-button";
 import { ListStatusBadge } from "@/components/list/list-status-badge";
 import {
   ListEmptyState,
@@ -202,16 +203,14 @@ const CatalogoPage = async ({ searchParams }: CatalogoPageProps) => {
                         </TableCell>
                         {canDeletePosition ? (
                           <TableCell className="text-right">
-                            <form
+                            <CatalogRowDeleteButton
                               action={deletePositionAction.bind(
                                 null,
                                 position.id,
                               )}
-                            >
-                              <Button size="sm" type="submit" variant="ghost">
-                                Borrar
-                              </Button>
-                            </form>
+                              itemLabel="puesto"
+                              itemName={position.name}
+                            />
                           </TableCell>
                         ) : null}
                       </TableRow>
@@ -305,11 +304,11 @@ const CatalogoPage = async ({ searchParams }: CatalogoPageProps) => {
                     </TableCell>
                     {canDeleteSite ? (
                       <TableCell className="text-right">
-                        <form action={deleteSiteAction.bind(null, site.id)}>
-                          <Button size="sm" type="submit" variant="ghost">
-                            Borrar
-                          </Button>
-                        </form>
+                        <CatalogRowDeleteButton
+                          action={deleteSiteAction.bind(null, site.id)}
+                          itemLabel="ubicación"
+                          itemName={site.name}
+                        />
                       </TableCell>
                     ) : null}
                   </TableRow>
