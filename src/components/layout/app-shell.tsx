@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { submitSignOutForm } from "@/lib/auth/client-sign-out";
 import {
   FileTextIcon,
   FolderTreeIcon,
@@ -90,10 +89,6 @@ export const AppShell = ({ children, user }: AppShellProps) => {
   const pathname = usePathname();
   const pageTitle = getPageTitle(pathname);
 
-  const handleSignOut = async () => {
-    await submitSignOutForm({ redirectTo: "/" });
-  };
-
   const initials = (user.name ?? "RRHH")
     .split(" ")
     .map((part) => part[0])
@@ -162,7 +157,6 @@ export const AppShell = ({ children, user }: AppShellProps) => {
                 avatar: user.image ?? "",
                 initials,
               }}
-              onSignOut={handleSignOut}
             />
           </SidebarFooter>
           <SidebarRail />

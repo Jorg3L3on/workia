@@ -1,8 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { submitSignOutForm } from "@/lib/auth/client-sign-out";
-
 import { NavMain } from "@/components/nav-main";
 import { NavProjects } from "@/components/nav-projects";
 import { NavUser } from "@/components/nav-user";
@@ -104,10 +102,6 @@ type AppSidebarProps = React.ComponentProps<typeof Sidebar> & {
 };
 
 export function AppSidebar({ user, ...props }: AppSidebarProps) {
-  const handleSignOut = async () => {
-    await submitSignOutForm({ redirectTo: "/" });
-  };
-
   const initials = user.name
     .split(" ")
     .map((part) => part[0])
@@ -125,7 +119,7 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
         <NavProjects projects={data.projects} />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={{ ...user, initials }} onSignOut={handleSignOut} />
+        <NavUser user={{ ...user, initials }} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

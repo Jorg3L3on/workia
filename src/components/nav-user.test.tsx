@@ -1,6 +1,8 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { SIGN_OUT_FORM_ID, SIGN_OUT_PATH } from "@/lib/auth/client-sign-out";
+
 afterEach(() => {
   cleanup();
 });
@@ -42,23 +44,11 @@ vi.mock("@/components/ui/dropdown-menu", () => ({
   ),
   DropdownMenuItem: ({
     children,
-    onSelect,
-    ...props
+    asChild,
   }: {
     children: React.ReactNode;
-    onSelect?: (event: { preventDefault: () => void }) => void;
-  } & React.ComponentProps<"button">) => (
-    <button
-      type="button"
-      {...props}
-      onClick={() => {
-        const event = { preventDefault: vi.fn() };
-        onSelect?.(event);
-      }}
-    >
-      {children}
-    </button>
-  ),
+    asChild?: boolean;
+  }) => (asChild ? <>{children}</> : <div>{children}</div>),
 }));
 
 import { NavUser } from "@/components/nav-user";
@@ -84,9 +74,7 @@ describe("NavUser", () => {
     expect(screen.getAllByText("rrhh@workia.local").length).toBeGreaterThan(0);
   });
 
-  it("invokes onSignOut when Cerrar sesión is selected", () => {
-    const onSignOut = vi.fn();
-
+  it("uses a mounted native POST form for Cerrar sesión", () => {
     render(
       <NavUser
         user={{
@@ -95,12 +83,16 @@ describe("NavUser", () => {
           avatar: "",
           initials: "ED",
         }}
-        onSignOut={onSignOut}
       />,
     );
 
-    fireEvent.click(screen.getByLabelText("Cerrar sesión"));
+    const form = document.getElementById(SIGN_OUT_FORM_ID);
+    expect(form).toBeInstanceOf(HTMLFormElement);
+    expect((form as HTMLFormElement).method.toLowerCase()).toBe("post");
+    expect((form as HTMLFormElement).action).toContain(SIGN_OUT_PATH);
 
-    expect(onSignOut).toHaveBeenCalledOnce();
+    const signOutButton = screen.getByLabelText("Cerrar sesión");
+    expect(signOutButton.getAttribute("type")).toBe("submit");
+    expect(signOutButton.getAttribute("form")).toBe(SIGN_OUT_FORM_ID);
   });
 });
