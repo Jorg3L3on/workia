@@ -1,5 +1,5 @@
 import {
-  appendExpiredAuthCookies,
+  appendTombstoneAuthCookies,
   collectAuthCookiesToClear,
 } from "@/lib/auth/clear-auth-cookies";
 import { buildSignOutHtml } from "@/lib/auth/sign-out-html";
@@ -21,7 +21,8 @@ export const POST = async (request: Request) => {
   const headers = new Headers();
   headers.set("Content-Type", "text/html; charset=utf-8");
   headers.set("Cache-Control", "private, no-store");
-  appendExpiredAuthCookies(headers, collectAuthCookiesToClear(request));
+  headers.set("Clear-Site-Data", '"cookies"');
+  appendTombstoneAuthCookies(headers, collectAuthCookiesToClear(request));
 
   return new Response(buildSignOutHtml(redirectTo), {
     status: 200,

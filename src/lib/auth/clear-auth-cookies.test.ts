@@ -1,28 +1,43 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  AUTH_COOKIE_TOMBSTONE_VALUE,
   collectAuthCookiesToClear,
   isAuthCookieName,
-  serializeExpiredAuthCookie,
+  serializeTombstoneAuthCookie,
 } from "@/lib/auth/clear-auth-cookies";
 
 describe("clear-auth-cookies", () => {
-  it("serializes expired __Secure-authjs.session-token matching Auth.js attribute order", () => {
-    const header = serializeExpiredAuthCookie(
+  it("serializes tombstone __Secure-authjs.session-token matching Auth.js login identity", () => {
+    const header = serializeTombstoneAuthCookie(
       "__Secure-authjs.session-token",
       true,
     );
 
     expect(header).toBe(
-      "__Secure-authjs.session-token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0; HttpOnly; Secure; SameSite=Lax",
+      "__Secure-authjs.session-token=deleted; Path=/; HttpOnly; Secure; SameSite=Lax",
+    );
+    expect(header).toContain(`=${AUTH_COOKIE_TOMBSTONE_VALUE}`);
+    expect(header).not.toContain("Max-Age=0");
+    expect(header).not.toMatch(/=;/);
+  });
+
+  it("serializes tombstone __Host-authjs.csrf-token with Secure", () => {
+    const header = serializeTombstoneAuthCookie(
+      "__Host-authjs.csrf-token",
+      true,
+    );
+
+    expect(header).toBe(
+      "__Host-authjs.csrf-token=deleted; Path=/; HttpOnly; Secure; SameSite=Lax",
     );
   });
 
   it("does not add Secure to non-secure cookie serialization", () => {
-    const header = serializeExpiredAuthCookie("authjs.session-token", false);
+    const header = serializeTombstoneAuthCookie("authjs.session-token", false);
 
     expect(header).toBe(
-      "authjs.session-token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0; HttpOnly; SameSite=Lax",
+      "authjs.session-token=deleted; Path=/; HttpOnly; SameSite=Lax",
     );
     expect(header).not.toContain("Secure");
   });
