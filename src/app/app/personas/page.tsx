@@ -1,7 +1,17 @@
 import Link from "next/link";
 import { PlusIcon, SearchIcon } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
+import { PersonasMobileList } from "@/components/people/personas-mobile-list";
+import { ClickableTableRow } from "@/components/list/clickable-table-row";
+import { ListFilterBar } from "@/components/list/list-filter-bar";
+import { ListRowAction } from "@/components/list/list-row-action";
+import { ListStatusBadge } from "@/components/list/list-status-badge";
+import {
+  ListEmptyState,
+  ListResultCount,
+  ListTableShell,
+  listTableDensityClassName,
+} from "@/components/list/list-table-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -35,6 +45,8 @@ const PersonasPage = async ({ searchParams }: PersonasPageProps) => {
     userHasPermission(session.user.id, "people:create"),
   ]);
 
+  const hasFilters = Boolean(q || status);
+
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-wrap items-start justify-between gap-4">
@@ -60,8 +72,16 @@ const PersonasPage = async ({ searchParams }: PersonasPageProps) => {
         ) : null}
       </header>
 
-      <form className="workia-pass-card flex flex-col gap-3 p-4 sm:flex-row sm:items-end">
-        <div className="flex-1 space-y-2">
+      <ListFilterBar
+        footer={
+          <ListResultCount
+            count={people.length}
+            plural="resultados"
+            singular="resultado"
+          />
+        }
+      >
+        <div className="min-w-0 flex-1 space-y-2">
           <label className="text-sm font-medium" htmlFor="q">
             Buscar
           </label>
@@ -79,12 +99,12 @@ const PersonasPage = async ({ searchParams }: PersonasPageProps) => {
             />
           </div>
         </div>
-        <div className="space-y-2">
+        <div className="space-y-2 sm:w-44">
           <label className="text-sm font-medium" htmlFor="status">
             Relación
           </label>
           <select
-            className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-8 w-full min-w-40 rounded-lg border px-2.5 text-sm outline-none focus-visible:ring-3"
+            className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-8 w-full rounded-lg border px-2.5 text-sm outline-none focus-visible:ring-3"
             defaultValue={status ?? ""}
             id="status"
             name="status"
@@ -94,74 +114,86 @@ const PersonasPage = async ({ searchParams }: PersonasPageProps) => {
             <option value="baja">Bajas</option>
           </select>
         </div>
-        <Button type="submit" variant="outline">
+        <Button className="sm:self-end" type="submit" variant="outline">
           Filtrar
         </Button>
-      </form>
+      </ListFilterBar>
 
-      <div className="workia-pass-card overflow-hidden">
-        {people.length === 0 ? (
-          <div className="workia-empty-state m-4 px-4 py-8 text-center">
-            <p className="text-sm font-medium">
-              {q || status
-                ? "No hay coincidencias"
-                : "Aún no hay personas en el expediente"}
-            </p>
-            <p className="text-muted-foreground mt-1 text-sm">
-              {canCreate
+      {people.length === 0 ? (
+        <ListTableShell>
+          <ListEmptyState
+            action={
+              canCreate && !hasFilters ? (
+                <Button asChild variant="outline">
+                  <Link href="/app/personas/nueva">
+                    Dar de alta a la primera persona
+                  </Link>
+                </Button>
+              ) : undefined
+            }
+            description={
+              canCreate
                 ? "Da de alta a alguien para empezar el expediente."
-                : "Cuando existan registros, los verás aquí."}
-            </p>
-            {canCreate && !q && !status ? (
-              <Button asChild className="mt-4" variant="outline">
-                <Link href="/app/personas/nueva">
-                  Dar de alta a la primera persona
-                </Link>
-              </Button>
-            ) : null}
-          </div>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nombre</TableHead>
-                <TableHead>RFC</TableHead>
-                <TableHead>Relación</TableHead>
-                <TableHead className="text-right">Expediente</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {people.map((person) => (
-                <TableRow key={person.id}>
-                  <TableCell className="font-medium">
-                    {formatPersonName(person)}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {person.rfc ?? "—"}
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={
-                        person.status === "activa" ? "default" : "secondary"
-                      }
-                    >
-                      {personStatusLabels[person.status]}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Link
-                      className="workia-accent-text text-sm font-medium hover:underline"
-                      href={`/app/personas/${person.id}`}
-                    >
-                      Ver expediente
-                    </Link>
-                  </TableCell>
+                : "Cuando existan registros, los verás aquí."
+            }
+            title={
+              hasFilters
+                ? "No hay coincidencias"
+                : "Aún no hay personas en el expediente"
+            }
+          />
+        </ListTableShell>
+      ) : (
+        <>
+          <PersonasMobileList people={people} />
+
+          <ListTableShell desktopOnly>
+            <Table className={listTableDensityClassName}>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nombre</TableHead>
+                  <TableHead>RFC</TableHead>
+                  <TableHead>Relación</TableHead>
+                  <TableHead className="text-right">Expediente</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </div>
+              </TableHeader>
+              <TableBody>
+                {people.map((person) => (
+                  <ClickableTableRow
+                    key={person.id}
+                    ariaLabel={`Ver expediente de ${formatPersonName(person)}`}
+                    href={`/app/personas/${person.id}`}
+                  >
+                    <TableCell className="font-medium">
+                      {formatPersonName(person)}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground tabular-nums">
+                      {person.rfc ?? "—"}
+                    </TableCell>
+                    <TableCell>
+                      <ListStatusBadge
+                        tone={
+                          person.status === "activa" ? "active" : "inactive"
+                        }
+                      >
+                        {personStatusLabels[person.status]}
+                      </ListStatusBadge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <ListRowAction
+                        aria-label={`Ver expediente de ${formatPersonName(person)}`}
+                        href={`/app/personas/${person.id}`}
+                      >
+                        Ver expediente
+                      </ListRowAction>
+                    </TableCell>
+                  </ClickableTableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </ListTableShell>
+        </>
+      )}
     </div>
   );
 };

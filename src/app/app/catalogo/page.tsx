@@ -1,5 +1,10 @@
 import { AreaTreeView } from "@/components/catalog/area-tree-view";
-import { Badge } from "@/components/ui/badge";
+import { ListStatusBadge } from "@/components/list/list-status-badge";
+import {
+  ListEmptyState,
+  ListTableShell,
+  listTableDensityClassName,
+} from "@/components/list/list-table-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -158,8 +163,8 @@ const CatalogoPage = async ({ searchParams }: CatalogoPageProps) => {
             </p>
           </div>
 
-          <div className="overflow-hidden rounded-lg border">
-            <Table>
+          <ListTableShell>
+            <Table className={listTableDensityClassName}>
               <TableHeader>
                 <TableRow>
                   <TableHead>Puesto</TableHead>
@@ -170,9 +175,9 @@ const CatalogoPage = async ({ searchParams }: CatalogoPageProps) => {
               </TableHeader>
               <TableBody>
                 {positions.length === 0 ? (
-                  <TableRow>
-                    <TableCell className="text-muted-foreground" colSpan={4}>
-                      Sin puestos registrados.
+                  <TableRow className="hover:bg-transparent">
+                    <TableCell colSpan={canDeletePosition ? 4 : 3}>
+                      <ListEmptyState title="Sin puestos registrados." />
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -189,11 +194,17 @@ const CatalogoPage = async ({ searchParams }: CatalogoPageProps) => {
                         <TableCell>{area?.name ?? "—"}</TableCell>
                         <TableCell>
                           {position.deletedAt ? (
-                            <Badge variant="outline">Borrado</Badge>
+                            <ListStatusBadge tone="destructive">
+                              Borrado
+                            </ListStatusBadge>
                           ) : position.active ? (
-                            <Badge>Activo</Badge>
+                            <ListStatusBadge tone="active">
+                              Activo
+                            </ListStatusBadge>
                           ) : (
-                            <Badge variant="secondary">Inactivo</Badge>
+                            <ListStatusBadge tone="inactive">
+                              Inactivo
+                            </ListStatusBadge>
                           )}
                         </TableCell>
                         {canDeletePosition ? (
@@ -218,7 +229,7 @@ const CatalogoPage = async ({ searchParams }: CatalogoPageProps) => {
                 )}
               </TableBody>
             </Table>
-          </div>
+          </ListTableShell>
 
           {canCreatePosition ? (
             <form
@@ -296,8 +307,8 @@ const CatalogoPage = async ({ searchParams }: CatalogoPageProps) => {
           </p>
         </div>
 
-        <div className="overflow-hidden rounded-lg border">
-          <Table>
+        <ListTableShell>
+          <Table className={listTableDensityClassName}>
             <TableHeader>
               <TableRow>
                 <TableHead>Nombre</TableHead>
@@ -308,9 +319,9 @@ const CatalogoPage = async ({ searchParams }: CatalogoPageProps) => {
             </TableHeader>
             <TableBody>
               {siteRows.length === 0 ? (
-                <TableRow>
-                  <TableCell className="text-muted-foreground" colSpan={4}>
-                    Sin ubicaciones registradas.
+                <TableRow className="hover:bg-transparent">
+                  <TableCell colSpan={canDeleteSite ? 4 : 3}>
+                    <ListEmptyState title="Sin ubicaciones registradas." />
                   </TableCell>
                 </TableRow>
               ) : (
@@ -320,9 +331,11 @@ const CatalogoPage = async ({ searchParams }: CatalogoPageProps) => {
                     <TableCell>{siteKindLabels[site.kind]}</TableCell>
                     <TableCell>
                       {site.deletedAt ? (
-                        <Badge variant="outline">Borrada</Badge>
+                        <ListStatusBadge tone="destructive">
+                          Borrada
+                        </ListStatusBadge>
                       ) : (
-                        <Badge>Activa</Badge>
+                        <ListStatusBadge tone="active">Activa</ListStatusBadge>
                       )}
                     </TableCell>
                     {canDeleteSite ? (
@@ -341,7 +354,7 @@ const CatalogoPage = async ({ searchParams }: CatalogoPageProps) => {
               )}
             </TableBody>
           </Table>
-        </div>
+        </ListTableShell>
 
         {canCreateSite ? (
           <form action={createSiteAction} className="space-y-3 border-t pt-4">

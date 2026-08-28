@@ -1,9 +1,23 @@
 import Link from "next/link";
+import { Fragment } from "react";
 
-import { Badge } from "@/components/ui/badge";
 import { ContractForm } from "@/components/contracts/contract-form";
 import { NoRenewButton } from "@/components/contracts/no-renew-button";
 import { RenewContractForm } from "@/components/contracts/renew-contract-form";
+import { ListRowAction } from "@/components/list/list-row-action";
+import {
+  ListEmptyState,
+  listTableDensityClassName,
+} from "@/components/list/list-table-shell";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import type { Contract, ContractTemplate } from "@/lib/db/schema";
 import {
   contractNoticeWindowLabels,
@@ -164,46 +178,63 @@ export const RenewalTrayList = ({
 }: RenewalTrayListProps) => {
   if (items.length === 0) {
     return (
-      <div className="workia-empty-state m-4 px-4 py-8 text-center">
-        <p className="text-sm font-medium">Sin renovaciones pendientes</p>
-        <p className="text-muted-foreground mt-1 text-sm">
-          Los contratos aparecen aquí cuando entran en su ventana de aviso
-          configurada.
-        </p>
-      </div>
+      <ListEmptyState
+        description="Los contratos aparecen aquí cuando entran en su ventana de aviso configurada."
+        title="Sin renovaciones pendientes"
+      />
     );
   }
 
   return (
-    <div className="space-y-4 p-4">
-      {items.map((item) => (
-        <div key={item.contract.id} className="workia-pass-card space-y-3 p-4">
-          <div className="flex flex-wrap items-start justify-between gap-2">
-            <div>
-              <Link
-                className="font-semibold hover:underline"
-                href={`/app/personas/${item.personId}`}
-              >
-                {item.personName}
-              </Link>
-              <p className="text-muted-foreground text-sm">
-                Vence {formatContractDate(item.endDate)} ·{" "}
+    <Table className={listTableDensityClassName}>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Persona</TableHead>
+          <TableHead>Vence</TableHead>
+          <TableHead>Ventana de aviso</TableHead>
+          <TableHead className="text-right">Acciones</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {items.map((item) => (
+          <Fragment key={item.contract.id}>
+            <TableRow>
+              <TableCell className="font-medium">{item.personName}</TableCell>
+              <TableCell className="text-muted-foreground tabular-nums">
+                {formatContractDate(item.endDate)}
+              </TableCell>
+              <TableCell className="text-muted-foreground">
                 {contractNoticeWindowLabels[item.noticeWindow]}
-              </p>
-            </div>
-            {canUpdate ? <NoRenewButton contractId={item.contract.id} /> : null}
-          </div>
-
-          {canUpdate && templates.length > 0 ? (
-            <RenewContractForm
-              contractId={item.contract.id}
-              endDate={item.endDate}
-              personName={item.personName}
-              templates={templates}
-            />
-          ) : null}
-        </div>
-      ))}
-    </div>
+              </TableCell>
+              <TableCell className="text-right">
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  {canUpdate ? (
+                    <NoRenewButton contractId={item.contract.id} />
+                  ) : null}
+                  <ListRowAction
+                    aria-label={`Ver expediente de ${item.personName}`}
+                    href={`/app/personas/${item.personId}`}
+                  >
+                    Ver expediente
+                  </ListRowAction>
+                </div>
+              </TableCell>
+            </TableRow>
+            {canUpdate && templates.length > 0 ? (
+              <TableRow className="hover:bg-transparent">
+                <TableCell className="bg-muted/20 py-4" colSpan={4}>
+                  <RenewContractForm
+                    contractId={item.contract.id}
+                    endDate={item.endDate}
+                    personName={item.personName}
+                    templates={templates}
+                  />
+                </TableCell>
+              </TableRow>
+            ) : null}
+          </Fragment>
+        ))}
+      </TableBody>
+    </Table>
   );
 };
