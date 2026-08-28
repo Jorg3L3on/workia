@@ -19,6 +19,7 @@ export const authConfig = {
   pages: {
     signIn: "/login",
   },
+  useSecureCookies: env.NODE_ENV === "production",
   session: {
     strategy: "jwt",
   },

@@ -1,13 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const { getCsrfTokenMock } = vi.hoisted(() => ({
-  getCsrfTokenMock: vi.fn(),
-}));
-
-vi.mock("next-auth/react", () => ({
-  getCsrfToken: getCsrfTokenMock,
-}));
-
 import {
   DEFAULT_SIGN_OUT_REDIRECT,
   SIGN_OUT_PATH,
@@ -20,47 +12,33 @@ describe("submitSignOutForm", () => {
     document.body.innerHTML = "";
   });
 
-  it("POSTs to Auth.js signout with csrf and callbackUrl via a real form submit", async () => {
-    getCsrfTokenMock.mockResolvedValue("csrf-test-token");
+  it("POSTs to the Workia sign-out route via a native form submit", () => {
     const submitSpy = vi.spyOn(HTMLFormElement.prototype, "submit");
 
-    await submitSignOutForm({ redirectTo: "/" });
+    submitSignOutForm({ redirectTo: "/" });
 
     const form = document.querySelector(`form[action="${SIGN_OUT_PATH}"]`);
     expect(form).toBeTruthy();
     expect(form).toBeInstanceOf(HTMLFormElement);
     expect((form as HTMLFormElement).method.toLowerCase()).toBe("post");
 
-    const csrfInput = form?.querySelector<HTMLInputElement>(
-      'input[name="csrfToken"]',
-    );
-    const callbackInput = form?.querySelector<HTMLInputElement>(
-      'input[name="callbackUrl"]',
+    const redirectInput = form?.querySelector<HTMLInputElement>(
+      'input[name="redirectTo"]',
     );
 
-    expect(csrfInput?.value).toBe("csrf-test-token");
-    expect(callbackInput?.value).toBe("/");
+    expect(redirectInput?.value).toBe("/");
+    expect(form?.querySelector('input[name="csrfToken"]')).toBeNull();
     expect(submitSpy).toHaveBeenCalledOnce();
-    expect(getCsrfTokenMock).toHaveBeenCalledOnce();
   });
 
-  it("uses the landing page when redirectTo is omitted", async () => {
-    getCsrfTokenMock.mockResolvedValue("csrf-test-token");
+  it("uses the landing page when redirectTo is omitted", () => {
     vi.spyOn(HTMLFormElement.prototype, "submit");
 
-    await submitSignOutForm();
+    submitSignOutForm();
 
-    const callbackInput = document.querySelector<HTMLInputElement>(
-      'input[name="callbackUrl"]',
+    const redirectInput = document.querySelector<HTMLInputElement>(
+      'input[name="redirectTo"]',
     );
-    expect(callbackInput?.value).toBe(DEFAULT_SIGN_OUT_REDIRECT);
-  });
-
-  it("throws when csrf token is unavailable", async () => {
-    getCsrfTokenMock.mockResolvedValue(null);
-
-    await expect(submitSignOutForm()).rejects.toThrow(
-      "No se pudo cerrar la sesión. Intenta de nuevo.",
-    );
+    expect(redirectInput?.value).toBe(DEFAULT_SIGN_OUT_REDIRECT);
   });
 });

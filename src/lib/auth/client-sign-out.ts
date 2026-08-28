@@ -1,8 +1,6 @@
 "use client";
 
-import { getCsrfToken } from "next-auth/react";
-
-export const SIGN_OUT_PATH = "/api/auth/signout";
+export const SIGN_OUT_PATH = "/api/auth/sign-out";
 export const DEFAULT_SIGN_OUT_REDIRECT = "/";
 
 type SubmitSignOutFormOptions = {
@@ -10,35 +8,22 @@ type SubmitSignOutFormOptions = {
 };
 
 /**
- * Ends the session with a native form POST to Auth.js signout (same as the
- * built-in confirmation page). Unlike next-auth/react signOut(), this does not
- * use fetch + X-Auth-Return-Redirect, so the browser applies Set-Cookie and
- * follows the redirect reliably in production.
+ * Ends the session with a native same-origin form POST to our sign-out handler.
+ * The server clears every Auth.js session cookie variant (including __Secure- on
+ * HTTPS) before redirecting, avoiding Auth.js built-in signout Set-Cookie mismatches.
  */
-export const submitSignOutForm = async ({
+export const submitSignOutForm = ({
   redirectTo = DEFAULT_SIGN_OUT_REDIRECT,
 }: SubmitSignOutFormOptions = {}) => {
-  const csrfToken = await getCsrfToken();
-
-  if (!csrfToken) {
-    throw new Error("No se pudo cerrar la sesión. Intenta de nuevo.");
-  }
-
   const form = document.createElement("form");
   form.method = "POST";
   form.action = SIGN_OUT_PATH;
 
-  const csrfInput = document.createElement("input");
-  csrfInput.type = "hidden";
-  csrfInput.name = "csrfToken";
-  csrfInput.value = csrfToken;
-  form.appendChild(csrfInput);
-
-  const callbackInput = document.createElement("input");
-  callbackInput.type = "hidden";
-  callbackInput.name = "callbackUrl";
-  callbackInput.value = redirectTo;
-  form.appendChild(callbackInput);
+  const redirectInput = document.createElement("input");
+  redirectInput.type = "hidden";
+  redirectInput.name = "redirectTo";
+  redirectInput.value = redirectTo;
+  form.appendChild(redirectInput);
 
   document.body.appendChild(form);
   form.submit();
