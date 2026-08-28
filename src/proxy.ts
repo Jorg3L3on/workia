@@ -1,5 +1,3 @@
-import type { NextRequest } from "next/server";
-
 import { auth } from "@/auth";
 import {
   requestHasLogoutLatch,
@@ -7,21 +5,17 @@ import {
   resolveLatchedProxyResponse,
 } from "@/lib/auth/proxy-guard";
 
-const authorizedProxy = auth((request) =>
-  resolveAuthRouting({
-    pathname: request.nextUrl.pathname,
-    nextUrl: request.nextUrl,
-    isLoggedIn: Boolean(request.auth),
-  }),
-) as (request: NextRequest) => ReturnType<typeof resolveAuthRouting>;
-
-export default function proxy(request: NextRequest) {
+export default auth((request) => {
   if (requestHasLogoutLatch(request)) {
     return resolveLatchedProxyResponse(request);
   }
 
-  return authorizedProxy(request);
-}
+  return resolveAuthRouting({
+    pathname: request.nextUrl.pathname,
+    nextUrl: request.nextUrl,
+    isLoggedIn: Boolean(request.auth),
+  });
+});
 
 export const config = {
   matcher: [

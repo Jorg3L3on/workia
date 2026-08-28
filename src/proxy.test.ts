@@ -1,16 +1,27 @@
 import { NextRequest } from "next/server";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-
-const { authorizedProxy } = vi.hoisted(() => ({
-  authorizedProxy: vi.fn(),
-}));
+import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/auth", () => ({
-  auth: () => authorizedProxy,
+  auth: (
+    handler: (request: {
+      nextUrl: URL;
+      headers: Headers;
+      auth?: { user: { id: string } };
+    }) => Response | undefined,
+  ) => {
+    return (request: NextRequest) =>
+      handler({
+        nextUrl: request.nextUrl,
+        headers: request.headers,
+        auth: { user: { id: "user-1" } },
+      });
+  },
 }));
 
 import proxy, { config } from "@/proxy";
 import { LOGOUT_LATCH_COOKIE_NAME } from "@/lib/auth/logout-latch";
+
+const routeContext = { params: Promise.resolve({}) };
 
 const makeRequest = (pathname: string, cookie?: string) => {
   const headers = new Headers();
@@ -24,11 +35,6 @@ const makeRequest = (pathname: string, cookie?: string) => {
 };
 
 describe("proxy", () => {
-  beforeEach(() => {
-    authorizedProxy.mockReset();
-    authorizedProxy.mockResolvedValue(undefined);
-  });
-
   it("matches login, app, admin, and Auth.js session", () => {
     expect(config.matcher).toEqual([
       "/admin/:path*",
@@ -39,16 +45,19 @@ describe("proxy", () => {
     ]);
   });
 
-  it("does not run auth() when the logout latch is set", async () => {
+  it("lets the logout latch win even when auth() still sees a JWT user", async () => {
     const cookie = `${LOGOUT_LATCH_COOKIE_NAME}=1; __Secure-authjs.session-token=jwt`;
 
-    const loginResponse = await proxy(makeRequest("/login", cookie));
-    const appResponse = await proxy(makeRequest("/app", cookie));
+    const loginResponse = await proxy(
+      makeRequest("/login", cookie),
+      routeContext,
+    );
+    const appResponse = await proxy(makeRequest("/app", cookie), routeContext);
     const sessionResponse = await proxy(
       makeRequest("/api/auth/session", cookie),
+      routeContext,
     );
 
-    expect(authorizedProxy).not.toHaveBeenCalled();
     expect(loginResponse).toBeUndefined();
     expect(appResponse?.headers.get("location")).toBe(
       "https://workia.local/login?callbackUrl=%2Fapp",
@@ -57,9 +66,13 @@ describe("proxy", () => {
     await expect(sessionResponse?.text()).resolves.toBe("null");
   });
 
-  it("runs auth() when there is no latch so logged-in /login can bounce to /app", async () => {
-    await proxy(makeRequest("/login", "__Secure-authjs.session-token=jwt"));
+  it("keeps the logged-in /login → /app bounce when there is no latch", async () => {
+    const response = await proxy(
+      makeRequest("/login", "__Secure-authjs.session-token=jwt"),
+      routeContext,
+    );
 
-    expect(authorizedProxy).toHaveBeenCalledOnce();
+    expect(response?.status).toBe(302);
+    expect(response?.headers.get("location")).toBe("https://workia.local/app");
   });
 });
