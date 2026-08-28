@@ -3,16 +3,16 @@ import { describe, expect, it, vi } from "vitest";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
 
-const { signOutMock } = vi.hoisted(() => ({
-  signOutMock: vi.fn(),
+const { submitSignOutFormMock } = vi.hoisted(() => ({
+  submitSignOutFormMock: vi.fn(),
 }));
 
 vi.mock("@/hooks/use-mobile", () => ({
   useIsMobile: () => false,
 }));
 
-vi.mock("next-auth/react", () => ({
-  signOut: signOutMock,
+vi.mock("@/lib/auth/client-sign-out", () => ({
+  submitSignOutForm: submitSignOutFormMock,
 }));
 
 vi.mock("next/navigation", () => ({
@@ -34,7 +34,9 @@ vi.mock("@/components/theme-toggle", () => ({
 import { AppShell } from "@/components/layout/app-shell";
 
 describe("AppShell", () => {
-  it("signs out with redirect to the landing page", () => {
+  it("submits Auth.js signout via form POST helper when Cerrar sesión is selected", async () => {
+    submitSignOutFormMock.mockResolvedValue(undefined);
+
     render(
       <TooltipProvider>
         <AppShell user={{ name: "Elena Demo", email: "rrhh@workia.local" }}>
@@ -45,6 +47,6 @@ describe("AppShell", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Cerrar sesión" }));
 
-    expect(signOutMock).toHaveBeenCalledWith({ callbackUrl: "/" });
+    expect(submitSignOutFormMock).toHaveBeenCalledWith({ redirectTo: "/" });
   });
 });

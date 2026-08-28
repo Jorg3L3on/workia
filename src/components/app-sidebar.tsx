@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { signOut } from "next-auth/react";
+import { submitSignOutForm } from "@/lib/auth/client-sign-out";
 
 import { NavMain } from "@/components/nav-main";
 import { NavProjects } from "@/components/nav-projects";
@@ -105,7 +105,7 @@ type AppSidebarProps = React.ComponentProps<typeof Sidebar> & {
 
 export function AppSidebar({ user, ...props }: AppSidebarProps) {
   const handleSignOut = async () => {
-    await signOut({ callbackUrl: "/" });
+    await submitSignOutForm({ redirectTo: "/" });
   };
 
   const initials = user.name
