@@ -19,7 +19,6 @@ import {
 import {
   createAreaAction,
   createPositionAction,
-  deleteAreaAction,
   deletePositionAction,
 } from "@/lib/catalog/actions";
 import { requireAreasRead, requirePositionsRead } from "@/lib/catalog/auth";
@@ -50,24 +49,22 @@ const CatalogoPage = async ({ searchParams }: CatalogoPageProps) => {
     siteRows,
     canCreateArea,
     canCreatePosition,
-    canDeleteArea,
     canDeletePosition,
     canCreateSite,
     canDeleteSite,
   ] = await Promise.all([
-    listAreas({ includeDeleted: true }),
-    listPositions({ includeDeleted: true }),
-    listSites({ includeDeleted: true }),
+    listAreas(),
+    listPositions(),
+    listSites(),
     userHasPermission(session.user.id, "areas:create"),
     userHasPermission(session.user.id, "positions:create"),
-    userHasPermission(session.user.id, "areas:delete"),
     userHasPermission(session.user.id, "positions:delete"),
     userHasPermission(session.user.id, "sites:create"),
     userHasPermission(session.user.id, "sites:delete"),
   ]);
 
   const areaTree = buildAreaTree(areas);
-  const activeAreas = areas.filter((area) => !area.deletedAt && area.active);
+  const activeAreas = areas.filter((area) => area.active);
 
   return (
     <div className="flex flex-col gap-6">
@@ -193,11 +190,7 @@ const CatalogoPage = async ({ searchParams }: CatalogoPageProps) => {
                         </TableCell>
                         <TableCell>{area?.name ?? "—"}</TableCell>
                         <TableCell>
-                          {position.deletedAt ? (
-                            <ListStatusBadge tone="destructive">
-                              Borrado
-                            </ListStatusBadge>
-                          ) : position.active ? (
+                          {position.active ? (
                             <ListStatusBadge tone="active">
                               Activo
                             </ListStatusBadge>
@@ -209,18 +202,16 @@ const CatalogoPage = async ({ searchParams }: CatalogoPageProps) => {
                         </TableCell>
                         {canDeletePosition ? (
                           <TableCell className="text-right">
-                            {!position.deletedAt ? (
-                              <form
-                                action={deletePositionAction.bind(
-                                  null,
-                                  position.id,
-                                )}
-                              >
-                                <Button size="sm" type="submit" variant="ghost">
-                                  Borrar
-                                </Button>
-                              </form>
-                            ) : null}
+                            <form
+                              action={deletePositionAction.bind(
+                                null,
+                                position.id,
+                              )}
+                            >
+                              <Button size="sm" type="submit" variant="ghost">
+                                Borrar
+                              </Button>
+                            </form>
                           </TableCell>
                         ) : null}
                       </TableRow>
@@ -278,26 +269,6 @@ const CatalogoPage = async ({ searchParams }: CatalogoPageProps) => {
         </section>
       </div>
 
-      {canDeleteArea ? (
-        <section className="workia-pass-card space-y-3 p-5">
-          <h2 className="text-base font-semibold">Borrado lógico de áreas</h2>
-          <div className="flex flex-wrap gap-2">
-            {areas
-              .filter((area) => !area.deletedAt)
-              .map((area) => (
-                <form
-                  action={deleteAreaAction.bind(null, area.id)}
-                  key={area.id}
-                >
-                  <Button size="sm" type="submit" variant="outline">
-                    Borrar {area.name}
-                  </Button>
-                </form>
-              ))}
-          </div>
-        </section>
-      ) : null}
-
       <section className="workia-pass-card space-y-4 p-5">
         <div>
           <h2 className="text-base font-semibold">Ubicaciones</h2>
@@ -330,23 +301,15 @@ const CatalogoPage = async ({ searchParams }: CatalogoPageProps) => {
                     <TableCell className="font-medium">{site.name}</TableCell>
                     <TableCell>{siteKindLabels[site.kind]}</TableCell>
                     <TableCell>
-                      {site.deletedAt ? (
-                        <ListStatusBadge tone="destructive">
-                          Borrada
-                        </ListStatusBadge>
-                      ) : (
-                        <ListStatusBadge tone="active">Activa</ListStatusBadge>
-                      )}
+                      <ListStatusBadge tone="active">Activa</ListStatusBadge>
                     </TableCell>
                     {canDeleteSite ? (
                       <TableCell className="text-right">
-                        {!site.deletedAt ? (
-                          <form action={deleteSiteAction.bind(null, site.id)}>
-                            <Button size="sm" type="submit" variant="ghost">
-                              Borrar
-                            </Button>
-                          </form>
-                        ) : null}
+                        <form action={deleteSiteAction.bind(null, site.id)}>
+                          <Button size="sm" type="submit" variant="ghost">
+                            Borrar
+                          </Button>
+                        </form>
                       </TableCell>
                     ) : null}
                   </TableRow>
