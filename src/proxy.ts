@@ -2,7 +2,6 @@ import type { NextRequest } from "next/server";
 
 import { auth } from "@/auth";
 import {
-  PROXY_MATCHER,
   requestHasLogoutLatch,
   resolveAuthRouting,
   resolveLatchedProxyResponse,
@@ -25,5 +24,11 @@ export default function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: [...PROXY_MATCHER],
+  matcher: [
+    "/admin/:path*",
+    "/app/:path*",
+    "/login",
+    "/api/auth/session",
+    "/api/auth/session/",
+  ],
 };
