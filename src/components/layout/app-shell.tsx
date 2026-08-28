@@ -7,6 +7,7 @@ import {
   FileTextIcon,
   FolderTreeIcon,
   HomeIcon,
+  LaptopIcon,
   ScrollTextIcon,
   UsersIcon,
 } from "lucide-react";
@@ -53,6 +54,7 @@ const navItems = [
   { title: "Inicio", href: "/app", icon: HomeIcon },
   { title: "Personas", href: "/app/personas", icon: UsersIcon },
   { title: "Contratos", href: "/app/contratos", icon: FileTextIcon },
+  { title: "Resguardo", href: "/app/resguardo", icon: LaptopIcon },
   { title: "Catálogo", href: "/app/catalogo", icon: FolderTreeIcon },
   { title: "Auditoría", href: "/app/auditoria", icon: ScrollTextIcon },
 ] as const;
@@ -68,6 +70,10 @@ const getPageTitle = (pathname: string) => {
 
   if (pathname.startsWith("/app/contratos")) {
     return "Contratos";
+  }
+
+  if (pathname.startsWith("/app/resguardo")) {
+    return "Resguardo";
   }
 
   if (pathname.startsWith("/app/catalogo")) {

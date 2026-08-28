@@ -167,3 +167,23 @@ export const snapshotContractTemplate = (
   active: template.active,
   deletedAt: template.deletedAt,
 });
+
+export const snapshotAsset = (asset: Record<string, unknown>) => ({
+  name: asset.name,
+  identifier: asset.identifier,
+  category: asset.category,
+  tracksHistory: asset.tracksHistory,
+  holderId: asset.holderId,
+  conditionNote: asset.conditionNote,
+  status: asset.status,
+  deletedAt: asset.deletedAt,
+});
+
+export const snapshotAssetMovement = (movement: Record<string, unknown>) => ({
+  assetId: movement.assetId,
+  type: movement.type,
+  personId: movement.personId,
+  movementDate: movement.movementDate,
+  conditionNote: movement.conditionNote,
+  notes: movement.notes,
+});

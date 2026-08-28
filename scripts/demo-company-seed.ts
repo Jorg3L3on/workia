@@ -9,6 +9,8 @@ import { fillContractTemplate } from "@/lib/contracts/schema";
 import { db } from "@/lib/db";
 import {
   areas,
+  assetMovements,
+  assets,
   contractTemplates,
   contracts,
   people,
@@ -404,5 +406,171 @@ export const seedDemoCompany = async () => {
 
   console.log(
     `Demo company seed completed (${areaNames.length} areas, ${peopleCreated} people, ${contractCount} contracts).`,
+  );
+};
+
+const DEMO_ASSET_MARKER = "LAP-DEMO-001";
+
+export const seedDemoResguardo = async () => {
+  const existing = await db
+    .select({ id: assets.id })
+    .from(assets)
+    .where(eq(assets.identifier, DEMO_ASSET_MARKER))
+    .limit(1);
+
+  if (existing.length > 0) {
+    console.log("Demo resguardo already seeded — skipping asset data.");
+    return;
+  }
+
+  const activePeople = await db
+    .select({ id: people.id, nombres: people.nombres })
+    .from(people)
+    .where(and(eq(people.status, "activa"), isNull(people.deletedAt)))
+    .limit(5);
+
+  if (activePeople.length < 2) {
+    console.log(
+      "Demo resguardo skipped — need at least 2 active people in expediente.",
+    );
+    return;
+  }
+
+  const [holderA, holderB] = activePeople;
+  const today = new Date();
+
+  const [laptopWarehouse] = await db
+    .insert(assets)
+    .values({
+      name: "Laptop demo almacén",
+      identifier: DEMO_ASSET_MARKER,
+      category: "laptop",
+      tracksHistory: true,
+      status: "disponible",
+    })
+    .returning();
+
+  await recordAuditEvent({
+    resourceType: "asset",
+    resourceId: laptopWarehouse.id,
+    action: "create",
+    source: "seed",
+    payload: { summary: "Activo demo en almacén" },
+  });
+
+  const [laptopAssigned] = await db
+    .insert(assets)
+    .values({
+      name: "Laptop demo asignada",
+      identifier: "LAP-DEMO-002",
+      category: "laptop",
+      tracksHistory: true,
+      holderId: holderA.id,
+      conditionNote: "Buen estado, cargador incluido",
+      status: "asignado",
+    })
+    .returning();
+
+  await db.insert(assetMovements).values({
+    assetId: laptopAssigned.id,
+    type: "entrega",
+    personId: holderA.id,
+    movementDate: subtractDays(today, 45),
+    conditionNote: "Buen estado, cargador incluido",
+  });
+
+  await recordAuditEvent({
+    resourceType: "asset",
+    resourceId: laptopAssigned.id,
+    action: "create",
+    source: "seed",
+    payload: { summary: "Laptop demo asignada" },
+  });
+
+  const [moto] = await db
+    .insert(assets)
+    .values({
+      name: "Motocicleta demo",
+      identifier: "MOTO-DEMO-001",
+      category: "moto",
+      tracksHistory: true,
+      holderId: holderB.id,
+      conditionNote: "Llanta trasera con desgaste leve",
+      status: "asignado",
+    })
+    .returning();
+
+  await db.insert(assetMovements).values([
+    {
+      assetId: moto.id,
+      type: "entrega",
+      personId: holderA.id,
+      movementDate: subtractDays(today, 180),
+      conditionNote: "Excelente estado, placas vigentes",
+    },
+    {
+      assetId: moto.id,
+      type: "devolucion",
+      personId: holderA.id,
+      movementDate: subtractDays(today, 90),
+      conditionNote: "Rayón menor en guardabarros",
+    },
+    {
+      assetId: moto.id,
+      type: "entrega",
+      personId: holderB.id,
+      movementDate: subtractDays(today, 30),
+      conditionNote: "Llanta trasera con desgaste leve",
+    },
+  ]);
+
+  await recordAuditEvent({
+    resourceType: "asset",
+    resourceId: moto.id,
+    action: "create",
+    source: "seed",
+    payload: { summary: "Motocicleta demo con historial de 2 titulares" },
+  });
+
+  const [consumible] = await db
+    .insert(assets)
+    .values({
+      name: "Paquete lápices demo",
+      identifier: "CON-DEMO-001",
+      category: "consumible",
+      tracksHistory: false,
+      status: "disponible",
+    })
+    .returning();
+
+  await recordAuditEvent({
+    resourceType: "asset",
+    resourceId: consumible.id,
+    action: "create",
+    source: "seed",
+    payload: { summary: "Consumible demo sin historial" },
+  });
+
+  const [phone] = await db
+    .insert(assets)
+    .values({
+      name: "Teléfono demo",
+      identifier: "TEL-DEMO-001",
+      category: "telefono",
+      tracksHistory: true,
+      status: "disponible",
+    })
+    .returning();
+
+  await recordAuditEvent({
+    resourceType: "asset",
+    resourceId: phone.id,
+    action: "create",
+    source: "seed",
+    payload: { summary: "Teléfono demo en almacén" },
+  });
+
+  console.log(
+    `Demo resguardo seed completed (5 assets, moto with ${holderA.nombres} → devolución → ${holderB.nombres}).`,
   );
 };
