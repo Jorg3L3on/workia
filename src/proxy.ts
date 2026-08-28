@@ -1,27 +1,29 @@
+import type { NextFetchEvent, NextRequest } from "next/server";
+
 import { auth } from "@/auth";
+import {
+  PROXY_MATCHER,
+  requestHasLogoutLatch,
+  resolveAuthRouting,
+  resolveLatchedProxyResponse,
+} from "@/lib/auth/proxy-guard";
 
-export default auth((request) => {
-  const { nextUrl } = request;
-  const isLoggedIn = Boolean(request.auth);
-  const pathname = nextUrl.pathname;
+const authorizedProxy = auth((request) =>
+  resolveAuthRouting({
+    pathname: request.nextUrl.pathname,
+    nextUrl: request.nextUrl,
+    isLoggedIn: Boolean(request.auth),
+  }),
+);
 
-  const isProtectedRoute =
-    pathname.startsWith("/admin") || pathname.startsWith("/app");
-  const isAuthRoute = pathname.startsWith("/login");
-
-  if (isAuthRoute && isLoggedIn) {
-    return Response.redirect(new URL("/app", nextUrl));
+export default function proxy(request: NextRequest, event: NextFetchEvent) {
+  if (requestHasLogoutLatch(request)) {
+    return resolveLatchedProxyResponse(request);
   }
 
-  if (isProtectedRoute && !isLoggedIn) {
-    const loginUrl = new URL("/login", nextUrl);
-    loginUrl.searchParams.set("callbackUrl", pathname);
-    return Response.redirect(loginUrl);
-  }
-
-  return undefined;
-});
+  return authorizedProxy(request, event);
+}
 
 export const config = {
-  matcher: ["/admin/:path*", "/app/:path*", "/login"],
+  matcher: [...PROXY_MATCHER],
 };

@@ -2,9 +2,11 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { SIGN_OUT_FORM_ID, SIGN_OUT_PATH } from "@/lib/auth/client-sign-out";
+import { LOGOUT_LATCH_COOKIE_NAME } from "@/lib/auth/logout-latch";
 
 afterEach(() => {
   cleanup();
+  document.cookie = `${LOGOUT_LATCH_COOKIE_NAME}=; Path=/; Max-Age=0`;
   vi.restoreAllMocks();
 });
 
@@ -131,6 +133,7 @@ describe("NavUser", () => {
     fireEvent.click(screen.getByLabelText("Cerrar sesión"));
 
     const form = document.getElementById(SIGN_OUT_FORM_ID);
+    expect(document.cookie).toContain(`${LOGOUT_LATCH_COOKIE_NAME}=1`);
     expect(submitSpy).toHaveBeenCalledOnce();
     expect(submitSpy.mock.instances[0]).toBe(form);
     expect(requestSubmitSpy).not.toHaveBeenCalled();

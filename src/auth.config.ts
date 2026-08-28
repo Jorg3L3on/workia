@@ -6,6 +6,7 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 
 import { env } from "@/env";
+import { AUTH_SESSION_MAX_AGE_SECONDS } from "@/lib/auth/session-max-age";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { logger } from "@/lib/logger";
@@ -22,6 +23,7 @@ export const authConfig = {
   useSecureCookies: env.NODE_ENV === "production",
   session: {
     strategy: "jwt",
+    maxAge: AUTH_SESSION_MAX_AGE_SECONDS,
   },
   providers: [
     Credentials({

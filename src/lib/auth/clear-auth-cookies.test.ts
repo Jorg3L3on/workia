@@ -6,6 +6,7 @@ import {
   isAuthCookieName,
   serializeTombstoneAuthCookie,
 } from "@/lib/auth/clear-auth-cookies";
+import { AUTH_SESSION_MAX_AGE_SECONDS } from "@/lib/auth/session-max-age";
 
 describe("clear-auth-cookies", () => {
   it("serializes tombstone __Secure-authjs.session-token matching Auth.js login identity", () => {
@@ -15,7 +16,7 @@ describe("clear-auth-cookies", () => {
     );
 
     expect(header).toBe(
-      "__Secure-authjs.session-token=deleted; Path=/; HttpOnly; Secure; SameSite=Lax",
+      `__Secure-authjs.session-token=deleted; Path=/; HttpOnly; Max-Age=${AUTH_SESSION_MAX_AGE_SECONDS}; Secure; SameSite=Lax`,
     );
     expect(header).toContain(`=${AUTH_COOKIE_TOMBSTONE_VALUE}`);
     expect(header).not.toContain("Max-Age=0");
@@ -29,7 +30,7 @@ describe("clear-auth-cookies", () => {
     );
 
     expect(header).toBe(
-      "__Host-authjs.csrf-token=deleted; Path=/; HttpOnly; Secure; SameSite=Lax",
+      `__Host-authjs.csrf-token=deleted; Path=/; HttpOnly; Max-Age=${AUTH_SESSION_MAX_AGE_SECONDS}; Secure; SameSite=Lax`,
     );
   });
 
@@ -37,7 +38,7 @@ describe("clear-auth-cookies", () => {
     const header = serializeTombstoneAuthCookie("authjs.session-token", false);
 
     expect(header).toBe(
-      "authjs.session-token=deleted; Path=/; HttpOnly; SameSite=Lax",
+      `authjs.session-token=deleted; Path=/; HttpOnly; Max-Age=${AUTH_SESSION_MAX_AGE_SECONDS}; SameSite=Lax`,
     );
     expect(header).not.toContain("Secure");
   });

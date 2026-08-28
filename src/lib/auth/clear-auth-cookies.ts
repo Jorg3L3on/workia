@@ -1,3 +1,5 @@
+import { AUTH_SESSION_MAX_AGE_SECONDS } from "@/lib/auth/session-max-age";
+
 export type AuthCookieClearSpec = {
   name: string;
   secure: boolean;
@@ -59,6 +61,7 @@ export const serializeTombstoneAuthCookie = (
     `${name}=${AUTH_COOKIE_TOMBSTONE_VALUE}`,
     "Path=/",
     "HttpOnly",
+    `Max-Age=${AUTH_SESSION_MAX_AGE_SECONDS}`,
   ];
 
   if (secure) {
