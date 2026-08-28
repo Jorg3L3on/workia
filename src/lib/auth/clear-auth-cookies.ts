@@ -1,13 +1,54 @@
-import type { NextResponse } from "next/server";
-
-import {
-  AUTH_COOKIE_CLEAR_SPECS,
-  type AuthCookieClearSpec,
-} from "@/lib/auth/auth-cookie-names";
-
-export { AUTH_COOKIE_CLEAR_SPECS };
+export type AuthCookieClearSpec = {
+  name: string;
+  secure: boolean;
+};
 
 const EXPIRES_EPOCH = new Date(0);
+
+const AUTH_COOKIE_NAME_PATTERN =
+  /^(?:__Secure-|__Host-)?(?:authjs|next-auth)\./;
+
+export const KNOWN_AUTH_COOKIE_NAMES = [
+  "__Secure-authjs.session-token",
+  "__Host-authjs.csrf-token",
+  "__Secure-authjs.callback-url",
+] as const;
+
+const isSecureCookieName = (name: string) =>
+  name.startsWith("__Secure-") || name.startsWith("__Host-");
+
+const parseCookieHeaderNames = (cookieHeader: string): string[] => {
+  if (!cookieHeader.trim()) {
+    return [];
+  }
+
+  return cookieHeader
+    .split(";")
+    .map((part) => part.trim().split("=")[0]?.trim())
+    .filter((name): name is string => Boolean(name));
+};
+
+export const isAuthCookieName = (name: string) =>
+  AUTH_COOKIE_NAME_PATTERN.test(name);
+
+export const collectAuthCookiesToClear = (
+  request: Request,
+): AuthCookieClearSpec[] => {
+  const names = new Set<string>(KNOWN_AUTH_COOKIE_NAMES);
+
+  for (const name of parseCookieHeaderNames(
+    request.headers.get("cookie") ?? "",
+  )) {
+    if (isAuthCookieName(name)) {
+      names.add(name);
+    }
+  }
+
+  return [...names].map((name) => ({
+    name,
+    secure: isSecureCookieName(name),
+  }));
+};
 
 export const serializeExpiredAuthCookie = (
   name: string,
@@ -16,35 +57,28 @@ export const serializeExpiredAuthCookie = (
   const parts = [
     `${name}=`,
     "Path=/",
-    "HttpOnly",
-    "SameSite=Lax",
-    "Max-Age=0",
     `Expires=${EXPIRES_EPOCH.toUTCString()}`,
+    "Max-Age=0",
+    "HttpOnly",
   ];
 
   if (secure) {
     parts.push("Secure");
   }
 
+  parts.push("SameSite=Lax");
+
   return parts.join("; ");
 };
 
-export const applyAuthCookieClearSpec = (
-  response: NextResponse,
-  spec: AuthCookieClearSpec,
+export const appendExpiredAuthCookies = (
+  headers: Headers,
+  specs: AuthCookieClearSpec[],
 ) => {
-  response.cookies.set(spec.name, "", {
-    path: "/",
-    httpOnly: true,
-    sameSite: "lax",
-    secure: spec.secure,
-    maxAge: 0,
-    expires: EXPIRES_EPOCH,
-  });
-};
-
-export const applyAuthCookieClearing = (response: NextResponse) => {
-  for (const spec of AUTH_COOKIE_CLEAR_SPECS) {
-    applyAuthCookieClearSpec(response, spec);
+  for (const spec of specs) {
+    headers.append(
+      "Set-Cookie",
+      serializeExpiredAuthCookie(spec.name, spec.secure),
+    );
   }
 };

@@ -1,5 +1,10 @@
 "use client";
 
+import {
+  DEFAULT_SIGN_OUT_REDIRECT,
+  SIGN_OUT_FORM_ID,
+  SignOutForm,
+} from "@/lib/auth/client-sign-out";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -17,22 +22,33 @@ import {
 } from "@/components/ui/sidebar";
 import { ChevronsUpDownIcon, LogOutIcon } from "lucide-react";
 
-export function NavUser({
-  user,
-  onSignOut,
-}: {
+type NavUserProps = {
   user: {
     name: string;
     email: string;
     avatar: string;
     initials?: string;
   };
-  onSignOut?: () => void | Promise<void>;
-}) {
+  signOutRedirectTo?: string;
+};
+
+const handleSignOutSelect = (event: Event) => {
+  event.preventDefault();
+  const form = document.getElementById(SIGN_OUT_FORM_ID);
+  if (form instanceof HTMLFormElement) {
+    form.requestSubmit();
+  }
+};
+
+export function NavUser({
+  user,
+  signOutRedirectTo = DEFAULT_SIGN_OUT_REDIRECT,
+}: NavUserProps) {
   const { isMobile } = useSidebar();
 
   return (
     <SidebarMenu>
+      <SignOutForm redirectTo={signOutRedirectTo} />
       <SidebarMenuItem>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -77,10 +93,7 @@ export function NavUser({
             <DropdownMenuSeparator />
             <DropdownMenuItem
               aria-label="Cerrar sesión"
-              onSelect={(event) => {
-                event.preventDefault();
-                void onSignOut?.();
-              }}
+              onSelect={handleSignOutSelect}
             >
               <LogOutIcon aria-hidden />
               Cerrar sesión

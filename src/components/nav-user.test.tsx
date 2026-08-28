@@ -1,8 +1,11 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { SIGN_OUT_FORM_ID, SIGN_OUT_PATH } from "@/lib/auth/client-sign-out";
+
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
 });
 
 vi.mock("@/components/ui/sidebar", () => ({
@@ -46,13 +49,17 @@ vi.mock("@/components/ui/dropdown-menu", () => ({
     ...props
   }: {
     children: React.ReactNode;
-    onSelect?: (event: { preventDefault: () => void }) => void;
+    onSelect?: (event: Event) => void;
   } & React.ComponentProps<"button">) => (
     <button
       type="button"
       {...props}
       onClick={() => {
-        const event = { preventDefault: vi.fn() };
+        const event = new Event("select");
+        const preventDefault = vi.fn();
+        Object.defineProperty(event, "preventDefault", {
+          value: preventDefault,
+        });
         onSelect?.(event);
       }}
     >
@@ -84,8 +91,28 @@ describe("NavUser", () => {
     expect(screen.getAllByText("rrhh@workia.local").length).toBeGreaterThan(0);
   });
 
-  it("invokes onSignOut when Cerrar sesión is selected", () => {
-    const onSignOut = vi.fn();
+  it("keeps a mounted native POST form outside the dropdown menu", () => {
+    render(
+      <NavUser
+        user={{
+          name: "Elena Demo",
+          email: "rrhh@workia.local",
+          avatar: "",
+          initials: "ED",
+        }}
+      />,
+    );
+
+    const form = document.getElementById(SIGN_OUT_FORM_ID);
+    expect(form).toBeInstanceOf(HTMLFormElement);
+    expect((form as HTMLFormElement).method.toLowerCase()).toBe("post");
+    expect((form as HTMLFormElement).action).toContain(SIGN_OUT_PATH);
+  });
+
+  it("calls requestSubmit on the mounted form when Cerrar sesión is selected", () => {
+    const requestSubmitSpy = vi
+      .spyOn(HTMLFormElement.prototype, "requestSubmit")
+      .mockImplementation(() => {});
 
     render(
       <NavUser
@@ -95,12 +122,13 @@ describe("NavUser", () => {
           avatar: "",
           initials: "ED",
         }}
-        onSignOut={onSignOut}
       />,
     );
 
     fireEvent.click(screen.getByLabelText("Cerrar sesión"));
 
-    expect(onSignOut).toHaveBeenCalledOnce();
+    const form = document.getElementById(SIGN_OUT_FORM_ID);
+    expect(requestSubmitSpy).toHaveBeenCalledOnce();
+    expect(requestSubmitSpy.mock.instances[0]).toBe(form);
   });
 });

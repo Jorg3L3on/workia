@@ -1,102 +1,57 @@
 import { describe, expect, it } from "vitest";
-import { NextResponse } from "next/server";
 
 import {
-  applyAuthCookieClearing,
-  applyAuthCookieClearSpec,
-  AUTH_COOKIE_CLEAR_SPECS,
+  collectAuthCookiesToClear,
+  isAuthCookieName,
   serializeExpiredAuthCookie,
 } from "@/lib/auth/clear-auth-cookies";
 
 describe("clear-auth-cookies", () => {
-  it("includes __Secure-authjs.session-token with secure flag", () => {
-    const spec = AUTH_COOKIE_CLEAR_SPECS.find(
-      (entry) => entry.name === "__Secure-authjs.session-token",
-    );
-
-    expect(spec).toEqual({
-      name: "__Secure-authjs.session-token",
-      secure: true,
-    });
-  });
-
-  it("includes chunked __Secure-authjs.session-token variants", () => {
-    expect(
-      AUTH_COOKIE_CLEAR_SPECS.some(
-        (entry) => entry.name === "__Secure-authjs.session-token.0",
-      ),
-    ).toBe(true);
-    expect(
-      AUTH_COOKIE_CLEAR_SPECS.some(
-        (entry) => entry.name === "__Secure-authjs.session-token.1",
-      ),
-    ).toBe(true);
-  });
-
-  it("includes non-secure localhost session cookie names", () => {
-    const spec = AUTH_COOKIE_CLEAR_SPECS.find(
-      (entry) => entry.name === "authjs.session-token",
-    );
-
-    expect(spec).toEqual({
-      name: "authjs.session-token",
-      secure: false,
-    });
-  });
-
-  it("serializes expired __Secure-authjs.session-token with Secure and Max-Age=0", () => {
+  it("serializes expired __Secure-authjs.session-token matching Auth.js attribute order", () => {
     const header = serializeExpiredAuthCookie(
       "__Secure-authjs.session-token",
       true,
     );
 
-    expect(header).toContain("__Secure-authjs.session-token=");
-    expect(header).toContain("Max-Age=0");
-    expect(header).toContain("Secure");
-    expect(header).toContain("HttpOnly");
-    expect(header).toContain("SameSite=Lax");
-    expect(header).toContain("Path=/");
+    expect(header).toBe(
+      "__Secure-authjs.session-token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0; HttpOnly; Secure; SameSite=Lax",
+    );
   });
 
   it("does not add Secure to non-secure cookie serialization", () => {
     const header = serializeExpiredAuthCookie("authjs.session-token", false);
 
-    expect(header).toContain("authjs.session-token=");
+    expect(header).toBe(
+      "authjs.session-token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0; HttpOnly; SameSite=Lax",
+    );
     expect(header).not.toContain("Secure");
   });
 
-  it("applyAuthCookieClearSpec expires __Secure-authjs.session-token on NextResponse", () => {
-    const response = NextResponse.redirect("https://workia.local/");
-    applyAuthCookieClearSpec(response, {
-      name: "__Secure-authjs.session-token",
-      secure: true,
-    });
-
-    const cookie = response.cookies
-      .getAll()
-      .find((entry) => entry.name === "__Secure-authjs.session-token");
-
-    expect(cookie?.value).toBe("");
-    expect(cookie?.maxAge).toBe(0);
-    expect(cookie?.secure).toBe(true);
-    expect(cookie?.httpOnly).toBe(true);
-    expect(cookie?.sameSite).toBe("lax");
+  it("recognizes authjs and next-auth cookie names", () => {
+    expect(isAuthCookieName("__Secure-authjs.session-token")).toBe(true);
+    expect(isAuthCookieName("__Host-authjs.csrf-token")).toBe(true);
+    expect(isAuthCookieName("next-auth.session-token")).toBe(true);
+    expect(isAuthCookieName("theme")).toBe(false);
   });
 
-  it("applyAuthCookieClearing expires all known Auth.js cookie names", () => {
-    const response = NextResponse.redirect("https://workia.local/");
-    applyAuthCookieClearing(response);
+  it("collects request cookies plus known Auth.js names without speculative extras", () => {
+    const request = new Request("https://workia.local/logout", {
+      method: "POST",
+      headers: {
+        cookie:
+          "__Secure-authjs.session-token=jwt; __Host-authjs.csrf-token=csrf; theme=dark",
+      },
+    });
 
-    const clearedNames = response.cookies.getAll().map((entry) => entry.name);
+    const specs = collectAuthCookiesToClear(request);
+    const names = specs.map((spec) => spec.name).sort();
 
-    expect(clearedNames).toEqual(
-      expect.arrayContaining([
-        "__Secure-authjs.session-token",
-        "__Secure-authjs.session-token.0",
-        "authjs.session-token",
-        "__Host-authjs.csrf-token",
-      ]),
-    );
-    expect(clearedNames.length).toBe(AUTH_COOKIE_CLEAR_SPECS.length);
+    expect(names).toEqual([
+      "__Host-authjs.csrf-token",
+      "__Secure-authjs.callback-url",
+      "__Secure-authjs.session-token",
+    ]);
+    expect(names).not.toContain("theme");
+    expect(names.length).toBeLessThanOrEqual(5);
   });
 });
