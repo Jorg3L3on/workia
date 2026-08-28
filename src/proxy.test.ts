@@ -1,7 +1,9 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const authorizedProxy = vi.fn();
+const { authorizedProxy } = vi.hoisted(() => ({
+  authorizedProxy: vi.fn(),
+}));
 
 vi.mock("@/auth", () => ({
   auth: () => authorizedProxy,
@@ -40,14 +42,10 @@ describe("proxy", () => {
   it("does not run auth() when the logout latch is set", async () => {
     const cookie = `${LOGOUT_LATCH_COOKIE_NAME}=1; __Secure-authjs.session-token=jwt`;
 
-    const loginResponse = await proxy(
-      makeRequest("/login", cookie),
-      {} as never,
-    );
-    const appResponse = await proxy(makeRequest("/app", cookie), {} as never);
+    const loginResponse = await proxy(makeRequest("/login", cookie));
+    const appResponse = await proxy(makeRequest("/app", cookie));
     const sessionResponse = await proxy(
       makeRequest("/api/auth/session", cookie),
-      {} as never,
     );
 
     expect(authorizedProxy).not.toHaveBeenCalled();
@@ -60,10 +58,7 @@ describe("proxy", () => {
   });
 
   it("runs auth() when there is no latch so logged-in /login can bounce to /app", async () => {
-    await proxy(
-      makeRequest("/login", "__Secure-authjs.session-token=jwt"),
-      {} as never,
-    );
+    await proxy(makeRequest("/login", "__Secure-authjs.session-token=jwt"));
 
     expect(authorizedProxy).toHaveBeenCalledOnce();
   });

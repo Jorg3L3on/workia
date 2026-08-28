@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -22,7 +28,9 @@ vi.mock("next/navigation", () => ({
 }));
 
 vi.mock("next/image", () => ({
-  default: (props: { alt?: string }) => <img alt={props.alt ?? ""} />,
+  default: (props: { alt?: string }) => (
+    <span role="img" aria-label={props.alt ?? ""} />
+  ),
 }));
 
 import { LoginForm } from "@/components/auth/login-form";
@@ -45,6 +53,7 @@ describe("LoginForm", () => {
   });
 
   afterEach(() => {
+    cleanup();
     document.cookie = `${LOGOUT_LATCH_COOKIE_NAME}=; Path=/; Max-Age=0`;
   });
 
@@ -85,9 +94,7 @@ describe("LoginForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "Iniciar sesión" }));
 
     await waitFor(() => {
-      expect(
-        screen.getByText("Correo o contraseña incorrectos."),
-      ).toBeTruthy();
+      expect(screen.getByText("Correo o contraseña incorrectos.")).toBeTruthy();
     });
     expect(document.cookie).toContain(`${LOGOUT_LATCH_COOKIE_NAME}=1`);
     expect(push).not.toHaveBeenCalled();

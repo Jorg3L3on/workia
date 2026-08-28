@@ -35,7 +35,7 @@ describe("proxy guard", () => {
       isLoggedIn: true,
     });
 
-    expect(response?.status).toBe(307);
+    expect(response?.status).toBe(302);
     expect(response?.headers.get("location")).toBe(`${origin}/app`);
   });
 
@@ -55,7 +55,7 @@ describe("proxy guard", () => {
       nextUrl: new URL("/admin/rbac", origin),
     });
 
-    expect(appResponse?.status).toBe(307);
+    expect(appResponse?.status).toBe(302);
     expect(appResponse?.headers.get("location")).toBe(
       `${origin}/login?callbackUrl=%2Fapp`,
     );

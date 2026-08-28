@@ -1,4 +1,4 @@
-import type { NextFetchEvent, NextRequest } from "next/server";
+import type { NextRequest } from "next/server";
 
 import { auth } from "@/auth";
 import {
@@ -14,14 +14,14 @@ const authorizedProxy = auth((request) =>
     nextUrl: request.nextUrl,
     isLoggedIn: Boolean(request.auth),
   }),
-);
+) as (request: NextRequest) => ReturnType<typeof resolveAuthRouting>;
 
-export default function proxy(request: NextRequest, event: NextFetchEvent) {
+export default function proxy(request: NextRequest) {
   if (requestHasLogoutLatch(request)) {
     return resolveLatchedProxyResponse(request);
   }
 
-  return authorizedProxy(request, event);
+  return authorizedProxy(request);
 }
 
 export const config = {
