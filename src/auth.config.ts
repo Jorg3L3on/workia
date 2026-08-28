@@ -20,7 +20,17 @@ export const authConfig = {
   pages: {
     signIn: "/login",
   },
-  useSecureCookies: env.NODE_ENV === "production",
+  cookies: {
+    sessionToken: {
+      name: "authjs.session-token",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: env.NODE_ENV === "production",
+      },
+    },
+  },
   session: {
     strategy: "jwt",
     maxAge: AUTH_SESSION_MAX_AGE_SECONDS,

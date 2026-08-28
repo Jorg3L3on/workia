@@ -10,7 +10,6 @@ import { z } from "zod";
 import { LoginBadgeStub } from "@/components/auth/login-badge-stub";
 import { WorkiaMark } from "@/components/brand/workia-mark";
 import { PasswordInput } from "@/components/ui/password-input";
-import { clearLogoutLatchInDocument } from "@/lib/auth/logout-latch";
 import { cn } from "@/lib/utils";
 
 const loginSchema = z.object({
@@ -68,8 +67,6 @@ export const LoginForm = () => {
       setError("Correo o contraseña incorrectos.");
       return;
     }
-
-    clearLogoutLatchInDocument();
 
     const reduceMotion = window.matchMedia(
       "(prefers-reduced-motion: reduce)",

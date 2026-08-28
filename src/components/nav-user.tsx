@@ -1,10 +1,8 @@
 "use client";
 
-import {
-  DEFAULT_SIGN_OUT_REDIRECT,
-  SignOutForm,
-  handleNativeSignOutSelect,
-} from "@/lib/auth/client-sign-out";
+import { signOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
+
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -29,18 +27,19 @@ type NavUserProps = {
     avatar: string;
     initials?: string;
   };
-  signOutRedirectTo?: string;
 };
 
-export function NavUser({
-  user,
-  signOutRedirectTo = DEFAULT_SIGN_OUT_REDIRECT,
-}: NavUserProps) {
+export function NavUser({ user }: NavUserProps) {
   const { isMobile } = useSidebar();
+  const router = useRouter();
+
+  const handleCerrarSesion = async () => {
+    await signOut({ redirect: false });
+    router.push("/login");
+  };
 
   return (
     <SidebarMenu>
-      <SignOutForm redirectTo={signOutRedirectTo} />
       <SidebarMenuItem>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -85,7 +84,9 @@ export function NavUser({
             <DropdownMenuSeparator />
             <DropdownMenuItem
               aria-label="Cerrar sesión"
-              onSelect={handleNativeSignOutSelect}
+              onSelect={() => {
+                void handleCerrarSesion();
+              }}
             >
               <LogOutIcon aria-hidden />
               Cerrar sesión

@@ -1,27 +1,10 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
+
 import { NextRequest } from "next/server";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
-vi.mock("@/auth", () => ({
-  auth: (
-    handler: (request: {
-      nextUrl: URL;
-      headers: Headers;
-      auth?: { user: { id: string } };
-    }) => Response | undefined,
-  ) => {
-    return (request: NextRequest) =>
-      handler({
-        nextUrl: request.nextUrl,
-        headers: request.headers,
-        auth: { user: { id: "user-1" } },
-      });
-  },
-}));
-
-import proxy, { config } from "@/proxy";
-import { LOGOUT_LATCH_COOKIE_NAME } from "@/lib/auth/logout-latch";
-
-const routeContext = { params: Promise.resolve({}) };
+import proxy, { config, requestHasAuthjsSessionCookie } from "@/proxy";
 
 const makeRequest = (pathname: string, cookie?: string) => {
   const headers = new Headers();
@@ -35,44 +18,85 @@ const makeRequest = (pathname: string, cookie?: string) => {
 };
 
 describe("proxy", () => {
-  it("matches login, app, admin, and Auth.js session", () => {
-    expect(config.matcher).toEqual([
-      "/admin/:path*",
-      "/app/:path*",
-      "/login",
-      "/api/auth/session",
-      "/api/auth/session/",
-    ]);
+  it("does not import or call auth()", () => {
+    const source = readFileSync(path.join(process.cwd(), "src/proxy.ts"), "utf8");
+
+    expect(source).not.toContain('from "@/auth"');
+    expect(source).not.toContain("from '@/auth'");
+    expect(source).not.toMatch(/\bauth\s*\(/);
   });
 
-  it("lets the logout latch win even when auth() still sees a JWT user", async () => {
-    const cookie = `${LOGOUT_LATCH_COOKIE_NAME}=1; __Secure-authjs.session-token=jwt`;
-
-    const loginResponse = await proxy(
-      makeRequest("/login", cookie),
-      routeContext,
-    );
-    const appResponse = await proxy(makeRequest("/app", cookie), routeContext);
-    const sessionResponse = await proxy(
-      makeRequest("/api/auth/session", cookie),
-      routeContext,
+  it("matches only app and admin with a static matcher literal", () => {
+    expect(config.matcher).toEqual(["/admin/:path*", "/app/:path*"]);
+    expect(config.matcher).not.toContain("/login");
+    expect(config.matcher.some((pattern) => pattern.includes("/api/auth"))).toBe(
+      false,
     );
 
-    expect(loginResponse).toBeUndefined();
-    expect(appResponse?.headers.get("location")).toBe(
+    const source = readFileSync(path.join(process.cwd(), "src/proxy.ts"), "utf8");
+    expect(source).toContain('matcher: ["/admin/:path*", "/app/:path*"]');
+  });
+
+  it("does not bounce /login to /app when a session cookie is present", () => {
+    const response = proxy(
+      makeRequest("/login", "__Secure-authjs.session-token=jwt"),
+    );
+
+    expect(response.status).not.toBe(302);
+    expect(response.headers.get("location")).toBeNull();
+  });
+
+  it("sends /app without a session cookie to /login", () => {
+    const response = proxy(makeRequest("/app"));
+
+    expect(response.status).toBe(302);
+    expect(response.headers.get("location")).toBe(
       "https://workia.local/login?callbackUrl=%2Fapp",
     );
-    expect(sessionResponse?.status).toBe(200);
-    await expect(sessionResponse?.text()).resolves.toBe("null");
   });
 
-  it("keeps the logged-in /login → /app bounce when there is no latch", async () => {
-    const response = await proxy(
-      makeRequest("/login", "__Secure-authjs.session-token=jwt"),
-      routeContext,
+  it("sends /admin without a session cookie to /login", () => {
+    const response = proxy(makeRequest("/admin/rbac"));
+
+    expect(response.status).toBe(302);
+    expect(response.headers.get("location")).toBe(
+      "https://workia.local/login?callbackUrl=%2Fadmin%2Frbac",
+    );
+  });
+
+  it("lets /app through when a live Auth.js session cookie is present", () => {
+    const response = proxy(makeRequest("/app", "authjs.session-token=jwt"));
+
+    expect(response.status).not.toBe(302);
+    expect(response.headers.get("location")).toBeNull();
+  });
+
+  it("treats empty and literal deleted session cookies as logged out", () => {
+    expect(
+      requestHasAuthjsSessionCookie(
+        makeRequest("/app", "__Secure-authjs.session-token="),
+      ),
+    ).toBe(false);
+    expect(
+      requestHasAuthjsSessionCookie(
+        makeRequest("/app", "__Secure-authjs.session-token=deleted"),
+      ),
+    ).toBe(false);
+    expect(
+      requestHasAuthjsSessionCookie(
+        makeRequest("/app", "authjs.session-token=live-jwt"),
+      ),
+    ).toBe(true);
+  });
+
+  it("sends /app to /login when the session cookie is a leftover deleted value", () => {
+    const response = proxy(
+      makeRequest("/app", "__Secure-authjs.session-token=deleted"),
     );
 
-    expect(response?.status).toBe(302);
-    expect(response?.headers.get("location")).toBe("https://workia.local/app");
+    expect(response.status).toBe(302);
+    expect(response.headers.get("location")).toBe(
+      "https://workia.local/login?callbackUrl=%2Fapp",
+    );
   });
 });

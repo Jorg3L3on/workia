@@ -7,11 +7,6 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  LOGOUT_LATCH_COOKIE_NAME,
-  applyLogoutLatchInDocument,
-} from "@/lib/auth/logout-latch";
-
 const signIn = vi.fn();
 const push = vi.fn();
 const refresh = vi.fn();
@@ -40,7 +35,6 @@ describe("LoginForm", () => {
     signIn.mockReset();
     push.mockReset();
     refresh.mockReset();
-    document.cookie = `${LOGOUT_LATCH_COOKIE_NAME}=; Path=/; Max-Age=0`;
     Object.defineProperty(window, "matchMedia", {
       writable: true,
       value: (query: string) => ({
@@ -54,13 +48,10 @@ describe("LoginForm", () => {
 
   afterEach(() => {
     cleanup();
-    document.cookie = `${LOGOUT_LATCH_COOKIE_NAME}=; Path=/; Max-Age=0`;
   });
 
-  it("clears the logout latch after a successful sign-in", async () => {
+  it("navigates to /app after a successful sign-in", async () => {
     signIn.mockResolvedValue({ error: undefined, ok: true });
-    applyLogoutLatchInDocument();
-    expect(document.cookie).toContain(`${LOGOUT_LATCH_COOKIE_NAME}=1`);
 
     render(<LoginForm />);
 
@@ -75,13 +66,11 @@ describe("LoginForm", () => {
     await waitFor(() => {
       expect(signIn).toHaveBeenCalledOnce();
     });
-    expect(document.cookie).not.toContain(`${LOGOUT_LATCH_COOKIE_NAME}=1`);
     expect(push).toHaveBeenCalledWith("/app");
   });
 
-  it("keeps the logout latch when sign-in fails", async () => {
+  it("shows an error and stays on login when sign-in fails", async () => {
     signIn.mockResolvedValue({ error: "CredentialsSignin", ok: false });
-    applyLogoutLatchInDocument();
 
     render(<LoginForm />);
 
@@ -96,7 +85,6 @@ describe("LoginForm", () => {
     await waitFor(() => {
       expect(screen.getByText("Correo o contraseña incorrectos.")).toBeTruthy();
     });
-    expect(document.cookie).toContain(`${LOGOUT_LATCH_COOKIE_NAME}=1`);
     expect(push).not.toHaveBeenCalled();
   });
 });
