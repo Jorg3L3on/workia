@@ -17,6 +17,7 @@ export const POST = async (request: Request) => {
   const redirectTo = getSafeSignOutRedirect(
     formData.get("redirectTo")?.toString() ?? null,
   );
+  const origin = request.headers.get("origin") ?? new URL(request.url).origin;
 
   const headers = new Headers();
   headers.set("Content-Type", "text/html; charset=utf-8");
@@ -24,7 +25,7 @@ export const POST = async (request: Request) => {
   headers.set("Clear-Site-Data", '"cookies"');
   appendTombstoneAuthCookies(headers, collectAuthCookiesToClear(request));
 
-  return new Response(buildSignOutHtml(redirectTo), {
+  return new Response(buildSignOutHtml(redirectTo, origin), {
     status: 200,
     headers,
   });

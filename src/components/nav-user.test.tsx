@@ -109,7 +109,10 @@ describe("NavUser", () => {
     expect((form as HTMLFormElement).action).toContain(SIGN_OUT_PATH);
   });
 
-  it("calls requestSubmit on the mounted form when Cerrar sesión is selected", () => {
+  it("native-submits the mounted form with prototype.submit, not requestSubmit", () => {
+    const submitSpy = vi
+      .spyOn(HTMLFormElement.prototype, "submit")
+      .mockImplementation(() => {});
     const requestSubmitSpy = vi
       .spyOn(HTMLFormElement.prototype, "requestSubmit")
       .mockImplementation(() => {});
@@ -128,7 +131,8 @@ describe("NavUser", () => {
     fireEvent.click(screen.getByLabelText("Cerrar sesión"));
 
     const form = document.getElementById(SIGN_OUT_FORM_ID);
-    expect(requestSubmitSpy).toHaveBeenCalledOnce();
-    expect(requestSubmitSpy.mock.instances[0]).toBe(form);
+    expect(submitSpy).toHaveBeenCalledOnce();
+    expect(submitSpy.mock.instances[0]).toBe(form);
+    expect(requestSubmitSpy).not.toHaveBeenCalled();
   });
 });

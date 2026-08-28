@@ -28,14 +28,12 @@ export const isSameOriginSignOutRequest = (request: Request): boolean => {
   return false;
 };
 
+const ALLOWED_SIGN_OUT_REDIRECTS = new Set(["/login", "/"]);
+
 export const getSafeSignOutRedirect = (redirectTo: string | null): string => {
-  if (
-    !redirectTo ||
-    !redirectTo.startsWith("/") ||
-    redirectTo.startsWith("//")
-  ) {
-    return "/";
+  if (redirectTo && ALLOWED_SIGN_OUT_REDIRECTS.has(redirectTo)) {
+    return redirectTo;
   }
 
-  return redirectTo;
+  return "/login";
 };

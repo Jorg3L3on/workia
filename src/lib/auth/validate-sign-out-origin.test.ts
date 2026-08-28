@@ -53,14 +53,20 @@ describe("validate-sign-out-origin", () => {
     expect(isSameOriginSignOutRequest(request)).toBe(false);
   });
 
-  it("returns / for unsafe redirect targets", () => {
-    expect(getSafeSignOutRedirect("//evil.example")).toBe("/");
-    expect(getSafeSignOutRedirect("https://evil.example")).toBe("/");
-    expect(getSafeSignOutRedirect(null)).toBe("/");
+  it("returns /login for unsafe redirect targets", () => {
+    expect(getSafeSignOutRedirect("//evil.example")).toBe("/login");
+    expect(getSafeSignOutRedirect("https://evil.example")).toBe("/login");
+    expect(getSafeSignOutRedirect(null)).toBe("/login");
   });
 
-  it("allows same-site relative redirects", () => {
+  it("allows only /login or /", () => {
     expect(getSafeSignOutRedirect("/")).toBe("/");
     expect(getSafeSignOutRedirect("/login")).toBe("/login");
+  });
+
+  it("rejects /app and other in-app paths", () => {
+    expect(getSafeSignOutRedirect("/app")).toBe("/login");
+    expect(getSafeSignOutRedirect("/app/personas")).toBe("/login");
+    expect(getSafeSignOutRedirect("/login/extra")).toBe("/login");
   });
 });

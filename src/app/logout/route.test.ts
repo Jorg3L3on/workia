@@ -44,10 +44,12 @@ describe("POST /logout", () => {
 
     const html = await response.text();
     expect(html).toContain('meta http-equiv="refresh"');
-    expect(html).toContain('content="1;url=/login"');
+    expect(html).toContain('content="1;url=https://workia.local/login"');
     expect(html).toContain("setTimeout");
-    expect(html).toContain("location.replace");
-    expect(html).toContain("/login");
+    expect(html).toContain("window.location.replace");
+    expect(html).toContain("https://workia.local/login");
+    expect(html).not.toContain("/app");
+    expect(html).not.toContain('location.replace("/login")');
   });
 
   it("rejects cross-origin POST with 403", async () => {
@@ -70,7 +72,7 @@ describe("POST /logout", () => {
     expect(response.headers.get("clear-site-data")).toBeNull();
   });
 
-  it("falls back to / when redirectTo is unsafe", async () => {
+  it("falls back to /login when redirectTo is unsafe", async () => {
     const formData = new FormData();
     formData.set("redirectTo", "//evil.example");
 
@@ -87,8 +89,33 @@ describe("POST /logout", () => {
     const html = await response.text();
 
     expect(response.status).toBe(200);
-    expect(html).toContain('content="1;url=/"');
+    expect(html).toContain('content="1;url=https://workia.local/login"');
     expect(html).toContain("setTimeout");
-    expect(html).toContain('location.replace("/")');
+    expect(html).toContain(
+      'window.location.replace("https://workia.local/login")',
+    );
+    expect(html).not.toContain("/app");
+  });
+
+  it("ignores redirectTo=/app and never navigates to /app", async () => {
+    const formData = new FormData();
+    formData.set("redirectTo", "/app");
+
+    const request = new Request("https://workia.local/logout", {
+      method: "POST",
+      headers: {
+        host: "workia.local",
+        origin: "https://workia.local",
+      },
+      body: formData,
+    });
+
+    const response = await POST(request);
+    const html = await response.text();
+
+    expect(response.status).toBe(200);
+    expect(html).toContain("https://workia.local/login");
+    expect(html).not.toContain("/app");
+    expect(html).not.toContain("https://workia.local/app");
   });
 });
