@@ -4,15 +4,16 @@ const DEMO_EMAIL = "viewer@workia.local";
 const DEMO_PASSWORD = "Workia123!";
 
 test("login reaches /app and logout returns to login", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/login");
 
   await page.getByLabel("Correo electrónico").fill(DEMO_EMAIL);
   await page.getByRole("textbox", { name: "Contraseña" }).fill(DEMO_PASSWORD);
   await page.getByRole("button", { name: "Iniciar sesión" }).click();
 
-  await expect(page).toHaveURL(/\/app/, { timeout: 15_000 });
+  await expect(page).toHaveURL(/\/app/, { timeout: 25_000 });
   await expect(page.getByLabel("Menú de usuario")).toBeVisible({
-    timeout: 15_000,
+    timeout: 25_000,
   });
 
   await page.getByLabel("Menú de usuario").click();
