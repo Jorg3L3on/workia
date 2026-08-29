@@ -1,14 +1,24 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { SIGN_OUT_FORM_ID, SIGN_OUT_PATH } from "@/lib/auth/client-sign-out";
-import { LOGOUT_LATCH_COOKIE_NAME } from "@/lib/auth/logout-latch";
+const signOut = vi.fn();
+const push = vi.fn();
 
-afterEach(() => {
-  cleanup();
-  document.cookie = `${LOGOUT_LATCH_COOKIE_NAME}=; Path=/; Max-Age=0`;
-  vi.restoreAllMocks();
-});
+vi.mock("next-auth/react", () => ({
+  signOut: (...args: unknown[]) => signOut(...args),
+}));
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push,
+  }),
+}));
 
 vi.mock("@/components/ui/sidebar", () => ({
   SidebarMenu: ({ children }: { children: React.ReactNode }) => (
@@ -58,10 +68,6 @@ vi.mock("@/components/ui/dropdown-menu", () => ({
       {...props}
       onClick={() => {
         const event = new Event("select");
-        const preventDefault = vi.fn();
-        Object.defineProperty(event, "preventDefault", {
-          value: preventDefault,
-        });
         onSelect?.(event);
       }}
     >
@@ -71,6 +77,13 @@ vi.mock("@/components/ui/dropdown-menu", () => ({
 }));
 
 import { NavUser } from "@/components/nav-user";
+
+afterEach(() => {
+  cleanup();
+  signOut.mockReset();
+  push.mockReset();
+  vi.restoreAllMocks();
+});
 
 describe("NavUser", () => {
   it("shows Cerrar sesión and not billing or upgrade items", () => {
@@ -93,7 +106,7 @@ describe("NavUser", () => {
     expect(screen.getAllByText("rrhh@workia.local").length).toBeGreaterThan(0);
   });
 
-  it("keeps a mounted native POST form outside the dropdown menu", () => {
+  it("does not mount a custom POST logout form", () => {
     render(
       <NavUser
         user={{
@@ -105,19 +118,11 @@ describe("NavUser", () => {
       />,
     );
 
-    const form = document.getElementById(SIGN_OUT_FORM_ID);
-    expect(form).toBeInstanceOf(HTMLFormElement);
-    expect((form as HTMLFormElement).method.toLowerCase()).toBe("post");
-    expect((form as HTMLFormElement).action).toContain(SIGN_OUT_PATH);
+    expect(document.querySelector("form")).toBeNull();
   });
 
-  it("native-submits the mounted form with prototype.submit, not requestSubmit", () => {
-    const submitSpy = vi
-      .spyOn(HTMLFormElement.prototype, "submit")
-      .mockImplementation(() => {});
-    const requestSubmitSpy = vi
-      .spyOn(HTMLFormElement.prototype, "requestSubmit")
-      .mockImplementation(() => {});
+  it("calls Auth.js signOut then navigates to /login", async () => {
+    signOut.mockResolvedValue(undefined);
 
     render(
       <NavUser
@@ -132,10 +137,9 @@ describe("NavUser", () => {
 
     fireEvent.click(screen.getByLabelText("Cerrar sesión"));
 
-    const form = document.getElementById(SIGN_OUT_FORM_ID);
-    expect(document.cookie).toContain(`${LOGOUT_LATCH_COOKIE_NAME}=1`);
-    expect(submitSpy).toHaveBeenCalledOnce();
-    expect(submitSpy.mock.instances[0]).toBe(form);
-    expect(requestSubmitSpy).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(signOut).toHaveBeenCalledWith({ redirect: false });
+    });
+    expect(push).toHaveBeenCalledWith("/login");
   });
 });
