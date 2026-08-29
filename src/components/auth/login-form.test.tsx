@@ -13,8 +13,7 @@ import {
 } from "@/lib/auth/logout-latch";
 
 const signIn = vi.fn();
-const push = vi.fn();
-const refresh = vi.fn();
+const assign = vi.fn();
 
 vi.mock("next-auth/react", () => ({
   signIn: (...args: unknown[]) => signIn(...args),
@@ -22,8 +21,8 @@ vi.mock("next-auth/react", () => ({
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
-    push,
-    refresh,
+    push: vi.fn(),
+    refresh: vi.fn(),
   }),
 }));
 
@@ -38,13 +37,20 @@ import { LoginForm } from "@/components/auth/login-form";
 describe("LoginForm", () => {
   beforeEach(() => {
     signIn.mockReset();
-    push.mockReset();
-    refresh.mockReset();
+    assign.mockReset();
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      writable: true,
+      value: {
+        ...window.location,
+        assign,
+      },
+    });
     document.cookie = `${LOGOUT_LATCH_COOKIE_NAME}=; Path=/; Max-Age=0`;
     Object.defineProperty(window, "matchMedia", {
       writable: true,
       value: (query: string) => ({
-        matches: query.includes("prefers-reduced-motion"),
+        matches: query.includes("prefers-reduced-motion: reduce"),
         media: query,
         addEventListener: () => undefined,
         removeEventListener: () => undefined,
@@ -57,7 +63,7 @@ describe("LoginForm", () => {
     document.cookie = `${LOGOUT_LATCH_COOKIE_NAME}=; Path=/; Max-Age=0`;
   });
 
-  it("clears the logout latch after a successful sign-in", async () => {
+  it("clears the logout latch and hard-navigates to /app after a successful sign-in", async () => {
     signIn.mockResolvedValue({ error: undefined, ok: true });
     applyLogoutLatchInDocument();
     expect(document.cookie).toContain(`${LOGOUT_LATCH_COOKIE_NAME}=1`);
@@ -76,7 +82,7 @@ describe("LoginForm", () => {
       expect(signIn).toHaveBeenCalledOnce();
     });
     expect(document.cookie).not.toContain(`${LOGOUT_LATCH_COOKIE_NAME}=1`);
-    expect(push).toHaveBeenCalledWith("/app");
+    expect(assign).toHaveBeenCalledWith("/app");
   });
 
   it("keeps the logout latch when sign-in fails", async () => {
@@ -97,6 +103,6 @@ describe("LoginForm", () => {
       expect(screen.getByText("Correo o contraseña incorrectos.")).toBeTruthy();
     });
     expect(document.cookie).toContain(`${LOGOUT_LATCH_COOKIE_NAME}=1`);
-    expect(push).not.toHaveBeenCalled();
+    expect(assign).not.toHaveBeenCalled();
   });
 });

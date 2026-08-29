@@ -6,7 +6,6 @@ vi.mock("@/auth", () => ({
 
 import { signOut } from "@/auth";
 import { POST } from "@/app/logout/route";
-import { AUTH_COOKIE_TOMBSTONE_VALUE } from "@/lib/auth/clear-auth-cookies";
 import { LOGOUT_LATCH_COOKIE_NAME } from "@/lib/auth/logout-latch";
 import { AUTH_SESSION_MAX_AGE_SECONDS } from "@/lib/auth/session-max-age";
 
@@ -15,7 +14,7 @@ describe("POST /logout", () => {
     vi.mocked(signOut).mockClear();
   });
 
-  it("calls Auth.js signOut and returns 200 HTML with no-store cache and tombstone session cookie", async () => {
+  it("calls Auth.js signOut and returns 200 HTML with no-store cache and logout latch", async () => {
     const formData = new FormData();
     formData.set("redirectTo", "/login");
 
@@ -40,29 +39,10 @@ describe("POST /logout", () => {
     expect(response.headers.get("clear-site-data")).toBeNull();
 
     const setCookieHeaders = response.headers.getSetCookie();
-    expect(setCookieHeaders.length).toBeLessThanOrEqual(5);
-    expect(setCookieHeaders.length).toBeGreaterThan(0);
-
-    const sessionHeaders = setCookieHeaders.filter((header) =>
-      header.startsWith("__Secure-authjs.session-token="),
+    expect(setCookieHeaders).toHaveLength(1);
+    expect(setCookieHeaders[0]).toBe(
+      `${LOGOUT_LATCH_COOKIE_NAME}=1; Path=/; Max-Age=${AUTH_SESSION_MAX_AGE_SECONDS}; SameSite=Lax; Secure`,
     );
-
-    expect(sessionHeaders).toHaveLength(1);
-    expect(sessionHeaders[0]).toBe(
-      `__Secure-authjs.session-token=deleted; Path=/; HttpOnly; Max-Age=${AUTH_SESSION_MAX_AGE_SECONDS}; Secure; SameSite=Lax`,
-    );
-    expect(
-      setCookieHeaders.some(
-        (header) =>
-          header ===
-          `${LOGOUT_LATCH_COOKIE_NAME}=1; Path=/; Max-Age=${AUTH_SESSION_MAX_AGE_SECONDS}; SameSite=Lax; Secure`,
-      ),
-    ).toBe(true);
-    expect(sessionHeaders[0]).toContain(
-      `__Secure-authjs.session-token=${AUTH_COOKIE_TOMBSTONE_VALUE}`,
-    );
-    expect(sessionHeaders[0]).not.toContain("jwt-value");
-    expect(sessionHeaders[0]).not.toMatch(/=;/);
 
     const html = await response.text();
     expect(html).toContain('meta http-equiv="refresh"');

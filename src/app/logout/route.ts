@@ -1,7 +1,3 @@
-import {
-  appendTombstoneAuthCookies,
-  collectAuthCookiesToClear,
-} from "@/lib/auth/clear-auth-cookies";
 import { appendLogoutLatchCookie, isHttpsUrl } from "@/lib/auth/logout-latch";
 import { buildSignOutHtml } from "@/lib/auth/sign-out-html";
 import {
@@ -27,7 +23,6 @@ export const POST = async (request: Request) => {
   headers.set("Content-Type", "text/html; charset=utf-8");
   headers.set("Cache-Control", "private, no-store");
   appendLogoutLatchCookie(headers, isHttpsUrl(request.url));
-  appendTombstoneAuthCookies(headers, collectAuthCookiesToClear(request));
 
   return new Response(buildSignOutHtml(redirectTo, origin), {
     status: 200,
