@@ -16,20 +16,17 @@ const credentialsSchema = z.object({
   password: z.string().min(8),
 });
 
-const useSecureAuthCookies = env.NODE_ENV === "production";
-
 export const authConfig = {
   pages: {
     signIn: "/login",
   },
   cookies: {
     sessionToken: {
-      name: `${useSecureAuthCookies ? "__Secure-" : ""}authjs.session-token`,
       options: {
         httpOnly: true,
         sameSite: "lax",
         path: "/",
-        secure: useSecureAuthCookies,
+        secure: env.NODE_ENV === "production",
       },
     },
   },
