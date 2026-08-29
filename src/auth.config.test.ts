@@ -10,12 +10,13 @@ describe("auth cookie config", () => {
       "utf8",
     );
 
-    expect(source).toContain('name: "authjs.session-token"');
+    expect(source).toContain("authjs.session-token");
+    expect(source).toContain("__Secure-");
     expect(source).toContain("httpOnly: true");
     expect(source).toContain('sameSite: "lax"');
     expect(source).toContain('path: "/"');
-    expect(source).toContain('secure: env.NODE_ENV === "production"');
-    expect(source).not.toContain("useSecureCookies");
+    expect(source).toContain("secure: useSecureAuthCookies");
+    expect(source).not.toMatch(/\buseSecureCookies\s*:/);
     expect(source).not.toMatch(/\bdomain:/i);
   });
 });
