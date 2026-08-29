@@ -29,18 +29,20 @@ describe("proxy", () => {
     expect(source).not.toMatch(/\bauth\s*\(/);
   });
 
-  it("matches only app and admin with a static matcher literal", () => {
-    expect(config.matcher).toEqual(["/admin/:path*", "/app/:path*"]);
-    expect(config.matcher).not.toContain("/login");
-    expect(
-      config.matcher.some((pattern) => pattern.includes("/api/auth")),
-    ).toBe(false);
+  it("matches app, admin, login, and auth routes with a static matcher literal", () => {
+    expect(config.matcher).toEqual([
+      "/admin/:path*",
+      "/app/:path*",
+      "/login",
+      "/api/auth/:path*",
+    ]);
 
     const source = readFileSync(
       path.join(process.cwd(), "src/proxy.ts"),
       "utf8",
     );
-    expect(source).toContain('matcher: ["/admin/:path*", "/app/:path*"]');
+    expect(source).toContain('"/login"');
+    expect(source).toContain('"/api/auth/:path*"');
   });
 
   it("does not bounce /login to /app when a session cookie is present", () => {
@@ -105,6 +107,34 @@ describe("proxy", () => {
     expect(response.status).toBe(307);
     expect(response.headers.get("location")).toBe(
       "https://workia.local/login?callbackUrl=%2Fapp",
+    );
+  });
+
+  it("expires tombstone Auth.js cookies on /login", () => {
+    const response = proxy(
+      makeRequest("/login", "__Secure-authjs.callback-url=deleted"),
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.cookies.get("__Secure-authjs.callback-url")?.value).toBe(
+      "",
+    );
+  });
+
+  it("sanitizes tombstone Auth.js cookies before /api/auth handlers run", () => {
+    const response = proxy(
+      makeRequest(
+        "/api/auth/session",
+        "__Secure-authjs.callback-url=deleted; __Secure-authjs.session-token=live-jwt",
+      ),
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("x-middleware-request-cookie")).toBe(
+      "__Secure-authjs.session-token=live-jwt",
+    );
+    expect(response.cookies.get("__Secure-authjs.callback-url")?.value).toBe(
+      "",
     );
   });
 });
