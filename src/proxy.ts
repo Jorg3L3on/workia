@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import {
+  buildRequestHeadersWithoutTombstones,
+  finalizeAuthProxyResponse,
+  getTombstoneAuthCookieNames,
+} from "@/lib/auth/authjs-cookies";
+
 const AUTHJS_SESSION_COOKIE_NAMES = [
   "authjs.session-token",
   "__Secure-authjs.session-token",
@@ -24,20 +30,48 @@ const isProtectedPath = (pathname: string) =>
   pathname === "/admin" ||
   pathname.startsWith("/admin/");
 
+const isAuthPath = (pathname: string) =>
+  pathname === "/login" || pathname.startsWith("/api/auth/");
+
+const nextWithSanitizedCookies = (request: NextRequest) => {
+  if (getTombstoneAuthCookieNames(request).length === 0) {
+    return NextResponse.next();
+  }
+
+  return NextResponse.next({
+    request: {
+      headers: buildRequestHeadersWithoutTombstones(request),
+    },
+  });
+};
+
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (isProtectedPath(pathname) && !requestHasAuthjsSessionCookie(request)) {
-    const loginUrl = new URL("/login", request.nextUrl);
-    loginUrl.searchParams.set("callbackUrl", pathname);
-    return NextResponse.redirect(loginUrl);
+    return finalizeAuthProxyResponse(
+      request,
+      NextResponse.redirect(
+        new URL(
+          `/login?callbackUrl=${encodeURIComponent(pathname)}`,
+          request.nextUrl,
+        ),
+      ),
+    );
   }
 
-  return NextResponse.next();
+  if (isAuthPath(pathname)) {
+    return finalizeAuthProxyResponse(
+      request,
+      nextWithSanitizedCookies(request),
+    );
+  }
+
+  return finalizeAuthProxyResponse(request, NextResponse.next());
 }
 
 export default proxy;
 
 export const config = {
-  matcher: ["/admin/:path*", "/app/:path*"],
+  matcher: ["/admin/:path*", "/app/:path*", "/login", "/api/auth/:path*"],
 };
