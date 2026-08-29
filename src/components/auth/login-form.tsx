@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useForm } from "react-hook-form";
@@ -9,7 +10,6 @@ import { z } from "zod";
 import { LoginBadgeStub } from "@/components/auth/login-badge-stub";
 import { WorkiaMark } from "@/components/brand/workia-mark";
 import { PasswordInput } from "@/components/ui/password-input";
-import { clearLogoutLatchInDocument } from "@/lib/auth/logout-latch";
 import { cn } from "@/lib/utils";
 
 const loginSchema = z.object({
@@ -29,6 +29,7 @@ const fieldInputClassName = cn(
 );
 
 export const LoginForm = () => {
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isStamped, setIsStamped] = useState(false);
   const stampTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -67,8 +68,6 @@ export const LoginForm = () => {
       return;
     }
 
-    clearLogoutLatchInDocument();
-
     const reduceMotion = window.matchMedia(
       "(prefers-reduced-motion: reduce)",
     ).matches;
@@ -76,12 +75,12 @@ export const LoginForm = () => {
     if (!reduceMotion) {
       setIsStamped(true);
       stampTimeoutRef.current = setTimeout(() => {
-        window.location.assign("/app");
+        setIsStamped(false);
       }, 1100);
-      return;
     }
 
-    window.location.assign("/app");
+    router.push("/app");
+    router.refresh();
   };
 
   const handleFormSubmit = (event: FormEvent<HTMLFormElement>) => {

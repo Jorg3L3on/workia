@@ -1,11 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import {
-  SignOutForm,
-  submitNativeSignOutForm,
-} from "@/lib/auth/client-sign-out";
+import { usePathname, useRouter } from "next/navigation";
+import { signOut } from "next-auth/react";
 import { LayoutDashboardIcon, LogOutIcon, ShieldIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -43,9 +40,11 @@ type AdminShellProps = {
 
 export const AdminShell = ({ children }: AdminShellProps) => {
   const pathname = usePathname();
+  const router = useRouter();
 
-  const handleCerrarSesionClick = () => {
-    submitNativeSignOutForm();
+  const handleCerrarSesionClick = async () => {
+    await signOut({ redirect: false });
+    router.push("/login");
   };
 
   return (
@@ -79,13 +78,14 @@ export const AdminShell = ({ children }: AdminShellProps) => {
           </SidebarGroup>
         </SidebarContent>
         <SidebarFooter className="border-sidebar-border border-t p-2">
-          <SignOutForm />
           <Button
             aria-label="Cerrar sesión"
             className="w-full justify-start"
             variant="ghost"
             type="button"
-            onClick={handleCerrarSesionClick}
+            onClick={() => {
+              void handleCerrarSesionClick();
+            }}
           >
             <LogOutIcon className="size-4" />
             Cerrar sesión
