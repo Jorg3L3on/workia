@@ -1,9 +1,5 @@
 import { AuditEventList } from "@/components/audit/audit-event-list";
 import { ListFilterBar } from "@/components/list/list-filter-bar";
-import {
-  ListResultCount,
-  ListTableShell,
-} from "@/components/list/list-table-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { listAuditEvents } from "@/lib/audit";
@@ -63,16 +59,7 @@ const AuditoriaPage = async ({ searchParams }: AuditoriaPageProps) => {
         </p>
       </header>
 
-      <ListFilterBar
-        className="md:grid md:grid-cols-2 xl:grid-cols-3"
-        footer={
-          <ListResultCount
-            count={events.length}
-            plural="eventos"
-            singular="evento"
-          />
-        }
-      >
+      <ListFilterBar className="md:grid md:grid-cols-2 xl:grid-cols-3">
         <div className="space-y-2">
           <label className="text-sm font-medium" htmlFor="resourceType">
             Tipo de recurso
@@ -173,9 +160,7 @@ const AuditoriaPage = async ({ searchParams }: AuditoriaPageProps) => {
         </div>
       </ListFilterBar>
 
-      <ListTableShell>
-        <AuditEventList events={events} />
-      </ListTableShell>
+      <AuditEventList events={events} />
     </div>
   );
 };

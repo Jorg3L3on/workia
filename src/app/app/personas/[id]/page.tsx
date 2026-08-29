@@ -269,6 +269,7 @@ const PersonaDetailPage = async ({
           <AuditEventList
             emptyMessage="Aún no hay cambios registrados para esta persona."
             events={auditEvents}
+            layout="inset"
           />
         </div>
       ) : null}
