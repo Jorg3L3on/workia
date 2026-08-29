@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 
 import { WorkiaMark } from "@/components/brand/workia-mark";
+import { SHELL_TOP_NAV_CLASS_NAME } from "@/components/layout/shell-top-nav";
 import { NavUser } from "@/components/nav-user";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
@@ -38,6 +39,7 @@ import {
   SidebarRail,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
+import { cn } from "@/lib/utils";
 
 type AppShellProps = {
   children: React.ReactNode;
@@ -163,7 +165,13 @@ export const AppShell = ({ children, user }: AppShellProps) => {
         </Sidebar>
 
         <SidebarInset className="bg-transparent">
-          <header className="workia-credential-header flex h-14 shrink-0 items-center gap-2 border-b">
+          <header
+            className={cn(
+              "workia-credential-header flex h-14 shrink-0 items-center gap-2 border-b",
+              SHELL_TOP_NAV_CLASS_NAME,
+            )}
+            data-slot="shell-top-nav"
+          >
             <div className="flex flex-1 items-center gap-2 px-4">
               <SidebarTrigger className="-ml-1" />
               <Separator

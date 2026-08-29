@@ -65,6 +65,13 @@ describe("LoginForm", () => {
     expect(assign).toHaveBeenCalledWith("/app");
   });
 
+  it("does not render the authenticated sticky chrome header", () => {
+    render(<LoginForm />);
+
+    expect(document.querySelector('[data-slot="shell-top-nav"]')).toBeNull();
+    expect(document.querySelector("header.sticky")).toBeNull();
+  });
+
   it("shows an error and stays on login when sign-in fails", async () => {
     signIn.mockResolvedValue({ error: "CredentialsSignin", ok: false });
 

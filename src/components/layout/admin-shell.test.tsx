@@ -51,4 +51,20 @@ describe("AdminShell", () => {
     expect(push).toHaveBeenCalledWith("/login");
     expect(document.querySelector("form")).toBeNull();
   });
+
+  it("keeps the chrome header sticky at the top", () => {
+    render(
+      <AdminShell>
+        <p>Admin</p>
+      </AdminShell>,
+    );
+
+    const headers = document.querySelectorAll('[data-slot="shell-top-nav"]');
+    expect(headers).toHaveLength(1);
+    expect(headers[0]?.className).toContain("sticky");
+    expect(headers[0]?.className).toContain("top-0");
+    expect(
+      document.querySelector('[data-slot="sidebar-inset"]')?.className,
+    ).not.toContain("sticky");
+  });
 });
