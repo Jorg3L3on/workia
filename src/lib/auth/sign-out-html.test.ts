@@ -13,6 +13,7 @@ describe("buildSignOutHtml", () => {
     expect(html).toContain(
       `setTimeout(function(){window.location.replace("https://workia.local/login");},${SIGN_OUT_NAVIGATION_DELAY_MS})`,
     );
+    expect(html).toContain("workia-logged-out=1");
     expect(SIGN_OUT_NAVIGATION_DELAY_MS).toBeGreaterThanOrEqual(100);
     expect(SIGN_OUT_NAVIGATION_DELAY_MS).toBeLessThanOrEqual(300);
     expect(html).not.toContain("/app");

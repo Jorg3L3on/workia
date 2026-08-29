@@ -5,6 +5,7 @@ import {
   LOGOUT_LATCH_COOKIE_NAME,
   LOGOUT_LATCH_COOKIE_VALUE,
   applyLogoutLatchInDocument,
+  buildLogoutLatchInlineScript,
   clearLogoutLatchInDocument,
   hasLogoutLatch,
   isHttpsUrl,
@@ -53,6 +54,13 @@ describe("logout latch", () => {
 
     clearLogoutLatchInDocument();
     expect(document.cookie).not.toContain(`${LOGOUT_LATCH_COOKIE_NAME}=1`);
+  });
+
+  it("builds an inline script that sets the latch cookie", () => {
+    expect(buildLogoutLatchInlineScript(true)).toContain(
+      `document.cookie="${LOGOUT_LATCH_COOKIE_NAME}=${LOGOUT_LATCH_COOKIE_VALUE}`,
+    );
+    expect(buildLogoutLatchInlineScript(false)).not.toContain("Secure");
   });
 
   it("treats https URLs as secure", () => {
