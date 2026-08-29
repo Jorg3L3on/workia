@@ -75,7 +75,9 @@ export const applyLogoutLatchInDocument = () => {
     return;
   }
 
-  document.cookie = serializeLogoutLatchCookie(shouldUseSecureDocumentCookies());
+  document.cookie = serializeLogoutLatchCookie(
+    shouldUseSecureDocumentCookies(),
+  );
 };
 
 export const clearLogoutLatchInDocument = () => {
@@ -91,3 +93,7 @@ export const clearLogoutLatchInDocument = () => {
 export const appendLogoutLatchCookie = (headers: Headers, secure: boolean) => {
   headers.append("Set-Cookie", serializeLogoutLatchCookie(secure));
 };
+
+/** Re-applies the latch from the logout HTML page after Clear-Site-Data or stuck JWTs. */
+export const buildLogoutLatchInlineScript = (secure: boolean) =>
+  `document.cookie=${JSON.stringify(serializeLogoutLatchCookie(secure))};`;

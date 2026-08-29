@@ -1,12 +1,21 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("@/auth", () => ({
+  signOut: vi.fn().mockResolvedValue(undefined),
+}));
+
+import { signOut } from "@/auth";
 import { POST } from "@/app/logout/route";
 import { AUTH_COOKIE_TOMBSTONE_VALUE } from "@/lib/auth/clear-auth-cookies";
 import { LOGOUT_LATCH_COOKIE_NAME } from "@/lib/auth/logout-latch";
 import { AUTH_SESSION_MAX_AGE_SECONDS } from "@/lib/auth/session-max-age";
 
 describe("POST /logout", () => {
-  it("returns 200 HTML with no-store cache, tombstone session cookie, and Clear-Site-Data", async () => {
+  beforeEach(() => {
+    vi.mocked(signOut).mockClear();
+  });
+
+  it("calls Auth.js signOut and returns 200 HTML with no-store cache and tombstone session cookie", async () => {
     const formData = new FormData();
     formData.set("redirectTo", "/login");
 
@@ -22,9 +31,13 @@ describe("POST /logout", () => {
 
     const response = await POST(request);
 
+    expect(signOut).toHaveBeenCalledWith({
+      redirect: false,
+      redirectTo: "/login",
+    });
     expect(response.status).toBe(200);
     expect(response.headers.get("cache-control")).toContain("no-store");
-    expect(response.headers.get("clear-site-data")).toBe('"cookies"');
+    expect(response.headers.get("clear-site-data")).toBeNull();
 
     const setCookieHeaders = response.headers.getSetCookie();
     expect(setCookieHeaders.length).toBeLessThanOrEqual(5);
@@ -57,6 +70,7 @@ describe("POST /logout", () => {
     expect(html).toContain("setTimeout");
     expect(html).toContain("window.location.replace");
     expect(html).toContain("https://workia.local/login");
+    expect(html).toContain(`${LOGOUT_LATCH_COOKIE_NAME}=1`);
     expect(html).not.toContain("/app");
     expect(html).not.toContain('location.replace("/login")');
   });
