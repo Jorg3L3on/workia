@@ -19,7 +19,10 @@ const makeRequest = (pathname: string, cookie?: string) => {
 
 describe("proxy", () => {
   it("does not import or call auth()", () => {
-    const source = readFileSync(path.join(process.cwd(), "src/proxy.ts"), "utf8");
+    const source = readFileSync(
+      path.join(process.cwd(), "src/proxy.ts"),
+      "utf8",
+    );
 
     expect(source).not.toContain('from "@/auth"');
     expect(source).not.toContain("from '@/auth'");
@@ -29,11 +32,14 @@ describe("proxy", () => {
   it("matches only app and admin with a static matcher literal", () => {
     expect(config.matcher).toEqual(["/admin/:path*", "/app/:path*"]);
     expect(config.matcher).not.toContain("/login");
-    expect(config.matcher.some((pattern) => pattern.includes("/api/auth"))).toBe(
-      false,
-    );
+    expect(
+      config.matcher.some((pattern) => pattern.includes("/api/auth")),
+    ).toBe(false);
 
-    const source = readFileSync(path.join(process.cwd(), "src/proxy.ts"), "utf8");
+    const source = readFileSync(
+      path.join(process.cwd(), "src/proxy.ts"),
+      "utf8",
+    );
     expect(source).toContain('matcher: ["/admin/:path*", "/app/:path*"]');
   });
 
@@ -42,6 +48,7 @@ describe("proxy", () => {
       makeRequest("/login", "__Secure-authjs.session-token=jwt"),
     );
 
+    expect(response.status).not.toBe(307);
     expect(response.status).not.toBe(302);
     expect(response.headers.get("location")).toBeNull();
   });
@@ -49,7 +56,7 @@ describe("proxy", () => {
   it("sends /app without a session cookie to /login", () => {
     const response = proxy(makeRequest("/app"));
 
-    expect(response.status).toBe(302);
+    expect(response.status).toBe(307);
     expect(response.headers.get("location")).toBe(
       "https://workia.local/login?callbackUrl=%2Fapp",
     );
@@ -58,7 +65,7 @@ describe("proxy", () => {
   it("sends /admin without a session cookie to /login", () => {
     const response = proxy(makeRequest("/admin/rbac"));
 
-    expect(response.status).toBe(302);
+    expect(response.status).toBe(307);
     expect(response.headers.get("location")).toBe(
       "https://workia.local/login?callbackUrl=%2Fadmin%2Frbac",
     );
@@ -67,6 +74,7 @@ describe("proxy", () => {
   it("lets /app through when a live Auth.js session cookie is present", () => {
     const response = proxy(makeRequest("/app", "authjs.session-token=jwt"));
 
+    expect(response.status).not.toBe(307);
     expect(response.status).not.toBe(302);
     expect(response.headers.get("location")).toBeNull();
   });
@@ -94,7 +102,7 @@ describe("proxy", () => {
       makeRequest("/app", "__Secure-authjs.session-token=deleted"),
     );
 
-    expect(response.status).toBe(302);
+    expect(response.status).toBe(307);
     expect(response.headers.get("location")).toBe(
       "https://workia.local/login?callbackUrl=%2Fapp",
     );
