@@ -166,7 +166,7 @@ export const LoginForm = () => {
 
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isStamped}
               data-stamped={isStamped ? "true" : "false"}
               className="login-stamp-btn mt-1.5 min-h-11 w-full rounded-lg px-0 py-3.5 text-[15px] font-semibold tracking-[0.01em] transition-[transform,box-shadow] duration-150 focus-visible:ring-2 focus-visible:ring-[color:var(--login-accent-violet)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--login-badge-a)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-80"
             >
