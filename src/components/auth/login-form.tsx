@@ -1,7 +1,6 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useForm } from "react-hook-form";
@@ -29,7 +28,6 @@ const fieldInputClassName = cn(
 );
 
 export const LoginForm = () => {
-  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isStamped, setIsStamped] = useState(false);
   const stampTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -63,10 +61,14 @@ export const LoginForm = () => {
       redirect: false,
     });
 
-    if (result?.error) {
+    if (result?.error || result?.ok === false) {
       setError("Correo o contraseña incorrectos.");
       return;
     }
+
+    const navigateToApp = () => {
+      window.location.assign("/app");
+    };
 
     const reduceMotion = window.matchMedia(
       "(prefers-reduced-motion: reduce)",
@@ -74,13 +76,11 @@ export const LoginForm = () => {
 
     if (!reduceMotion) {
       setIsStamped(true);
-      stampTimeoutRef.current = setTimeout(() => {
-        setIsStamped(false);
-      }, 1100);
+      stampTimeoutRef.current = setTimeout(navigateToApp, 1100);
+      return;
     }
 
-    router.push("/app");
-    router.refresh();
+    navigateToApp();
   };
 
   const handleFormSubmit = (event: FormEvent<HTMLFormElement>) => {

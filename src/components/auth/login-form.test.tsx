@@ -8,18 +8,10 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const signIn = vi.fn();
-const push = vi.fn();
-const refresh = vi.fn();
+const assign = vi.fn();
 
 vi.mock("next-auth/react", () => ({
   signIn: (...args: unknown[]) => signIn(...args),
-}));
-
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({
-    push,
-    refresh,
-  }),
 }));
 
 vi.mock("next/image", () => ({
@@ -33,12 +25,16 @@ import { LoginForm } from "@/components/auth/login-form";
 describe("LoginForm", () => {
   beforeEach(() => {
     signIn.mockReset();
-    push.mockReset();
-    refresh.mockReset();
+    assign.mockReset();
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      writable: true,
+      value: { ...window.location, assign },
+    });
     Object.defineProperty(window, "matchMedia", {
       writable: true,
       value: (query: string) => ({
-        matches: query.includes("prefers-reduced-motion"),
+        matches: query.includes("prefers-reduced-motion: reduce"),
         media: query,
         addEventListener: () => undefined,
         removeEventListener: () => undefined,
@@ -50,7 +46,7 @@ describe("LoginForm", () => {
     cleanup();
   });
 
-  it("navigates to /app after a successful sign-in", async () => {
+  it("hard-navigates to /app after a successful sign-in", async () => {
     signIn.mockResolvedValue({ error: undefined, ok: true });
 
     render(<LoginForm />);
@@ -66,7 +62,7 @@ describe("LoginForm", () => {
     await waitFor(() => {
       expect(signIn).toHaveBeenCalledOnce();
     });
-    expect(push).toHaveBeenCalledWith("/app");
+    expect(assign).toHaveBeenCalledWith("/app");
   });
 
   it("shows an error and stays on login when sign-in fails", async () => {
@@ -85,6 +81,6 @@ describe("LoginForm", () => {
     await waitFor(() => {
       expect(screen.getByText("Correo o contraseña incorrectos.")).toBeTruthy();
     });
-    expect(push).not.toHaveBeenCalled();
+    expect(assign).not.toHaveBeenCalled();
   });
 });
