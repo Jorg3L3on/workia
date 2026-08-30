@@ -125,6 +125,22 @@ export const snapshotPerson = (person: Record<string, unknown>) => ({
   deletedAt: person.deletedAt,
 });
 
+export const snapshotPersonSchedule = (
+  schedule: Record<string, unknown> | null,
+) => {
+  if (!schedule) {
+    return null;
+  }
+
+  return {
+    entrada: schedule.entrada,
+    salidaComer: schedule.salidaComer,
+    regresoComer: schedule.regresoComer,
+    salida: schedule.salida,
+    deletedAt: schedule.deletedAt,
+  };
+};
+
 export const snapshotArea = (area: Record<string, unknown>) => ({
   name: area.name,
   parentAreaId: area.parentAreaId,
@@ -169,6 +185,10 @@ export const snapshotContract = (contract: Record<string, unknown>) => ({
   templateId: contract.templateId,
   templateName: contract.templateName,
   generatedText: contract.generatedText,
+  scheduleEntrada: contract.scheduleEntrada,
+  scheduleSalidaComer: contract.scheduleSalidaComer,
+  scheduleRegresoComer: contract.scheduleRegresoComer,
+  scheduleSalida: contract.scheduleSalida,
   status: contract.status,
   previousContractId: contract.previousContractId,
   deletedAt: contract.deletedAt,

@@ -68,6 +68,27 @@ describe("people domain rules", () => {
   });
 });
 
+describe("person schedule helpers", () => {
+  it("formats the horario token in Spanish without inventing PII", async () => {
+    const { formatHorarioToken, toPersonScheduleValues } =
+      await import("@/lib/people/schema");
+
+    expect(
+      formatHorarioToken(
+        toPersonScheduleValues({
+          horarioEntrada: "08:00",
+          horarioSalidaComer: "13:00",
+          horarioRegresoComer: "14:00",
+          horarioSalida: "17:00",
+        }),
+      ),
+    ).toBe(
+      "entrada 08:00, salida a comer 13:00, regreso de comer 14:00, salida 17:00",
+    );
+    expect(formatHorarioToken(null)).toBe("—");
+  });
+});
+
 describe("dummy identifier policy", () => {
   it("uses obviously fake RFC placeholder in tests", () => {
     const fakeRfc = "XAXX010101000";

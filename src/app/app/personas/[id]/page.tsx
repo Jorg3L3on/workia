@@ -28,10 +28,13 @@ import {
 import { requirePeopleRead } from "@/lib/people/auth";
 import {
   formatDateLabel,
+  formatHorarioToken,
   formatPersonName,
+  formatTimeLabel,
   personDeletedLabel,
   personIsDeleted,
   personStatusLabels,
+  SCHEDULE_FIELD_LABELS,
 } from "@/lib/people/schema";
 import { userHasPermission } from "@/lib/rbac";
 import { listActiveSites } from "@/lib/sites";
@@ -125,6 +128,7 @@ const PersonaDetailPage = async ({
           mode="edit"
           person={person}
           positions={positions}
+          schedule={person.schedule}
           sites={sites}
         />
       </div>
@@ -228,6 +232,38 @@ const PersonaDetailPage = async ({
             <dt className="text-muted-foreground">Puesto</dt>
             <dd className="font-medium">{person.position?.name ?? "—"}</dd>
           </div>
+          <div>
+            <dt className="text-muted-foreground">
+              {SCHEDULE_FIELD_LABELS.horarioEntrada}
+            </dt>
+            <dd className="font-medium">
+              {formatTimeLabel(person.schedule?.entrada)}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">
+              {SCHEDULE_FIELD_LABELS.horarioSalidaComer}
+            </dt>
+            <dd className="font-medium">
+              {formatTimeLabel(person.schedule?.salidaComer)}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">
+              {SCHEDULE_FIELD_LABELS.horarioRegresoComer}
+            </dt>
+            <dd className="font-medium">
+              {formatTimeLabel(person.schedule?.regresoComer)}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">
+              {SCHEDULE_FIELD_LABELS.horarioSalida}
+            </dt>
+            <dd className="font-medium">
+              {formatTimeLabel(person.schedule?.salida)}
+            </dd>
+          </div>
           {person.position ? (
             <div className="sm:col-span-2">
               <dt className="text-muted-foreground">Actividades del puesto</dt>
@@ -315,6 +351,7 @@ const PersonaDetailPage = async ({
             area: person.area?.name ?? null,
             sucursal: buildSiteLabel(person.site),
             rfc: person.rfc,
+            horario: formatHorarioToken(person.schedule),
           }}
           personId={person.id}
           showEmitForm={emit === "1" && !isDeleted}

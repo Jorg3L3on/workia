@@ -43,6 +43,10 @@ const formDataToValues = (formData: FormData): PersonFormValues => ({
   rfc: String(formData.get("rfc") ?? ""),
   curp: String(formData.get("curp") ?? ""),
   nss: String(formData.get("nss") ?? ""),
+  horarioEntrada: String(formData.get("horarioEntrada") ?? ""),
+  horarioSalidaComer: String(formData.get("horarioSalidaComer") ?? ""),
+  horarioRegresoComer: String(formData.get("horarioRegresoComer") ?? ""),
+  horarioSalida: String(formData.get("horarioSalida") ?? ""),
   status: String(
     formData.get("status") ?? "activa",
   ) as PersonFormValues["status"],

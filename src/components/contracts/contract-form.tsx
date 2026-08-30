@@ -27,6 +27,7 @@ type ContractFormProps = {
     area?: string | null;
     sucursal?: string | null;
     rfc?: string | null;
+    horario?: string | null;
   };
   templates: ContractTemplate[];
 };

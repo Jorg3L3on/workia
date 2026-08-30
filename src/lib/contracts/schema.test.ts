@@ -9,7 +9,7 @@ import {
 describe("contract template tokens", () => {
   it("fills expediente fields into template body", () => {
     const body =
-      "Contrato con {{nombres}} {{apellido_paterno}} {{apellido_materno}}, puesto {{puesto}}, área {{area}}, sucursal {{sucursal}}, RFC {{rfc}}, del {{fecha_inicio}} al {{fecha_fin}}.";
+      "Contrato con {{nombres}} {{apellido_paterno}} {{apellido_materno}}, puesto {{puesto}}, área {{area}}, sucursal {{sucursal}}, RFC {{rfc}}, horario {{horario}}, del {{fecha_inicio}} al {{fecha_fin}}.";
 
     const filled = fillContractTemplate(body, {
       nombres: "Ana",
@@ -19,6 +19,8 @@ describe("contract template tokens", () => {
       area: "RRHH",
       sucursal: "Corporativo Demo (Corporativo)",
       rfc: "XAXX010101000",
+      horario:
+        "entrada 08:00, salida a comer 13:00, regreso de comer 14:00, salida 17:00",
       fechaInicio: "2025-01-15",
       fechaFin: "2025-12-31",
     });
@@ -28,7 +30,51 @@ describe("contract template tokens", () => {
     expect(filled).toContain("RRHH");
     expect(filled).toContain("Corporativo Demo");
     expect(filled).toContain("XAXX010101000");
+    expect(filled).toContain("entrada 08:00");
     expect(filled).not.toContain("{{nombres}}");
+    expect(filled).not.toContain("{{horario}}");
+  });
+});
+
+describe("contract schedule snapshot", () => {
+  it("keeps the emitted schedule when the expediente later changes", async () => {
+    const { buildContractScheduleSnapshot, fillContractTemplate } =
+      await import("@/lib/contracts/schema");
+    const { formatHorarioToken } = await import("@/lib/people/schema");
+
+    const scheduleAtEmit = {
+      entrada: "08:00",
+      salidaComer: "13:00",
+      regresoComer: "14:00",
+      salida: "17:00",
+    };
+    const laterExpediente = {
+      entrada: "10:00",
+      salidaComer: "15:00",
+      regresoComer: "16:00",
+      salida: "19:00",
+    };
+
+    const issued = {
+      ...buildContractScheduleSnapshot(scheduleAtEmit),
+      generatedText: fillContractTemplate("Horario: {{horario}}.", {
+        nombres: "Persona",
+        apellidoPaterno: "Demo",
+        horario: formatHorarioToken(scheduleAtEmit),
+        fechaInicio: "2026-01-15",
+      }),
+    };
+
+    expect(issued.scheduleEntrada).toBe("08:00");
+    expect(issued.generatedText).toContain("08:00");
+    expect(issued.generatedText).not.toContain("10:00");
+    expect(buildContractScheduleSnapshot(laterExpediente).scheduleEntrada).toBe(
+      "10:00",
+    );
+    expect(formatHorarioToken(laterExpediente)).toContain("10:00");
+    expect(issued.scheduleEntrada).not.toBe(
+      buildContractScheduleSnapshot(laterExpediente).scheduleEntrada,
+    );
   });
 });
 
@@ -68,6 +114,16 @@ describe("renewal window", () => {
   it("maps notice windows to months", () => {
     expect(noticeWindowToMonths("3")).toBe(3);
     expect(noticeWindowToMonths("no_avisar")).toBeNull();
+  });
+});
+
+describe("template token catalog", () => {
+  it("includes horario next to the expediente tokens", async () => {
+    const { CONTRACT_TEMPLATE_TOKENS } = await import("@/lib/contracts/schema");
+
+    expect(CONTRACT_TEMPLATE_TOKENS).toContain("horario");
+    expect(CONTRACT_TEMPLATE_TOKENS).toContain("puesto");
+    expect(CONTRACT_TEMPLATE_TOKENS).toContain("sucursal");
   });
 });
 

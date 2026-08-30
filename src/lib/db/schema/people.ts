@@ -62,6 +62,33 @@ export const people = pgTable(
   ],
 );
 
+export const personSchedules = pgTable(
+  "person_schedules",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => people.id, { onDelete: "cascade" })
+      .unique(),
+    entrada: text("entrada"),
+    salidaComer: text("salida_comer"),
+    regresoComer: text("regreso_comer"),
+    salida: text("salida"),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    index("person_schedules_person_id_idx").on(table.personId),
+    index("person_schedules_deleted_at_idx").on(table.deletedAt),
+  ],
+);
+
 export const peopleRelations = relations(people, ({ one, many }) => ({
   area: one(areas, {
     fields: [people.areaId],
@@ -80,9 +107,25 @@ export const peopleRelations = relations(people, ({ one, many }) => ({
     fields: [people.siteId],
     references: [sites.id],
   }),
+  schedule: one(personSchedules, {
+    fields: [people.id],
+    references: [personSchedules.personId],
+  }),
   directReports: many(people, { relationName: "personManager" }),
 }));
+
+export const personSchedulesRelations = relations(
+  personSchedules,
+  ({ one }) => ({
+    person: one(people, {
+      fields: [personSchedules.personId],
+      references: [people.id],
+    }),
+  }),
+);
 
 export type Person = typeof people.$inferSelect;
 export type NewPerson = typeof people.$inferInsert;
 export type PersonStatus = (typeof personStatusEnum.enumValues)[number];
+export type PersonSchedule = typeof personSchedules.$inferSelect;
+export type NewPersonSchedule = typeof personSchedules.$inferInsert;

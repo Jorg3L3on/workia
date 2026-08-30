@@ -29,6 +29,8 @@ const NuevaPlantillaPage = async ({
 
 El presente contrato se celebra con {{nombres}} {{apellido_paterno}} {{apellido_materno}}, RFC {{rfc}}, para desempeñar el puesto de {{puesto}} en el área de {{area}}, con ubicación en {{sucursal}}.
 
+Horario: {{horario}}.
+
 Vigencia: del {{fecha_inicio}} al {{fecha_fin}}.`;
 
   return (
