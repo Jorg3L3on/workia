@@ -15,11 +15,15 @@ import {
   requirePositionsCreate,
   requirePositionsDelete,
 } from "@/lib/catalog/auth";
+import { CATALOG_PATHS, catalogHref } from "@/lib/catalog/paths";
 import { areaFormSchema, positionFormSchema } from "@/lib/catalog/schema";
 import { AuthorizationError } from "@/lib/rbac";
 
 const revalidateCatalog = () => {
-  revalidatePath("/app/catalogo");
+  revalidatePath(CATALOG_PATHS.index);
+  revalidatePath(CATALOG_PATHS.areas);
+  revalidatePath(CATALOG_PATHS.puestos);
+  revalidatePath(CATALOG_PATHS.sucursales);
   revalidatePath("/app/auditoria");
   revalidatePath("/app/personas");
 };
@@ -47,7 +51,7 @@ export const createAreaAction = async (formData: FormData) => {
     session = await requireAreasCreate();
   } catch (error) {
     if (error instanceof AuthorizationError) {
-      redirect("/app/catalogo?error=areas-create");
+      redirect(catalogHref(CATALOG_PATHS.areas, { error: "areas-create" }));
     }
 
     redirect("/login");
@@ -56,12 +60,12 @@ export const createAreaAction = async (formData: FormData) => {
   const parsed = parseAreaForm(formData);
 
   if (!parsed.success) {
-    redirect("/app/catalogo?error=area-form");
+    redirect(catalogHref(CATALOG_PATHS.areas, { error: "area-form" }));
   }
 
   await createArea(parsed.data, session.user.id);
   revalidateCatalog();
-  redirect("/app/catalogo?saved=area");
+  redirect(catalogHref(CATALOG_PATHS.areas, { saved: "area" }));
 };
 
 export const deleteAreaAction = async (areaId: string) => {
@@ -71,7 +75,7 @@ export const deleteAreaAction = async (areaId: string) => {
     session = await requireAreasDelete();
   } catch (error) {
     if (error instanceof AuthorizationError) {
-      redirect("/app/catalogo?error=areas-delete");
+      redirect(catalogHref(CATALOG_PATHS.areas, { error: "areas-delete" }));
     }
 
     redirect("/login");
@@ -79,7 +83,7 @@ export const deleteAreaAction = async (areaId: string) => {
 
   await softDeleteArea(areaId, session.user.id);
   revalidateCatalog();
-  redirect("/app/catalogo?deleted=area");
+  redirect(catalogHref(CATALOG_PATHS.areas, { deleted: "area" }));
 };
 
 export const createPositionAction = async (formData: FormData) => {
@@ -89,7 +93,9 @@ export const createPositionAction = async (formData: FormData) => {
     session = await requirePositionsCreate();
   } catch (error) {
     if (error instanceof AuthorizationError) {
-      redirect("/app/catalogo?error=positions-create");
+      redirect(
+        catalogHref(CATALOG_PATHS.puestos, { error: "positions-create" }),
+      );
     }
 
     redirect("/login");
@@ -98,12 +104,12 @@ export const createPositionAction = async (formData: FormData) => {
   const parsed = parsePositionForm(formData);
 
   if (!parsed.success) {
-    redirect("/app/catalogo?error=position-form");
+    redirect(catalogHref(CATALOG_PATHS.puestos, { error: "position-form" }));
   }
 
   await createPosition(parsed.data, session.user.id);
   revalidateCatalog();
-  redirect("/app/catalogo?saved=position");
+  redirect(catalogHref(CATALOG_PATHS.puestos, { saved: "position" }));
 };
 
 export const deletePositionAction = async (positionId: string) => {
@@ -113,7 +119,9 @@ export const deletePositionAction = async (positionId: string) => {
     session = await requirePositionsDelete();
   } catch (error) {
     if (error instanceof AuthorizationError) {
-      redirect("/app/catalogo?error=positions-delete");
+      redirect(
+        catalogHref(CATALOG_PATHS.puestos, { error: "positions-delete" }),
+      );
     }
 
     redirect("/login");
@@ -121,5 +129,5 @@ export const deletePositionAction = async (positionId: string) => {
 
   await softDeletePosition(positionId, session.user.id);
   revalidateCatalog();
-  redirect("/app/catalogo?deleted=position");
+  redirect(catalogHref(CATALOG_PATHS.puestos, { deleted: "position" }));
 };

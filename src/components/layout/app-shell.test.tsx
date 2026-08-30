@@ -1,14 +1,19 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
+
+const { navigationState } = vi.hoisted(() => ({
+  navigationState: { pathname: "/app" },
+}));
 
 vi.mock("@/hooks/use-mobile", () => ({
   useIsMobile: () => false,
 }));
 
 vi.mock("next/navigation", () => ({
-  usePathname: () => "/app",
+  usePathname: () => navigationState.pathname,
+  useRouter: () => ({ push: vi.fn() }),
 }));
 
 vi.mock("@/components/nav-user", () => ({
@@ -25,19 +30,23 @@ vi.mock("@/components/theme-toggle", () => ({
 
 import { AppShell } from "@/components/layout/app-shell";
 
+const renderShell = () =>
+  render(
+    <TooltipProvider>
+      <AppShell user={{ name: "Elena Demo", email: "rrhh@workia.local" }}>
+        <p>Contenido</p>
+      </AppShell>
+    </TooltipProvider>,
+  );
+
 afterEach(() => {
+  navigationState.pathname = "/app";
   cleanup();
 });
 
 describe("AppShell", () => {
   it("renders the authenticated shell with Cerrar sesión", () => {
-    render(
-      <TooltipProvider>
-        <AppShell user={{ name: "Elena Demo", email: "rrhh@workia.local" }}>
-          <p>Contenido</p>
-        </AppShell>
-      </TooltipProvider>,
-    );
+    renderShell();
 
     expect(screen.getByText("Contenido")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Cerrar sesión" })).toBeTruthy();
@@ -45,13 +54,7 @@ describe("AppShell", () => {
   });
 
   it("keeps the chrome header sticky at the top", () => {
-    render(
-      <TooltipProvider>
-        <AppShell user={{ name: "Elena Demo", email: "rrhh@workia.local" }}>
-          <p>Contenido</p>
-        </AppShell>
-      </TooltipProvider>,
-    );
+    renderShell();
 
     const headers = document.querySelectorAll('[data-slot="shell-top-nav"]');
     expect(headers).toHaveLength(1);
@@ -61,4 +64,67 @@ describe("AppShell", () => {
       document.querySelector('[data-slot="sidebar-inset"]')?.className,
     ).not.toContain("sticky");
   });
+
+  it("shows a Spanish breadcrumb for Inicio in the sticky header", () => {
+    renderShell();
+
+    const breadcrumb = screen.getByRole("navigation", { name: "Miga de pan" });
+    expect(breadcrumb).toBeTruthy();
+    expect(breadcrumb.textContent).toContain("Inicio");
+    expect(headersContainBreadcrumb()).toBe(true);
+  });
+
+  it("opens Catálogo with three children and marks the child active", () => {
+    navigationState.pathname = "/app/catalogo/areas";
+    renderShell();
+
+    const sidebar = document.querySelector('[data-slot="sidebar"]');
+    expect(sidebar).toBeTruthy();
+    const sidebarQueries = within(sidebar as HTMLElement);
+
+    const areasLink = sidebarQueries.getByRole("link", { name: "Áreas" });
+    expect(areasLink.getAttribute("data-active")).toBe("true");
+    expect(sidebarQueries.getByRole("link", { name: "Puestos" })).toBeTruthy();
+    expect(
+      sidebarQueries.getByRole("link", { name: "Sucursales" }),
+    ).toBeTruthy();
+
+    const catalogButtons = sidebarQueries.getAllByRole("button", {
+      name: "Catálogo",
+    });
+    expect(
+      catalogButtons.some(
+        (button) => button.getAttribute("data-active") === "true",
+      ),
+    ).toBe(false);
+
+    const breadcrumb = screen.getByRole("navigation", { name: "Miga de pan" });
+    expect(breadcrumb.textContent).toContain("Catálogo");
+    expect(breadcrumb.textContent).toContain("Áreas");
+    expect(
+      within(breadcrumb)
+        .getByRole("link", { name: "Catálogo" })
+        .getAttribute("href"),
+    ).toBe("/app/catalogo");
+  });
+
+  it("nests Personas over the current expediente name", () => {
+    navigationState.pathname =
+      "/app/personas/aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee";
+    renderShell();
+
+    const breadcrumb = screen.getByRole("navigation", { name: "Miga de pan" });
+    expect(breadcrumb.textContent).toContain("Personas");
+    expect(breadcrumb.textContent).toContain("Expediente");
+    expect(
+      within(breadcrumb)
+        .getByRole("link", { name: "Personas" })
+        .getAttribute("href"),
+    ).toBe("/app/personas");
+  });
 });
+
+const headersContainBreadcrumb = () => {
+  const header = document.querySelector('[data-slot="shell-top-nav"]');
+  return Boolean(header?.querySelector('[data-slot="breadcrumb"]'));
+};

@@ -5,8 +5,10 @@ import { usePathname, useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { LayoutDashboardIcon, LogOutIcon, ShieldIcon } from "lucide-react";
 
+import { AppBreadcrumbs } from "@/components/layout/app-breadcrumbs";
 import { SHELL_TOP_NAV_CLASS_NAME } from "@/components/layout/shell-top-nav";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import {
   Sidebar,
   SidebarContent,
@@ -26,7 +28,7 @@ import { cn } from "@/lib/utils";
 
 const adminNavItems = [
   {
-    title: "Overview",
+    title: "Resumen",
     href: "/admin",
     icon: LayoutDashboardIcon,
   },
@@ -60,7 +62,7 @@ export const AdminShell = ({ children }: AdminShellProps) => {
         </SidebarHeader>
         <SidebarContent>
           <SidebarGroup>
-            <SidebarGroupLabel>Management</SidebarGroupLabel>
+            <SidebarGroupLabel>Administración</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {adminNavItems.map((item) => (
@@ -104,7 +106,11 @@ export const AdminShell = ({ children }: AdminShellProps) => {
           data-slot="shell-top-nav"
         >
           <SidebarTrigger />
-          <span className="text-muted-foreground text-sm">Administration</span>
+          <Separator
+            className="mr-2 data-[orientation=vertical]:h-4"
+            orientation="vertical"
+          />
+          <AppBreadcrumbs />
         </header>
         <div className="flex-1 p-6">{children}</div>
       </SidebarInset>

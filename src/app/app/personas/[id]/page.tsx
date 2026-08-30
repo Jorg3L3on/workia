@@ -7,6 +7,7 @@ import { PersonContractsSection } from "@/components/contracts/person-contracts-
 import { PersonAssetsSection } from "@/components/resguardo/person-assets-section";
 import { DeletePersonButton } from "@/components/people/delete-person-button";
 import { PersonForm } from "@/components/people/person-form";
+import { PageBreadcrumbLabel } from "@/components/layout/app-breadcrumbs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { listAuditEvents } from "@/lib/audit";
@@ -104,10 +105,12 @@ const PersonaDetailPage = async ({
 
   const isDeleted = personIsDeleted(person);
   const isEditing = edit === "1" && canUpdate && !isDeleted;
+  const personName = formatPersonName(person);
 
   if (isEditing) {
     return (
       <div className="mx-auto w-full max-w-3xl">
+        <PageBreadcrumbLabel label={personName} />
         <PersonForm
           areas={areas}
           managers={managers}
@@ -122,6 +125,7 @@ const PersonaDetailPage = async ({
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
+      <PageBreadcrumbLabel label={personName} />
       <div className="workia-pass-card space-y-4 p-5 sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-1">

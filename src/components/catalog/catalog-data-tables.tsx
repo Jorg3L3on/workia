@@ -131,7 +131,7 @@ export const CatalogSitesTable = ({
               cell: (row: CatalogSiteRow) => (
                 <CatalogRowDeleteButton
                   action={deleteSiteAction.bind(null, row.id)}
-                  itemLabel="ubicación"
+                  itemLabel="sucursal"
                   itemName={row.name}
                 />
               ),
@@ -146,12 +146,12 @@ export const CatalogSitesTable = ({
     <DataTable
       columns={columns}
       data={sites}
-      emptyTitle="Sin ubicaciones registradas."
+      emptyTitle="Sin sucursales registradas."
       getRowId={(row) => row.id}
       layout="inset"
-      resultPlural="ubicaciones"
-      resultSingular="ubicación"
-      searchPlaceholder="Buscar ubicación"
+      resultPlural="sucursales"
+      resultSingular="sucursal"
+      searchPlaceholder="Buscar sucursal"
     />
   );
 };
