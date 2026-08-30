@@ -7,7 +7,8 @@ import { LayoutDashboardIcon, LogOutIcon, ShieldIcon } from "lucide-react";
 
 import { AppBreadcrumbs } from "@/components/layout/app-breadcrumbs";
 import {
-  SHELL_INSET_SCROLL_CLASS_NAME,
+  SHELL_INSET_CLASS_NAME,
+  SHELL_MAIN_SCROLL_CLASS_NAME,
   SHELL_TOP_NAV_CLASS_NAME,
   SHELL_VIEWPORT_CLASS_NAME,
 } from "@/components/layout/shell-top-nav";
@@ -101,7 +102,7 @@ export const AdminShell = ({ children }: AdminShellProps) => {
           </Button>
         </SidebarFooter>
       </Sidebar>
-      <SidebarInset className={SHELL_INSET_SCROLL_CLASS_NAME}>
+      <SidebarInset className={SHELL_INSET_CLASS_NAME}>
         <header
           className={cn(
             "border-border flex h-14 shrink-0 items-center gap-2 border-b px-4",
@@ -116,7 +117,12 @@ export const AdminShell = ({ children }: AdminShellProps) => {
           />
           <AppBreadcrumbs />
         </header>
-        <div className="flex-1 p-6">{children}</div>
+        <div
+          className={cn("p-6", SHELL_MAIN_SCROLL_CLASS_NAME)}
+          data-slot="shell-main-scroll"
+        >
+          {children}
+        </div>
       </SidebarInset>
     </SidebarProvider>
   );

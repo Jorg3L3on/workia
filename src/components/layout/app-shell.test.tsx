@@ -78,7 +78,14 @@ describe("AppShell", () => {
 
     const inset = document.querySelector('[data-slot="sidebar-inset"]');
     expect(inset?.className).toContain("min-h-0");
-    expect(inset?.className).toContain("overflow-y-auto");
+    expect(inset?.className).toContain("overflow-hidden");
+    expect(inset?.className).not.toContain("overflow-y-auto");
+
+    const mainScroll = document.querySelector(
+      '[data-slot="shell-main-scroll"]',
+    );
+    expect(mainScroll?.className).toContain("min-h-0");
+    expect(mainScroll?.className).toContain("overflow-y-auto");
 
     expect(document.querySelector('[data-slot="sidebar-header"]')).toBeTruthy();
     expect(document.querySelector('[data-slot="sidebar-footer"]')).toBeTruthy();

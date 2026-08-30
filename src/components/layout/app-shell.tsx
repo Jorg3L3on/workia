@@ -17,7 +17,8 @@ import {
 } from "@/components/layout/app-breadcrumbs";
 import { AppSidebarNav } from "@/components/layout/app-sidebar-nav";
 import {
-  SHELL_INSET_SCROLL_CLASS_NAME,
+  SHELL_INSET_CLASS_NAME,
+  SHELL_MAIN_SCROLL_CLASS_NAME,
   SHELL_TOP_NAV_CLASS_NAME,
   SHELL_VIEWPORT_CLASS_NAME,
 } from "@/components/layout/shell-top-nav";
@@ -115,7 +116,7 @@ export const AppShell = ({ children, user }: AppShellProps) => {
           </Sidebar>
 
           <SidebarInset
-            className={cn("bg-transparent", SHELL_INSET_SCROLL_CLASS_NAME)}
+            className={cn("bg-transparent", SHELL_INSET_CLASS_NAME)}
           >
             <header
               className={cn(
@@ -136,7 +137,13 @@ export const AppShell = ({ children, user }: AppShellProps) => {
                 <ThemeToggle />
               </div>
             </header>
-            <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 p-4 md:p-6">
+            <div
+              className={cn(
+                "mx-auto flex w-full max-w-6xl flex-col gap-4 p-4 md:p-6",
+                SHELL_MAIN_SCROLL_CLASS_NAME,
+              )}
+              data-slot="shell-main-scroll"
+            >
               {children}
             </div>
           </SidebarInset>
