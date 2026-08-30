@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { LayoutDashboardIcon, LogOutIcon, ShieldIcon } from "lucide-react";
 
+import { SHELL_TOP_NAV_CLASS_NAME } from "@/components/layout/shell-top-nav";
 import { Button } from "@/components/ui/button";
 import {
   Sidebar,
@@ -14,12 +15,14 @@ import {
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarHeader,
+  SidebarInset,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
+import { cn } from "@/lib/utils";
 
 const adminNavItems = [
   {
@@ -92,13 +95,19 @@ export const AdminShell = ({ children }: AdminShellProps) => {
           </Button>
         </SidebarFooter>
       </Sidebar>
-      <main className="flex min-h-full flex-1 flex-col">
-        <header className="border-border flex h-14 items-center gap-2 border-b px-4">
+      <SidebarInset>
+        <header
+          className={cn(
+            "border-border flex h-14 shrink-0 items-center gap-2 border-b px-4",
+            SHELL_TOP_NAV_CLASS_NAME,
+          )}
+          data-slot="shell-top-nav"
+        >
           <SidebarTrigger />
           <span className="text-muted-foreground text-sm">Administration</span>
         </header>
         <div className="flex-1 p-6">{children}</div>
-      </main>
+      </SidebarInset>
     </SidebarProvider>
   );
 };
