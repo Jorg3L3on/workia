@@ -66,7 +66,9 @@ test.describe("Actividades de puesto", () => {
     await page
       .getByPlaceholder("Buscar puesto, área o actividad")
       .fill(activityName);
-    await expect(page.getByText(activityName, { exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("table").getByText(activityName, { exact: true }),
+    ).toBeVisible();
 
     await page.goto(expedienteUrl);
     await expect(page.getByText("Actividades del puesto")).toBeVisible();
@@ -82,7 +84,12 @@ test.describe("Actividades de puesto", () => {
     await expect(page.getByRole("status")).toContainText(
       "Actividad quitada del puesto",
     );
-    await expect(page.getByText(activityName, { exact: true })).toHaveCount(0);
+    await page
+      .getByPlaceholder("Buscar puesto, área o actividad")
+      .fill(activityName);
+    await expect(
+      page.getByRole("table").getByText(activityName, { exact: true }),
+    ).toHaveCount(0);
 
     await page.goto(expedienteUrl);
     await expect(page.getByText(activityName, { exact: true })).toHaveCount(0);
