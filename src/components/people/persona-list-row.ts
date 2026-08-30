@@ -3,5 +3,6 @@ export type PersonaListRow = {
   name: string;
   rfc: string | null;
   status: "activa" | "baja";
+  deleted: boolean;
   searchText: string;
 };

@@ -9,6 +9,35 @@ export const personStatusLabels: Record<PersonStatusValue, string> = {
   baja: "Baja",
 };
 
+export const PERSON_LIST_VISIBILITY = ["expediente", "deleted"] as const;
+
+export type PersonListVisibility = (typeof PERSON_LIST_VISIBILITY)[number];
+
+export const personDeletedLabel = "Borrado";
+
+export const personIsDeleted = (person: { deletedAt?: Date | string | null }) =>
+  Boolean(person.deletedAt);
+
+export const matchesPersonaListRow = (
+  row: { status: PersonStatusValue; deleted: boolean },
+  filters: {
+    status?: PersonStatusValue | "";
+    visibility?: PersonListVisibility;
+  } = {},
+) => {
+  const visibility = filters.visibility ?? "expediente";
+
+  if (visibility === "deleted" ? !row.deleted : row.deleted) {
+    return false;
+  }
+
+  if (filters.status && row.status !== filters.status) {
+    return false;
+  }
+
+  return true;
+};
+
 const optionalText = z.string().trim().max(120).optional().or(z.literal(""));
 
 const optionalIdentifier = z
