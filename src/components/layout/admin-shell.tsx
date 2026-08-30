@@ -6,7 +6,11 @@ import { signOut } from "next-auth/react";
 import { LayoutDashboardIcon, LogOutIcon, ShieldIcon } from "lucide-react";
 
 import { AppBreadcrumbs } from "@/components/layout/app-breadcrumbs";
-import { SHELL_TOP_NAV_CLASS_NAME } from "@/components/layout/shell-top-nav";
+import {
+  SHELL_INSET_SCROLL_CLASS_NAME,
+  SHELL_TOP_NAV_CLASS_NAME,
+  SHELL_VIEWPORT_CLASS_NAME,
+} from "@/components/layout/shell-top-nav";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -53,7 +57,7 @@ export const AdminShell = ({ children }: AdminShellProps) => {
   };
 
   return (
-    <SidebarProvider>
+    <SidebarProvider className={SHELL_VIEWPORT_CLASS_NAME}>
       <Sidebar collapsible="icon">
         <SidebarHeader className="border-sidebar-border border-b p-4">
           <Link className="font-semibold tracking-tight" href="/admin">
@@ -97,7 +101,7 @@ export const AdminShell = ({ children }: AdminShellProps) => {
           </Button>
         </SidebarFooter>
       </Sidebar>
-      <SidebarInset>
+      <SidebarInset className={SHELL_INSET_SCROLL_CLASS_NAME}>
         <header
           className={cn(
             "border-border flex h-14 shrink-0 items-center gap-2 border-b px-4",

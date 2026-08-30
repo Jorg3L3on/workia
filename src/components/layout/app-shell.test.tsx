@@ -65,6 +65,28 @@ describe("AppShell", () => {
     ).not.toContain("sticky");
   });
 
+  it("pins the sidebar to the viewport and scrolls only the content column", () => {
+    renderShell();
+
+    const shell = document.querySelector(".workia-shell");
+    expect(shell?.className).toContain("h-dvh");
+    expect(shell?.className).toContain("overflow-hidden");
+
+    const wrapper = document.querySelector('[data-slot="sidebar-wrapper"]');
+    expect(wrapper?.className).toContain("h-dvh");
+    expect(wrapper?.className).toContain("overflow-hidden");
+
+    const inset = document.querySelector('[data-slot="sidebar-inset"]');
+    expect(inset?.className).toContain("min-h-0");
+    expect(inset?.className).toContain("overflow-y-auto");
+
+    expect(document.querySelector('[data-slot="sidebar-header"]')).toBeTruthy();
+    expect(document.querySelector('[data-slot="sidebar-footer"]')).toBeTruthy();
+    expect(
+      document.querySelector('[data-slot="sidebar-content"]'),
+    ).toBeTruthy();
+  });
+
   it("shows a Spanish breadcrumb for Inicio in the sticky header", () => {
     renderShell();
 

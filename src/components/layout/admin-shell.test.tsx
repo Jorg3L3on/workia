@@ -68,6 +68,25 @@ describe("AdminShell", () => {
     ).not.toContain("sticky");
   });
 
+  it("pins the sidebar to the viewport and scrolls only the content column", () => {
+    render(
+      <AdminShell>
+        <p>Admin</p>
+      </AdminShell>,
+    );
+
+    const wrapper = document.querySelector('[data-slot="sidebar-wrapper"]');
+    expect(wrapper?.className).toContain("h-dvh");
+    expect(wrapper?.className).toContain("overflow-hidden");
+
+    const inset = document.querySelector('[data-slot="sidebar-inset"]');
+    expect(inset?.className).toContain("min-h-0");
+    expect(inset?.className).toContain("overflow-y-auto");
+
+    expect(document.querySelector('[data-slot="sidebar-header"]')).toBeTruthy();
+    expect(document.querySelector('[data-slot="sidebar-footer"]')).toBeTruthy();
+  });
+
   it("shows Spanish breadcrumbs in the sticky header", () => {
     render(
       <AdminShell>
