@@ -19,7 +19,6 @@ type LandingStep = {
   title: string;
   description: string;
   icon: typeof UsersIcon;
-  upcoming?: boolean;
 };
 
 const steps: LandingStep[] = [
@@ -36,7 +35,6 @@ const steps: LandingStep[] = [
     description:
       "Los vencimientos se ven a tiempo, con recordatorios antes de que se escape la renovación.",
     icon: CalendarClockIcon,
-    upcoming: true,
   },
   {
     number: "03",
@@ -73,19 +71,16 @@ const liveCapabilities = [
     icon: ScrollTextIcon,
   },
   {
-    title: "Resguardo",
-    description:
-      "Equipo asignado con dueño, entregas y devoluciones rastreadas.",
-    icon: LaptopIcon,
-  },
-] as const;
-
-const upcomingCapabilities = [
-  {
     title: "Contratos",
     description:
       "Vencimientos, renovaciones y avisos configurables por contrato.",
     icon: CalendarClockIcon,
+  },
+  {
+    title: "Resguardo",
+    description:
+      "Equipo asignado con dueño, entregas y devoluciones rastreadas.",
+    icon: LaptopIcon,
   },
 ] as const;
 
@@ -220,32 +215,23 @@ export const LandingPage = () => {
             </h2>
           </div>
           <ol className="grid gap-4 md:grid-cols-3">
-            {steps.map(
-              ({ number, title, description, icon: Icon, upcoming }) => (
-                <li
-                  key={number}
-                  className="workia-pass-card flex flex-col gap-4 p-5"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <span className="workia-accent-text font-mono text-sm font-semibold">
-                      {number}
-                    </span>
-                    {upcoming ? (
-                      <Badge className="shrink-0 text-[10px]" variant="outline">
-                        Lo que viene
-                      </Badge>
-                    ) : null}
-                  </div>
-                  <Icon className="text-muted-foreground size-5" aria-hidden />
-                  <div className="space-y-2">
-                    <h3 className="font-semibold tracking-tight">{title}</h3>
-                    <p className="text-muted-foreground text-sm leading-relaxed">
-                      {description}
-                    </p>
-                  </div>
-                </li>
-              ),
-            )}
+            {steps.map(({ number, title, description, icon: Icon }) => (
+              <li
+                key={number}
+                className="workia-pass-card flex flex-col gap-4 p-5"
+              >
+                <span className="workia-accent-text font-mono text-sm font-semibold">
+                  {number}
+                </span>
+                <Icon className="text-muted-foreground size-5" aria-hidden />
+                <div className="space-y-2">
+                  <h3 className="font-semibold tracking-tight">{title}</h3>
+                  <p className="text-muted-foreground text-sm leading-relaxed">
+                    {description}
+                  </p>
+                </div>
+              </li>
+            ))}
           </ol>
         </section>
 
@@ -293,40 +279,6 @@ export const LandingPage = () => {
                 </div>
               </article>
             ))}
-          </div>
-
-          <div className="space-y-4">
-            <p className="text-muted-foreground text-center text-sm">
-              En el roadmap — no disponible en producción todavía
-            </p>
-            <div className="grid gap-4 sm:grid-cols-2">
-              {upcomingCapabilities.map(
-                ({ title, description, icon: Icon }) => (
-                  <article
-                    key={title}
-                    className="workia-empty-state flex gap-4 p-5"
-                  >
-                    <Icon
-                      className="text-muted-foreground mt-0.5 size-5 shrink-0"
-                      aria-hidden
-                    />
-                    <div className="space-y-1.5">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="font-semibold tracking-tight">
-                          {title}
-                        </h3>
-                        <Badge className="text-[10px]" variant="outline">
-                          Lo que viene
-                        </Badge>
-                      </div>
-                      <p className="text-muted-foreground text-sm leading-relaxed">
-                        {description}
-                      </p>
-                    </div>
-                  </article>
-                ),
-              )}
-            </div>
           </div>
         </section>
 
