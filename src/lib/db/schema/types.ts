@@ -13,7 +13,8 @@ export type PermissionResource =
   | "positions"
   | "sites"
   | "contracts"
-  | "contract_templates";
+  | "contract_templates"
+  | "assets";
 
 export type PermissionSlug = `${PermissionResource}:${PermissionAction}`;
 
@@ -304,6 +305,34 @@ export const PERMISSIONS: Array<{
     action: "delete",
     description: "Deactivate or delete contract templates",
   },
+  {
+    slug: "assets:read",
+    name: "Read Assets",
+    resource: "assets",
+    action: "read",
+    description: "View inventory and custody records",
+  },
+  {
+    slug: "assets:create",
+    name: "Create Assets",
+    resource: "assets",
+    action: "create",
+    description: "Register identifiable assets",
+  },
+  {
+    slug: "assets:update",
+    name: "Update Assets",
+    resource: "assets",
+    action: "update",
+    description: "Assign, return, and edit asset records",
+  },
+  {
+    slug: "assets:delete",
+    name: "Delete Assets",
+    resource: "assets",
+    action: "delete",
+    description: "Logically delete asset records",
+  },
 ];
 
 export const ROLES = [
@@ -355,6 +384,10 @@ export const ROLES = [
       "contract_templates:create",
       "contract_templates:update",
       "contract_templates:delete",
+      "assets:read",
+      "assets:create",
+      "assets:update",
+      "assets:delete",
     ] satisfies PermissionSlug[],
   },
   {
@@ -378,6 +411,9 @@ export const ROLES = [
       "contract_templates:read",
       "contract_templates:create",
       "contract_templates:update",
+      "assets:read",
+      "assets:create",
+      "assets:update",
     ] satisfies PermissionSlug[],
   },
   {
@@ -393,6 +429,7 @@ export const ROLES = [
       "sites:read",
       "contracts:read",
       "contract_templates:read",
+      "assets:read",
     ] satisfies PermissionSlug[],
   },
 ] as const;

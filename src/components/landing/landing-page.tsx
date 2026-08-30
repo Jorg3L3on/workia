@@ -44,7 +44,6 @@ const steps: LandingStep[] = [
     description:
       "El equipo caro tiene dueño e historial: entregas, devoluciones y trazabilidad clara.",
     icon: LaptopIcon,
-    upcoming: true,
   },
 ];
 
@@ -73,6 +72,12 @@ const liveCapabilities = [
       "Quién cambió qué y cuándo — eventos inmutables para cumplimiento y confianza.",
     icon: ScrollTextIcon,
   },
+  {
+    title: "Resguardo",
+    description:
+      "Equipo asignado con dueño, entregas y devoluciones rastreadas.",
+    icon: LaptopIcon,
+  },
 ] as const;
 
 const upcomingCapabilities = [
@@ -81,12 +86,6 @@ const upcomingCapabilities = [
     description:
       "Vencimientos, renovaciones y avisos configurables por contrato.",
     icon: CalendarClockIcon,
-  },
-  {
-    title: "Resguardo",
-    description:
-      "Equipo asignado con dueño, entregas y devoluciones rastreadas.",
-    icon: LaptopIcon,
   },
 ] as const;
 

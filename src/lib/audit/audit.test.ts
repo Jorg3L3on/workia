@@ -23,6 +23,8 @@ describe("audit append-only surface", () => {
       "listAuditEvents",
       "recordAuditEvent",
       "snapshotArea",
+      "snapshotAsset",
+      "snapshotAssetMovement",
       "snapshotContract",
       "snapshotContractTemplate",
       "snapshotPerson",

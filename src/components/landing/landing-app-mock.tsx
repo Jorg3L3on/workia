@@ -125,7 +125,7 @@ export const LandingAppMock = () => {
               <div className="workia-empty-state px-3 py-4 text-center">
                 <p className="text-sm font-medium">Sin equipo pendiente</p>
                 <p className="text-muted-foreground mt-1 text-xs">
-                  Próximamente: resguardo con dueño e historial
+                  Entregas y devoluciones visibles en Resguardo
                 </p>
               </div>
             </div>

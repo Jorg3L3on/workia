@@ -4,6 +4,7 @@ import { PencilIcon } from "lucide-react";
 
 import { AuditEventList } from "@/components/audit/audit-event-list";
 import { PersonContractsSection } from "@/components/contracts/person-contracts-section";
+import { PersonAssetsSection } from "@/components/resguardo/person-assets-section";
 import { DeletePersonButton } from "@/components/people/delete-person-button";
 import { PersonForm } from "@/components/people/person-form";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +15,7 @@ import {
   listActiveContractTemplates,
   listContractsByPerson,
 } from "@/lib/contracts";
+import { listAssetsByPerson } from "@/lib/resguardo";
 import {
   getPersonWithRelations,
   listActivePeopleForSelect,
@@ -65,6 +67,7 @@ const PersonaDetailPage = async ({
     canReadAudit,
     canReadContracts,
     canCreateContracts,
+    canReadAssets,
     areas,
     positions,
     sites,
@@ -72,6 +75,7 @@ const PersonaDetailPage = async ({
     auditEvents,
     personContracts,
     contractTemplates,
+    personAssets,
   ] = await Promise.all([
     getPersonWithRelations(id),
     userHasPermission(session.user.id, "people:update"),
@@ -79,6 +83,7 @@ const PersonaDetailPage = async ({
     userHasPermission(session.user.id, "audit:read"),
     userHasPermission(session.user.id, "contracts:read"),
     userHasPermission(session.user.id, "contracts:create"),
+    userHasPermission(session.user.id, "assets:read"),
     listActiveAreas(),
     listActivePositions(),
     listActiveSites(),
@@ -86,6 +91,9 @@ const PersonaDetailPage = async ({
     listAuditEvents({ resourceType: "person", resourceId: id, limit: 50 }),
     listContractsByPerson(id),
     listActiveContractTemplates(),
+    userHasPermission(session.user.id, "assets:read").then((allowed) =>
+      allowed ? listAssetsByPerson(id) : Promise.resolve([]),
+    ),
   ]);
 
   if (!person) {
@@ -257,6 +265,11 @@ const PersonaDetailPage = async ({
           templates={contractTemplates}
         />
       ) : null}
+
+      <PersonAssetsSection
+        assets={personAssets}
+        canReadAssets={canReadAssets}
+      />
 
       {canReadAudit ? (
         <div className="workia-pass-card overflow-hidden">
