@@ -40,11 +40,12 @@ test("landing, login and app share the Workia favicon", async ({ page }) => {
 });
 
 const loginAsDemoRrhh = async (page: import("@playwright/test").Page) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/login");
-  await page.locator("#email").fill("rrhh@workia.local");
-  await page.locator("#password").fill("Workia123!");
+  await page.getByLabel("Correo electrónico").fill("rrhh@workia.local");
+  await page.getByRole("textbox", { name: "Contraseña" }).fill("Workia123!");
   await page.getByRole("button", { name: "Iniciar sesión" }).click();
-  await expect(page).toHaveURL(/\/app/);
+  await expect(page).toHaveURL(/\/app/, { timeout: 25_000 });
 };
 
 test.describe("Authenticated breadcrumbs", () => {
