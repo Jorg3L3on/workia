@@ -1,14 +1,13 @@
 "use client";
 
-import type { Person } from "@/lib/db/schema";
-import { formatPersonName, personStatusLabels } from "@/lib/people/schema";
-
 import { ListMobileCard } from "@/components/list/list-mobile-card";
 import { ListRowAction } from "@/components/list/list-row-action";
 import { ListStatusBadge } from "@/components/list/list-status-badge";
+import type { PersonaListRow } from "@/components/people/persona-list-row";
+import { personStatusLabels } from "@/lib/people/schema";
 
 type PersonasMobileListProps = {
-  people: Person[];
+  people: PersonaListRow[];
 };
 
 export const PersonasMobileList = ({ people }: PersonasMobileListProps) => (
@@ -18,17 +17,17 @@ export const PersonasMobileList = ({ people }: PersonasMobileListProps) => (
         key={person.id}
         actions={
           <ListRowAction
-            aria-label={`Ver expediente de ${formatPersonName(person)}`}
+            aria-label={`Ver expediente de ${person.name}`}
             href={`/app/personas/${person.id}`}
           >
             Ver expediente
           </ListRowAction>
         }
-        ariaLabel={`Ver expediente de ${formatPersonName(person)}`}
+        ariaLabel={`Ver expediente de ${person.name}`}
         href={`/app/personas/${person.id}`}
       >
         <div className="space-y-2">
-          <p className="truncate font-medium">{formatPersonName(person)}</p>
+          <p className="truncate font-medium">{person.name}</p>
           <dl className="grid grid-cols-2 gap-2 text-sm">
             <div>
               <dt className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">

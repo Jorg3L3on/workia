@@ -1,11 +1,7 @@
 import Link from "next/link";
 import { FileTextIcon } from "lucide-react";
 
-import { RenewalTrayList } from "@/components/contracts/person-contracts-section";
-import {
-  ListResultCount,
-  ListTableShell,
-} from "@/components/list/list-table-shell";
+import { RenewalTrayList } from "@/components/contracts/renewal-tray-list";
 import { Button } from "@/components/ui/button";
 import {
   listActiveContractTemplates,
@@ -82,28 +78,19 @@ const ContratosPage = async ({ searchParams }: ContratosPageProps) => {
         </p>
       ) : null}
 
-      <div className="space-y-2">
-        <div className="flex flex-wrap items-end justify-between gap-2">
-          <div>
-            <h2 className="text-base font-semibold">Renovaciones pendientes</h2>
-            <p className="text-muted-foreground text-sm">
-              Contratos en ventana de aviso
-            </p>
-          </div>
-          <ListResultCount
-            count={renewalItems.length}
-            plural="contratos"
-            singular="contrato"
-          />
+      <div className="space-y-3">
+        <div>
+          <h2 className="text-base font-semibold">Renovaciones pendientes</h2>
+          <p className="text-muted-foreground text-sm">
+            Contratos en ventana de aviso
+          </p>
         </div>
 
-        <ListTableShell>
-          <RenewalTrayList
-            canUpdate={canUpdate}
-            items={renewalItems}
-            templates={templates}
-          />
-        </ListTableShell>
+        <RenewalTrayList
+          canUpdate={canUpdate}
+          items={renewalItems}
+          templates={templates}
+        />
       </div>
     </div>
   );

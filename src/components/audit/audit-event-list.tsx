@@ -1,3 +1,9 @@
+"use client";
+
+import { useMemo } from "react";
+
+import { DataTable, type DataTableColumn } from "@/components/list/data-table";
+import { ListStatusBadge } from "@/components/list/list-status-badge";
 import type { AuditPayload } from "@/lib/audit/types";
 import {
   auditActionLabels,
@@ -5,20 +11,6 @@ import {
   type AuditAction,
   type AuditResourceType,
 } from "@/lib/audit/types";
-
-import { ListStatusBadge } from "@/components/list/list-status-badge";
-import {
-  ListEmptyState,
-  listTableDensityClassName,
-} from "@/components/list/list-table-shell";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 
 export type AuditEventRow = {
   id: string;
@@ -29,14 +21,14 @@ export type AuditEventRow = {
   action: string;
   result: string;
   payload: AuditPayload | null;
-  occurredAt: Date;
+  occurredAt: Date | string;
 };
 
-const formatOccurredAt = (value: Date) =>
+const formatOccurredAt = (value: Date | string) =>
   new Intl.DateTimeFormat("es-MX", {
     dateStyle: "medium",
     timeStyle: "short",
-  }).format(value);
+  }).format(typeof value === "string" ? new Date(value) : value);
 
 const formatChangeValue = (value: unknown) => {
   if (value === null || value === undefined || value === "") {
@@ -66,57 +58,114 @@ const renderChanges = (payload: AuditPayload | null) => {
 type AuditEventListProps = {
   events: AuditEventRow[];
   emptyMessage?: string;
+  layout?: "page" | "inset";
+};
+
+type AuditTableRow = AuditEventRow & {
+  occurredLabel: string;
+  actorLabel: string;
+  resourceLabel: string;
+  actionLabel: string;
+  detail: string;
 };
 
 export const AuditEventList = ({
   events,
   emptyMessage = "Sin eventos de auditoría.",
+  layout = "page",
 }: AuditEventListProps) => {
-  if (events.length === 0) {
-    return <ListEmptyState title={emptyMessage} />;
-  }
+  const rows = useMemo<AuditTableRow[]>(
+    () =>
+      events.map((event) => ({
+        ...event,
+        occurredLabel: formatOccurredAt(event.occurredAt),
+        actorLabel: event.actorName ?? "Sistema",
+        resourceLabel:
+          auditResourceTypeLabels[event.resourceType as AuditResourceType] ??
+          event.resourceType,
+        actionLabel:
+          auditActionLabels[event.action as AuditAction] ?? event.action,
+        detail: renderChanges(event.payload),
+      })),
+    [events],
+  );
+
+  const columns = useMemo<DataTableColumn<AuditTableRow>[]>(
+    () => [
+      {
+        id: "when",
+        header: "Cuándo",
+        accessor: (row) =>
+          typeof row.occurredAt === "string"
+            ? row.occurredAt
+            : row.occurredAt.toISOString(),
+        cell: (row) => (
+          <span className="whitespace-nowrap tabular-nums">
+            {row.occurredLabel}
+          </span>
+        ),
+      },
+      {
+        id: "actor",
+        header: "Actor",
+        accessor: (row) => row.actorLabel,
+        cell: (row) => (
+          <div>
+            <div className="font-medium">{row.actorLabel}</div>
+            {row.actorEmail ? (
+              <div className="text-muted-foreground text-xs">
+                {row.actorEmail}
+              </div>
+            ) : null}
+          </div>
+        ),
+      },
+      {
+        id: "resource",
+        header: "Recurso",
+        accessor: (row) => row.resourceLabel,
+        cell: (row) => (
+          <ListStatusBadge tone="neutral">{row.resourceLabel}</ListStatusBadge>
+        ),
+      },
+      {
+        id: "action",
+        header: "Acción",
+        accessor: (row) => row.actionLabel,
+      },
+      {
+        id: "detail",
+        header: "Detalle",
+        accessor: (row) => row.detail,
+        cell: (row) => (
+          <span className="text-muted-foreground max-w-md text-xs whitespace-normal">
+            {row.detail}
+          </span>
+        ),
+      },
+    ],
+    [],
+  );
 
   return (
-    <Table className={listTableDensityClassName}>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Cuándo</TableHead>
-          <TableHead>Actor</TableHead>
-          <TableHead>Recurso</TableHead>
-          <TableHead>Acción</TableHead>
-          <TableHead>Detalle</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {events.map((event) => (
-          <TableRow key={event.id}>
-            <TableCell className="whitespace-nowrap tabular-nums">
-              {formatOccurredAt(event.occurredAt)}
-            </TableCell>
-            <TableCell>
-              <div className="font-medium">{event.actorName ?? "Sistema"}</div>
-              {event.actorEmail ? (
-                <div className="text-muted-foreground text-xs">
-                  {event.actorEmail}
-                </div>
-              ) : null}
-            </TableCell>
-            <TableCell>
-              <ListStatusBadge tone="neutral">
-                {auditResourceTypeLabels[
-                  event.resourceType as AuditResourceType
-                ] ?? event.resourceType}
-              </ListStatusBadge>
-            </TableCell>
-            <TableCell>
-              {auditActionLabels[event.action as AuditAction] ?? event.action}
-            </TableCell>
-            <TableCell className="text-muted-foreground max-w-md text-xs whitespace-normal">
-              {renderChanges(event.payload)}
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+    <DataTable
+      columns={columns}
+      data={rows}
+      emptyTitle={emptyMessage}
+      getRowId={(row) => row.id}
+      getSearchText={(row) =>
+        [
+          row.occurredLabel,
+          row.actorLabel,
+          row.resourceLabel,
+          row.actionLabel,
+          row.detail,
+        ].join(" ")
+      }
+      layout={layout}
+      resultPlural="eventos"
+      resultSingular="evento"
+      searchPlaceholder="Buscar en los eventos cargados"
+    />
   );
 };

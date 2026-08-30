@@ -1,32 +1,17 @@
 import { AreaTreeView } from "@/components/catalog/area-tree-view";
-import { CatalogRowDeleteButton } from "@/components/catalog/catalog-row-delete-button";
-import { ListStatusBadge } from "@/components/list/list-status-badge";
 import {
-  ListEmptyState,
-  ListTableShell,
-  listTableDensityClassName,
-} from "@/components/list/list-table-shell";
+  CatalogPositionsTable,
+  CatalogSitesTable,
+} from "@/components/catalog/catalog-data-tables";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  createAreaAction,
-  createPositionAction,
-  deletePositionAction,
-} from "@/lib/catalog/actions";
+import { createAreaAction, createPositionAction } from "@/lib/catalog/actions";
 import { requireAreasRead, requirePositionsRead } from "@/lib/catalog/auth";
 import { listAreas, listPositions } from "@/lib/catalog";
 import { buildAreaTree } from "@/lib/catalog/schema";
 import { userHasPermission } from "@/lib/rbac";
-import { createSiteAction, deleteSiteAction } from "@/lib/sites/actions";
+import { createSiteAction } from "@/lib/sites/actions";
 import { requireSitesRead } from "@/lib/sites/auth";
 import { listSites } from "@/lib/sites";
 import { SITE_KINDS, siteKindLabels } from "@/lib/sites/schema";
@@ -161,65 +146,16 @@ const CatalogoPage = async ({ searchParams }: CatalogoPageProps) => {
             </p>
           </div>
 
-          <ListTableShell>
-            <Table className={listTableDensityClassName}>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Puesto</TableHead>
-                  <TableHead>Área</TableHead>
-                  <TableHead>Estado</TableHead>
-                  {canDeletePosition ? <TableHead /> : null}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {positions.length === 0 ? (
-                  <TableRow className="hover:bg-transparent">
-                    <TableCell colSpan={canDeletePosition ? 4 : 3}>
-                      <ListEmptyState title="Sin puestos registrados." />
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  positions.map((position) => {
-                    const area = areas.find(
-                      (item) => item.id === position.areaId,
-                    );
-
-                    return (
-                      <TableRow key={position.id}>
-                        <TableCell className="font-medium">
-                          {position.name}
-                        </TableCell>
-                        <TableCell>{area?.name ?? "—"}</TableCell>
-                        <TableCell>
-                          {position.active ? (
-                            <ListStatusBadge tone="active">
-                              Activo
-                            </ListStatusBadge>
-                          ) : (
-                            <ListStatusBadge tone="inactive">
-                              Inactivo
-                            </ListStatusBadge>
-                          )}
-                        </TableCell>
-                        {canDeletePosition ? (
-                          <TableCell className="text-right">
-                            <CatalogRowDeleteButton
-                              action={deletePositionAction.bind(
-                                null,
-                                position.id,
-                              )}
-                              itemLabel="puesto"
-                              itemName={position.name}
-                            />
-                          </TableCell>
-                        ) : null}
-                      </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
-          </ListTableShell>
+          <CatalogPositionsTable
+            canDelete={canDeletePosition}
+            positions={positions.map((position) => ({
+              id: position.id,
+              name: position.name,
+              areaName:
+                areas.find((area) => area.id === position.areaId)?.name ?? "—",
+              active: position.active,
+            }))}
+          />
 
           {canCreatePosition ? (
             <form
@@ -277,46 +213,14 @@ const CatalogoPage = async ({ searchParams }: CatalogoPageProps) => {
           </p>
         </div>
 
-        <ListTableShell>
-          <Table className={listTableDensityClassName}>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nombre</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Estado</TableHead>
-                {canDeleteSite ? <TableHead /> : null}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {siteRows.length === 0 ? (
-                <TableRow className="hover:bg-transparent">
-                  <TableCell colSpan={canDeleteSite ? 4 : 3}>
-                    <ListEmptyState title="Sin ubicaciones registradas." />
-                  </TableCell>
-                </TableRow>
-              ) : (
-                siteRows.map((site) => (
-                  <TableRow key={site.id}>
-                    <TableCell className="font-medium">{site.name}</TableCell>
-                    <TableCell>{siteKindLabels[site.kind]}</TableCell>
-                    <TableCell>
-                      <ListStatusBadge tone="active">Activa</ListStatusBadge>
-                    </TableCell>
-                    {canDeleteSite ? (
-                      <TableCell className="text-right">
-                        <CatalogRowDeleteButton
-                          action={deleteSiteAction.bind(null, site.id)}
-                          itemLabel="ubicación"
-                          itemName={site.name}
-                        />
-                      </TableCell>
-                    ) : null}
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </ListTableShell>
+        <CatalogSitesTable
+          canDelete={canDeleteSite}
+          sites={siteRows.map((site) => ({
+            id: site.id,
+            name: site.name,
+            kindLabel: siteKindLabels[site.kind],
+          }))}
+        />
 
         {canCreateSite ? (
           <form action={createSiteAction} className="space-y-3 border-t pt-4">

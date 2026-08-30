@@ -1,23 +1,8 @@
 import Link from "next/link";
 import { PlusIcon } from "lucide-react";
 
-import { ClickableTableRow } from "@/components/list/clickable-table-row";
-import { ListRowAction } from "@/components/list/list-row-action";
-import { ListStatusBadge } from "@/components/list/list-status-badge";
-import {
-  ListEmptyState,
-  ListTableShell,
-  listTableDensityClassName,
-} from "@/components/list/list-table-shell";
+import { PlantillasDataTable } from "@/components/contracts/plantillas-data-table";
 import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { listContractTemplates } from "@/lib/contracts";
 import { requireContractTemplatesRead } from "@/lib/contracts/auth";
 import { userHasPermission } from "@/lib/rbac";
@@ -105,50 +90,13 @@ const PlantillasPage = async ({ searchParams }: PlantillasPageProps) => {
         </p>
       ) : null}
 
-      <ListTableShell>
-        {templates.length === 0 ? (
-          <ListEmptyState
-            description="Crea una plantilla para emitir contratos desde el expediente."
-            title="Sin plantillas"
-          />
-        ) : (
-          <Table className={listTableDensityClassName}>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nombre</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {templates.map((template) => (
-                <ClickableTableRow
-                  key={template.id}
-                  ariaLabel={`Editar plantilla ${template.name}`}
-                  href={`/app/contratos/plantillas/${template.id}`}
-                >
-                  <TableCell className="font-medium">{template.name}</TableCell>
-                  <TableCell>
-                    <ListStatusBadge
-                      tone={template.active ? "active" : "inactive"}
-                    >
-                      {template.active ? "Activa" : "Inactiva"}
-                    </ListStatusBadge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <ListRowAction
-                      aria-label={`Editar plantilla ${template.name}`}
-                      href={`/app/contratos/plantillas/${template.id}`}
-                    >
-                      Editar
-                    </ListRowAction>
-                  </TableCell>
-                </ClickableTableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </ListTableShell>
+      <PlantillasDataTable
+        templates={templates.map((template) => ({
+          id: template.id,
+          name: template.name,
+          active: template.active,
+        }))}
+      />
     </div>
   );
 };
