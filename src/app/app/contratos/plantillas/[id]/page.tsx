@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PageBreadcrumbLabel } from "@/components/layout/app-breadcrumbs";
 import {
   deactivateContractTemplateAction,
   deleteContractTemplateAction,
@@ -45,6 +46,7 @@ const PlantillaDetailPage = async ({
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
+      <PageBreadcrumbLabel label={template.name} />
       <header className="space-y-1">
         <p className="text-muted-foreground font-mono text-[10.5px] font-medium tracking-[0.09em] uppercase">
           Contratos

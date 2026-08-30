@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { CATALOG_PATHS, catalogHref } from "@/lib/catalog/paths";
 import { AuthorizationError } from "@/lib/rbac";
 
 import { createSite, softDeleteSite } from "./index";
@@ -10,7 +11,8 @@ import { requireSitesCreate, requireSitesDelete } from "./auth";
 import { siteFormSchema } from "./schema";
 
 const revalidateSites = () => {
-  revalidatePath("/app/catalogo");
+  revalidatePath(CATALOG_PATHS.index);
+  revalidatePath(CATALOG_PATHS.sucursales);
   revalidatePath("/app/auditoria");
   revalidatePath("/app/personas");
 };
@@ -22,7 +24,9 @@ export const createSiteAction = async (formData: FormData) => {
     session = await requireSitesCreate();
   } catch (error) {
     if (error instanceof AuthorizationError) {
-      redirect("/app/catalogo?error=sites-create");
+      redirect(
+        catalogHref(CATALOG_PATHS.sucursales, { error: "sites-create" }),
+      );
     }
 
     redirect("/login");
@@ -34,12 +38,12 @@ export const createSiteAction = async (formData: FormData) => {
   });
 
   if (!parsed.success) {
-    redirect("/app/catalogo?error=site-form");
+    redirect(catalogHref(CATALOG_PATHS.sucursales, { error: "site-form" }));
   }
 
   await createSite(parsed.data, session.user.id);
   revalidateSites();
-  redirect("/app/catalogo?saved=site");
+  redirect(catalogHref(CATALOG_PATHS.sucursales, { saved: "site" }));
 };
 
 export const deleteSiteAction = async (siteId: string) => {
@@ -49,7 +53,9 @@ export const deleteSiteAction = async (siteId: string) => {
     session = await requireSitesDelete();
   } catch (error) {
     if (error instanceof AuthorizationError) {
-      redirect("/app/catalogo?error=sites-delete");
+      redirect(
+        catalogHref(CATALOG_PATHS.sucursales, { error: "sites-delete" }),
+      );
     }
 
     redirect("/login");
@@ -57,5 +63,5 @@ export const deleteSiteAction = async (siteId: string) => {
 
   await softDeleteSite(siteId, session.user.id);
   revalidateSites();
-  redirect("/app/catalogo?deleted=site");
+  redirect(catalogHref(CATALOG_PATHS.sucursales, { deleted: "site" }));
 };

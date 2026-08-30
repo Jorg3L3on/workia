@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 
 import { Providers } from "@/components/providers";
+import { workiaIcons } from "@/lib/brand/workia-icons";
 
 import "./globals.css";
 
@@ -19,13 +20,8 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "workia",
   description: "Plataforma de recursos humanos — personas, nómina y talento.",
-  icons: {
-    icon: [
-      { url: "/favicon.ico", sizes: "48x48" },
-      { url: "/icon.png", type: "image/png", sizes: "32x32" },
-    ],
-    apple: [{ url: "/apple-icon.png", sizes: "180x180" }],
-  },
+  icons: workiaIcons,
+  manifest: "/manifest.webmanifest",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

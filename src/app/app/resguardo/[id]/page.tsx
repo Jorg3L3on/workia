@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { AuditEventList } from "@/components/audit/audit-event-list";
 import { AssignAssetForm } from "@/components/resguardo/assign-asset-form";
 import { ReturnAssetForm } from "@/components/resguardo/return-asset-form";
+import { PageBreadcrumbLabel } from "@/components/layout/app-breadcrumbs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -97,6 +98,7 @@ const AssetDetailPage = async ({
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
+      <PageBreadcrumbLabel label={asset.name} />
       <div className="workia-pass-card space-y-4 p-5 sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-1">

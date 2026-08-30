@@ -67,4 +67,20 @@ describe("AdminShell", () => {
       document.querySelector('[data-slot="sidebar-inset"]')?.className,
     ).not.toContain("sticky");
   });
+
+  it("shows Spanish breadcrumbs in the sticky header", () => {
+    render(
+      <AdminShell>
+        <p>Admin</p>
+      </AdminShell>,
+    );
+
+    const breadcrumb = screen.getByRole("navigation", { name: "Miga de pan" });
+    expect(breadcrumb.textContent).toContain("Administración");
+    expect(
+      document
+        .querySelector('[data-slot="shell-top-nav"]')
+        ?.querySelector('[data-slot="breadcrumb"]'),
+    ).toBeTruthy();
+  });
 });
