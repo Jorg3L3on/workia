@@ -16,7 +16,12 @@ import {
   BreadcrumbLabelsProvider,
 } from "@/components/layout/app-breadcrumbs";
 import { AppSidebarNav } from "@/components/layout/app-sidebar-nav";
-import { SHELL_TOP_NAV_CLASS_NAME } from "@/components/layout/shell-top-nav";
+import {
+  SHELL_INSET_CLASS_NAME,
+  SHELL_MAIN_SCROLL_CLASS_NAME,
+  SHELL_TOP_NAV_CLASS_NAME,
+  SHELL_VIEWPORT_CLASS_NAME,
+} from "@/components/layout/shell-top-nav";
 import { NavUser } from "@/components/nav-user";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Separator } from "@/components/ui/separator";
@@ -61,13 +66,20 @@ export const AppShell = ({ children, user }: AppShellProps) => {
 
   return (
     <BreadcrumbLabelsProvider>
-      <div className="workia-shell relative flex min-h-full flex-col">
+      <div
+        className={cn(
+          "workia-shell relative flex flex-col",
+          SHELL_VIEWPORT_CLASS_NAME,
+        )}
+      >
         <div
           className="workia-shell-grain pointer-events-none absolute inset-0 z-0"
           aria-hidden
         />
 
-        <SidebarProvider className="relative z-10 flex min-h-full w-full">
+        <SidebarProvider
+          className={cn("relative z-10 flex w-full", SHELL_VIEWPORT_CLASS_NAME)}
+        >
           <Sidebar
             collapsible="icon"
             className="border-sidebar-border border-r"
@@ -103,7 +115,9 @@ export const AppShell = ({ children, user }: AppShellProps) => {
             <SidebarRail />
           </Sidebar>
 
-          <SidebarInset className="bg-transparent">
+          <SidebarInset
+            className={cn("bg-transparent", SHELL_INSET_CLASS_NAME)}
+          >
             <header
               className={cn(
                 "workia-credential-header flex h-14 shrink-0 items-center gap-2 border-b",
@@ -123,7 +137,13 @@ export const AppShell = ({ children, user }: AppShellProps) => {
                 <ThemeToggle />
               </div>
             </header>
-            <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 p-4 md:p-6">
+            <div
+              className={cn(
+                "mx-auto flex w-full max-w-6xl flex-col gap-4 p-4 md:p-6",
+                SHELL_MAIN_SCROLL_CLASS_NAME,
+              )}
+              data-slot="shell-main-scroll"
+            >
               {children}
             </div>
           </SidebarInset>
