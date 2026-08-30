@@ -1,11 +1,5 @@
 import { expect, test } from "@playwright/test";
 
-const artifactsDir = process.env.E2E_ARTIFACTS_DIR;
-
-test.use({
-  video: artifactsDir ? { mode: "on", dir: artifactsDir } : "off",
-});
-
 const loginAsDemoAdmin = async (page: import("@playwright/test").Page) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/login");
@@ -13,20 +7,6 @@ const loginAsDemoAdmin = async (page: import("@playwright/test").Page) => {
   await page.getByRole("textbox", { name: "Contraseña" }).fill("Workia123!");
   await page.getByRole("button", { name: "Iniciar sesión" }).click();
   await expect(page).toHaveURL(/\/app/, { timeout: 25_000 });
-};
-
-const capture = async (
-  page: import("@playwright/test").Page,
-  filename: string,
-) => {
-  if (!artifactsDir) {
-    return;
-  }
-
-  await page.screenshot({
-    path: `${artifactsDir}/${filename}`,
-    fullPage: true,
-  });
 };
 
 test("soft-deleted expediente stays open and appears in borrados", async ({
@@ -77,7 +57,6 @@ test("soft-deleted expediente stays open and appears in borrados", async ({
   await expect(
     page.getByText("Borrado", { exact: true }).first(),
   ).toBeVisible();
-  await capture(page, "expediente_borrado_ficha.png");
 
   await page.getByRole("link", { name: "Ver listado de borrados" }).click();
   await expect(page).toHaveURL(/\/app\/personas\?deleted=1/);
@@ -85,8 +64,6 @@ test("soft-deleted expediente stays open and appears in borrados", async ({
   await expect(
     page.locator("table").getByText("Borrado", { exact: true }).first(),
   ).toBeVisible();
-
-  await capture(page, "personas_borrados_list.png");
 
   await page.locator("#persona-visibility").selectOption("expediente");
   await expect(page.getByText(fullName)).toHaveCount(0);
