@@ -24,8 +24,18 @@ const fillSchedule = async (
   await page.getByLabel("Salida", { exact: true }).fill(times.salida);
 };
 
+const expedienteCard = (page: import("@playwright/test").Page) =>
+  page
+    .getByRole("heading", { level: 1 })
+    .locator("xpath=ancestor::div[contains(@class,'workia-pass-card')]");
+
+const contractCard = (page: import("@playwright/test").Page) =>
+  page
+    .getByRole("heading", { name: "Contratos" })
+    .locator("xpath=ancestor::div[contains(@class,'workia-pass-card')]");
+
 const expectScheduleOnFicha = async (
-  page: import("@playwright/test").Page,
+  root: import("@playwright/test").Locator,
   times: {
     entrada: string;
     salidaComer: string;
@@ -33,26 +43,24 @@ const expectScheduleOnFicha = async (
     salida: string;
   },
 ) => {
-  const entrada = page.locator("dt").filter({ hasText: /^Entrada$/ });
+  const entrada = root.locator("dt").filter({ hasText: /^Entrada$/ });
   await expect(entrada).toBeVisible();
   await expect(entrada.locator("..").locator("dd")).toHaveText(times.entrada);
 
-  const salidaComer = page
+  const salidaComer = root
     .locator("dt")
     .filter({ hasText: /^Salida a comer$/ });
   await expect(salidaComer.locator("..").locator("dd")).toHaveText(
     times.salidaComer,
   );
 
-  const regreso = page.locator("dt").filter({ hasText: /^Regreso de comer$/ });
+  const regreso = root.locator("dt").filter({ hasText: /^Regreso de comer$/ });
   await expect(regreso.locator("..").locator("dd")).toHaveText(
     times.regresoComer,
   );
 
-  const salida = page.locator("dt").filter({ hasText: /^Salida$/ });
-  await expect(salida.locator("..").locator("dd").first()).toHaveText(
-    times.salida,
-  );
+  const salida = root.locator("dt").filter({ hasText: /^Salida$/ });
+  await expect(salida.locator("..").locator("dd")).toHaveText(times.salida);
 };
 
 test.describe("Horario por persona", () => {
@@ -97,7 +105,7 @@ test.describe("Horario por persona", () => {
     await expect(
       page.getByRole("heading", { name: nameA, exact: true }),
     ).toBeVisible();
-    await expectScheduleOnFicha(page, scheduleA);
+    await expectScheduleOnFicha(expedienteCard(page), scheduleA);
     const expedienteA = page.url();
 
     await page.goto("/app/personas/nueva");
@@ -114,7 +122,7 @@ test.describe("Horario por persona", () => {
     await expect(
       page.getByRole("heading", { name: nameB, exact: true }),
     ).toBeVisible();
-    await expectScheduleOnFicha(page, scheduleB);
+    await expectScheduleOnFicha(expedienteCard(page), scheduleB);
 
     const puestoA = (
       await page
@@ -136,7 +144,7 @@ test.describe("Horario por persona", () => {
     expect(sitioB).toMatch(/Sucursal Centro Demo/);
 
     await page.goto(expedienteA);
-    await expectScheduleOnFicha(page, scheduleA);
+    await expectScheduleOnFicha(expedienteCard(page), scheduleA);
     await expect(page.getByText("09:00")).toHaveCount(0);
 
     await page.getByRole("link", { name: "Emitir contrato" }).click();
@@ -148,10 +156,8 @@ test.describe("Horario por persona", () => {
       page.getByText("Contrato emitido y guardado en el expediente."),
     ).toBeVisible();
 
-    const contractSection = page
-      .getByRole("heading", { name: "Contratos" })
-      .locator("xpath=ancestor::div[contains(@class,'workia-pass-card')]");
-    await expect(contractSection.getByText("08:00").first()).toBeVisible();
+    const contractSection = contractCard(page);
+    await expectScheduleOnFicha(contractSection, scheduleA);
     await contractSection.getByText("Ver texto generado").click();
     await expect(contractSection.locator("pre")).toContainText("entrada 08:00");
     await expect(contractSection.locator("pre")).not.toContainText("10:00");
@@ -160,12 +166,11 @@ test.describe("Horario por persona", () => {
     await fillSchedule(page, laterSchedule);
     await page.getByRole("button", { name: "Guardar cambios" }).click();
     await expect(page).toHaveURL(/saved=1/);
-    await expectScheduleOnFicha(page, laterSchedule);
+    await expectScheduleOnFicha(expedienteCard(page), laterSchedule);
 
-    const contractAfterEdit = page
-      .getByRole("heading", { name: "Contratos" })
-      .locator("xpath=ancestor::div[contains(@class,'workia-pass-card')]");
-    await expect(contractAfterEdit.getByText("08:00").first()).toBeVisible();
+    const contractAfterEdit = contractCard(page);
+    await expectScheduleOnFicha(contractAfterEdit, scheduleA);
+    await contractAfterEdit.getByText("Ver texto generado").click();
     await expect(contractAfterEdit.locator("pre")).toContainText(
       "entrada 08:00",
     );
