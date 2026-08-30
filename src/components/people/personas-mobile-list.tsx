@@ -4,7 +4,7 @@ import { ListMobileCard } from "@/components/list/list-mobile-card";
 import { ListRowAction } from "@/components/list/list-row-action";
 import { ListStatusBadge } from "@/components/list/list-status-badge";
 import type { PersonaListRow } from "@/components/people/persona-list-row";
-import { personStatusLabels } from "@/lib/people/schema";
+import { personDeletedLabel, personStatusLabels } from "@/lib/people/schema";
 
 type PersonasMobileListProps = {
   people: PersonaListRow[];
@@ -23,7 +23,11 @@ export const PersonasMobileList = ({ people }: PersonasMobileListProps) => (
             Ver expediente
           </ListRowAction>
         }
-        ariaLabel={`Ver expediente de ${person.name}`}
+        ariaLabel={
+          person.deleted
+            ? `Ver expediente borrado de ${person.name}`
+            : `Ver expediente de ${person.name}`
+        }
         href={`/app/personas/${person.id}`}
       >
         <div className="space-y-2">
@@ -42,11 +46,18 @@ export const PersonasMobileList = ({ people }: PersonasMobileListProps) => (
                 Relación
               </dt>
               <dd className="mt-0.5">
-                <ListStatusBadge
-                  tone={person.status === "activa" ? "active" : "inactive"}
-                >
-                  {personStatusLabels[person.status]}
-                </ListStatusBadge>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <ListStatusBadge
+                    tone={person.status === "activa" ? "active" : "inactive"}
+                  >
+                    {personStatusLabels[person.status]}
+                  </ListStatusBadge>
+                  {person.deleted ? (
+                    <ListStatusBadge tone="destructive">
+                      {personDeletedLabel}
+                    </ListStatusBadge>
+                  ) : null}
+                </div>
               </dd>
             </div>
           </dl>

@@ -26,6 +26,46 @@ describe("people domain rules", () => {
     expect(personStatusLabels.baja).toBe("Baja");
     expect(personStatusLabels.activa).toBe("Activa");
   });
+
+  it("marks soft-deleted people without treating them as baja", async () => {
+    const { personDeletedLabel, personIsDeleted } =
+      await import("@/lib/people/schema");
+
+    expect(personDeletedLabel).toBe("Borrado");
+    expect(
+      personIsDeleted({ deletedAt: new Date("2026-01-15T00:00:00Z") }),
+    ).toBe(true);
+    expect(personIsDeleted({ deletedAt: null })).toBe(false);
+  });
+
+  it("keeps deleted people out of the default expediente list", async () => {
+    const { matchesPersonaListRow } = await import("@/lib/people/schema");
+
+    expect(
+      matchesPersonaListRow(
+        { status: "activa", deleted: false },
+        { visibility: "expediente" },
+      ),
+    ).toBe(true);
+    expect(
+      matchesPersonaListRow(
+        { status: "activa", deleted: true },
+        { visibility: "expediente" },
+      ),
+    ).toBe(false);
+    expect(
+      matchesPersonaListRow(
+        { status: "activa", deleted: true },
+        { visibility: "deleted" },
+      ),
+    ).toBe(true);
+    expect(
+      matchesPersonaListRow(
+        { status: "baja", deleted: true },
+        { status: "activa", visibility: "deleted" },
+      ),
+    ).toBe(false);
+  });
 });
 
 describe("dummy identifier policy", () => {

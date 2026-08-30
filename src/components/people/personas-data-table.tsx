@@ -7,7 +7,12 @@ import { ListRowAction } from "@/components/list/list-row-action";
 import { ListStatusBadge } from "@/components/list/list-status-badge";
 import type { PersonaListRow } from "@/components/people/persona-list-row";
 import { PersonasMobileList } from "@/components/people/personas-mobile-list";
-import { personStatusLabels } from "@/lib/people/schema";
+import {
+  matchesPersonaListRow,
+  personDeletedLabel,
+  personStatusLabels,
+  type PersonListVisibility,
+} from "@/lib/people/schema";
 
 export type { PersonaListRow } from "@/components/people/persona-list-row";
 
@@ -15,6 +20,7 @@ type PersonasDataTableProps = {
   people: PersonaListRow[];
   initialSearch?: string;
   initialStatus?: "activa" | "baja" | "";
+  initialVisibility?: PersonListVisibility;
   emptyAction?: ReactNode;
 };
 
@@ -22,12 +28,19 @@ export const PersonasDataTable = ({
   people,
   initialSearch = "",
   initialStatus = "",
+  initialVisibility = "expediente",
   emptyAction,
 }: PersonasDataTableProps) => {
   const [status, setStatus] = useState(initialStatus);
+  const [visibility, setVisibility] =
+    useState<PersonListVisibility>(initialVisibility);
 
   const handleStatusChange = (event: ChangeEvent<HTMLSelectElement>) => {
     setStatus(event.target.value as typeof initialStatus);
+  };
+
+  const handleVisibilityChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    setVisibility(event.target.value as PersonListVisibility);
   };
 
   const columns = useMemo<DataTableColumn<PersonaListRow>[]>(
@@ -51,13 +64,23 @@ export const PersonasDataTable = ({
       {
         id: "status",
         header: "Relación",
-        accessor: (row) => personStatusLabels[row.status],
+        accessor: (row) =>
+          row.deleted
+            ? `${personDeletedLabel} ${personStatusLabels[row.status]}`
+            : personStatusLabels[row.status],
         cell: (row) => (
-          <ListStatusBadge
-            tone={row.status === "activa" ? "active" : "inactive"}
-          >
-            {personStatusLabels[row.status]}
-          </ListStatusBadge>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <ListStatusBadge
+              tone={row.status === "activa" ? "active" : "inactive"}
+            >
+              {personStatusLabels[row.status]}
+            </ListStatusBadge>
+            {row.deleted ? (
+              <ListStatusBadge tone="destructive">
+                {personDeletedLabel}
+              </ListStatusBadge>
+            ) : null}
+          </div>
         ),
       },
       {
@@ -80,23 +103,43 @@ export const PersonasDataTable = ({
     [],
   );
 
+  const viewingDeleted = visibility === "deleted";
+
   return (
     <DataTable
       columns={columns}
       data={people}
-      emptyAction={emptyAction}
+      emptyAction={viewingDeleted ? undefined : emptyAction}
       emptyDescription={
-        emptyAction
-          ? "Da de alta a alguien para empezar el expediente."
-          : "Cuando existan registros, los verás aquí."
+        viewingDeleted
+          ? "Los expedientes con borrado lógico aparecen aquí."
+          : emptyAction
+            ? "Da de alta a alguien para empezar el expediente."
+            : "Cuando existan registros, los verás aquí."
       }
-      emptyTitle="Aún no hay personas en el expediente"
-      filterRow={status ? (row) => row.status === status : undefined}
-      getRowAriaLabel={(row) => `Ver expediente de ${row.name}`}
+      emptyTitle={
+        viewingDeleted
+          ? "No hay expedientes borrados"
+          : "Aún no hay personas en el expediente"
+      }
+      filterRow={(row) => matchesPersonaListRow(row, { status, visibility })}
+      getRowAriaLabel={(row) =>
+        row.deleted
+          ? `Ver expediente borrado de ${row.name}`
+          : `Ver expediente de ${row.name}`
+      }
       getRowHref={(row) => `/app/personas/${row.id}`}
       getRowId={(row) => row.id}
       getSearchText={(row) => row.searchText}
       initialSearch={initialSearch}
+      noMatchesDescription={
+        viewingDeleted
+          ? "Los expedientes con borrado lógico aparecen aquí."
+          : "Prueba con otros términos o limpia la búsqueda."
+      }
+      noMatchesTitle={
+        viewingDeleted ? "No hay expedientes borrados" : "No hay coincidencias"
+      }
       renderMobile={(visiblePeople) => (
         <PersonasMobileList people={visiblePeople} />
       )}
@@ -104,20 +147,36 @@ export const PersonasDataTable = ({
       resultSingular="resultado"
       searchPlaceholder="Nombre, RFC, CURP o correo"
       toolbar={
-        <div className="space-y-2 sm:w-44">
-          <label className="text-sm font-medium" htmlFor="persona-status">
-            Relación
-          </label>
-          <select
-            className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-8 w-full rounded-lg border px-2.5 text-sm outline-none focus-visible:ring-3"
-            id="persona-status"
-            onChange={handleStatusChange}
-            value={status}
-          >
-            <option value="">Todas</option>
-            <option value="activa">Activas</option>
-            <option value="baja">Bajas</option>
-          </select>
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <div className="space-y-2 sm:w-44">
+            <label className="text-sm font-medium" htmlFor="persona-status">
+              Relación
+            </label>
+            <select
+              className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-8 w-full rounded-lg border px-2.5 text-sm outline-none focus-visible:ring-3"
+              id="persona-status"
+              onChange={handleStatusChange}
+              value={status}
+            >
+              <option value="">Todas</option>
+              <option value="activa">Activas</option>
+              <option value="baja">Bajas</option>
+            </select>
+          </div>
+          <div className="space-y-2 sm:w-44">
+            <label className="text-sm font-medium" htmlFor="persona-visibility">
+              Expediente
+            </label>
+            <select
+              className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-8 w-full rounded-lg border px-2.5 text-sm outline-none focus-visible:ring-3"
+              id="persona-visibility"
+              onChange={handleVisibilityChange}
+              value={visibility}
+            >
+              <option value="expediente">En expediente</option>
+              <option value="deleted">Borrados</option>
+            </select>
+          </div>
         </div>
       }
     />

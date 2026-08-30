@@ -14,15 +14,16 @@ type PersonasPageProps = {
   searchParams: Promise<{
     q?: string;
     status?: "activa" | "baja";
+    deleted?: string;
   }>;
 };
 
 const PersonasPage = async ({ searchParams }: PersonasPageProps) => {
   const session = await assertPeopleListAccess();
-  const { q, status } = await searchParams;
+  const { q, status, deleted } = await searchParams;
 
   const [people, canCreate] = await Promise.all([
-    listPeople(),
+    listPeople({ includeDeleted: true }),
     userHasPermission(session.user.id, "people:create"),
   ]);
 
@@ -31,6 +32,7 @@ const PersonasPage = async ({ searchParams }: PersonasPageProps) => {
     name: formatPersonName(person),
     rfc: person.rfc,
     status: person.status,
+    deleted: Boolean(person.deletedAt),
     searchText: [
       formatPersonName(person),
       person.rfc,
@@ -78,6 +80,7 @@ const PersonasPage = async ({ searchParams }: PersonasPageProps) => {
         }
         initialSearch={q ?? ""}
         initialStatus={status ?? ""}
+        initialVisibility={deleted === "1" ? "deleted" : "expediente"}
         people={rows}
       />
     </div>

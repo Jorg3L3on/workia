@@ -167,8 +167,8 @@ export const deletePersonAction = async (personId: string): Promise<void> => {
 
   await softDeletePerson(personId, session.user.id);
 
-  revalidatePersonPaths();
-  redirect("/app/personas");
+  revalidatePersonPaths(personId);
+  redirect(`/app/personas/${personId}`);
 };
 
 export const assertPeopleListAccess = async () => requirePeopleRead();

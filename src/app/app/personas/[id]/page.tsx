@@ -24,6 +24,8 @@ import { requirePeopleRead } from "@/lib/people/auth";
 import {
   formatDateLabel,
   formatPersonName,
+  personDeletedLabel,
+  personIsDeleted,
   personStatusLabels,
 } from "@/lib/people/schema";
 import { userHasPermission } from "@/lib/rbac";
@@ -77,7 +79,7 @@ const PersonaDetailPage = async ({
     contractTemplates,
     personAssets,
   ] = await Promise.all([
-    getPersonWithRelations(id),
+    getPersonWithRelations(id, true),
     userHasPermission(session.user.id, "people:update"),
     userHasPermission(session.user.id, "people:delete"),
     userHasPermission(session.user.id, "audit:read"),
@@ -100,7 +102,8 @@ const PersonaDetailPage = async ({
     notFound();
   }
 
-  const isEditing = edit === "1" && canUpdate;
+  const isDeleted = personIsDeleted(person);
+  const isEditing = edit === "1" && canUpdate && !isDeleted;
 
   if (isEditing) {
     return (
@@ -132,10 +135,27 @@ const PersonaDetailPage = async ({
               Datos de empresa, identificadores y relación laboral.
             </p>
           </div>
-          <Badge variant={person.status === "activa" ? "default" : "secondary"}>
-            {personStatusLabels[person.status]}
-          </Badge>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge
+              variant={person.status === "activa" ? "default" : "secondary"}
+            >
+              {personStatusLabels[person.status]}
+            </Badge>
+            {isDeleted ? (
+              <Badge variant="destructive">{personDeletedLabel}</Badge>
+            ) : null}
+          </div>
         </div>
+
+        {isDeleted ? (
+          <p
+            className="border-border/70 bg-muted/40 rounded-lg border px-3 py-2 text-sm"
+            role="status"
+          >
+            Expediente borrado el {formatDateLabel(person.deletedAt)}. Sigue
+            disponible para consulta; no se restauró el registro.
+          </p>
+        ) : null}
 
         {saved === "1" ? (
           <p
@@ -225,7 +245,7 @@ const PersonaDetailPage = async ({
         </dl>
 
         <div className="flex flex-wrap gap-3 pt-1">
-          {canUpdate ? (
+          {canUpdate && !isDeleted ? (
             <Button asChild variant="outline">
               <Link href={`/app/personas/${person.id}?edit=1`}>
                 <PencilIcon className="size-4" aria-hidden />
@@ -233,16 +253,22 @@ const PersonaDetailPage = async ({
               </Link>
             </Button>
           ) : null}
-          {canCreateContracts && canReadContracts ? (
+          {canCreateContracts && canReadContracts && !isDeleted ? (
             <Button asChild variant="outline">
               <Link href={`/app/personas/${person.id}?emit=1`}>
                 Emitir contrato
               </Link>
             </Button>
           ) : null}
-          {canDelete ? <DeletePersonButton personId={person.id} /> : null}
+          {canDelete && !isDeleted ? (
+            <DeletePersonButton personId={person.id} />
+          ) : null}
           <Button asChild variant="ghost">
-            <Link href="/app/personas">Volver al listado</Link>
+            <Link
+              href={isDeleted ? "/app/personas?deleted=1" : "/app/personas"}
+            >
+              {isDeleted ? "Ver listado de borrados" : "Volver al listado"}
+            </Link>
           </Button>
         </div>
       </div>
@@ -261,7 +287,7 @@ const PersonaDetailPage = async ({
             rfc: person.rfc,
           }}
           personId={person.id}
-          showEmitForm={emit === "1"}
+          showEmitForm={emit === "1" && !isDeleted}
           templates={contractTemplates}
         />
       ) : null}

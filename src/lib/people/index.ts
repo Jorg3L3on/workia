@@ -114,8 +114,11 @@ export const getPersonById = async (id: string, includeDeleted = false) => {
   return person ?? null;
 };
 
-export const getPersonWithRelations = async (id: string) => {
-  const person = await getPersonById(id);
+export const getPersonWithRelations = async (
+  id: string,
+  includeDeleted = false,
+) => {
+  const person = await getPersonById(id, includeDeleted);
 
   if (!person) {
     return null;
