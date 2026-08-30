@@ -22,6 +22,7 @@ describe("audit append-only surface", () => {
       "buildChanges",
       "listAuditEvents",
       "recordAuditEvent",
+      "snapshotActivity",
       "snapshotArea",
       "snapshotAsset",
       "snapshotAssetMovement",
@@ -29,6 +30,7 @@ describe("audit append-only surface", () => {
       "snapshotContractTemplate",
       "snapshotPerson",
       "snapshotPosition",
+      "snapshotPositionActivity",
       "snapshotSite",
     ]);
   });
@@ -50,6 +52,21 @@ describe("audit permissions catalog", () => {
     expect(slugs).toContain("audit:read");
     expect(slugs).not.toContain("audit:update");
     expect(slugs).not.toContain("audit:delete");
+  });
+});
+
+describe("audit Spanish labels", () => {
+  it("keeps assign as Entrega and uses link/unlink for activities", async () => {
+    const { auditActionLabels, auditResourceTypeLabels } =
+      await import("@/lib/audit/types");
+
+    expect(auditActionLabels.assign).toBe("Entrega");
+    expect(auditActionLabels.link).toBe("Asignación");
+    expect(auditActionLabels.unlink).toBe("Desasignación");
+    expect(auditResourceTypeLabels.activity).toBe("Actividad");
+    expect(auditResourceTypeLabels.position_activity).toBe(
+      "Actividad de puesto",
+    );
   });
 });
 

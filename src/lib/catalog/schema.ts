@@ -28,6 +28,31 @@ export const positionFormSchema = z.object({
 
 export type PositionFormValues = z.infer<typeof positionFormSchema>;
 
+export const activityFormSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, "El nombre es obligatorio")
+    .max(120, "Máximo 120 caracteres"),
+  active: z.boolean(),
+});
+
+export type ActivityFormValues = z.infer<typeof activityFormSchema>;
+
+export const positionActivityFormSchema = z.object({
+  positionId: z.string().uuid("Puesto inválido"),
+  activityId: z.string().uuid("Actividad inválida"),
+});
+
+export type PositionActivityFormValues = z.infer<
+  typeof positionActivityFormSchema
+>;
+
+export const isActivityAssignable = (activity: {
+  active: boolean;
+  deletedAt: Date | null;
+}) => activity.active && activity.deletedAt == null;
+
 export type AreaTreeNode = {
   id: string;
   name: string;

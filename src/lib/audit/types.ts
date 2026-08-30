@@ -2,6 +2,8 @@ export const AUDIT_RESOURCE_TYPES = [
   "person",
   "area",
   "position",
+  "activity",
+  "position_activity",
   "site",
   "contract",
   "contract_template",
@@ -23,6 +25,8 @@ export const AUDIT_ACTIONS = [
   "no_renew",
   "assign",
   "return",
+  "link",
+  "unlink",
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
@@ -39,12 +43,16 @@ export const auditActionLabels: Record<AuditAction, string> = {
   no_renew: "No renovar",
   assign: "Entrega",
   return: "Devolución",
+  link: "Asignación",
+  unlink: "Desasignación",
 };
 
 export const auditResourceTypeLabels: Record<AuditResourceType, string> = {
   person: "Persona",
   area: "Área",
   position: "Puesto",
+  activity: "Actividad",
+  position_activity: "Actividad de puesto",
   site: "Ubicación",
   contract: "Contrato",
   contract_template: "Plantilla de contrato",

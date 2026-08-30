@@ -101,6 +101,13 @@ export const resolveBreadcrumbs = (
     ];
   }
 
+  if (path === CATALOG_PATHS.actividades) {
+    return [
+      { label: "Catálogo", href: CATALOG_PATHS.index },
+      { label: "Actividades" },
+    ];
+  }
+
   if (path === CATALOG_PATHS.sucursales) {
     return [
       { label: "Catálogo", href: CATALOG_PATHS.index },

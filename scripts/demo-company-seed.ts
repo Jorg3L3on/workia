@@ -8,12 +8,14 @@ import { recordAuditEvent } from "@/lib/audit";
 import { fillContractTemplate } from "@/lib/contracts/schema";
 import { db } from "@/lib/db";
 import {
+  activities,
   areas,
   assetMovements,
   assets,
   contractTemplates,
   contracts,
   people,
+  positionActivities,
   positions,
   sites,
 } from "@/lib/db/schema";
@@ -572,5 +574,102 @@ export const seedDemoResguardo = async () => {
 
   console.log(
     `Demo resguardo seed completed (5 assets, moto with ${holderA.nombres} → devolución → ${holderB.nombres}).`,
+  );
+};
+
+const DEMO_ACTIVITY_MARKER = "Atención a solicitudes internas";
+
+export const seedDemoActivities = async () => {
+  const existing = await db
+    .select({ id: activities.id })
+    .from(activities)
+    .where(eq(activities.name, DEMO_ACTIVITY_MARKER))
+    .limit(1);
+
+  if (existing.length > 0) {
+    console.log("Demo activities already seeded — skipping activity data.");
+    return;
+  }
+
+  const activityNames = [
+    DEMO_ACTIVITY_MARKER,
+    "Captura de reportes semanales",
+    "Coordinación de turnos demo",
+    "Revisión de bitácora diaria",
+  ] as const;
+
+  const activityIds = new Map<string, string>();
+
+  for (const name of activityNames) {
+    const [activity] = await db
+      .insert(activities)
+      .values({ name, active: true })
+      .returning({ id: activities.id });
+
+    activityIds.set(name, activity.id);
+
+    await recordAuditEvent({
+      resourceType: "activity",
+      resourceId: activity.id,
+      action: "create",
+      source: "seed",
+      payload: { summary: `Actividad demo: ${name}` },
+    });
+  }
+
+  const findPosition = async (name: string) => {
+    const [row] = await db
+      .select({ id: positions.id, name: positions.name })
+      .from(positions)
+      .where(and(eq(positions.name, name), isNull(positions.deletedAt)))
+      .limit(1);
+
+    return row ?? null;
+  };
+
+  const analista = await findPosition("Analista");
+  const jefe = await findPosition("Jefe de área");
+
+  const assignments: Array<{
+    position: { id: string; name: string } | null;
+    activityName: (typeof activityNames)[number];
+  }> = [
+    { position: analista, activityName: DEMO_ACTIVITY_MARKER },
+    { position: analista, activityName: "Captura de reportes semanales" },
+    { position: jefe, activityName: "Coordinación de turnos demo" },
+  ];
+
+  let assignedCount = 0;
+
+  for (const assignment of assignments) {
+    const activityId = activityIds.get(assignment.activityName);
+
+    if (!assignment.position || !activityId) {
+      continue;
+    }
+
+    await db
+      .insert(positionActivities)
+      .values({
+        positionId: assignment.position.id,
+        activityId,
+      })
+      .onConflictDoNothing();
+
+    await recordAuditEvent({
+      resourceType: "position_activity",
+      resourceId: `${assignment.position.id}:${activityId}`,
+      action: "link",
+      source: "seed",
+      payload: {
+        summary: `Actividad demo asignada: ${assignment.activityName} → ${assignment.position.name}`,
+      },
+    });
+
+    assignedCount++;
+  }
+
+  console.log(
+    `Demo activities seed completed (${activityNames.length} activities, ${assignedCount} assignments).`,
   );
 };

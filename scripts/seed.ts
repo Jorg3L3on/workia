@@ -16,7 +16,7 @@ const seed = async () => {
     PERMISSIONS,
     ROLES,
   } = await import("@/lib/db/schema/types");
-  const { seedDemoCompany, seedDemoResguardo } =
+  const { seedDemoActivities, seedDemoCompany, seedDemoResguardo } =
     await import("./demo-company-seed");
 
   console.log("Seeding RBAC data...");
@@ -164,6 +164,7 @@ const seed = async () => {
 
   await seedDemoCompany();
   await seedDemoResguardo();
+  await seedDemoActivities();
 
   console.log("Seed finished. Use demo credentials documented in README.");
 };

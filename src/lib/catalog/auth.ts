@@ -31,3 +31,12 @@ export const requirePositionsUpdate = async () =>
 
 export const requirePositionsDelete = async () =>
   requireCatalogPermission("positions:delete");
+
+/** Activities reuse positions:* — they describe what a puesto does. */
+export const requireActivitiesRead = async () => requirePositionsRead();
+
+export const requireActivitiesCreate = async () => requirePositionsCreate();
+
+export const requireActivitiesUpdate = async () => requirePositionsUpdate();
+
+export const requireActivitiesDelete = async () => requirePositionsDelete();

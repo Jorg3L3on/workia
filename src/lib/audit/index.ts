@@ -139,6 +139,21 @@ export const snapshotPosition = (position: Record<string, unknown>) => ({
   deletedAt: position.deletedAt,
 });
 
+export const snapshotActivity = (activity: Record<string, unknown>) => ({
+  name: activity.name,
+  active: activity.active,
+  deletedAt: activity.deletedAt,
+});
+
+export const snapshotPositionActivity = (
+  assignment: Record<string, unknown>,
+) => ({
+  positionId: assignment.positionId,
+  activityId: assignment.activityId,
+  positionName: assignment.positionName,
+  activityName: assignment.activityName,
+});
+
 export const snapshotSite = (site: Record<string, unknown>) => ({
   name: site.name,
   kind: site.kind,

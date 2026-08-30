@@ -10,7 +10,7 @@ const loginAsDemoRrhh = async (page: import("@playwright/test").Page) => {
 };
 
 test.describe("Catálogo sidebar", () => {
-  test("splits Catálogo into áreas, puestos and sucursales", async ({
+  test("splits Catálogo into áreas, puestos, actividades and sucursales", async ({
     page,
   }) => {
     await loginAsDemoRrhh(page);
@@ -31,6 +31,12 @@ test.describe("Catálogo sidebar", () => {
     await expect(page).toHaveURL(/\/app\/catalogo\/puestos/);
     await expect(
       page.getByRole("heading", { name: "Puestos", exact: true }),
+    ).toBeVisible();
+
+    await page.getByRole("link", { name: "Actividades" }).click();
+    await expect(page).toHaveURL(/\/app\/catalogo\/actividades/);
+    await expect(
+      page.getByRole("heading", { name: "Actividades", exact: true }),
     ).toBeVisible();
 
     await page.getByRole("link", { name: "Sucursales" }).click();

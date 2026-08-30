@@ -5,14 +5,24 @@ import { useMemo } from "react";
 import { CatalogRowDeleteButton } from "@/components/catalog/catalog-row-delete-button";
 import { DataTable, type DataTableColumn } from "@/components/list/data-table";
 import { ListStatusBadge } from "@/components/list/list-status-badge";
-import { deletePositionAction } from "@/lib/catalog/actions";
+import { Button } from "@/components/ui/button";
+import {
+  deletePositionAction,
+  unassignActivityFromPositionAction,
+} from "@/lib/catalog/actions";
 import { deleteSiteAction } from "@/lib/sites/actions";
+
+export type CatalogPositionActivity = {
+  id: string;
+  name: string;
+};
 
 export type CatalogPositionRow = {
   id: string;
   name: string;
   areaName: string;
   active: boolean;
+  activities: CatalogPositionActivity[];
 };
 
 export type CatalogSiteRow = {
@@ -24,6 +34,7 @@ export type CatalogSiteRow = {
 type CatalogPositionsTableProps = {
   positions: CatalogPositionRow[];
   canDelete: boolean;
+  canAssign: boolean;
 };
 
 type CatalogSitesTableProps = {
@@ -34,6 +45,7 @@ type CatalogSitesTableProps = {
 export const CatalogPositionsTable = ({
   positions,
   canDelete,
+  canAssign,
 }: CatalogPositionsTableProps) => {
   const columns = useMemo<DataTableColumn<CatalogPositionRow>[]>(
     () => [
@@ -47,6 +59,45 @@ export const CatalogPositionsTable = ({
         id: "area",
         header: "Área",
         accessor: (row) => row.areaName,
+      },
+      {
+        id: "activities",
+        header: "Actividades",
+        accessor: (row) =>
+          row.activities.map((activity) => activity.name).join(" "),
+        cell: (row) =>
+          row.activities.length === 0 ? (
+            <span className="text-muted-foreground">—</span>
+          ) : (
+            <ul className="space-y-1">
+              {row.activities.map((activity) => (
+                <li
+                  className="flex flex-wrap items-center gap-2"
+                  key={activity.id}
+                >
+                  <span>{activity.name}</span>
+                  {canAssign ? (
+                    <form action={unassignActivityFromPositionAction}>
+                      <input name="positionId" type="hidden" value={row.id} />
+                      <input
+                        name="activityId"
+                        type="hidden"
+                        value={activity.id}
+                      />
+                      <Button
+                        aria-label={`Quitar ${activity.name} de ${row.name}`}
+                        size="sm"
+                        type="submit"
+                        variant="ghost"
+                      >
+                        Quitar
+                      </Button>
+                    </form>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          ),
       },
       {
         id: "status",
@@ -79,7 +130,7 @@ export const CatalogPositionsTable = ({
           ]
         : []),
     ],
-    [canDelete],
+    [canAssign, canDelete],
   );
 
   return (
@@ -88,10 +139,15 @@ export const CatalogPositionsTable = ({
       data={positions}
       emptyTitle="Sin puestos registrados."
       getRowId={(row) => row.id}
+      getSearchText={(row) =>
+        [row.name, row.areaName, ...row.activities.map((item) => item.name)]
+          .filter(Boolean)
+          .join(" ")
+      }
       layout="inset"
       resultPlural="puestos"
       resultSingular="puesto"
-      searchPlaceholder="Buscar puesto o área"
+      searchPlaceholder="Buscar puesto, área o actividad"
     />
   );
 };
