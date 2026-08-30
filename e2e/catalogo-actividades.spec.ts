@@ -44,7 +44,9 @@ test.describe("Actividades de puesto", () => {
     await page.getByLabel("Nombre").fill(activityName);
     await page.getByRole("button", { name: "Crear actividad" }).click();
     await expect(page.getByRole("status")).toContainText("Cambios guardados");
-    await expect(page.getByRole("cell", { name: activityName })).toBeVisible();
+    await expect(
+      page.getByRole("cell", { name: activityName, exact: true }),
+    ).toBeVisible();
 
     await page.goto("/app/catalogo/puestos");
     await expect(
@@ -61,6 +63,9 @@ test.describe("Actividades de puesto", () => {
     await expect(page.getByRole("status")).toContainText(
       "Actividad asignada al puesto",
     );
+    await page
+      .getByPlaceholder("Buscar puesto, área o actividad")
+      .fill(activityName);
     await expect(page.getByText(activityName, { exact: true })).toBeVisible();
 
     await page.goto(expedienteUrl);
@@ -68,6 +73,9 @@ test.describe("Actividades de puesto", () => {
     await expect(page.getByText(activityName, { exact: true })).toBeVisible();
 
     await page.goto("/app/catalogo/puestos");
+    await page
+      .getByPlaceholder("Buscar puesto, área o actividad")
+      .fill(activityName);
     await page
       .getByRole("button", { name: `Quitar ${activityName} de ${puestoName}` })
       .click();
