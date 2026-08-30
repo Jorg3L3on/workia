@@ -58,5 +58,12 @@ test.describe("Authenticated list tables", () => {
     await expect(
       page.locator(".rounded-xl.border.border-border\\/70").first(),
     ).toBeVisible();
+    await expect(page.getByLabel("Nuevo tipo")).toHaveCount(0);
+
+    const renovar = page.getByRole("button", { name: /Renovar contrato de/ });
+    if ((await renovar.count()) > 0) {
+      await renovar.first().click();
+      await expect(page.getByLabel("Nuevo tipo")).toHaveCount(1);
+    }
   });
 });

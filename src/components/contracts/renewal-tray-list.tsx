@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import { NoRenewButton } from "@/components/contracts/no-renew-button";
 import { RenewContractForm } from "@/components/contracts/renew-contract-form";
 import { DataTable, type DataTableColumn } from "@/components/list/data-table";
 import { ListRowAction } from "@/components/list/list-row-action";
+import { Button } from "@/components/ui/button";
 import type { Contract, ContractTemplate } from "@/lib/db/schema";
 import {
   contractNoticeWindowLabels,
@@ -41,6 +42,21 @@ export const RenewalTrayList = ({
   canUpdate,
   templates,
 }: RenewalTrayListProps) => {
+  const [expandedContractId, setExpandedContractId] = useState<string | null>(
+    null,
+  );
+  const canRenew = canUpdate && templates.length > 0;
+
+  const handleToggleRenewForm = (contractId: string) => {
+    setExpandedContractId((current) =>
+      current === contractId ? null : contractId,
+    );
+  };
+
+  const handleCloseRenewForm = () => {
+    setExpandedContractId(null);
+  };
+
   const rows = useMemo<RenewalRow[]>(
     () =>
       items.map((item) => ({
@@ -87,20 +103,39 @@ export const RenewalTrayList = ({
         enableSorting: false,
         headerClassName: "text-right",
         cellClassName: "text-right",
-        cell: (row) => (
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            {canUpdate ? <NoRenewButton contractId={row.id} /> : null}
-            <ListRowAction
-              aria-label={`Ver expediente de ${row.personName}`}
-              href={`/app/personas/${row.personId}`}
-            >
-              Ver expediente
-            </ListRowAction>
-          </div>
-        ),
+        cell: (row) => {
+          const isFormOpen = expandedContractId === row.id;
+          const formId = `renewal-form-${row.id}`;
+
+          return (
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {canRenew ? (
+                <Button
+                  aria-controls={isFormOpen ? formId : undefined}
+                  aria-expanded={isFormOpen}
+                  aria-label={`Renovar contrato de ${row.personName}`}
+                  className="h-8 px-3 text-xs font-medium"
+                  onClick={() => handleToggleRenewForm(row.id)}
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                >
+                  Renovar
+                </Button>
+              ) : null}
+              {canUpdate ? <NoRenewButton contractId={row.id} /> : null}
+              <ListRowAction
+                aria-label={`Ver expediente de ${row.personName}`}
+                href={`/app/personas/${row.personId}`}
+              >
+                Ver expediente
+              </ListRowAction>
+            </div>
+          );
+        },
       },
     ],
-    [canUpdate],
+    [canRenew, canUpdate, expandedContractId],
   );
 
   return (
@@ -111,19 +146,40 @@ export const RenewalTrayList = ({
       emptyTitle="Sin renovaciones pendientes"
       getRowId={(row) => row.id}
       renderAfterRow={
-        canUpdate && templates.length > 0
-          ? (row) => (
-              <TableRow className="hover:bg-transparent">
-                <TableCell className="bg-muted/20 py-4" colSpan={4}>
-                  <RenewContractForm
-                    contractId={row.id}
-                    endDate={row.endDate}
-                    personName={row.personName}
-                    templates={templates}
-                  />
-                </TableCell>
-              </TableRow>
-            )
+        canRenew
+          ? (row) => {
+              if (expandedContractId !== row.id) {
+                return null;
+              }
+
+              return (
+                <TableRow className="hover:bg-transparent">
+                  <TableCell className="bg-muted/20 py-4" colSpan={4}>
+                    <div className="space-y-3" id={`renewal-form-${row.id}`}>
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-sm font-medium">Renovar contrato</p>
+                        <Button
+                          aria-label={`Cerrar formulario de renovación de ${row.personName}`}
+                          className="h-8 px-3 text-xs font-medium"
+                          onClick={handleCloseRenewForm}
+                          size="sm"
+                          type="button"
+                          variant="ghost"
+                        >
+                          Cerrar
+                        </Button>
+                      </div>
+                      <RenewContractForm
+                        contractId={row.id}
+                        endDate={row.endDate}
+                        personName={row.personName}
+                        templates={templates}
+                      />
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            }
           : undefined
       }
       resultPlural="contratos"
