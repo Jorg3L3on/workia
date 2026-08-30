@@ -50,6 +50,12 @@ test("soft-deleted expediente stays open and appears in borrados", async ({
   ).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Editar" })).toHaveCount(0);
 
+  const breadcrumb = page.getByRole("navigation", { name: "Miga de pan" });
+  await expect(
+    breadcrumb.getByRole("link", { name: "Personas" }),
+  ).toBeVisible();
+  await expect(breadcrumb.getByText(fullName, { exact: true })).toBeVisible();
+
   await page.goto(expedienteUrl);
   await expect(
     page.getByRole("heading", { name: fullName, exact: true }),
