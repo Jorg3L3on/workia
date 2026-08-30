@@ -26,6 +26,18 @@ test("landing page renders in Spanish with Entrar CTA to login", async ({
   await expect(page.getByRole("link", { name: "Open app" })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Sign in" })).toHaveCount(0);
   await expect(page.getByText("Next.js 16")).toHaveCount(0);
+
+  await expect(
+    page.getByRole("heading", { name: "Contratos", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Resguardo", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("Lo que viene")).toHaveCount(0);
+  await expect(
+    page.getByText("En el roadmap — no disponible en producción todavía"),
+  ).toHaveCount(0);
+  await expect(page.getByText("Próximamente")).toHaveCount(0);
 });
 
 test("login page renders credential form", async ({ page }) => {

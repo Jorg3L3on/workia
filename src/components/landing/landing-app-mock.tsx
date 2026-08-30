@@ -1,6 +1,7 @@
 import {
   CalendarClockIcon,
   CheckCircle2Icon,
+  FileTextIcon,
   FolderTreeIcon,
   HomeIcon,
   LaptopIcon,
@@ -14,6 +15,8 @@ import { Badge } from "@/components/ui/badge";
 const navItems = [
   { title: "Inicio", icon: HomeIcon, active: true },
   { title: "Personas", icon: UsersIcon, active: false },
+  { title: "Contratos", icon: FileTextIcon, active: false },
+  { title: "Resguardo", icon: LaptopIcon, active: false },
   { title: "Catálogo", icon: FolderTreeIcon, active: false },
   { title: "Auditoría", icon: ScrollTextIcon, active: false },
 ] as const;
@@ -106,7 +109,7 @@ export const LandingAppMock = () => {
                   Sin vencimientos por ahora
                 </p>
                 <p className="text-muted-foreground mt-1 text-xs">
-                  Próximamente: avisos configurables por contrato
+                  Vencimientos y renovaciones visibles en Contratos
                 </p>
               </div>
             </div>
