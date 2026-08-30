@@ -2,6 +2,7 @@ export const CATALOG_PATHS = {
   index: "/app/catalogo",
   areas: "/app/catalogo/areas",
   puestos: "/app/catalogo/puestos",
+  actividades: "/app/catalogo/actividades",
   sucursales: "/app/catalogo/sucursales",
 } as const;
 
@@ -23,5 +24,6 @@ export const catalogHref = (
 export const CATALOG_NAV_CHILDREN = [
   { title: "Áreas", href: CATALOG_PATHS.areas },
   { title: "Puestos", href: CATALOG_PATHS.puestos },
+  { title: "Actividades", href: CATALOG_PATHS.actividades },
   { title: "Sucursales", href: CATALOG_PATHS.sucursales },
 ] as const;

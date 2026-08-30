@@ -1,32 +1,54 @@
 import { CatalogPositionsTable } from "@/components/catalog/catalog-data-tables";
 import { CatalogStatusMessages } from "@/components/catalog/catalog-status-messages";
+import { PositionActivitiesAssign } from "@/components/catalog/position-activities-assign";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createPositionAction } from "@/lib/catalog/actions";
 import { requirePositionsRead } from "@/lib/catalog/auth";
-import { listAreas, listPositions } from "@/lib/catalog";
+import {
+  listActivitiesByPositionIds,
+  listAreas,
+  listAssignableActivities,
+  listPositions,
+} from "@/lib/catalog";
 import { userHasPermission } from "@/lib/rbac";
 
 export const dynamic = "force-dynamic";
 
 type PuestosCatalogPageProps = {
-  searchParams: Promise<{ saved?: string; deleted?: string }>;
+  searchParams: Promise<{
+    saved?: string;
+    deleted?: string;
+    assigned?: string;
+    unassigned?: string;
+  }>;
 };
 
 const PuestosCatalogPage = async ({
   searchParams,
 }: PuestosCatalogPageProps) => {
   const session = await requirePositionsRead();
-  const { saved, deleted } = await searchParams;
+  const { saved, deleted, assigned, unassigned } = await searchParams;
 
-  const [positions, areas, canCreatePosition, canDeletePosition] =
-    await Promise.all([
-      listPositions(),
-      listAreas(),
-      userHasPermission(session.user.id, "positions:create"),
-      userHasPermission(session.user.id, "positions:delete"),
-    ]);
+  const [
+    positions,
+    areas,
+    assignableActivities,
+    canCreatePosition,
+    canDeletePosition,
+    canAssignActivity,
+  ] = await Promise.all([
+    listPositions(),
+    listAreas(),
+    listAssignableActivities(),
+    userHasPermission(session.user.id, "positions:create"),
+    userHasPermission(session.user.id, "positions:delete"),
+    userHasPermission(session.user.id, "positions:update"),
+  ]);
+  const activitiesByPosition = await listActivitiesByPositionIds(
+    positions.map((position) => position.id),
+  );
   const activeAreas = areas.filter((area) => area.active);
 
   return (
@@ -37,14 +59,20 @@ const PuestosCatalogPage = async ({
         </p>
         <h1 className="text-2xl font-semibold tracking-tight">Puestos</h1>
         <p className="text-muted-foreground text-sm">
-          Puestos opcionalmente ligados a un área.
+          Puestos opcionalmente ligados a un área, con actividades asignadas.
         </p>
       </header>
 
-      <CatalogStatusMessages deleted={deleted} saved={saved} />
+      <CatalogStatusMessages
+        assigned={assigned}
+        deleted={deleted}
+        saved={saved}
+        unassigned={unassigned}
+      />
 
       <section className="workia-pass-card space-y-4 p-5">
         <CatalogPositionsTable
+          canAssign={canAssignActivity}
           canDelete={canDeletePosition}
           positions={positions.map((position) => ({
             id: position.id,
@@ -52,8 +80,25 @@ const PuestosCatalogPage = async ({
             areaName:
               areas.find((area) => area.id === position.areaId)?.name ?? "—",
             active: position.active,
+            activities: activitiesByPosition.get(position.id) ?? [],
           }))}
         />
+
+        {canAssignActivity ? (
+          <PositionActivitiesAssign
+            activities={assignableActivities.map((activity) => ({
+              id: activity.id,
+              name: activity.name,
+            }))}
+            positions={positions.map((position) => ({
+              id: position.id,
+              name: position.name,
+              assignedActivityIds: (
+                activitiesByPosition.get(position.id) ?? []
+              ).map((activity) => activity.id),
+            }))}
+          />
+        ) : null}
 
         {canCreatePosition ? (
           <form

@@ -1,15 +1,27 @@
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 
 import {
   buildChanges,
   recordAuditEvent,
+  snapshotActivity,
   snapshotArea,
   snapshotPosition,
+  snapshotPositionActivity,
 } from "@/lib/audit";
 import { db } from "@/lib/db";
-import { areas, positions } from "@/lib/db/schema";
+import {
+  activities,
+  areas,
+  positionActivities,
+  positions,
+} from "@/lib/db/schema";
 
-import type { AreaFormValues, PositionFormValues } from "./schema";
+import {
+  isActivityAssignable,
+  type ActivityFormValues,
+  type AreaFormValues,
+  type PositionFormValues,
+} from "./schema";
 
 export const listAreas = async (options: { includeDeleted?: boolean } = {}) => {
   const filters = options.includeDeleted ? undefined : isNull(areas.deletedAt);
@@ -305,4 +317,278 @@ export const softDeletePosition = async (
   });
 
   return updated;
+};
+
+export const listActivities = async (
+  options: { includeDeleted?: boolean } = {},
+) => {
+  const filters = options.includeDeleted
+    ? undefined
+    : isNull(activities.deletedAt);
+
+  return db
+    .select()
+    .from(activities)
+    .where(filters)
+    .orderBy(asc(activities.name));
+};
+
+export const listAssignableActivities = async () => {
+  return db
+    .select()
+    .from(activities)
+    .where(and(isNull(activities.deletedAt), eq(activities.active, true)))
+    .orderBy(asc(activities.name));
+};
+
+export const getActivityById = async (id: string) => {
+  const [activity] = await db
+    .select()
+    .from(activities)
+    .where(eq(activities.id, id))
+    .limit(1);
+
+  return activity ?? null;
+};
+
+export const createActivity = async (
+  input: ActivityFormValues,
+  actorUserId?: string | null,
+) => {
+  const [created] = await db
+    .insert(activities)
+    .values({
+      name: input.name,
+      active: input.active,
+    })
+    .returning();
+
+  await recordAuditEvent({
+    actorUserId,
+    resourceType: "activity",
+    resourceId: created.id,
+    action: "create",
+    payload: {
+      after: snapshotActivity(created),
+      summary: `Actividad creada: ${created.name}`,
+    },
+  });
+
+  return created;
+};
+
+export const updateActivity = async (
+  id: string,
+  input: ActivityFormValues,
+  actorUserId?: string | null,
+) => {
+  const existing = await getActivityById(id);
+
+  if (!existing || existing.deletedAt) {
+    return null;
+  }
+
+  const before = snapshotActivity(existing);
+
+  const [updated] = await db
+    .update(activities)
+    .set({
+      name: input.name,
+      active: input.active,
+    })
+    .where(eq(activities.id, id))
+    .returning();
+
+  if (!updated) {
+    return null;
+  }
+
+  const after = snapshotActivity(updated);
+  const changes = buildChanges(before, after, ["name", "active"]);
+
+  await recordAuditEvent({
+    actorUserId,
+    resourceType: "activity",
+    resourceId: id,
+    action:
+      input.active !== existing.active
+        ? input.active
+          ? "activate"
+          : "deactivate"
+        : "update",
+    payload: { before, after, changes },
+  });
+
+  return updated;
+};
+
+export const softDeleteActivity = async (
+  id: string,
+  actorUserId?: string | null,
+) => {
+  const existing = await getActivityById(id);
+
+  if (!existing || existing.deletedAt) {
+    return null;
+  }
+
+  const before = snapshotActivity(existing);
+  const deletedAt = new Date();
+
+  const [updated] = await db
+    .update(activities)
+    .set({ deletedAt, active: false })
+    .where(eq(activities.id, id))
+    .returning();
+
+  if (!updated) {
+    return null;
+  }
+
+  await recordAuditEvent({
+    actorUserId,
+    resourceType: "activity",
+    resourceId: id,
+    action: "delete",
+    payload: {
+      before,
+      after: snapshotActivity(updated),
+      summary: `Actividad borrada lógicamente: ${existing.name}`,
+    },
+  });
+
+  return updated;
+};
+
+export const listActivitiesByPositionIds = async (positionIds: string[]) => {
+  const grouped = new Map<
+    string,
+    Array<{ id: string; name: string; active: boolean }>
+  >();
+
+  for (const positionId of positionIds) {
+    grouped.set(positionId, []);
+  }
+
+  if (positionIds.length === 0) {
+    return grouped;
+  }
+
+  const rows = await db
+    .select({
+      positionId: positionActivities.positionId,
+      id: activities.id,
+      name: activities.name,
+      active: activities.active,
+    })
+    .from(positionActivities)
+    .innerJoin(activities, eq(positionActivities.activityId, activities.id))
+    .where(
+      and(
+        inArray(positionActivities.positionId, positionIds),
+        isNull(activities.deletedAt),
+      ),
+    )
+    .orderBy(asc(activities.name));
+
+  for (const row of rows) {
+    grouped.get(row.positionId)?.push({
+      id: row.id,
+      name: row.name,
+      active: row.active,
+    });
+  }
+
+  return grouped;
+};
+
+export const listActivitiesForPosition = async (positionId: string) => {
+  const grouped = await listActivitiesByPositionIds([positionId]);
+  return grouped.get(positionId) ?? [];
+};
+
+export const assignActivityToPosition = async (
+  positionId: string,
+  activityId: string,
+  actorUserId?: string | null,
+) => {
+  const [position, activity] = await Promise.all([
+    getPositionById(positionId),
+    getActivityById(activityId),
+  ]);
+
+  if (!position || position.deletedAt) {
+    return { ok: false as const, reason: "position-missing" };
+  }
+
+  if (!activity || !isActivityAssignable(activity)) {
+    return { ok: false as const, reason: "activity-not-assignable" };
+  }
+
+  const [inserted] = await db
+    .insert(positionActivities)
+    .values({ positionId, activityId })
+    .onConflictDoNothing()
+    .returning();
+
+  if (inserted) {
+    await recordAuditEvent({
+      actorUserId,
+      resourceType: "position_activity",
+      resourceId: `${positionId}:${activityId}`,
+      action: "link",
+      payload: {
+        after: snapshotPositionActivity({
+          positionId,
+          activityId,
+          positionName: position.name,
+          activityName: activity.name,
+        }),
+        summary: `Actividad asignada: ${activity.name} → ${position.name}`,
+      },
+    });
+  }
+
+  return { ok: true as const, created: Boolean(inserted) };
+};
+
+export const unassignActivityFromPosition = async (
+  positionId: string,
+  activityId: string,
+  actorUserId?: string | null,
+) => {
+  const [position, activity] = await Promise.all([
+    getPositionById(positionId),
+    getActivityById(activityId),
+  ]);
+
+  const [removed] = await db
+    .delete(positionActivities)
+    .where(
+      and(
+        eq(positionActivities.positionId, positionId),
+        eq(positionActivities.activityId, activityId),
+      ),
+    )
+    .returning();
+
+  if (removed) {
+    await recordAuditEvent({
+      actorUserId,
+      resourceType: "position_activity",
+      resourceId: `${positionId}:${activityId}`,
+      action: "unlink",
+      payload: {
+        before: snapshotPositionActivity({
+          positionId,
+          activityId,
+          positionName: position?.name ?? null,
+          activityName: activity?.name ?? null,
+        }),
+        summary: `Actividad desasignada: ${activity?.name ?? activityId} ← ${position?.name ?? positionId}`,
+      },
+    });
+  }
+
+  return { ok: true as const, removed: Boolean(removed) };
 };

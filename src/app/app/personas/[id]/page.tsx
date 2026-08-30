@@ -11,7 +11,11 @@ import { PageBreadcrumbLabel } from "@/components/layout/app-breadcrumbs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { listAuditEvents } from "@/lib/audit";
-import { listActiveAreas, listActivePositions } from "@/lib/catalog";
+import {
+  listActiveAreas,
+  listActivePositions,
+  listActivitiesForPosition,
+} from "@/lib/catalog";
 import {
   listActiveContractTemplates,
   listContractsByPerson,
@@ -102,6 +106,10 @@ const PersonaDetailPage = async ({
   if (!person) {
     notFound();
   }
+
+  const positionActivities = person.position
+    ? await listActivitiesForPosition(person.position.id)
+    : [];
 
   const isDeleted = personIsDeleted(person);
   const isEditing = edit === "1" && canUpdate && !isDeleted;
@@ -220,6 +228,24 @@ const PersonaDetailPage = async ({
             <dt className="text-muted-foreground">Puesto</dt>
             <dd className="font-medium">{person.position?.name ?? "—"}</dd>
           </div>
+          {person.position ? (
+            <div className="sm:col-span-2">
+              <dt className="text-muted-foreground">Actividades del puesto</dt>
+              <dd>
+                {positionActivities.length === 0 ? (
+                  <span className="font-medium">—</span>
+                ) : (
+                  <ul className="list-disc space-y-1 pl-5">
+                    {positionActivities.map((activity) => (
+                      <li className="font-medium" key={activity.id}>
+                        {activity.name}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </dd>
+            </div>
+          ) : null}
           <div className="sm:col-span-2">
             <dt className="text-muted-foreground">Jefe directo</dt>
             <dd className="font-medium">

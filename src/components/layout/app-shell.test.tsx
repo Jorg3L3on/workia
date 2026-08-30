@@ -103,7 +103,7 @@ describe("AppShell", () => {
     expect(headersContainBreadcrumb()).toBe(true);
   });
 
-  it("opens Catálogo with three children and marks the child active", () => {
+  it("opens Catálogo with four children and marks the child active", () => {
     navigationState.pathname = "/app/catalogo/areas";
     renderShell();
 
@@ -114,6 +114,9 @@ describe("AppShell", () => {
     const areasLink = sidebarQueries.getByRole("link", { name: "Áreas" });
     expect(areasLink.getAttribute("data-active")).toBe("true");
     expect(sidebarQueries.getByRole("link", { name: "Puestos" })).toBeTruthy();
+    expect(
+      sidebarQueries.getByRole("link", { name: "Actividades" }),
+    ).toBeTruthy();
     expect(
       sidebarQueries.getByRole("link", { name: "Sucursales" }),
     ).toBeTruthy();
