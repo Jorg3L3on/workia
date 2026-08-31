@@ -1,11 +1,27 @@
 import { and, asc, desc, eq, ilike, isNull, or, sql } from "drizzle-orm";
 
-import { buildChanges, recordAuditEvent, snapshotPerson } from "@/lib/audit";
+import {
+  buildChanges,
+  recordAuditEvent,
+  snapshotPerson,
+  snapshotPersonSchedule,
+} from "@/lib/audit";
 import { db } from "@/lib/db";
-import { areas, people, positions, sites } from "@/lib/db/schema";
+import {
+  areas,
+  people,
+  personSchedules,
+  positions,
+  sites,
+} from "@/lib/db/schema";
 import type { PersonStatus } from "@/lib/db/schema/people";
 
-import type { PersonFormValues } from "./schema";
+import {
+  personScheduleHasTimes,
+  toPersonScheduleValues,
+  type PersonFormValues,
+  type PersonScheduleValues,
+} from "./schema";
 
 export type ListPeopleOptions = {
   query?: string;
@@ -164,7 +180,158 @@ export const getPersonWithRelations = async (
       : Promise.resolve(null),
   ]);
 
-  return { ...person, area, position, manager, site };
+  const schedule = await getPersonSchedule(person.id);
+
+  return { ...person, area, position, manager, site, schedule };
+};
+
+export const getPersonSchedule = async (
+  personId: string,
+  includeDeleted = false,
+) => {
+  const filters = [eq(personSchedules.personId, personId)];
+
+  if (!includeDeleted) {
+    filters.push(isNull(personSchedules.deletedAt));
+  }
+
+  const [schedule] = await db
+    .select()
+    .from(personSchedules)
+    .where(filters.length === 1 ? filters[0] : and(...filters))
+    .limit(1);
+
+  return schedule ?? null;
+};
+
+const scheduleChanged = (
+  before: PersonScheduleValues | null,
+  after: PersonScheduleValues,
+) =>
+  (before?.entrada ?? null) !== (after.entrada ?? null) ||
+  (before?.salidaComer ?? null) !== (after.salidaComer ?? null) ||
+  (before?.regresoComer ?? null) !== (after.regresoComer ?? null) ||
+  (before?.salida ?? null) !== (after.salida ?? null);
+
+export const upsertPersonSchedule = async (
+  personId: string,
+  input: PersonFormValues,
+  actorUserId?: string | null,
+) => {
+  const values = toPersonScheduleValues(input);
+  const hasTimes = personScheduleHasTimes(values);
+  const existing = await getPersonSchedule(personId, true);
+
+  if (!hasTimes && !existing) {
+    return null;
+  }
+
+  if (!hasTimes && existing?.deletedAt) {
+    return existing;
+  }
+
+  if (!hasTimes && existing) {
+    const deletedAt = new Date();
+    const [updated] = await db
+      .update(personSchedules)
+      .set({
+        entrada: null,
+        salidaComer: null,
+        regresoComer: null,
+        salida: null,
+        deletedAt,
+      })
+      .where(eq(personSchedules.id, existing.id))
+      .returning();
+
+    await recordAuditEvent({
+      actorUserId,
+      resourceType: "person",
+      resourceId: personId,
+      action: "delete",
+      payload: {
+        summary: "Borrado de horario",
+        before: snapshotPersonSchedule(existing),
+        after: snapshotPersonSchedule(updated),
+      },
+    });
+
+    return updated;
+  }
+
+  if (existing && !existing.deletedAt && !scheduleChanged(existing, values)) {
+    return existing;
+  }
+
+  if (existing) {
+    const wasDeleted = Boolean(existing.deletedAt);
+    const [updated] = await db
+      .update(personSchedules)
+      .set({
+        entrada: values.entrada,
+        salidaComer: values.salidaComer,
+        regresoComer: values.regresoComer,
+        salida: values.salida,
+        deletedAt: null,
+      })
+      .where(eq(personSchedules.id, existing.id))
+      .returning();
+
+    await recordAuditEvent({
+      actorUserId,
+      resourceType: "person",
+      resourceId: personId,
+      action: wasDeleted ? "create" : "update",
+      payload: {
+        summary: wasDeleted ? "Alta de horario" : "Edición de horario",
+        before: snapshotPersonSchedule(existing),
+        after: snapshotPersonSchedule(updated),
+        changes: buildChanges(
+          snapshotPersonSchedule(existing) ?? {
+            entrada: null,
+            salidaComer: null,
+            regresoComer: null,
+            salida: null,
+            deletedAt: null,
+          },
+          snapshotPersonSchedule(updated) ?? {
+            entrada: null,
+            salidaComer: null,
+            regresoComer: null,
+            salida: null,
+            deletedAt: null,
+          },
+          ["entrada", "salidaComer", "regresoComer", "salida", "deletedAt"],
+        ),
+      },
+    });
+
+    return updated;
+  }
+
+  const [created] = await db
+    .insert(personSchedules)
+    .values({
+      personId,
+      entrada: values.entrada,
+      salidaComer: values.salidaComer,
+      regresoComer: values.regresoComer,
+      salida: values.salida,
+    })
+    .returning();
+
+  await recordAuditEvent({
+    actorUserId,
+    resourceType: "person",
+    resourceId: personId,
+    action: "create",
+    payload: {
+      summary: "Alta de horario",
+      after: snapshotPersonSchedule(created),
+    },
+  });
+
+  return created;
 };
 
 export const createPerson = async (
@@ -185,6 +352,8 @@ export const createPerson = async (
       summary: `Alta de persona: ${created.nombres} ${created.apellidoPaterno}`,
     },
   });
+
+  await upsertPersonSchedule(created.id, input, actorUserId);
 
   return created;
 };
@@ -246,6 +415,8 @@ export const updatePerson = async (
     payload: { before, after, changes },
   });
 
+  await upsertPersonSchedule(id, input, actorUserId);
+
   return updated;
 };
 
@@ -283,6 +454,15 @@ export const softDeletePerson = async (
       summary: "Borrado lógico del expediente",
     },
   });
+
+  const schedule = await getPersonSchedule(id);
+
+  if (schedule) {
+    await db
+      .update(personSchedules)
+      .set({ deletedAt: deletedAt })
+      .where(eq(personSchedules.id, schedule.id));
+  }
 
   return updated;
 };

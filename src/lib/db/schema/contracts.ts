@@ -73,6 +73,10 @@ export const contracts = pgTable(
     }),
     templateName: text("template_name"),
     generatedText: text("generated_text").notNull(),
+    scheduleEntrada: text("schedule_entrada"),
+    scheduleSalidaComer: text("schedule_salida_comer"),
+    scheduleRegresoComer: text("schedule_regreso_comer"),
+    scheduleSalida: text("schedule_salida"),
     status: contractStatusEnum("status").notNull().default("vigente"),
     previousContractId: uuid("previous_contract_id").references(
       (): AnyPgColumn => contracts.id,

@@ -15,20 +15,31 @@ vi.mock("@/lib/db", () => ({
   db: {},
 }));
 
-const { requirePeopleCreateMock, createPersonMock, redirectMock } = vi.hoisted(
-  () => ({
-    requirePeopleCreateMock: vi.fn(),
-    createPersonMock: vi.fn(),
-    redirectMock: vi.fn(),
-  }),
-);
+const {
+  requirePeopleCreateMock,
+  requirePeopleUpdateMock,
+  createPersonMock,
+  updatePersonMock,
+  getPersonByIdMock,
+  redirectMock,
+} = vi.hoisted(() => ({
+  requirePeopleCreateMock: vi.fn(),
+  requirePeopleUpdateMock: vi.fn(),
+  createPersonMock: vi.fn(),
+  updatePersonMock: vi.fn(),
+  getPersonByIdMock: vi.fn(),
+  redirectMock: vi.fn(),
+}));
 
 vi.mock("@/lib/people/auth", () => ({
   requirePeopleCreate: requirePeopleCreateMock,
+  requirePeopleUpdate: requirePeopleUpdateMock,
 }));
 
 vi.mock("@/lib/people/index", () => ({
   createPerson: createPersonMock,
+  updatePerson: updatePersonMock,
+  getPersonById: getPersonByIdMock,
 }));
 
 vi.mock("next/cache", () => ({
@@ -112,5 +123,37 @@ describe("createPersonAction", () => {
       }),
       "user-1",
     );
+  });
+});
+
+describe("updatePersonAction", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    redirectMock.mockImplementation(() => {
+      throw new Error("NEXT_REDIRECT");
+    });
+  });
+
+  it("fails closed when update permission is missing", async () => {
+    requirePeopleUpdateMock.mockRejectedValue(
+      new AuthorizationError("Missing permission: people:update"),
+    );
+
+    const { updatePersonAction } = await import("@/lib/people/actions");
+
+    const formData = new FormData();
+    formData.set("nombres", "Persona");
+    formData.set("apellidoPaterno", "Demo");
+    formData.set("horarioEntrada", "08:00");
+    formData.set("horarioSalidaComer", "13:00");
+    formData.set("horarioRegresoComer", "14:00");
+    formData.set("horarioSalida", "17:00");
+    formData.set("status", "activa");
+
+    const result = await updatePersonAction("person-1", {}, formData);
+
+    expect(result.error).toMatch(/permiso/i);
+    expect(updatePersonMock).not.toHaveBeenCalled();
+    expect(getPersonByIdMock).not.toHaveBeenCalled();
   });
 });

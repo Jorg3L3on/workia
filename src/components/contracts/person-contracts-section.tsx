@@ -9,6 +9,7 @@ import {
   contractTypeLabels,
   formatContractDate,
 } from "@/lib/contracts/schema";
+import { formatTimeLabel, SCHEDULE_FIELD_LABELS } from "@/lib/people/schema";
 
 type PersonContractsSectionProps = {
   personId: string;
@@ -20,6 +21,7 @@ type PersonContractsSectionProps = {
     area?: string | null;
     sucursal?: string | null;
     rfc?: string | null;
+    horario?: string | null;
   };
   contracts: Contract[];
   canCreate: boolean;
@@ -69,6 +71,40 @@ export const PersonContractsSection = ({
               </div>
               <Badge>{contractStatusLabels[vigente.status]}</Badge>
             </div>
+            <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
+              <div>
+                <dt className="text-muted-foreground">
+                  {SCHEDULE_FIELD_LABELS.horarioEntrada}
+                </dt>
+                <dd className="font-medium">
+                  {formatTimeLabel(vigente.scheduleEntrada)}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">
+                  {SCHEDULE_FIELD_LABELS.horarioSalidaComer}
+                </dt>
+                <dd className="font-medium">
+                  {formatTimeLabel(vigente.scheduleSalidaComer)}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">
+                  {SCHEDULE_FIELD_LABELS.horarioRegresoComer}
+                </dt>
+                <dd className="font-medium">
+                  {formatTimeLabel(vigente.scheduleRegresoComer)}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">
+                  {SCHEDULE_FIELD_LABELS.horarioSalida}
+                </dt>
+                <dd className="font-medium">
+                  {formatTimeLabel(vigente.scheduleSalida)}
+                </dd>
+              </div>
+            </dl>
             <details className="mt-3">
               <summary className="cursor-pointer text-sm font-medium">
                 Ver texto generado

@@ -60,6 +60,20 @@ const optionalUuid = z
   .optional()
   .or(z.literal(""));
 
+const optionalTime = z
+  .string()
+  .trim()
+  .regex(/^([01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/, "Hora inválida")
+  .optional()
+  .or(z.literal(""));
+
+export const SCHEDULE_FIELD_LABELS = {
+  horarioEntrada: "Entrada",
+  horarioSalidaComer: "Salida a comer",
+  horarioRegresoComer: "Regreso de comer",
+  horarioSalida: "Salida",
+} as const;
+
 export const personFormSchema = z.object({
   nombres: z
     .string()
@@ -89,10 +103,74 @@ export const personFormSchema = z.object({
   rfc: optionalIdentifier,
   curp: optionalIdentifier,
   nss: optionalIdentifier,
+  horarioEntrada: optionalTime,
+  horarioSalidaComer: optionalTime,
+  horarioRegresoComer: optionalTime,
+  horarioSalida: optionalTime,
   status: z.enum(PERSON_STATUSES),
 });
 
 export type PersonFormValues = z.infer<typeof personFormSchema>;
+
+export type PersonScheduleValues = {
+  entrada?: string | null;
+  salidaComer?: string | null;
+  regresoComer?: string | null;
+  salida?: string | null;
+};
+
+export const normalizeTimeValue = (value?: string | null) => {
+  const trimmed = value?.trim();
+
+  if (!trimmed) {
+    return null;
+  }
+
+  return trimmed.slice(0, 5);
+};
+
+export const toPersonScheduleValues = (
+  input: Pick<
+    PersonFormValues,
+    | "horarioEntrada"
+    | "horarioSalidaComer"
+    | "horarioRegresoComer"
+    | "horarioSalida"
+  >,
+): PersonScheduleValues => ({
+  entrada: normalizeTimeValue(input.horarioEntrada),
+  salidaComer: normalizeTimeValue(input.horarioSalidaComer),
+  regresoComer: normalizeTimeValue(input.horarioRegresoComer),
+  salida: normalizeTimeValue(input.horarioSalida),
+});
+
+export const personScheduleHasTimes = (
+  schedule?: PersonScheduleValues | null,
+) =>
+  Boolean(
+    normalizeTimeValue(schedule?.entrada) ||
+    normalizeTimeValue(schedule?.salidaComer) ||
+    normalizeTimeValue(schedule?.regresoComer) ||
+    normalizeTimeValue(schedule?.salida),
+  );
+
+export const formatTimeLabel = (value?: string | null) =>
+  normalizeTimeValue(value) ?? "—";
+
+export const formatHorarioToken = (schedule?: PersonScheduleValues | null) => {
+  if (!personScheduleHasTimes(schedule)) {
+    return "—";
+  }
+
+  const parts = [
+    `entrada ${formatTimeLabel(schedule?.entrada)}`,
+    `salida a comer ${formatTimeLabel(schedule?.salidaComer)}`,
+    `regreso de comer ${formatTimeLabel(schedule?.regresoComer)}`,
+    `salida ${formatTimeLabel(schedule?.salida)}`,
+  ];
+
+  return parts.join(", ");
+};
 
 export const formatPersonName = (person: {
   nombres: string;

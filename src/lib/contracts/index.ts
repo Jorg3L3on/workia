@@ -10,7 +10,7 @@ import { db } from "@/lib/db";
 import { contractTemplates, contracts, people } from "@/lib/db/schema";
 import type { ContractStatus } from "@/lib/db/schema/contracts";
 import { getPersonWithRelations } from "@/lib/people";
-import { formatPersonName } from "@/lib/people/schema";
+import { formatHorarioToken, formatPersonName } from "@/lib/people/schema";
 import { siteKindLabels } from "@/lib/sites/schema";
 
 import type {
@@ -18,7 +18,11 @@ import type {
   ContractTemplateFormValues,
   RenewContractFormValues,
 } from "./schema";
-import { fillContractTemplate, isContractInRenewalWindow } from "./schema";
+import {
+  buildContractScheduleSnapshot,
+  fillContractTemplate,
+  isContractInRenewalWindow,
+} from "./schema";
 
 const normalizeEndDate = (
   type: ContractFormValues["type"],
@@ -56,6 +60,7 @@ const resolveTemplateFillContext = async (
       area: person.area?.name ?? null,
       sucursal: buildSiteLabel(person.site),
       rfc: person.rfc,
+      horario: formatHorarioToken(person.schedule),
       fechaInicio: startDate,
       fechaFin: endDate,
     },
@@ -356,13 +361,14 @@ const emitContractRecord = async (
     throw new Error("Plantilla no encontrada.");
   }
 
-  const { context } = await resolveTemplateFillContext(
+  const { person, context } = await resolveTemplateFillContext(
     input.personId,
     input.startDate,
     input.endDate,
   );
 
   const generatedText = fillContractTemplate(template.body, context);
+  const scheduleSnapshot = buildContractScheduleSnapshot(person.schedule);
 
   const [created] = await db
     .insert(contracts)
@@ -375,6 +381,7 @@ const emitContractRecord = async (
       templateId: template.id,
       templateName: template.name,
       generatedText,
+      ...scheduleSnapshot,
       status: input.status ?? "vigente",
       previousContractId: input.previousContractId ?? null,
     })

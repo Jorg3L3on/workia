@@ -57,6 +57,13 @@
       "when": 1787749200000,
       "tag": "0007_activities",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1787752800000,
+      "tag": "0008_person_schedules",
+      "breakpoints": true
     }
   ]
 }

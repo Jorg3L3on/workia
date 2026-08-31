@@ -47,6 +47,58 @@ describe("personFormSchema", () => {
     expect(parsed.success).toBe(false);
   });
 
+  it("accepts a complete dummy schedule", () => {
+    const parsed = personFormSchema.safeParse({
+      nombres: "Persona",
+      apellidoPaterno: "Demo",
+      apellidoMaterno: "",
+      email: "",
+      telefono: "",
+      fechaNacimiento: "",
+      fechaIngreso: "",
+      areaId: "",
+      positionId: "",
+      managerId: "",
+      siteId: "",
+      rfc: "",
+      curp: "",
+      nss: "",
+      horarioEntrada: "08:00",
+      horarioSalidaComer: "13:00",
+      horarioRegresoComer: "14:00",
+      horarioSalida: "17:00",
+      status: "activa",
+    });
+
+    expect(parsed.success).toBe(true);
+  });
+
+  it("rejects an invalid schedule time", () => {
+    const parsed = personFormSchema.safeParse({
+      nombres: "Persona",
+      apellidoPaterno: "Demo",
+      apellidoMaterno: "",
+      email: "",
+      telefono: "",
+      fechaNacimiento: "",
+      fechaIngreso: "",
+      areaId: "",
+      positionId: "",
+      managerId: "",
+      siteId: "",
+      rfc: "",
+      curp: "",
+      nss: "",
+      horarioEntrada: "25:99",
+      horarioSalidaComer: "",
+      horarioRegresoComer: "",
+      horarioSalida: "",
+      status: "activa",
+    });
+
+    expect(parsed.success).toBe(false);
+  });
+
   it("rejects invalid email", () => {
     const parsed = personFormSchema.safeParse({
       nombres: "Persona",

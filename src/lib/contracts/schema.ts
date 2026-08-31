@@ -5,6 +5,11 @@ import type {
   ContractStatus,
   ContractType,
 } from "@/lib/db/schema/contracts";
+import {
+  formatHorarioToken,
+  normalizeTimeValue,
+  type PersonScheduleValues,
+} from "@/lib/people/schema";
 
 export const CONTRACT_TEMPLATE_TOKENS = [
   "nombres",
@@ -14,6 +19,7 @@ export const CONTRACT_TEMPLATE_TOKENS = [
   "area",
   "sucursal",
   "rfc",
+  "horario",
   "fecha_inicio",
   "fecha_fin",
 ] as const;
@@ -174,9 +180,26 @@ export type TemplateFillContext = {
   area?: string | null;
   sucursal?: string | null;
   rfc?: string | null;
+  horario?: string | null;
   fechaInicio: string;
   fechaFin?: string | null;
 };
+
+export type ContractScheduleSnapshot = {
+  scheduleEntrada: string | null;
+  scheduleSalidaComer: string | null;
+  scheduleRegresoComer: string | null;
+  scheduleSalida: string | null;
+};
+
+export const buildContractScheduleSnapshot = (
+  schedule?: PersonScheduleValues | null,
+): ContractScheduleSnapshot => ({
+  scheduleEntrada: normalizeTimeValue(schedule?.entrada),
+  scheduleSalidaComer: normalizeTimeValue(schedule?.salidaComer),
+  scheduleRegresoComer: normalizeTimeValue(schedule?.regresoComer),
+  scheduleSalida: normalizeTimeValue(schedule?.salida),
+});
 
 export const fillContractTemplate = (
   body: string,
@@ -190,6 +213,7 @@ export const fillContractTemplate = (
     area: context.area ?? "",
     sucursal: context.sucursal ?? "",
     rfc: context.rfc ?? "",
+    horario: context.horario?.trim() || formatHorarioToken(null),
     fecha_inicio: formatContractDate(context.fechaInicio),
     fecha_fin: formatContractDate(context.fechaFin),
   };

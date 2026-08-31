@@ -7,6 +7,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { recordAuditEvent } from "@/lib/audit";
 import { fillContractTemplate } from "@/lib/contracts/schema";
 import { db } from "@/lib/db";
+import { formatHorarioToken } from "@/lib/people/schema";
 import {
   activities,
   areas,
@@ -15,6 +16,7 @@ import {
   contractTemplates,
   contracts,
   people,
+  personSchedules,
   positionActivities,
   positions,
   sites,
@@ -43,9 +45,18 @@ const DEFAULT_TEMPLATE_BODY = `Contrato de trabajo
 
 El presente contrato se celebra con {{nombres}} {{apellido_paterno}} {{apellido_materno}}, RFC {{rfc}}, para desempeñar el puesto de {{puesto}} en el área de {{area}}, con ubicación en {{sucursal}}.
 
+Horario: {{horario}}.
+
 Vigencia: del {{fecha_inicio}} al {{fecha_fin}}.`;
 
-const INDETERMINADO_TEMPLATE_BODY = `Contrato por tiempo indeterminado con {{nombres}} {{apellido_paterno}}, puesto {{puesto}}, área {{area}}, ubicación {{sucursal}}. Inicio: {{fecha_inicio}}.`;
+const INDETERMINADO_TEMPLATE_BODY = `Contrato por tiempo indeterminado con {{nombres}} {{apellido_paterno}}, puesto {{puesto}}, área {{area}}, ubicación {{sucursal}}. Horario: {{horario}}. Inicio: {{fecha_inicio}}.`;
+
+const HORARIO_TOKEN = "{{horario}}";
+
+const appendHorarioToken = (body: string) =>
+  body.includes(HORARIO_TOKEN)
+    ? body
+    : `${body.trim()}\n\nHorario: ${HORARIO_TOKEN}.`;
 
 export const seedDemoCompany = async () => {
   const existing = await db
@@ -372,6 +383,7 @@ export const seedDemoCompany = async () => {
       area: row.areaName ?? "",
       sucursal: row.siteName ?? "",
       rfc: row.person.rfc,
+      horario: formatHorarioToken(null),
       fechaInicio: startDate,
       fechaFin: endDate,
     });
@@ -671,5 +683,187 @@ export const seedDemoActivities = async () => {
 
   console.log(
     `Demo activities seed completed (${activityNames.length} activities, ${assignedCount} assignments).`,
+  );
+};
+
+const DEMO_SCHEDULE_PEOPLE = [
+  {
+    email: "horario.uno@ejemplo.local",
+    nombres: "Persona",
+    apellidoPaterno: "HorarioUno",
+    apellidoMaterno: "Demo",
+    rfc: "XAXX010101001",
+    curp: "XAXX010101HDFXXX01",
+    nss: "99999999901",
+    schedule: {
+      entrada: "08:00",
+      salidaComer: "13:00",
+      regresoComer: "14:00",
+      salida: "17:00",
+    },
+  },
+  {
+    email: "horario.dos@ejemplo.local",
+    nombres: "Persona",
+    apellidoPaterno: "HorarioDos",
+    apellidoMaterno: "Demo",
+    rfc: "XAXX010101002",
+    curp: "XAXX010101HDFXXX02",
+    nss: "99999999902",
+    schedule: {
+      entrada: "09:00",
+      salidaComer: "14:00",
+      regresoComer: "15:00",
+      salida: "18:00",
+    },
+  },
+] as const;
+
+export const seedDemoSchedules = async () => {
+  const [position] = await db
+    .select({ id: positions.id })
+    .from(positions)
+    .where(and(eq(positions.name, "Analista"), isNull(positions.deletedAt)))
+    .limit(1);
+
+  const [site] = await db
+    .select({ id: sites.id })
+    .from(sites)
+    .where(and(eq(sites.name, "Sucursal Centro Demo"), isNull(sites.deletedAt)))
+    .limit(1);
+
+  const [area] = await db
+    .select({ id: areas.id })
+    .from(areas)
+    .where(and(eq(areas.name, "Operaciones"), isNull(areas.deletedAt)))
+    .limit(1);
+
+  if (!position || !site || !area) {
+    console.log(
+      "Demo schedules skipped — need Analista, Sucursal Centro Demo and Operaciones.",
+    );
+    return;
+  }
+
+  const demoTemplates = await db
+    .select()
+    .from(contractTemplates)
+    .where(isNull(contractTemplates.deletedAt));
+
+  for (const template of demoTemplates) {
+    const nextBody = appendHorarioToken(template.body);
+
+    if (nextBody === template.body) {
+      continue;
+    }
+
+    await db
+      .update(contractTemplates)
+      .set({ body: nextBody })
+      .where(eq(contractTemplates.id, template.id));
+  }
+
+  let peopleReady = 0;
+
+  for (const demo of DEMO_SCHEDULE_PEOPLE) {
+    const [existing] = await db
+      .select({ id: people.id })
+      .from(people)
+      .where(eq(people.email, demo.email))
+      .limit(1);
+
+    let personId = existing?.id;
+
+    if (!personId) {
+      const [created] = await db
+        .insert(people)
+        .values({
+          nombres: demo.nombres,
+          apellidoPaterno: demo.apellidoPaterno,
+          apellidoMaterno: demo.apellidoMaterno,
+          email: demo.email,
+          fechaIngreso: subtractDays(new Date(), 60),
+          areaId: area.id,
+          positionId: position.id,
+          siteId: site.id,
+          rfc: demo.rfc,
+          curp: demo.curp,
+          nss: demo.nss,
+          status: "activa",
+        })
+        .returning({ id: people.id });
+
+      personId = created.id;
+
+      await recordAuditEvent({
+        resourceType: "person",
+        resourceId: personId,
+        action: "create",
+        source: "seed",
+        payload: {
+          summary: `Persona demo de horario: ${demo.apellidoPaterno}`,
+        },
+      });
+    } else {
+      await db
+        .update(people)
+        .set({
+          areaId: area.id,
+          positionId: position.id,
+          siteId: site.id,
+          status: "activa",
+          deletedAt: null,
+        })
+        .where(eq(people.id, personId));
+    }
+
+    const [existingSchedule] = await db
+      .select({ id: personSchedules.id })
+      .from(personSchedules)
+      .where(eq(personSchedules.personId, personId))
+      .limit(1);
+
+    if (existingSchedule) {
+      await db
+        .update(personSchedules)
+        .set({
+          entrada: demo.schedule.entrada,
+          salidaComer: demo.schedule.salidaComer,
+          regresoComer: demo.schedule.regresoComer,
+          salida: demo.schedule.salida,
+          deletedAt: null,
+        })
+        .where(eq(personSchedules.id, existingSchedule.id));
+    } else {
+      await db.insert(personSchedules).values({
+        personId,
+        entrada: demo.schedule.entrada,
+        salidaComer: demo.schedule.salidaComer,
+        regresoComer: demo.schedule.regresoComer,
+        salida: demo.schedule.salida,
+      });
+
+      await recordAuditEvent({
+        resourceType: "person",
+        resourceId: personId,
+        action: "create",
+        source: "seed",
+        payload: {
+          summary: "Alta de horario",
+          after: {
+            entrada: demo.schedule.entrada,
+            salidaComer: demo.schedule.salidaComer,
+            regresoComer: demo.schedule.regresoComer,
+            salida: demo.schedule.salida,
+          },
+        },
+      });
+    }
+
+    peopleReady++;
+  }
+
+  console.log(
+    `Demo schedules seed completed (${peopleReady} people, same Analista + Sucursal Centro Demo).`,
   );
 };

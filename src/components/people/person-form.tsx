@@ -8,7 +8,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { Area, Person, Position, Site } from "@/lib/db/schema";
+import type {
+  Area,
+  Person,
+  PersonSchedule,
+  Position,
+  Site,
+} from "@/lib/db/schema";
 import {
   createPersonAction,
   updatePersonAction,
@@ -16,6 +22,7 @@ import {
 } from "@/lib/people/actions";
 import {
   PERSON_STATUSES,
+  SCHEDULE_FIELD_LABELS,
   personStatusLabels,
   type PersonFormValues,
 } from "@/lib/people/schema";
@@ -29,6 +36,7 @@ type SelectPerson = Pick<
 type PersonFormProps = {
   mode: "create" | "edit";
   person?: Person;
+  schedule?: PersonSchedule | null;
   areas: Area[];
   positions: Position[];
   sites: Site[];
@@ -59,6 +67,7 @@ const formatSelectPerson = (person: SelectPerson) =>
 export const PersonForm = ({
   mode,
   person,
+  schedule,
   areas,
   positions,
   sites,
@@ -86,6 +95,10 @@ export const PersonForm = ({
     rfc: person?.rfc ?? "",
     curp: person?.curp ?? "",
     nss: person?.nss ?? "",
+    horarioEntrada: schedule?.entrada ?? "",
+    horarioSalidaComer: schedule?.salidaComer ?? "",
+    horarioRegresoComer: schedule?.regresoComer ?? "",
+    horarioSalida: schedule?.salida ?? "",
     status: person?.status ?? "activa",
   };
 
@@ -251,6 +264,83 @@ export const PersonForm = ({
                 </option>
               ))}
             </select>
+          </div>
+        </div>
+      </section>
+
+      <section className="space-y-4">
+        <h3 className="text-sm font-semibold">Horario</h3>
+        <p className="text-muted-foreground text-xs">
+          Horario de esta persona — no del puesto ni de la sucursal.
+        </p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="horarioEntrada">
+              {SCHEDULE_FIELD_LABELS.horarioEntrada}
+            </Label>
+            <Input
+              aria-invalid={Boolean(state.fieldErrors?.horarioEntrada)}
+              defaultValue={defaultValues.horarioEntrada}
+              id="horarioEntrada"
+              name="horarioEntrada"
+              type="time"
+            />
+            {state.fieldErrors?.horarioEntrada ? (
+              <p className="text-destructive text-xs">
+                {state.fieldErrors.horarioEntrada}
+              </p>
+            ) : null}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="horarioSalidaComer">
+              {SCHEDULE_FIELD_LABELS.horarioSalidaComer}
+            </Label>
+            <Input
+              aria-invalid={Boolean(state.fieldErrors?.horarioSalidaComer)}
+              defaultValue={defaultValues.horarioSalidaComer}
+              id="horarioSalidaComer"
+              name="horarioSalidaComer"
+              type="time"
+            />
+            {state.fieldErrors?.horarioSalidaComer ? (
+              <p className="text-destructive text-xs">
+                {state.fieldErrors.horarioSalidaComer}
+              </p>
+            ) : null}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="horarioRegresoComer">
+              {SCHEDULE_FIELD_LABELS.horarioRegresoComer}
+            </Label>
+            <Input
+              aria-invalid={Boolean(state.fieldErrors?.horarioRegresoComer)}
+              defaultValue={defaultValues.horarioRegresoComer}
+              id="horarioRegresoComer"
+              name="horarioRegresoComer"
+              type="time"
+            />
+            {state.fieldErrors?.horarioRegresoComer ? (
+              <p className="text-destructive text-xs">
+                {state.fieldErrors.horarioRegresoComer}
+              </p>
+            ) : null}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="horarioSalida">
+              {SCHEDULE_FIELD_LABELS.horarioSalida}
+            </Label>
+            <Input
+              aria-invalid={Boolean(state.fieldErrors?.horarioSalida)}
+              defaultValue={defaultValues.horarioSalida}
+              id="horarioSalida"
+              name="horarioSalida"
+              type="time"
+            />
+            {state.fieldErrors?.horarioSalida ? (
+              <p className="text-destructive text-xs">
+                {state.fieldErrors.horarioSalida}
+              </p>
+            ) : null}
           </div>
         </div>
       </section>

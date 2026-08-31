@@ -29,6 +29,7 @@ describe("audit append-only surface", () => {
       "snapshotContract",
       "snapshotContractTemplate",
       "snapshotPerson",
+      "snapshotPersonSchedule",
       "snapshotPosition",
       "snapshotPositionActivity",
       "snapshotSite",
@@ -67,6 +68,9 @@ describe("audit Spanish labels", () => {
     expect(auditResourceTypeLabels.position_activity).toBe(
       "Actividad de puesto",
     );
+    expect(auditActionLabels.assign).not.toBe("Alta de horario");
+    expect(auditActionLabels.create).toBe("Alta");
+    expect(auditActionLabels.update).toBe("Edición");
   });
 });
 
