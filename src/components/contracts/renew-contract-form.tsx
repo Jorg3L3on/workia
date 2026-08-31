@@ -4,7 +4,7 @@ import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import type { ContractTemplate } from "@/lib/db/schema";
 import {
@@ -100,18 +100,17 @@ export const RenewContractForm = ({
 
         <div className="space-y-1">
           <Label htmlFor={`start-${contractId}`}>Inicio</Label>
-          <Input
+          <DateInput
             defaultValue={defaultStart}
             id={`start-${contractId}`}
             name="startDate"
             required
-            type="date"
           />
         </div>
 
         <div className="space-y-1">
           <Label htmlFor={`end-${contractId}`}>Fin</Label>
-          <Input id={`end-${contractId}`} name="endDate" type="date" />
+          <DateInput id={`end-${contractId}`} name="endDate" />
         </div>
 
         <div className="space-y-1 sm:col-span-2">

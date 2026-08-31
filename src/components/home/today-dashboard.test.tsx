@@ -69,5 +69,7 @@ describe("TodayDashboard", () => {
     expect(screen.getByText("1 urgente")).toBeTruthy();
     expect(screen.getByText("Ana Demo")).toBeTruthy();
     expect(screen.getByText("1 pendiente")).toBeTruthy();
+    expect(screen.getByText("Vence 01/09/2026 · 1 mes antes")).toBeTruthy();
+    expect(screen.queryByText(/Vence 09\/01\/2026/)).toBeNull();
   });
 });

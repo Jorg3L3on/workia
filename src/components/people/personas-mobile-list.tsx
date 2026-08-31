@@ -4,6 +4,7 @@ import { ListMobileCard } from "@/components/list/list-mobile-card";
 import { ListRowAction } from "@/components/list/list-row-action";
 import { ListStatusBadge } from "@/components/list/list-status-badge";
 import type { PersonaListRow } from "@/components/people/persona-list-row";
+import { formatDateMx } from "@/lib/format/date";
 import { personDeletedLabel, personStatusLabels } from "@/lib/people/schema";
 
 type PersonasMobileListProps = {
@@ -42,6 +43,14 @@ export const PersonasMobileList = ({ people }: PersonasMobileListProps) => (
               </dd>
             </div>
             <div>
+              <dt className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
+                Ingreso
+              </dt>
+              <dd className="mt-0.5 tabular-nums">
+                {formatDateMx(person.fechaIngreso)}
+              </dd>
+            </div>
+            <div className="col-span-2">
               <dt className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
                 Relación
               </dt>

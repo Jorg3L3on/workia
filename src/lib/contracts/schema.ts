@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { formatDateMx } from "@/lib/format/date";
 import type {
   ContractNoticeWindow,
   ContractStatus,
@@ -111,23 +112,7 @@ export type ContractTemplateFormValues = z.infer<
   typeof contractTemplateFormSchema
 >;
 
-export const formatContractDate = (value?: string | null) => {
-  if (!value) {
-    return "—";
-  }
-
-  const date = new Date(`${value}T12:00:00`);
-
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-
-  return new Intl.DateTimeFormat("es-MX", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  }).format(date);
-};
+export const formatContractDate = formatDateMx;
 
 export const noticeWindowToMonths = (
   notice: ContractNoticeWindow,

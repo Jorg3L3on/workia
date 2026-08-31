@@ -3,9 +3,11 @@
 import { useActionState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { DateInput } from "@/components/ui/date-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { isoToday } from "@/lib/format/date";
 import {
   assignAssetAction,
   type ResguardoActionState,
@@ -24,7 +26,7 @@ export const AssignAssetForm = ({ assetId, people }: AssignAssetFormProps) => {
     initialState,
   );
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = isoToday();
 
   return (
     <form action={formAction} className="space-y-4 border-t px-5 py-4">
@@ -62,12 +64,11 @@ export const AssignAssetForm = ({ assetId, people }: AssignAssetFormProps) => {
         </div>
         <div className="space-y-2">
           <Label htmlFor="movementDate">Fecha de entrega</Label>
-          <Input
+          <DateInput
             defaultValue={today}
             id="movementDate"
             name="movementDate"
             required
-            type="date"
           />
         </div>
         <div className="space-y-2">

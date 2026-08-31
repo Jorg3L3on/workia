@@ -4,6 +4,7 @@ import { AuditEventList } from "@/components/audit/audit-event-list";
 import { pageTitles } from "@/lib/brand/chrome-copy";
 import { ListFilterBar } from "@/components/list/list-filter-bar";
 import { Button } from "@/components/ui/button";
+import { DateInput } from "@/components/ui/date-input";
 import { Input } from "@/components/ui/input";
 import { listAuditEvents } from "@/lib/audit";
 import { requireAuditRead } from "@/lib/audit/auth";
@@ -140,24 +141,14 @@ const AuditoriaPage = async ({ searchParams }: AuditoriaPageProps) => {
           <label className="text-sm font-medium" htmlFor="from">
             Desde
           </label>
-          <Input
-            defaultValue={filters.from ?? ""}
-            id="from"
-            name="from"
-            type="date"
-          />
+          <DateInput defaultValue={filters.from ?? ""} id="from" name="from" />
         </div>
 
         <div className="space-y-2">
           <label className="text-sm font-medium" htmlFor="to">
             Hasta
           </label>
-          <Input
-            defaultValue={filters.to ?? ""}
-            id="to"
-            name="to"
-            type="date"
-          />
+          <DateInput defaultValue={filters.to ?? ""} id="to" name="to" />
         </div>
 
         <div className="flex items-end md:col-span-2 xl:col-span-3">

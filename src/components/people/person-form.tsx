@@ -6,6 +6,7 @@ import { useFormStatus } from "react-dom";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DateInput } from "@/components/ui/date-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type {
@@ -182,20 +183,18 @@ export const PersonForm = ({
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="fechaIngreso">Fecha de ingreso</Label>
-            <Input
+            <DateInput
               defaultValue={defaultValues.fechaIngreso}
               id="fechaIngreso"
               name="fechaIngreso"
-              type="date"
             />
           </div>
           <div className="space-y-2">
             <Label htmlFor="fechaNacimiento">Fecha de nacimiento</Label>
-            <Input
+            <DateInput
               defaultValue={defaultValues.fechaNacimiento}
               id="fechaNacimiento"
               name="fechaNacimiento"
-              type="date"
             />
           </div>
           <div className="space-y-2">

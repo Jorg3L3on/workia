@@ -38,6 +38,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  formatDateMx,
+  formatDateTimeMx,
+  looksLikeDateValue,
+} from "@/lib/format/date";
 import { cn } from "@/lib/utils";
 
 const DEFAULT_PAGE_SIZES = [10, 25, 50] as const;
@@ -89,7 +94,13 @@ const stringifySearchValue = (value: unknown) => {
   }
 
   if (value instanceof Date) {
-    return value.toISOString();
+    return formatDateTimeMx(value);
+  }
+
+  if (typeof value === "string" && looksLikeDateValue(value)) {
+    return /^\d{4}-\d{2}-\d{2}$/.test(value.trim())
+      ? formatDateMx(value)
+      : formatDateTimeMx(value);
   }
 
   return String(value);
