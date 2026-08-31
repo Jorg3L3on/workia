@@ -38,6 +38,8 @@ test("landing page renders in Spanish with Entrar CTA to login", async ({
     page.getByText("En el roadmap — no disponible en producción todavía"),
   ).toHaveCount(0);
   await expect(page.getByText("Próximamente")).toHaveCount(0);
+  await expect(page.locator(".workia-credential-slot")).toHaveCount(0);
+  await expect(page.locator(".login-badge-slot")).toHaveCount(0);
 });
 
 test("login page renders credential form", async ({ page }) => {
@@ -49,6 +51,8 @@ test("login page renders credential form", async ({ page }) => {
   await expect(page.getByText("ID · RRHH")).toBeVisible();
   await expect(page.getByLabel("Correo electrónico")).toBeVisible();
   await expect(page.getByRole("textbox", { name: "Contraseña" })).toBeVisible();
+  await expect(page.locator(".login-badge-slot")).toHaveCount(0);
+  await expect(page.locator(".workia-credential-slot")).toHaveCount(0);
 });
 
 test("protected app route redirects to login", async ({ page }) => {
