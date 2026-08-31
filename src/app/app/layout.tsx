@@ -5,7 +5,10 @@ import { pageTitles } from "@/lib/brand/chrome-copy";
 import { requireAuth } from "@/lib/auth/session";
 
 export const metadata: Metadata = {
-  title: pageTitles.inicio,
+  title: {
+    default: pageTitles.inicio,
+    template: "%s — workia",
+  },
 };
 
 type AppLayoutProps = {

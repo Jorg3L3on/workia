@@ -5,7 +5,10 @@ import { pageTitles } from "@/lib/brand/chrome-copy";
 import { requireAdminAccess } from "@/lib/auth/session";
 
 export const metadata: Metadata = {
-  title: pageTitles.administracion,
+  title: {
+    default: pageTitles.administracion,
+    template: "%s — workia",
+  },
 };
 
 type AdminLayoutProps = {
