@@ -40,7 +40,9 @@ test.describe("Actividades de puesto", () => {
     await expect(
       page.getByRole("heading", { name: "Actividades", exact: true }),
     ).toBeVisible();
+    await expect(page.getByLabel("Nombre")).toHaveCount(0);
 
+    await page.getByRole("button", { name: "Nueva actividad" }).click();
     await page.getByLabel("Nombre").fill(activityName);
     await page.getByRole("button", { name: "Crear actividad" }).click();
     await expect(page.getByRole("status")).toContainText("Cambios guardados");
@@ -52,14 +54,21 @@ test.describe("Actividades de puesto", () => {
     await expect(
       page.getByRole("heading", { name: "Puestos", exact: true }),
     ).toBeVisible();
+    await expect(page.getByLabel("Puesto a asignar")).toHaveCount(0);
 
+    await page
+      .getByRole("button", { name: "Asignar actividad", exact: true })
+      .click();
     await page
       .getByLabel("Puesto a asignar")
       .selectOption({ label: puestoName });
     await page
       .getByLabel("Actividad a asignar")
       .selectOption({ label: activityName });
-    await page.getByRole("button", { name: "Asignar actividad" }).click();
+    await page
+      .locator("#catalog-form-assign")
+      .getByRole("button", { name: "Asignar actividad", exact: true })
+      .click();
     await expect(page.getByRole("status")).toContainText(
       "Actividad asignada al puesto",
     );

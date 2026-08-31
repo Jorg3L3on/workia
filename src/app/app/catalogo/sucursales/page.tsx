@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { CatalogFormTray } from "@/components/catalog/catalog-form-tray";
 import { CatalogSitesTable } from "@/components/catalog/catalog-data-tables";
 import { pageTitles } from "@/lib/brand/chrome-copy";
 import { CatalogStatusMessages } from "@/components/catalog/catalog-status-messages";
@@ -50,6 +51,54 @@ const SucursalesCatalogPage = async ({
       <CatalogStatusMessages deleted={deleted} saved={saved} />
 
       <section className="workia-pass-card space-y-4 p-5">
+        <CatalogFormTray
+          actions={
+            canCreateSite
+              ? [
+                  {
+                    id: "create",
+                    actionLabel: "Nueva sucursal",
+                    formTitle: "Nueva sucursal",
+                    children: (
+                      <form action={createSiteAction} className="space-y-3">
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <div className="space-y-2">
+                            <Label htmlFor="site-name">Nombre</Label>
+                            <Input
+                              id="site-name"
+                              name="name"
+                              placeholder="Ej. Sucursal Demo Norte"
+                              required
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="site-kind">Tipo</Label>
+                            <select
+                              className="border-input bg-background h-8 w-full rounded-lg border px-2.5 text-sm"
+                              defaultValue="sucursal"
+                              id="site-kind"
+                              name="kind"
+                              required
+                            >
+                              {SITE_KINDS.map((kind) => (
+                                <option key={kind} value={kind}>
+                                  {siteKindLabels[kind]}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                        <Button type="submit" variant="outline">
+                          Crear sucursal
+                        </Button>
+                      </form>
+                    ),
+                  },
+                ]
+              : []
+          }
+        />
+
         <CatalogSitesTable
           canDelete={canDeleteSite}
           sites={siteRows.map((site) => ({
@@ -58,42 +107,6 @@ const SucursalesCatalogPage = async ({
             kindLabel: siteKindLabels[site.kind],
           }))}
         />
-
-        {canCreateSite ? (
-          <form action={createSiteAction} className="space-y-3 border-t pt-4">
-            <h2 className="text-sm font-semibold">Nueva sucursal</h2>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="site-name">Nombre</Label>
-                <Input
-                  id="site-name"
-                  name="name"
-                  placeholder="Ej. Sucursal Demo Norte"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="site-kind">Tipo</Label>
-                <select
-                  className="border-input bg-background h-8 w-full rounded-lg border px-2.5 text-sm"
-                  defaultValue="sucursal"
-                  id="site-kind"
-                  name="kind"
-                  required
-                >
-                  {SITE_KINDS.map((kind) => (
-                    <option key={kind} value={kind}>
-                      {siteKindLabels[kind]}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <Button type="submit" variant="outline">
-              Crear sucursal
-            </Button>
-          </form>
-        ) : null}
       </section>
     </div>
   );
