@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import Link from "next/link";
 
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { chromeCopy } from "@/lib/brand/chrome-copy";
@@ -92,9 +93,9 @@ describe("NavigationProgress", () => {
   it("shows the top loader on an internal destination click and hides it after the route changes", () => {
     setCurrentPath("/app");
     const { rerender } = renderProgress(
-      <a href="/app/personas" data-slot="sidebar">
+      <Link href="/app/personas" data-slot="sidebar">
         Personas
-      </a>,
+      </Link>,
     );
 
     expect(screen.queryByRole("progressbar")).toBeNull();
@@ -110,9 +111,9 @@ describe("NavigationProgress", () => {
     navigationState.pathname = "/app/personas";
     rerender(
       <ProgressHarness>
-        <a href="/app/personas" data-slot="sidebar">
+        <Link href="/app/personas" data-slot="sidebar">
           Personas
-        </a>
+        </Link>
       </ProgressHarness>,
     );
 
@@ -121,7 +122,7 @@ describe("NavigationProgress", () => {
 
   it("does not start for the current page", () => {
     setCurrentPath("/app");
-    renderProgress(<a href="/app">Inicio</a>);
+    renderProgress(<Link href="/app">Inicio</Link>);
 
     fireEvent.click(screen.getByRole("link", { name: "Inicio" }));
 
