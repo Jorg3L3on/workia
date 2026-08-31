@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { CatalogActivitiesTable } from "@/components/catalog/catalog-activities-table";
+import { CatalogFormTray } from "@/components/catalog/catalog-form-tray";
 import { pageTitles } from "@/lib/brand/chrome-copy";
 import { CatalogStatusMessages } from "@/components/catalog/catalog-status-messages";
 import { Button } from "@/components/ui/button";
@@ -61,6 +62,81 @@ const ActividadesCatalogPage = async ({
       <CatalogStatusMessages deleted={deleted} saved={saved} />
 
       <section className="workia-pass-card space-y-4 p-5">
+        {isEditing && editingActivity ? (
+          <div className="bg-muted/20 space-y-3 rounded-lg p-4">
+            <p className="text-sm font-medium">Editar actividad</p>
+            <form
+              action={updateActivityAction.bind(null, editingActivity.id)}
+              className="space-y-3"
+            >
+              <div className="space-y-2">
+                <Label htmlFor="activity-name">Nombre</Label>
+                <Input
+                  defaultValue={editingActivity.name}
+                  id="activity-name"
+                  name="name"
+                  placeholder="Ej. Atención a solicitudes internas"
+                  required
+                />
+              </div>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  defaultChecked={editingActivity.active}
+                  name="active"
+                  type="checkbox"
+                  value="true"
+                />
+                Activa
+              </label>
+              <Button type="submit" variant="outline">
+                Guardar cambios
+              </Button>
+            </form>
+          </div>
+        ) : (
+          <CatalogFormTray
+            actions={
+              canCreateActivity
+                ? [
+                    {
+                      id: "create",
+                      actionLabel: "Nueva actividad",
+                      formTitle: "Nueva actividad",
+                      children: (
+                        <form
+                          action={createActivityAction}
+                          className="space-y-3"
+                        >
+                          <div className="space-y-2">
+                            <Label htmlFor="activity-name">Nombre</Label>
+                            <Input
+                              id="activity-name"
+                              name="name"
+                              placeholder="Ej. Atención a solicitudes internas"
+                              required
+                            />
+                          </div>
+                          <label className="flex items-center gap-2 text-sm">
+                            <input
+                              defaultChecked
+                              name="active"
+                              type="checkbox"
+                              value="true"
+                            />
+                            Activa
+                          </label>
+                          <Button type="submit" variant="outline">
+                            Crear actividad
+                          </Button>
+                        </form>
+                      ),
+                    },
+                  ]
+                : []
+            }
+          />
+        )}
+
         <CatalogActivitiesTable
           activities={activityRows.map((activity) => ({
             id: activity.id,
@@ -70,67 +146,6 @@ const ActividadesCatalogPage = async ({
           canDelete={canDeleteActivity}
           canUpdate={canUpdateActivity}
         />
-
-        {isEditing && editingActivity ? (
-          <form
-            action={updateActivityAction.bind(null, editingActivity.id)}
-            className="space-y-3 border-t pt-4"
-          >
-            <h2 className="text-sm font-semibold">Editar actividad</h2>
-            <div className="space-y-2">
-              <Label htmlFor="activity-name">Nombre</Label>
-              <Input
-                defaultValue={editingActivity.name}
-                id="activity-name"
-                name="name"
-                placeholder="Ej. Atención a solicitudes internas"
-                required
-              />
-            </div>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                defaultChecked={editingActivity.active}
-                name="active"
-                type="checkbox"
-                value="true"
-              />
-              Activa
-            </label>
-            <Button type="submit" variant="outline">
-              Guardar cambios
-            </Button>
-          </form>
-        ) : null}
-
-        {!isEditing && canCreateActivity ? (
-          <form
-            action={createActivityAction}
-            className="space-y-3 border-t pt-4"
-          >
-            <h2 className="text-sm font-semibold">Nueva actividad</h2>
-            <div className="space-y-2">
-              <Label htmlFor="activity-name">Nombre</Label>
-              <Input
-                id="activity-name"
-                name="name"
-                placeholder="Ej. Atención a solicitudes internas"
-                required
-              />
-            </div>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                defaultChecked
-                name="active"
-                type="checkbox"
-                value="true"
-              />
-              Activa
-            </label>
-            <Button type="submit" variant="outline">
-              Crear actividad
-            </Button>
-          </form>
-        ) : null}
       </section>
     </div>
   );

@@ -48,11 +48,7 @@ export const PositionActivitiesAssign = ({
   };
 
   return (
-    <form
-      action={assignActivityToPositionAction}
-      className="space-y-3 border-t pt-4"
-    >
-      <h2 className="text-sm font-semibold">Asignar actividad</h2>
+    <form action={assignActivityToPositionAction} className="space-y-3">
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="assign-position">Puesto a asignar</Label>
