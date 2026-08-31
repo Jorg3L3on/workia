@@ -4,6 +4,8 @@ import { expect, test } from "@playwright/test";
 
 import { OFFICIAL_DELETED_DEMO_FULL_NAME } from "../src/lib/people/borrados-cleanup";
 
+test.describe.configure({ mode: "serial" });
+
 const loginAsDemoAdmin = async (page: import("@playwright/test").Page) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/login");
