@@ -1,14 +1,21 @@
-import { cleanup, render, screen, within } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
 
-const { navigationState } = vi.hoisted(() => ({
+const { navigationState, mobileState } = vi.hoisted(() => ({
   navigationState: { pathname: "/app" },
+  mobileState: { isMobile: false },
 }));
 
 vi.mock("@/hooks/use-mobile", () => ({
-  useIsMobile: () => false,
+  useIsMobile: () => mobileState.isMobile,
 }));
 
 vi.mock("next/navigation", () => ({
@@ -42,6 +49,7 @@ const renderShell = () =>
 
 afterEach(() => {
   navigationState.pathname = "/app";
+  mobileState.isMobile = false;
   cleanup();
 });
 
@@ -158,6 +166,44 @@ describe("AppShell", () => {
         .getByRole("link", { name: "Personas" })
         .getAttribute("href"),
     ).toBe("/app/personas");
+  });
+
+  it("starts the top loader on Inicio → Personas and keeps the desktop sidebar", () => {
+    renderShell();
+
+    const sidebar = document.querySelector('[data-slot="sidebar"]');
+    expect(sidebar).toBeTruthy();
+    expect(screen.queryByRole("progressbar")).toBeNull();
+    expect(screen.queryByRole("dialog", { name: "Menú" })).toBeNull();
+
+    fireEvent.click(
+      within(sidebar as HTMLElement).getByRole("link", { name: "Personas" }),
+    );
+
+    expect(
+      screen.getByRole("progressbar", { name: chromeCopy.navigationProgress }),
+    ).toBeTruthy();
+    expect(document.querySelector('[data-slot="sidebar"]')).toBeTruthy();
+    expect(screen.queryByRole("dialog", { name: "Menú" })).toBeNull();
+  });
+
+  it("closes the mobile menu as soon as a destination is chosen", () => {
+    mobileState.isMobile = true;
+    renderShell();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: chromeCopy.sidebarToggle }),
+    );
+
+    const menu = screen.getByRole("dialog", { name: "Menú" });
+    expect(menu).toBeTruthy();
+
+    fireEvent.click(within(menu).getByRole("link", { name: "Personas" }));
+
+    expect(screen.queryByRole("dialog", { name: "Menú" })).toBeNull();
+    expect(
+      screen.getByRole("progressbar", { name: chromeCopy.navigationProgress }),
+    ).toBeTruthy();
   });
 });
 

@@ -6,6 +6,7 @@ import { signOut } from "next-auth/react";
 import { LayoutDashboardIcon, LogOutIcon, ShieldIcon } from "lucide-react";
 
 import { AppBreadcrumbs } from "@/components/layout/app-breadcrumbs";
+import { NavigationProgress } from "@/components/layout/navigation-progress";
 import {
   SHELL_INSET_CLASS_NAME,
   SHELL_MAIN_SCROLL_CLASS_NAME,
@@ -59,6 +60,7 @@ export const AdminShell = ({ children }: AdminShellProps) => {
 
   return (
     <SidebarProvider className={SHELL_VIEWPORT_CLASS_NAME}>
+      <NavigationProgress />
       <Sidebar collapsible="icon">
         <SidebarHeader className="border-sidebar-border border-b p-4">
           <Link className="font-semibold tracking-tight" href="/admin">

@@ -16,6 +16,7 @@ import {
   BreadcrumbLabelsProvider,
 } from "@/components/layout/app-breadcrumbs";
 import { AppSidebarNav } from "@/components/layout/app-sidebar-nav";
+import { NavigationProgress } from "@/components/layout/navigation-progress";
 import {
   SHELL_INSET_CLASS_NAME,
   SHELL_MAIN_SCROLL_CLASS_NAME,
@@ -80,6 +81,7 @@ export const AppShell = ({ children, user }: AppShellProps) => {
         <SidebarProvider
           className={cn("relative z-10 flex w-full", SHELL_VIEWPORT_CLASS_NAME)}
         >
+          <NavigationProgress />
           <Sidebar
             collapsible="icon"
             className="border-sidebar-border border-r"
