@@ -211,15 +211,6 @@
   box-shadow: 0 1px 0 var(--workia-line);
 }
 
-.workia-credential-slot {
-  height: 6px;
-  width: 28px;
-  border-radius: 999px;
-  border: 1px solid var(--workia-line-strong);
-  background: var(--workia-surface);
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.12);
-}
-
 .workia-nav-link {
   border-radius: calc(var(--radius) - 2px);
   padding: 0.375rem 0.625rem;
@@ -382,16 +373,6 @@
     var(--login-badge-b)
   );
   padding: 22px 0 24px;
-}
-
-.login-badge-slot {
-  margin: 0 auto 18px;
-  height: 10px;
-  width: 42px;
-  border-radius: 999px;
-  border: 1.5px solid var(--login-line-strong);
-  background: var(--login-page-bg);
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.25);
 }
 
 .login-input-line {

@@ -21,8 +21,6 @@ export const CredentialError = ({
     <LoginStage>
       <div className="login-badge-shadow w-full">
         <div className="login-badge" data-testid={`credential-error-${code}`}>
-          <div className="login-badge-slot" aria-hidden />
-
           <div className="px-[30px] pt-2 pb-1 max-[400px]:px-[22px]">
             <div className="mb-[22px] flex items-center justify-between gap-3">
               <div className="flex items-center gap-2.5">

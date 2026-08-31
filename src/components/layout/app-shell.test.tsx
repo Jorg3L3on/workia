@@ -64,6 +64,8 @@ describe("AppShell", () => {
     ).toBeGreaterThan(0);
     expect(screen.queryByLabelText("Toggle Sidebar")).toBeNull();
     expect(document.querySelector("form")).toBeNull();
+    expect(document.querySelector(".workia-credential-slot")).toBeNull();
+    expect(screen.getByRole("link", { name: /workia/i })).toBeTruthy();
   });
 
   it("keeps the chrome header sticky at the top", () => {

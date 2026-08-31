@@ -96,10 +96,6 @@ export const AppShell = ({ children, user }: AppShellProps) => {
                   workia
                 </span>
               </Link>
-              <div
-                className="workia-credential-slot mx-1 mt-3 group-data-[collapsible=icon]:hidden"
-                aria-hidden
-              />
             </SidebarHeader>
             <SidebarContent>
               <AppSidebarNav items={navItems} />
