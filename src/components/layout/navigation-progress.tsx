@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 
 import { useSidebar } from "@/components/ui/sidebar";
 import { chromeCopy } from "@/lib/brand/chrome-copy";
+
+const PROGRESS_TIMEOUT_MS = 10_000;
 
 const isModifiedClick = (event: MouseEvent) =>
   event.metaKey ||
@@ -59,7 +61,9 @@ export const resolveInternalNavigationHref = (
 export const NavigationProgress = () => {
   const pathname = usePathname();
   const { isMobile, setOpenMobile } = useSidebar();
-  const [active, setActive] = useState(false);
+  const [originPath, setOriginPath] = useState<string | null>(null);
+  const timeoutRef = useRef<number | null>(null);
+  const active = originPath !== null && originPath === pathname;
 
   useEffect(() => {
     const handleClick = (event: MouseEvent) => {
@@ -89,18 +93,25 @@ export const NavigationProgress = () => {
         setOpenMobile(false);
       }
 
-      setActive(true);
+      setOriginPath(pathname);
+
+      if (timeoutRef.current !== null) {
+        window.clearTimeout(timeoutRef.current);
+      }
+
+      timeoutRef.current = window.setTimeout(() => {
+        setOriginPath(null);
+      }, PROGRESS_TIMEOUT_MS);
     };
 
     document.addEventListener("click", handleClick, true);
     return () => {
       document.removeEventListener("click", handleClick, true);
+      if (timeoutRef.current !== null) {
+        window.clearTimeout(timeoutRef.current);
+      }
     };
-  }, [isMobile, setOpenMobile]);
-
-  useEffect(() => {
-    setActive(false);
-  }, [pathname]);
+  }, [isMobile, pathname, setOpenMobile]);
 
   if (!active) {
     return null;
