@@ -11,6 +11,7 @@ import {
   type AuditAction,
   type AuditResourceType,
 } from "@/lib/audit/types";
+import { formatDateTimeMx, formatStoredDateValue } from "@/lib/format/date";
 
 export type AuditEventRow = {
   id: string;
@@ -24,11 +25,7 @@ export type AuditEventRow = {
   occurredAt: Date | string;
 };
 
-const formatOccurredAt = (value: Date | string) =>
-  new Intl.DateTimeFormat("es-MX", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(typeof value === "string" ? new Date(value) : value);
+const formatOccurredAt = (value: Date | string) => formatDateTimeMx(value);
 
 const formatChangeValue = (value: unknown) => {
   if (value === null || value === undefined || value === "") {
@@ -39,7 +36,7 @@ const formatChangeValue = (value: unknown) => {
     return value ? "Sí" : "No";
   }
 
-  return String(value);
+  return formatStoredDateValue(value) ?? String(value);
 };
 
 const renderChanges = (payload: AuditPayload | null) => {

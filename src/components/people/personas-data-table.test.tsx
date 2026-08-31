@@ -17,6 +17,7 @@ const demoPeople = [
     id: "person-activa",
     name: "Persona Demo",
     rfc: "XAXX010101000",
+    fechaIngreso: "2026-03-15",
     status: "activa" as const,
     deleted: false,
     searchText: "Persona Demo XAXX010101000",
@@ -25,6 +26,7 @@ const demoPeople = [
     id: "person-borrada",
     name: OFFICIAL_DELETED_DEMO_FULL_NAME,
     rfc: "XAXX010101001",
+    fechaIngreso: "2025-01-02",
     status: "activa" as const,
     deleted: true,
     searchText: `${OFFICIAL_DELETED_DEMO_FULL_NAME} XAXX010101001`,
@@ -36,6 +38,8 @@ describe("PersonasDataTable deleted visibility", () => {
     render(<PersonasDataTable people={demoPeople} />);
 
     expect(screen.getAllByText("Persona Demo").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("15/03/2026").length).toBeGreaterThan(0);
+    expect(screen.queryByText("03/15/2026")).toBeNull();
     expect(screen.queryByText(OFFICIAL_DELETED_DEMO_FULL_NAME)).toBeNull();
   });
 

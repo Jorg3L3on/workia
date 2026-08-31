@@ -7,6 +7,7 @@ import { ListRowAction } from "@/components/list/list-row-action";
 import { ListStatusBadge } from "@/components/list/list-status-badge";
 import type { PersonaListRow } from "@/components/people/persona-list-row";
 import { PersonasMobileList } from "@/components/people/personas-mobile-list";
+import { formatDateMx } from "@/lib/format/date";
 import {
   matchesPersonaListRow,
   personDeletedLabel,
@@ -59,6 +60,14 @@ export const PersonasDataTable = ({
           <span className="text-muted-foreground tabular-nums">
             {row.rfc ?? "—"}
           </span>
+        ),
+      },
+      {
+        id: "ingreso",
+        header: "Ingreso",
+        accessor: (row) => row.fechaIngreso ?? "",
+        cell: (row) => (
+          <span className="tabular-nums">{formatDateMx(row.fechaIngreso)}</span>
         ),
       },
       {

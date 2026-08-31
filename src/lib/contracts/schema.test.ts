@@ -31,6 +31,9 @@ describe("contract template tokens", () => {
     expect(filled).toContain("Corporativo Demo");
     expect(filled).toContain("XAXX010101000");
     expect(filled).toContain("entrada 08:00");
+    expect(filled).toContain("15/01/2025");
+    expect(filled).toContain("31/12/2025");
+    expect(filled).not.toContain("01/15/2025");
     expect(filled).not.toContain("{{nombres}}");
     expect(filled).not.toContain("{{horario}}");
   });

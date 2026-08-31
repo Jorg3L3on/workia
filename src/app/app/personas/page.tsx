@@ -38,6 +38,7 @@ const PersonasPage = async ({ searchParams }: PersonasPageProps) => {
     id: person.id,
     name: formatPersonName(person),
     rfc: person.rfc,
+    fechaIngreso: person.fechaIngreso,
     status: person.status,
     deleted: Boolean(person.deletedAt),
     searchText: [

@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { formatDateMx } from "@/lib/format/date";
 import type { AssetMovementType, AssetStatus } from "@/lib/db/schema/assets";
 
 export const assetCategoryLabels: Record<string, string> = {
@@ -58,18 +59,6 @@ export const returnAssetFormSchema = z.object({
 
 export type ReturnAssetFormValues = z.infer<typeof returnAssetFormSchema>;
 
-export const formatAssetDate = (value?: string | null) => {
-  if (!value) {
-    return "—";
-  }
-
-  const [year, month, day] = value.split("-");
-
-  if (!year || !month || !day) {
-    return value;
-  }
-
-  return `${day}/${month}/${year}`;
-};
+export const formatAssetDate = formatDateMx;
 
 export const isTrackableAsset = (tracksHistory: boolean) => tracksHistory;

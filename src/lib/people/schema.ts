@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { formatDateMx } from "@/lib/format/date";
+
 export const PERSON_STATUSES = ["activa", "baja"] as const;
 
 export type PersonStatusValue = (typeof PERSON_STATUSES)[number];
@@ -186,21 +188,4 @@ export const formatPersonName = (person: {
   return parts.join(" ").trim();
 };
 
-export const formatDateLabel = (value?: string | Date | null) => {
-  if (!value) {
-    return "—";
-  }
-
-  const date =
-    typeof value === "string" ? new Date(`${value}T12:00:00`) : value;
-
-  if (Number.isNaN(date.getTime())) {
-    return "—";
-  }
-
-  return new Intl.DateTimeFormat("es-MX", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(date);
-};
+export const formatDateLabel = formatDateMx;

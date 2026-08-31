@@ -4,7 +4,7 @@ import { useActionState, useMemo } from "react";
 import { useFormStatus } from "react-dom";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import type { ContractTemplate } from "@/lib/db/schema";
 import {
@@ -16,6 +16,7 @@ import {
   contractTypeLabels,
   fillContractTemplate,
 } from "@/lib/contracts/schema";
+import { isoToday } from "@/lib/format/date";
 
 type ContractFormProps = {
   personId: string;
@@ -107,12 +108,12 @@ export const ContractForm = ({
 
         <div className="space-y-2">
           <Label htmlFor="startDate">Fecha de inicio</Label>
-          <Input id="startDate" name="startDate" required type="date" />
+          <DateInput id="startDate" name="startDate" required />
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="endDate">Fecha de fin (determinado)</Label>
-          <Input id="endDate" name="endDate" type="date" />
+          <DateInput id="endDate" name="endDate" />
         </div>
 
         <div className="space-y-2 sm:col-span-2">
@@ -153,7 +154,7 @@ const ContractPreview = ({
 
     return fillContractTemplate(template.body, {
       ...personContext,
-      fechaInicio: new Date().toISOString().slice(0, 10),
+      fechaInicio: isoToday(),
       fechaFin: null,
     });
   }, [templates, personContext]);
