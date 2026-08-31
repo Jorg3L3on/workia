@@ -1,6 +1,8 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
+import { pageTitles } from "@/lib/brand/chrome-copy";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -11,6 +13,10 @@ import {
 } from "@/components/ui/card";
 import { requireAdminAccess } from "@/lib/auth/session";
 import { getUserPermissions } from "@/lib/rbac";
+
+export const metadata: Metadata = {
+  title: pageTitles.administracion,
+};
 
 export default async function AdminPage() {
   const session = await requireAdminAccess();

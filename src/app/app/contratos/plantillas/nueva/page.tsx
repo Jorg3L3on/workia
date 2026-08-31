@@ -1,6 +1,8 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
+import { pageTitles } from "@/lib/brand/chrome-copy";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createContractTemplateAction } from "@/lib/contracts/actions";
@@ -9,6 +11,10 @@ import { CONTRACT_TEMPLATE_TOKENS } from "@/lib/contracts/schema";
 import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: pageTitles.nuevaPlantilla,
+};
 
 type NuevaPlantillaPageProps = {
   searchParams: Promise<{ error?: string }>;

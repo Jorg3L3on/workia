@@ -29,6 +29,7 @@ vi.mock("@/components/theme-toggle", () => ({
 }));
 
 import { AppShell } from "@/components/layout/app-shell";
+import { chromeCopy } from "@/lib/brand/chrome-copy";
 
 const renderShell = () =>
   render(
@@ -50,6 +51,10 @@ describe("AppShell", () => {
 
     expect(screen.getByText("Contenido")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Cerrar sesión" })).toBeTruthy();
+    expect(
+      screen.getAllByRole("button", { name: chromeCopy.sidebarToggle }).length,
+    ).toBeGreaterThan(0);
+    expect(screen.queryByLabelText("Toggle Sidebar")).toBeNull();
     expect(document.querySelector("form")).toBeNull();
   });
 

@@ -1,4 +1,7 @@
+import type { Metadata } from "next";
+
 import { AuditEventList } from "@/components/audit/audit-event-list";
+import { pageTitles } from "@/lib/brand/chrome-copy";
 import { ListFilterBar } from "@/components/list/list-filter-bar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +19,10 @@ import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: pageTitles.auditoria,
+};
 
 type AuditoriaPageProps = {
   searchParams: Promise<{

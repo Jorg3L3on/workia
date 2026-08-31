@@ -21,6 +21,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import { chromeCopy } from "@/lib/brand/chrome-copy";
 import {
   resolveBreadcrumbs,
   type BreadcrumbLabels,
@@ -89,7 +90,7 @@ export const AppBreadcrumbs = () => {
   }
 
   return (
-    <Breadcrumb aria-label="Miga de pan">
+    <Breadcrumb aria-label={chromeCopy.breadcrumb}>
       <BreadcrumbList>
         {crumbs.map((crumb, index) => {
           const isLast = index === crumbs.length - 1;

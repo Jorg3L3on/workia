@@ -1,4 +1,7 @@
+import type { Metadata } from "next";
+
 import { CatalogPositionsTable } from "@/components/catalog/catalog-data-tables";
+import { pageTitles } from "@/lib/brand/chrome-copy";
 import { CatalogStatusMessages } from "@/components/catalog/catalog-status-messages";
 import { PositionActivitiesAssign } from "@/components/catalog/position-activities-assign";
 import { Button } from "@/components/ui/button";
@@ -15,6 +18,10 @@ import {
 import { userHasPermission } from "@/lib/rbac";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: pageTitles.puestos,
+};
 
 type PuestosCatalogPageProps = {
   searchParams: Promise<{

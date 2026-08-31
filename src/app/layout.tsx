@@ -18,7 +18,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "workia",
+  title: {
+    default: "workia",
+    template: "%s — workia",
+  },
   description: "Plataforma de recursos humanos — personas, nómina y talento.",
   icons: workiaIcons,
   manifest: "/manifest.webmanifest",

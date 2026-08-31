@@ -1,6 +1,9 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PencilIcon } from "lucide-react";
+
+import { pageTitles } from "@/lib/brand/chrome-copy";
 
 import { AuditEventList } from "@/components/audit/audit-event-list";
 import { PersonContractsSection } from "@/components/contracts/person-contracts-section";
@@ -36,6 +39,10 @@ import {
 import { userHasPermission } from "@/lib/rbac";
 import { listActiveSites } from "@/lib/sites";
 import { siteKindLabels } from "@/lib/sites/schema";
+
+export const metadata: Metadata = {
+  title: pageTitles.expediente,
+};
 
 const buildSiteLabel = (
   site?: { name: string; kind: "corporativo" | "sucursal" } | null,

@@ -1,10 +1,17 @@
+import type { Metadata } from "next";
+
 import { TodayDashboard } from "@/components/home/today-dashboard";
+import { pageTitles } from "@/lib/brand/chrome-copy";
 import { requireAuth } from "@/lib/auth/session";
 import { countRenewalTrayItems, listRenewalTrayItems } from "@/lib/contracts";
 import { countActivePeople } from "@/lib/people";
 import { userHasPermission } from "@/lib/rbac";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: pageTitles.inicio,
+};
 
 export default async function AppPage() {
   const session = await requireAuth();
