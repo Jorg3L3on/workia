@@ -114,4 +114,21 @@ describe("AdminShell", () => {
         ?.querySelector('[data-slot="breadcrumb"]'),
     ).toBeTruthy();
   });
+
+  it("starts the top loader when navigating to RBAC", () => {
+    render(
+      <AdminShell>
+        <p>Admin</p>
+      </AdminShell>,
+    );
+
+    expect(screen.queryByRole("progressbar")).toBeNull();
+
+    fireEvent.click(screen.getByRole("link", { name: "RBAC" }));
+
+    expect(
+      screen.getByRole("progressbar", { name: chromeCopy.navigationProgress }),
+    ).toBeTruthy();
+    expect(document.querySelector('[data-slot="sidebar"]')).toBeTruthy();
+  });
 });

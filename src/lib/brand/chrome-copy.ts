@@ -6,6 +6,7 @@ export const chromeCopy = {
   breadcrumb: "Miga de pan",
   breadcrumbMore: "Más",
   sheetClose: "Cerrar",
+  navigationProgress: "Cargando página",
 } as const;
 
 export const errorCopy = {

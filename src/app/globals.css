@@ -253,6 +253,46 @@
   );
 }
 
+.workia-route-progress {
+  pointer-events: none;
+  position: fixed;
+  inset-inline: 0;
+  top: 0;
+  z-index: 70;
+  height: 2px;
+}
+
+.workia-route-progress-bar {
+  height: 100%;
+  width: 80%;
+  background: linear-gradient(
+    135deg,
+    var(--workia-accent-blue),
+    var(--workia-accent-violet)
+  );
+  box-shadow: 0 0 10px
+    color-mix(in srgb, var(--workia-accent-blue) 55%, transparent);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .workia-route-progress-bar {
+    width: 0;
+    animation: workia-route-progress-indeterminate 1.1s ease-out forwards;
+  }
+}
+
+@keyframes workia-route-progress-indeterminate {
+  0% {
+    width: 0;
+  }
+  20% {
+    width: 36%;
+  }
+  100% {
+    width: 80%;
+  }
+}
+
 .workia-accent-text {
   background: linear-gradient(
     135deg,
