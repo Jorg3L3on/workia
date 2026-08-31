@@ -57,8 +57,7 @@ test.describe("Actividades de puesto", () => {
     await expect(page.getByLabel("Puesto a asignar")).toHaveCount(0);
 
     await page
-      .getByRole("button", { name: "Asignar actividad" })
-      .and(page.locator("[aria-expanded]"))
+      .getByRole("button", { name: "Asignar actividad", exact: true })
       .click();
     await page
       .getByLabel("Puesto a asignar")
@@ -68,7 +67,7 @@ test.describe("Actividades de puesto", () => {
       .selectOption({ label: activityName });
     await page
       .locator("#catalog-form-assign")
-      .getByRole("button", { name: "Asignar actividad" })
+      .getByRole("button", { name: "Asignar actividad", exact: true })
       .click();
     await expect(page.getByRole("status")).toContainText(
       "Actividad asignada al puesto",

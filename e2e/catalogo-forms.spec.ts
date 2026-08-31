@@ -23,9 +23,12 @@ test.describe("Catálogo forms collapsed", () => {
       page.getByRole("columnheader", { name: "Puesto" }),
     ).toBeVisible();
 
-    const createAction = page.getByRole("button", { name: "Nuevo puesto" });
+    const createAction = page.getByRole("button", {
+      name: "Nuevo puesto",
+      exact: true,
+    });
     const assignAction = page
-      .getByRole("button", { name: "Asignar actividad" })
+      .getByRole("button", { name: "Asignar actividad", exact: true })
       .and(page.locator("[aria-expanded]"));
 
     await expect(createAction).toHaveAttribute("aria-expanded", "false");
@@ -65,7 +68,10 @@ test.describe("Catálogo forms collapsed", () => {
       page.getByRole("columnheader", { name: "Actividad" }),
     ).toBeVisible();
 
-    const newActivity = page.getByRole("button", { name: "Nueva actividad" });
+    const newActivity = page.getByRole("button", {
+      name: "Nueva actividad",
+      exact: true,
+    });
     await expect(newActivity).toHaveAttribute("aria-expanded", "false");
     await expect(page.getByLabel("Nombre")).toHaveCount(0);
 
@@ -81,7 +87,10 @@ test.describe("Catálogo forms collapsed", () => {
       page.getByRole("heading", { name: "Áreas", exact: true }),
     ).toBeVisible();
 
-    const newArea = page.getByRole("button", { name: "Nueva área" });
+    const newArea = page.getByRole("button", {
+      name: "Nueva área",
+      exact: true,
+    });
     await expect(newArea).toHaveAttribute("aria-expanded", "false");
     await expect(page.getByLabel("Nombre")).toHaveCount(0);
 
@@ -100,7 +109,10 @@ test.describe("Catálogo forms collapsed", () => {
       page.getByRole("columnheader", { name: "Tipo" }),
     ).toBeVisible();
 
-    const newSite = page.getByRole("button", { name: "Nueva sucursal" });
+    const newSite = page.getByRole("button", {
+      name: "Nueva sucursal",
+      exact: true,
+    });
     await expect(newSite).toHaveAttribute("aria-expanded", "false");
     await expect(page.getByLabel("Nombre")).toHaveCount(0);
     await expect(page.getByLabel("Tipo")).toHaveCount(0);
