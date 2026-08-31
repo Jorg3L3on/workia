@@ -30,7 +30,6 @@ export const LandingAppMock = () => {
     >
       <div className="workia-credential-header flex items-center gap-3 px-4 py-3">
         <WorkiaMark className="h-7" />
-        <div className="workia-credential-slot" />
         <div className="ml-auto hidden items-center gap-2 sm:flex">
           <span className="text-muted-foreground font-mono text-[10px] tracking-[0.08em] uppercase">
             Corporativo Demo

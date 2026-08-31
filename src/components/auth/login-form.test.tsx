@@ -72,6 +72,14 @@ describe("LoginForm", () => {
     expect(document.querySelector("header.sticky")).toBeNull();
   });
 
+  it("keeps the wordmark without the decorative slot under the logo", () => {
+    render(<LoginForm />);
+
+    expect(screen.getByText("workia")).toBeTruthy();
+    expect(document.querySelector(".login-badge-slot")).toBeNull();
+    expect(document.querySelector(".workia-credential-slot")).toBeNull();
+  });
+
   it("shows an error and stays on login when sign-in fails", async () => {
     signIn.mockResolvedValue({ error: "CredentialsSignin", ok: false });
 
