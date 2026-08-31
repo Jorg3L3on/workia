@@ -22,6 +22,8 @@ const seed = async () => {
     seedDemoResguardo,
     seedDemoSchedules,
   } = await import("./demo-company-seed");
+  const { cleanupBorradosResidue, ensureOfficialDeletedDemoPerson } =
+    await import("./cleanup-borrados-residue");
 
   console.log("Seeding RBAC data...");
 
@@ -170,6 +172,8 @@ const seed = async () => {
   await seedDemoResguardo();
   await seedDemoActivities();
   await seedDemoSchedules();
+  await cleanupBorradosResidue();
+  await ensureOfficialDeletedDemoPerson();
 
   console.log("Seed finished. Use demo credentials documented in README.");
 };

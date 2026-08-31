@@ -6,6 +6,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 import { PersonasDataTable } from "@/components/people/personas-data-table";
+import { OFFICIAL_DELETED_DEMO_FULL_NAME } from "@/lib/people/borrados-cleanup";
 
 afterEach(() => {
   cleanup();
@@ -22,11 +23,11 @@ const demoPeople = [
   },
   {
     id: "person-borrada",
-    name: "Persona Borrada Demo",
+    name: OFFICIAL_DELETED_DEMO_FULL_NAME,
     rfc: "XAXX010101001",
     status: "activa" as const,
     deleted: true,
-    searchText: "Persona Borrada Demo XAXX010101001",
+    searchText: `${OFFICIAL_DELETED_DEMO_FULL_NAME} XAXX010101001`,
   },
 ];
 
@@ -35,7 +36,7 @@ describe("PersonasDataTable deleted visibility", () => {
     render(<PersonasDataTable people={demoPeople} />);
 
     expect(screen.getAllByText("Persona Demo").length).toBeGreaterThan(0);
-    expect(screen.queryByText("Persona Borrada Demo")).toBeNull();
+    expect(screen.queryByText(OFFICIAL_DELETED_DEMO_FULL_NAME)).toBeNull();
   });
 
   it("opens the borrados list when initialVisibility is deleted", () => {
@@ -43,9 +44,9 @@ describe("PersonasDataTable deleted visibility", () => {
       <PersonasDataTable initialVisibility="deleted" people={demoPeople} />,
     );
 
-    expect(screen.getAllByText("Persona Borrada Demo").length).toBeGreaterThan(
-      0,
-    );
+    expect(
+      screen.getAllByText(OFFICIAL_DELETED_DEMO_FULL_NAME).length,
+    ).toBeGreaterThan(0);
     expect(screen.queryByText("Persona Demo")).toBeNull();
   });
 
@@ -56,9 +57,9 @@ describe("PersonasDataTable deleted visibility", () => {
       target: { value: "deleted" },
     });
 
-    expect(screen.getAllByText("Persona Borrada Demo").length).toBeGreaterThan(
-      0,
-    );
+    expect(
+      screen.getAllByText(OFFICIAL_DELETED_DEMO_FULL_NAME).length,
+    ).toBeGreaterThan(0);
     expect(screen.getAllByText("Borrado").length).toBeGreaterThan(0);
     expect(screen.queryByText("Persona Demo")).toBeNull();
   });
