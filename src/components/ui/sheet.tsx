@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Dialog as SheetPrimitive } from "radix-ui";
 
+import { chromeCopy } from "@/lib/brand/chrome-copy";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { XIcon } from "lucide-react";
@@ -76,7 +77,7 @@ function SheetContent({
               size="icon-sm"
             >
               <XIcon />
-              <span className="sr-only">Close</span>
+              <span className="sr-only">{chromeCopy.sheetClose}</span>
             </Button>
           </SheetPrimitive.Close>
         )}

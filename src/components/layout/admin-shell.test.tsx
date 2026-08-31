@@ -26,6 +26,7 @@ vi.mock("@/hooks/use-mobile", () => ({
 }));
 
 import { AdminShell } from "@/components/layout/admin-shell";
+import { chromeCopy } from "@/lib/brand/chrome-copy";
 
 afterEach(() => {
   cleanup();
@@ -50,6 +51,10 @@ describe("AdminShell", () => {
     });
     expect(push).toHaveBeenCalledWith("/login");
     expect(document.querySelector("form")).toBeNull();
+    expect(
+      screen.getAllByRole("button", { name: chromeCopy.sidebarToggle }).length,
+    ).toBeGreaterThan(0);
+    expect(screen.queryByLabelText("Toggle Sidebar")).toBeNull();
   });
 
   it("keeps the chrome header sticky at the top", () => {

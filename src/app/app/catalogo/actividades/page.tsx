@@ -1,4 +1,7 @@
+import type { Metadata } from "next";
+
 import { CatalogActivitiesTable } from "@/components/catalog/catalog-activities-table";
+import { pageTitles } from "@/lib/brand/chrome-copy";
 import { CatalogStatusMessages } from "@/components/catalog/catalog-status-messages";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +15,10 @@ import { getActivityById, listActivities } from "@/lib/catalog";
 import { userHasPermission } from "@/lib/rbac";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: pageTitles.actividades,
+};
 
 type ActividadesCatalogPageProps = {
   searchParams: Promise<{ saved?: string; deleted?: string; edit?: string }>;

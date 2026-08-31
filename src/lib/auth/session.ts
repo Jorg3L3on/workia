@@ -1,3 +1,5 @@
+import { forbidden } from "next/navigation";
+
 import { auth } from "@/auth";
 import { userHasAnyPermission } from "@/lib/rbac";
 import type { PermissionSlug } from "@/lib/db/schema/types";
@@ -33,7 +35,7 @@ export const requireAdminAccess = async () => {
   );
 
   if (!hasAdminAccess) {
-    throw new Error("Forbidden");
+    forbidden();
   }
 
   return session;

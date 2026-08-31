@@ -1,5 +1,8 @@
 import { expect, test } from "@playwright/test";
 
+const THEME_TOGGLE = "Cambiar tema";
+const SIDEBAR_TOGGLE = "Alternar barra lateral";
+
 const assertWorkiaFavicon = async (page: import("@playwright/test").Page) => {
   const iconLinks = page.locator('link[rel="icon"], link[rel="shortcut icon"]');
   await expect(iconLinks.first()).toHaveCount(1);
@@ -96,5 +99,62 @@ test.describe("Authenticated breadcrumbs", () => {
     await expect(
       breadcrumb.getByText("Auditoría", { exact: true }),
     ).toBeVisible();
+  });
+});
+
+test.describe("Spanish chrome and error pages", () => {
+  test("walks Inicio, Personas, Catálogo, a 404 and the theme toggle", async ({
+    page,
+  }) => {
+    await loginAsDemoRrhh(page);
+
+    await expect(page).toHaveTitle(/Inicio — workia/);
+    await expect(
+      page.getByRole("button", { name: THEME_TOGGLE }),
+    ).toBeVisible();
+    await expect(
+      page.locator('[data-slot="sidebar-trigger"]'),
+    ).toHaveAccessibleName(SIDEBAR_TOGGLE);
+    await expect(page.getByLabel("Toggle theme")).toHaveCount(0);
+    await expect(page.getByLabel("Toggle Sidebar")).toHaveCount(0);
+
+    await page.goto("/app/personas");
+    await expect(page).toHaveTitle(/Personas — workia/);
+    await expect(
+      page.getByRole("button", { name: THEME_TOGGLE }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Personas", exact: true }),
+    ).toBeVisible();
+
+    await page.goto("/app/catalogo/areas");
+    await expect(page).toHaveTitle(/Áreas — workia/);
+    await expect(
+      page
+        .getByRole("navigation", { name: "Miga de pan" })
+        .getByText("Catálogo"),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: THEME_TOGGLE }),
+    ).toBeVisible();
+
+    await page.getByRole("button", { name: THEME_TOGGLE }).click();
+    await expect(page.locator("html")).toHaveClass(/dark/);
+
+    await page.goto("/app/esta-ruta-no-existe");
+    await expect(
+      page.getByRole("heading", { name: "Página no encontrada" }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Esta ruta no está en el expediente."),
+    ).toBeVisible();
+    await expect(page.getByText("This page could not be found")).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: THEME_TOGGLE }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "Volver a Inicio" }),
+    ).toBeVisible();
+    await expect(page).toHaveTitle(/Página no encontrada — workia/);
   });
 });

@@ -1,13 +1,19 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { PlusIcon } from "lucide-react";
 
 import { PlantillasDataTable } from "@/components/contracts/plantillas-data-table";
+import { pageTitles } from "@/lib/brand/chrome-copy";
 import { Button } from "@/components/ui/button";
 import { listContractTemplates } from "@/lib/contracts";
 import { requireContractTemplatesRead } from "@/lib/contracts/auth";
 import { userHasPermission } from "@/lib/rbac";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: pageTitles.plantillas,
+};
 
 type PlantillasPageProps = {
   searchParams: Promise<{

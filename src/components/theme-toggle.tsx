@@ -4,6 +4,7 @@ import { MoonIcon, SunIcon } from "lucide-react";
 import { useTheme } from "next-themes";
 
 import { Button } from "@/components/ui/button";
+import { chromeCopy } from "@/lib/brand/chrome-copy";
 
 export const ThemeToggle = () => {
   const { resolvedTheme, setTheme } = useTheme();
@@ -14,7 +15,7 @@ export const ThemeToggle = () => {
 
   return (
     <Button
-      aria-label="Toggle theme"
+      aria-label={chromeCopy.themeToggle}
       className="relative"
       size="icon-sm"
       variant="ghost"

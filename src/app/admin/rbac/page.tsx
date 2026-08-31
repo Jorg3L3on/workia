@@ -1,4 +1,7 @@
+import type { Metadata } from "next";
+
 import { Badge } from "@/components/ui/badge";
+import { pageTitles } from "@/lib/brand/chrome-copy";
 import {
   Card,
   CardContent,
@@ -23,6 +26,10 @@ import {
 } from "@/lib/rbac";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: pageTitles.rbac,
+};
 
 const AdminRbacPage = async () => {
   const [matrix, usersWithRoles] = await Promise.all([

@@ -1,5 +1,8 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { PlusIcon, SearchIcon } from "lucide-react";
+
+import { pageTitles } from "@/lib/brand/chrome-copy";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,6 +21,10 @@ import { assetCategoryLabels, assetStatusLabels } from "@/lib/resguardo/schema";
 import { userHasPermission } from "@/lib/rbac";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: pageTitles.resguardo,
+};
 
 type ResguardoPageProps = {
   searchParams: Promise<{

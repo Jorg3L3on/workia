@@ -1,4 +1,7 @@
+import type { Metadata } from "next";
+
 import { AreaTreeView } from "@/components/catalog/area-tree-view";
+import { pageTitles } from "@/lib/brand/chrome-copy";
 import { CatalogStatusMessages } from "@/components/catalog/catalog-status-messages";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +13,10 @@ import { buildAreaTree } from "@/lib/catalog/schema";
 import { userHasPermission } from "@/lib/rbac";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: pageTitles.areas,
+};
 
 type AreasCatalogPageProps = {
   searchParams: Promise<{ saved?: string; deleted?: string }>;

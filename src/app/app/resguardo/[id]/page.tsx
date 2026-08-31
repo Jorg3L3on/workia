@@ -1,5 +1,8 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+
+import { pageTitles } from "@/lib/brand/chrome-copy";
 
 import { AuditEventList } from "@/components/audit/audit-event-list";
 import { AssignAssetForm } from "@/components/resguardo/assign-asset-form";
@@ -30,6 +33,10 @@ import { formatPersonName } from "@/lib/people/schema";
 import { userHasPermission } from "@/lib/rbac";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: pageTitles.activo,
+};
 
 type AssetDetailPageProps = {
   params: Promise<{ id: string }>;

@@ -1,7 +1,9 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import { pageTitles } from "@/lib/brand/chrome-copy";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PageBreadcrumbLabel } from "@/components/layout/app-breadcrumbs";
@@ -16,6 +18,10 @@ import { CONTRACT_TEMPLATE_TOKENS } from "@/lib/contracts/schema";
 import { userHasPermission } from "@/lib/rbac";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: pageTitles.plantilla,
+};
 
 type PlantillaDetailPageProps = {
   params: Promise<{ id: string }>;

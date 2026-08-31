@@ -1,7 +1,9 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { FileTextIcon } from "lucide-react";
 
 import { RenewalTrayList } from "@/components/contracts/renewal-tray-list";
+import { pageTitles } from "@/lib/brand/chrome-copy";
 import { Button } from "@/components/ui/button";
 import {
   listActiveContractTemplates,
@@ -11,6 +13,10 @@ import { requireContractsRead } from "@/lib/contracts/auth";
 import { userHasPermission } from "@/lib/rbac";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: pageTitles.contratos,
+};
 
 type ContratosPageProps = {
   searchParams: Promise<{

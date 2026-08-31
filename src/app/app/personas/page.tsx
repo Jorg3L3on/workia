@@ -1,5 +1,8 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { PlusIcon } from "lucide-react";
+
+import { pageTitles } from "@/lib/brand/chrome-copy";
 
 import { PersonasDataTable } from "@/components/people/personas-data-table";
 import { Button } from "@/components/ui/button";
@@ -9,6 +12,10 @@ import { formatPersonName } from "@/lib/people/schema";
 import { userHasPermission } from "@/lib/rbac";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: pageTitles.personas,
+};
 
 type PersonasPageProps = {
   searchParams: Promise<{
