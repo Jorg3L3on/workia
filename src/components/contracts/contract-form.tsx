@@ -5,6 +5,7 @@ import { useFormStatus } from "react-dom";
 
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
+import { FormSelect } from "@/components/ui/form-select";
 import { Label } from "@/components/ui/label";
 import type { ContractTemplate } from "@/lib/db/schema";
 import {
@@ -39,11 +40,7 @@ const SubmitButton = () => {
   const { pending } = useFormStatus();
 
   return (
-    <Button
-      className="workia-accent-gradient border-0 text-white shadow-md hover:opacity-95"
-      disabled={pending}
-      type="submit"
-    >
+    <Button disabled={pending} type="submit">
       {pending ? "Emitiendo…" : "Emitir contrato"}
     </Button>
   );
@@ -72,38 +69,33 @@ export const ContractForm = ({
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="type">Tipo de contrato</Label>
-          <select
-            className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-8 w-full rounded-lg border px-2.5 text-sm outline-none focus-visible:ring-3"
+          <FormSelect
             defaultValue="determinado"
             id="type"
             name="type"
+            options={Object.entries(contractTypeLabels).map(
+              ([value, label]) => ({
+                value,
+                label,
+              }),
+            )}
             required
-          >
-            {Object.entries(contractTypeLabels).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
+            variant="field"
+          />
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="noticeWindow">Ventana de aviso</Label>
-          <select
-            className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-8 w-full rounded-lg border px-2.5 text-sm outline-none focus-visible:ring-3"
+          <FormSelect
             defaultValue="3"
             id="noticeWindow"
             name="noticeWindow"
-            required
-          >
-            {Object.entries(contractNoticeWindowLabels).map(
-              ([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ),
+            options={Object.entries(contractNoticeWindowLabels).map(
+              ([value, label]) => ({ value, label }),
             )}
-          </select>
+            required
+            variant="field"
+          />
         </div>
 
         <div className="space-y-2">
@@ -118,19 +110,17 @@ export const ContractForm = ({
 
         <div className="space-y-2 sm:col-span-2">
           <Label htmlFor="templateId">Plantilla</Label>
-          <select
-            className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-8 w-full rounded-lg border px-2.5 text-sm outline-none focus-visible:ring-3"
+          <FormSelect
             defaultValue={templates[0]?.id ?? ""}
             id="templateId"
             name="templateId"
+            options={templates.map((template) => ({
+              value: template.id,
+              label: template.name,
+            }))}
             required
-          >
-            {templates.map((template) => (
-              <option key={template.id} value={template.id}>
-                {template.name}
-              </option>
-            ))}
-          </select>
+            variant="field"
+          />
         </div>
       </div>
 

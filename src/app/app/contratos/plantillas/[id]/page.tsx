@@ -117,12 +117,7 @@ const PlantillaDetailPage = async ({
           </label>
 
           <div className="flex flex-wrap gap-2">
-            <Button
-              className="workia-accent-gradient border-0 text-white shadow-md hover:opacity-95"
-              type="submit"
-            >
-              Guardar cambios
-            </Button>
+            <Button type="submit">Guardar cambios</Button>
             <Button asChild variant="ghost">
               <Link href="/app/contratos/plantillas">Volver</Link>
             </Button>

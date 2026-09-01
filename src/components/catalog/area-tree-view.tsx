@@ -1,7 +1,9 @@
 import type { AreaTreeNode } from "@/lib/catalog/schema";
 import { CatalogRowDeleteButton } from "@/components/catalog/catalog-row-delete-button";
-import { Badge } from "@/components/ui/badge";
+import { ListEmptyState } from "@/components/list/list-table-shell";
+import { ListStatusBadge } from "@/components/list/list-status-badge";
 import { deleteAreaAction } from "@/lib/catalog/actions";
+import { FolderIcon, FolderOpenIcon } from "lucide-react";
 
 type AreaTreeViewProps = {
   nodes: AreaTreeNode[];
@@ -19,21 +21,28 @@ const AreaTreeItem = ({
   canDelete?: boolean;
 }) => {
   const isDeleted = Boolean(node.deletedAt);
+  const hasChildren = node.children.length > 0;
+  const Icon = hasChildren ? FolderOpenIcon : FolderIcon;
 
   return (
     <li className="space-y-2">
       <div
-        className="flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2"
+        className="bg-card flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2"
         style={{ marginLeft: depth * 16 }}
       >
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <Icon aria-hidden className="text-muted-foreground size-4 shrink-0" />
           <span
             className={`text-sm font-medium ${isDeleted ? "text-muted-foreground line-through" : ""}`}
           >
             {node.name}
           </span>
-          {!node.active ? <Badge variant="secondary">Inactiva</Badge> : null}
-          {isDeleted ? <Badge variant="outline">Borrada</Badge> : null}
+          {!node.active ? (
+            <ListStatusBadge tone="inactive">Inactiva</ListStatusBadge>
+          ) : null}
+          {isDeleted ? (
+            <ListStatusBadge tone="destructive">Borrada</ListStatusBadge>
+          ) : null}
         </div>
         {canDelete && !isDeleted ? (
           <CatalogRowDeleteButton
@@ -43,7 +52,7 @@ const AreaTreeItem = ({
           />
         ) : null}
       </div>
-      {node.children.length > 0 ? (
+      {hasChildren ? (
         <ul className="space-y-2">
           {node.children.map((child) => (
             <AreaTreeItem
@@ -66,9 +75,11 @@ export const AreaTreeView = ({
 }: AreaTreeViewProps) => {
   if (nodes.length === 0) {
     return (
-      <p className="text-muted-foreground text-sm">
-        Aún no hay áreas en el catálogo.
-      </p>
+      <ListEmptyState
+        className="py-8"
+        description="Crea la primera área para armar el árbol."
+        title="Aún no hay áreas en el catálogo"
+      />
     );
   }
 

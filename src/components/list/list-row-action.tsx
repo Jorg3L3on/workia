@@ -19,7 +19,7 @@ export const ListRowAction = ({
   href,
   children,
   className,
-  variant = "outline",
+  variant = "ghost",
   onClick,
   "aria-label": ariaLabel,
 }: ListRowActionProps) => (

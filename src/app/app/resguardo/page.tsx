@@ -3,8 +3,7 @@ import Link from "next/link";
 import { PlusIcon, SearchIcon } from "lucide-react";
 
 import { pageTitles } from "@/lib/brand/chrome-copy";
-
-import { listFilterSelectClassName } from "@/components/list/list-filter-bar";
+import { FormSelect } from "@/components/ui/form-select";
 import {
   ListPageHeader,
   listPrimaryActionClassName,
@@ -108,18 +107,18 @@ const ResguardoPage = async ({ searchParams }: ResguardoPageProps) => {
           <label className="sr-only" htmlFor="status">
             Estado
           </label>
-          <select
+          <FormSelect
             aria-label="Estado"
-            className={listFilterSelectClassName}
             defaultValue={status ?? ""}
             id="status"
             name="status"
-          >
-            <option value="">Todos los estados</option>
-            <option value="disponible">En almacén</option>
-            <option value="asignado">Asignado</option>
-            <option value="baja">Baja</option>
-          </select>
+            options={[
+              { value: "", label: "Todos los estados" },
+              { value: "disponible", label: "En almacén" },
+              { value: "asignado", label: "Asignado" },
+              { value: "baja", label: "Baja" },
+            ]}
+          />
         </div>
         <Button className="h-10 rounded-full" type="submit" variant="outline">
           Filtrar

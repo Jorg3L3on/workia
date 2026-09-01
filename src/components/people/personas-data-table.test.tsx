@@ -1,10 +1,11 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));
 
+import { chooseSelectOption } from "@/test/choose-select-option";
 import { PersonasDataTable } from "@/components/people/personas-data-table";
 import { OFFICIAL_DELETED_DEMO_FULL_NAME } from "@/lib/people/borrados-cleanup";
 
@@ -57,9 +58,7 @@ describe("PersonasDataTable deleted visibility", () => {
   it("shows soft-deleted people when the borrados filter is selected", () => {
     render(<PersonasDataTable people={demoPeople} />);
 
-    fireEvent.change(screen.getByLabelText("Expediente"), {
-      target: { value: "deleted" },
-    });
+    chooseSelectOption("Expediente", "Borrados");
 
     expect(
       screen.getAllByText(OFFICIAL_DELETED_DEMO_FULL_NAME).length,

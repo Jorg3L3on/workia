@@ -146,6 +146,12 @@
   --sidebar-ring: var(--workia-accent-blue);
 }
 
+:root {
+  --ease-out-product: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast: 120ms;
+  --duration-md: 180ms;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -173,14 +179,14 @@
   --login-stamp: var(--workia-accent-blue);
   --login-stamp-ink: #ffffff;
   --login-shadow: var(--workia-shadow);
-  --login-grain-op: 0.2;
+  --login-grain-op: 0.08;
   color: var(--login-ink);
   background: var(--login-page-bg);
   transition: background 0.5s ease;
 }
 
 .dark .login-surface {
-  --login-grain-op: 0.32;
+  --login-grain-op: 0.12;
   --login-stamp: var(--workia-accent-blue);
 }
 
@@ -192,18 +198,11 @@
 }
 
 .workia-shell-grain {
-  background-image: radial-gradient(
-    rgba(255, 255, 255, 0.05) 1px,
-    transparent 1px
-  );
-  background-size: 3px 3px;
-  opacity: 0.16;
-  mix-blend-mode: overlay;
-  pointer-events: none;
+  display: none;
 }
 
 .dark .workia-shell-grain {
-  opacity: 0.24;
+  display: none;
 }
 
 .workia-credential-header {
@@ -287,28 +286,29 @@
 
 .workia-pass-card {
   border: 1px solid var(--workia-line);
-  border-radius: calc(var(--radius) * 1.4);
+  border-radius: calc(var(--radius) * 1.8);
   background: var(--workia-badge-a);
-  box-shadow: 0 1px 3px var(--workia-shadow);
-}
-
-.workia-pass-card-urgent {
-  box-shadow:
-    0 8px 24px var(--workia-shadow),
-    0 0 0 1px color-mix(in srgb, var(--workia-accent-blue) 35%, transparent);
+  box-shadow: 0 1px 2px var(--workia-shadow);
+  transition: box-shadow var(--duration-md) var(--ease-out-product);
 }
 
 .workia-empty-state {
   border: 1px dashed var(--workia-line-strong);
   border-radius: calc(var(--radius) * 1.2);
-  background: color-mix(in srgb, var(--workia-badge-a) 65%, transparent);
+  background: transparent;
+}
+
+.workia-pass-card-urgent {
+  box-shadow:
+    0 1px 2px var(--workia-shadow),
+    0 0 0 1px color-mix(in srgb, var(--workia-accent-blue) 28%, transparent);
 }
 
 .login-ambient-blob {
   position: absolute;
   border-radius: 50%;
   filter: blur(90px);
-  opacity: 0.35;
+  opacity: 0.18;
   pointer-events: none;
 }
 

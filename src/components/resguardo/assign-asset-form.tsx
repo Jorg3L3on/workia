@@ -4,6 +4,7 @@ import { useActionState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
+import { FormSelect } from "@/components/ui/form-select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -48,19 +49,20 @@ export const AssignAssetForm = ({ assetId, people }: AssignAssetFormProps) => {
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2 sm:col-span-2">
           <Label htmlFor="personId">Persona</Label>
-          <select
-            className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-8 w-full rounded-lg border px-2.5 text-sm outline-none focus-visible:ring-3"
+          <FormSelect
             id="personId"
             name="personId"
+            options={[
+              { value: "", label: "Selecciona una persona" },
+              ...people.map((person) => ({
+                value: person.id,
+                label: person.label,
+              })),
+            ]}
+            placeholder="Selecciona una persona"
             required
-          >
-            <option value="">Selecciona una persona</option>
-            {people.map((person) => (
-              <option key={person.id} value={person.id}>
-                {person.label}
-              </option>
-            ))}
-          </select>
+            variant="field"
+          />
         </div>
         <div className="space-y-2">
           <Label htmlFor="movementDate">Fecha de entrega</Label>

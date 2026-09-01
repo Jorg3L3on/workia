@@ -22,7 +22,6 @@ import {
 } from "react";
 
 import { ClickableTableRow } from "@/components/list/clickable-table-row";
-import { listFilterSelectClassName } from "@/components/list/list-filter-bar";
 import {
   ListEmptyState,
   ListResultCount,
@@ -30,7 +29,13 @@ import {
   listTableDensityClassName,
 } from "@/components/list/list-table-shell";
 import { Button } from "@/components/ui/button";
+import { FormSelect } from "@/components/ui/form-select";
 import { Input } from "@/components/ui/input";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+} from "@/components/ui/pagination";
 import {
   Table,
   TableBody,
@@ -235,9 +240,8 @@ export const DataTable = <TData,>({
     setPagination((current) => ({ ...current, pageIndex: 0 }));
   };
 
-  const handlePageSizeChange = (event: ChangeEvent<HTMLSelectElement>) => {
-    const nextSize = Number(event.target.value);
-    setPagination({ pageIndex: 0, pageSize: nextSize });
+  const handlePageSizeChange = (next: string) => {
+    setPagination({ pageIndex: 0, pageSize: Number(next) });
   };
 
   const filteredCount = table.getFilteredRowModel().rows.length;
@@ -287,19 +291,16 @@ export const DataTable = <TData,>({
             <label className="sr-only" htmlFor={pageSizeId}>
               Filas por página
             </label>
-            <select
+            <FormSelect
               aria-label="Filas por página"
-              className={listFilterSelectClassName}
               id={pageSizeId}
-              onChange={handlePageSizeChange}
-              value={pagination.pageSize}
-            >
-              {pageSizes.map((size) => (
-                <option key={size} value={size}>
-                  {size} por página
-                </option>
-              ))}
-            </select>
+              onValueChange={handlePageSizeChange}
+              options={pageSizes.map((size) => ({
+                value: String(size),
+                label: `${size} por página`,
+              }))}
+              value={String(pagination.pageSize)}
+            />
           </div>
           <ListResultCount
             count={filteredCount}
@@ -434,31 +435,37 @@ export const DataTable = <TData,>({
       )}
 
       {hasVisibleRows && pageCount > 1 ? (
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <Pagination className="mx-0 justify-between">
           <p className="text-muted-foreground text-xs tabular-nums">
             Página {pagination.pageIndex + 1} de {pageCount}
           </p>
-          <div className="flex gap-2">
-            <Button
-              aria-label="Página anterior"
-              disabled={!table.getCanPreviousPage()}
-              onClick={() => table.previousPage()}
-              type="button"
-              variant="outline"
-            >
-              Anterior
-            </Button>
-            <Button
-              aria-label="Página siguiente"
-              disabled={!table.getCanNextPage()}
-              onClick={() => table.nextPage()}
-              type="button"
-              variant="outline"
-            >
-              Siguiente
-            </Button>
-          </div>
-        </div>
+          <PaginationContent>
+            <PaginationItem>
+              <Button
+                aria-label="Página anterior"
+                disabled={!table.getCanPreviousPage()}
+                onClick={() => table.previousPage()}
+                size="sm"
+                type="button"
+                variant="outline"
+              >
+                Anterior
+              </Button>
+            </PaginationItem>
+            <PaginationItem>
+              <Button
+                aria-label="Página siguiente"
+                disabled={!table.getCanNextPage()}
+                onClick={() => table.nextPage()}
+                size="sm"
+                type="button"
+                variant="outline"
+              >
+                Siguiente
+              </Button>
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
       ) : null}
     </div>
   );

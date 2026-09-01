@@ -7,6 +7,7 @@ import { CatalogStatusMessages } from "@/components/catalog/catalog-status-messa
 import { PositionActivitiesAssign } from "@/components/catalog/position-activities-assign";
 import { ListPageHeader } from "@/components/list/list-page-header";
 import { Button } from "@/components/ui/button";
+import { FormSelect } from "@/components/ui/form-select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createPositionAction } from "@/lib/catalog/actions";
@@ -101,18 +102,18 @@ const PuestosCatalogPage = async ({
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="position-area">Área (opcional)</Label>
-                          <select
-                            className="border-input bg-background h-8 w-full rounded-lg border px-2.5 text-sm"
+                          <FormSelect
                             id="position-area"
                             name="areaId"
-                          >
-                            <option value="">Sin área</option>
-                            {activeAreas.map((area) => (
-                              <option key={area.id} value={area.id}>
-                                {area.name}
-                              </option>
-                            ))}
-                          </select>
+                            options={[
+                              { value: "", label: "Sin área" },
+                              ...activeAreas.map((area) => ({
+                                value: area.id,
+                                label: area.name,
+                              })),
+                            ]}
+                            variant="field"
+                          />
                         </div>
                         <label className="flex items-center gap-2 text-sm">
                           <input

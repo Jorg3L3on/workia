@@ -1,5 +1,14 @@
+import { InboxIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { cn } from "@/lib/utils";
 
 /** Dense product list table styling (Zigzag tickets/clients aligned). */
@@ -42,20 +51,16 @@ export const ListEmptyState = ({
   action,
   className,
 }: ListEmptyStateProps) => (
-  <div
-    className={cn(
-      "flex flex-col items-center justify-center px-6 py-12 text-center",
-      className,
-    )}
-  >
-    <p className="text-sm font-medium">{title}</p>
-    {description ? (
-      <p className="text-muted-foreground mt-1 max-w-sm text-sm">
-        {description}
-      </p>
-    ) : null}
-    {action ? <div className="mt-4">{action}</div> : null}
-  </div>
+  <Empty className={cn("border-0 py-12", className)}>
+    <EmptyHeader>
+      <EmptyMedia variant="icon">
+        <InboxIcon />
+      </EmptyMedia>
+      <EmptyTitle>{title}</EmptyTitle>
+      {description ? <EmptyDescription>{description}</EmptyDescription> : null}
+    </EmptyHeader>
+    {action ? <EmptyContent>{action}</EmptyContent> : null}
+  </Empty>
 );
 
 type ListResultCountProps = {

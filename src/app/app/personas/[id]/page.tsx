@@ -8,6 +8,7 @@ import { pageTitles } from "@/lib/brand/chrome-copy";
 import { AuditEventList } from "@/components/audit/audit-event-list";
 import { PersonContractsSection } from "@/components/contracts/person-contracts-section";
 import { PersonAssetsSection } from "@/components/resguardo/person-assets-section";
+import { PersonExpedienteTabs } from "@/components/people/person-expediente-tabs";
 import { DeletePersonButton } from "@/components/people/delete-person-button";
 import { PersonForm } from "@/components/people/person-form";
 import { PageBreadcrumbLabel } from "@/components/layout/app-breadcrumbs";
@@ -142,6 +143,9 @@ const PersonaDetailPage = async ({
     );
   }
 
+  const defaultTab =
+    emit === "1" && canReadContracts && !isDeleted ? "contratos" : "datos";
+
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
       <PageBreadcrumbLabel label={personName} />
@@ -198,126 +202,7 @@ const PersonaDetailPage = async ({
           </p>
         ) : null}
 
-        <dl className="grid gap-3 text-sm sm:grid-cols-2">
-          <div>
-            <dt className="text-muted-foreground">Nombre(s)</dt>
-            <dd className="font-medium">{person.nombres}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">Apellido paterno</dt>
-            <dd className="font-medium">{person.apellidoPaterno}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">Apellido materno</dt>
-            <dd className="font-medium">{person.apellidoMaterno ?? "—"}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">Fecha de ingreso</dt>
-            <dd className="font-medium">
-              {formatDateLabel(person.fechaIngreso)}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">Fecha de nacimiento</dt>
-            <dd className="font-medium">
-              {formatDateLabel(person.fechaNacimiento)}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">Ubicación</dt>
-            <dd className="font-medium">
-              {person.site
-                ? `${person.site.name} (${siteKindLabels[person.site.kind]})`
-                : "—"}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">Área</dt>
-            <dd className="font-medium">{person.area?.name ?? "—"}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">Puesto</dt>
-            <dd className="font-medium">{person.position?.name ?? "—"}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">
-              {SCHEDULE_FIELD_LABELS.horarioEntrada}
-            </dt>
-            <dd className="font-medium">
-              {formatTimeLabel(person.schedule?.entrada)}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">
-              {SCHEDULE_FIELD_LABELS.horarioSalidaComer}
-            </dt>
-            <dd className="font-medium">
-              {formatTimeLabel(person.schedule?.salidaComer)}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">
-              {SCHEDULE_FIELD_LABELS.horarioRegresoComer}
-            </dt>
-            <dd className="font-medium">
-              {formatTimeLabel(person.schedule?.regresoComer)}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">
-              {SCHEDULE_FIELD_LABELS.horarioSalida}
-            </dt>
-            <dd className="font-medium">
-              {formatTimeLabel(person.schedule?.salida)}
-            </dd>
-          </div>
-          {person.position ? (
-            <div className="sm:col-span-2">
-              <dt className="text-muted-foreground">Actividades del puesto</dt>
-              <dd>
-                {positionActivities.length === 0 ? (
-                  <span className="font-medium">—</span>
-                ) : (
-                  <ul className="list-disc space-y-1 pl-5">
-                    {positionActivities.map((activity) => (
-                      <li className="font-medium" key={activity.id}>
-                        {activity.name}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </dd>
-            </div>
-          ) : null}
-          <div className="sm:col-span-2">
-            <dt className="text-muted-foreground">Jefe directo</dt>
-            <dd className="font-medium">
-              {person.manager ? formatPersonName(person.manager) : "—"}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">RFC</dt>
-            <dd className="font-medium">{person.rfc ?? "—"}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">CURP</dt>
-            <dd className="font-medium">{person.curp ?? "—"}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">NSS</dt>
-            <dd className="font-medium">{person.nss ?? "—"}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">Teléfono</dt>
-            <dd className="font-medium">{person.telefono ?? "—"}</dd>
-          </div>
-          <div className="sm:col-span-2">
-            <dt className="text-muted-foreground">Correo</dt>
-            <dd className="font-medium">{person.email ?? "—"}</dd>
-          </div>
-        </dl>
-
-        <div className="flex flex-wrap gap-3 pt-1">
+        <div className="flex flex-wrap gap-3">
           {canUpdate && !isDeleted ? (
             <Button asChild variant="outline">
               <Link href={`/app/personas/${person.id}?edit=1`}>
@@ -346,46 +231,181 @@ const PersonaDetailPage = async ({
         </div>
       </div>
 
-      {canReadContracts ? (
-        <PersonContractsSection
-          canCreate={canCreateContracts}
-          contracts={personContracts}
-          personContext={{
-            nombres: person.nombres,
-            apellidoPaterno: person.apellidoPaterno,
-            apellidoMaterno: person.apellidoMaterno,
-            puesto: person.position?.name ?? null,
-            area: person.area?.name ?? null,
-            sucursal: buildSiteLabel(person.site),
-            rfc: person.rfc,
-            horario: formatHorarioToken(person.schedule),
-          }}
-          personId={person.id}
-          showEmitForm={emit === "1" && !isDeleted}
-          templates={contractTemplates}
-        />
-      ) : null}
-
-      <PersonAssetsSection
-        assets={personAssets}
-        canReadAssets={canReadAssets}
-      />
-
-      {canReadAudit ? (
-        <div className="workia-pass-card overflow-hidden">
-          <div className="border-b px-5 py-4">
-            <h2 className="text-base font-semibold">Historial de cambios</h2>
-            <p className="text-muted-foreground text-sm">
-              Quién cambió qué en este expediente.
-            </p>
+      <PersonExpedienteTabs
+        contratos={
+          canReadContracts ? (
+            <PersonContractsSection
+              canCreate={canCreateContracts}
+              contracts={personContracts}
+              personContext={{
+                nombres: person.nombres,
+                apellidoPaterno: person.apellidoPaterno,
+                apellidoMaterno: person.apellidoMaterno,
+                puesto: person.position?.name ?? null,
+                area: person.area?.name ?? null,
+                sucursal: buildSiteLabel(person.site),
+                rfc: person.rfc,
+                horario: formatHorarioToken(person.schedule),
+              }}
+              personId={person.id}
+              showEmitForm={emit === "1" && !isDeleted}
+              templates={contractTemplates}
+            />
+          ) : undefined
+        }
+        datos={
+          <div className="workia-pass-card p-5 sm:p-6">
+            <dl className="grid gap-3 text-sm sm:grid-cols-2">
+              <div>
+                <dt className="text-muted-foreground">Nombre(s)</dt>
+                <dd className="font-medium">{person.nombres}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Apellido paterno</dt>
+                <dd className="font-medium">{person.apellidoPaterno}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Apellido materno</dt>
+                <dd className="font-medium">{person.apellidoMaterno ?? "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Fecha de ingreso</dt>
+                <dd className="font-medium">
+                  {formatDateLabel(person.fechaIngreso)}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Fecha de nacimiento</dt>
+                <dd className="font-medium">
+                  {formatDateLabel(person.fechaNacimiento)}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Ubicación</dt>
+                <dd className="font-medium">
+                  {person.site
+                    ? `${person.site.name} (${siteKindLabels[person.site.kind]})`
+                    : "—"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Área</dt>
+                <dd className="font-medium">{person.area?.name ?? "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Puesto</dt>
+                <dd className="font-medium">{person.position?.name ?? "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">
+                  {SCHEDULE_FIELD_LABELS.horarioEntrada}
+                </dt>
+                <dd className="font-medium">
+                  {formatTimeLabel(person.schedule?.entrada)}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">
+                  {SCHEDULE_FIELD_LABELS.horarioSalidaComer}
+                </dt>
+                <dd className="font-medium">
+                  {formatTimeLabel(person.schedule?.salidaComer)}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">
+                  {SCHEDULE_FIELD_LABELS.horarioRegresoComer}
+                </dt>
+                <dd className="font-medium">
+                  {formatTimeLabel(person.schedule?.regresoComer)}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">
+                  {SCHEDULE_FIELD_LABELS.horarioSalida}
+                </dt>
+                <dd className="font-medium">
+                  {formatTimeLabel(person.schedule?.salida)}
+                </dd>
+              </div>
+              {person.position ? (
+                <div className="sm:col-span-2">
+                  <dt className="text-muted-foreground">
+                    Actividades del puesto
+                  </dt>
+                  <dd>
+                    {positionActivities.length === 0 ? (
+                      <span className="font-medium">—</span>
+                    ) : (
+                      <ul className="list-disc space-y-1 pl-5">
+                        {positionActivities.map((activity) => (
+                          <li className="font-medium" key={activity.id}>
+                            {activity.name}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </dd>
+                </div>
+              ) : null}
+              <div className="sm:col-span-2">
+                <dt className="text-muted-foreground">Jefe directo</dt>
+                <dd className="font-medium">
+                  {person.manager ? formatPersonName(person.manager) : "—"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">RFC</dt>
+                <dd className="font-medium">{person.rfc ?? "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">CURP</dt>
+                <dd className="font-medium">{person.curp ?? "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">NSS</dt>
+                <dd className="font-medium">{person.nss ?? "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Teléfono</dt>
+                <dd className="font-medium">{person.telefono ?? "—"}</dd>
+              </div>
+              <div className="sm:col-span-2">
+                <dt className="text-muted-foreground">Correo</dt>
+                <dd className="font-medium">{person.email ?? "—"}</dd>
+              </div>
+            </dl>
           </div>
-          <AuditEventList
-            emptyMessage="Aún no hay cambios registrados para esta persona."
-            events={auditEvents}
-            layout="inset"
-          />
-        </div>
-      ) : null}
+        }
+        defaultValue={defaultTab}
+        historial={
+          canReadAudit ? (
+            <div className="workia-pass-card overflow-hidden">
+              <div className="border-b px-5 py-4">
+                <h2 className="text-base font-semibold">
+                  Historial de cambios
+                </h2>
+                <p className="text-muted-foreground text-sm">
+                  Quién cambió qué en este expediente.
+                </p>
+              </div>
+              <AuditEventList
+                emptyMessage="Aún no hay cambios registrados para esta persona."
+                events={auditEvents}
+                layout="inset"
+              />
+            </div>
+          ) : undefined
+        }
+        resguardo={
+          canReadAssets ? (
+            <PersonAssetsSection
+              assets={personAssets}
+              canReadAssets={canReadAssets}
+            />
+          ) : undefined
+        }
+      />
     </div>
   );
 };

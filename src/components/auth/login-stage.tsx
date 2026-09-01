@@ -42,7 +42,10 @@ export const LoginStage = ({ children, className }: LoginStageProps) => {
           }}
         />
       </div>
-      <div className="login-grain absolute inset-0 z-[1]" aria-hidden />
+      <div
+        className="login-grain pointer-events-none absolute inset-0 z-[1]"
+        aria-hidden
+      />
 
       <div className="fixed top-6 right-6 z-10">
         <ThemeToggle />
