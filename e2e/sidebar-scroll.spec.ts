@@ -10,13 +10,19 @@ const loginAsDemoRrhh = async (page: import("@playwright/test").Page) => {
 };
 
 const stretchContentColumn = async (page: import("@playwright/test").Page) => {
+  await expect(page.locator('[data-slot="shell-main-scroll"]')).toBeVisible();
   await page.evaluate(() => {
     const scroller = document.querySelector('[data-slot="shell-main-scroll"]');
     if (!(scroller instanceof HTMLElement)) {
-      return;
+      throw new Error("shell-main-scroll not found");
     }
 
     scroller.style.paddingBottom = "2200px";
+    const spacer = document.createElement("div");
+    spacer.setAttribute("data-testid", "scroll-stretch");
+    spacer.style.height = "2200px";
+    spacer.style.flexShrink = "0";
+    scroller.appendChild(spacer);
   });
 };
 
@@ -81,6 +87,9 @@ test.describe("Sidebar stays pinned while content scrolls", () => {
     await page.getByRole("button", { name: "Iniciar sesión" }).click();
     await expect(page).toHaveURL(/\/(app|admin)/, { timeout: 25_000 });
     await page.goto("/admin/rbac");
+    await expect(
+      page.getByRole("heading", { name: "RBAC Administration" }),
+    ).toBeVisible();
 
     await stretchContentColumn(page);
 

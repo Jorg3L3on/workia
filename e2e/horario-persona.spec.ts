@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { chooseSelectOption } from "./choose-select-option";
+
 const loginAsDemoRrhh = async (page: import("@playwright/test").Page) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/login");
@@ -24,10 +26,8 @@ const fillSchedule = async (
   await page.getByLabel("Salida", { exact: true }).fill(times.salida);
 };
 
-const expedienteCard = (page: import("@playwright/test").Page) =>
-  page
-    .getByRole("heading", { level: 1 })
-    .locator("xpath=ancestor::div[contains(@class,'workia-pass-card')]");
+const datosPanel = (page: import("@playwright/test").Page) =>
+  page.getByRole("tabpanel", { name: "Datos" });
 
 const contractCard = (page: import("@playwright/test").Page) =>
   page
@@ -95,34 +95,36 @@ test.describe("Horario por persona", () => {
     await page.locator("#nombres").fill("Persona");
     await page.locator("#apellidoPaterno").fill(`HorarioA${suffix}`);
     await page.locator("#apellidoMaterno").fill("Demo");
-    await page.locator("#positionId").selectOption({ label: "Analista" });
-    await page
-      .locator("#siteId")
-      .selectOption({ label: "Sucursal Centro Demo (Sucursal)" });
+    await chooseSelectOption(page.locator("#positionId"), "Analista");
+    await chooseSelectOption(
+      page.locator("#siteId"),
+      "Sucursal Centro Demo (Sucursal)",
+    );
     await fillSchedule(page, scheduleA);
     await page.getByRole("button", { name: "Dar de alta" }).click();
     await expect(page).toHaveURL(/\/app\/personas\/[0-9a-f-]{36}/);
     await expect(
       page.getByRole("heading", { name: nameA, exact: true }),
     ).toBeVisible();
-    await expectScheduleOnFicha(expedienteCard(page), scheduleA);
+    await expectScheduleOnFicha(datosPanel(page), scheduleA);
     const expedienteA = page.url();
 
     await page.goto("/app/personas/nueva");
     await page.locator("#nombres").fill("Persona");
     await page.locator("#apellidoPaterno").fill(`HorarioB${suffix}`);
     await page.locator("#apellidoMaterno").fill("Demo");
-    await page.locator("#positionId").selectOption({ label: "Analista" });
-    await page
-      .locator("#siteId")
-      .selectOption({ label: "Sucursal Centro Demo (Sucursal)" });
+    await chooseSelectOption(page.locator("#positionId"), "Analista");
+    await chooseSelectOption(
+      page.locator("#siteId"),
+      "Sucursal Centro Demo (Sucursal)",
+    );
     await fillSchedule(page, scheduleB);
     await page.getByRole("button", { name: "Dar de alta" }).click();
     await expect(page).toHaveURL(/\/app\/personas\/[0-9a-f-]{36}/);
     await expect(
       page.getByRole("heading", { name: nameB, exact: true }),
     ).toBeVisible();
-    await expectScheduleOnFicha(expedienteCard(page), scheduleB);
+    await expectScheduleOnFicha(datosPanel(page), scheduleB);
 
     const puestoA = (
       await page
@@ -144,10 +146,13 @@ test.describe("Horario por persona", () => {
     expect(sitioB).toMatch(/Sucursal Centro Demo/);
 
     await page.goto(expedienteA);
-    await expectScheduleOnFicha(expedienteCard(page), scheduleA);
+    await expectScheduleOnFicha(datosPanel(page), scheduleA);
     await expect(page.getByText("09:00")).toHaveCount(0);
 
     await page.getByRole("link", { name: "Emitir contrato" }).click();
+    await expect(page).toHaveURL(/emit=1/);
+    await page.getByRole("tab", { name: "Contratos" }).click();
+    await expect(page.locator("#startDate")).toBeVisible();
     await page.locator("#startDate").fill("2026-01-15");
     await page.locator("#endDate").fill("2026-12-15");
     await page.getByRole("button", { name: "Emitir contrato" }).click();
@@ -166,8 +171,9 @@ test.describe("Horario por persona", () => {
     await fillSchedule(page, laterSchedule);
     await page.getByRole("button", { name: "Guardar cambios" }).click();
     await expect(page).toHaveURL(/saved=1/);
-    await expectScheduleOnFicha(expedienteCard(page), laterSchedule);
+    await expectScheduleOnFicha(datosPanel(page), laterSchedule);
 
+    await page.getByRole("tab", { name: "Contratos" }).click();
     const contractAfterEdit = contractCard(page);
     await expectScheduleOnFicha(contractAfterEdit, scheduleA);
     await contractAfterEdit.getByText("Ver texto generado").click();

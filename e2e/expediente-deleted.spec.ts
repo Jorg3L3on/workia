@@ -4,6 +4,8 @@ import { expect, test } from "@playwright/test";
 
 import { OFFICIAL_DELETED_DEMO_FULL_NAME } from "../src/lib/people/borrados-cleanup";
 
+import { chooseSelectOption } from "./choose-select-option";
+
 test.describe.configure({ mode: "serial" });
 
 const loginAsDemoAdmin = async (page: import("@playwright/test").Page) => {
@@ -100,7 +102,10 @@ test("soft-deleted expediente stays open and appears in borrados", async ({
       page.locator("table").getByText("Borrado", { exact: true }).first(),
     ).toBeVisible();
 
-    await page.locator("#persona-visibility").selectOption("expediente");
+    await chooseSelectOption(
+      page.locator("#persona-visibility"),
+      "En expediente",
+    );
     await expect(page.getByText(fullName)).toHaveCount(0);
   } finally {
     hardDeleteBorradosFixture(fullName);
