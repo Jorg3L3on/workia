@@ -17,11 +17,16 @@ export const CountUp = ({ value, className }: CountUpProps) => {
       return;
     }
 
+    let cancelled = false;
     const started = performance.now();
     const duration = 520;
     let frame = 0;
 
     const tick = (now: number) => {
+      if (cancelled) {
+        return;
+      }
+
       const progress = Math.min(1, (now - started) / duration);
       const eased = 1 - (1 - progress) ** 3;
       setShown(Math.round(value * eased));
@@ -31,7 +36,10 @@ export const CountUp = ({ value, className }: CountUpProps) => {
     };
 
     frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(frame);
+    };
   }, [value, reduceMotion]);
 
   return <span className={className}>{reduceMotion ? value : shown}</span>;
