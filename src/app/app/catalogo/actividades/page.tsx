@@ -4,6 +4,7 @@ import { CatalogActivitiesTable } from "@/components/catalog/catalog-activities-
 import { CatalogFormTray } from "@/components/catalog/catalog-form-tray";
 import { pageTitles } from "@/lib/brand/chrome-copy";
 import { CatalogStatusMessages } from "@/components/catalog/catalog-status-messages";
+import { ListPageHeader } from "@/components/list/list-page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -49,15 +50,11 @@ const ActividadesCatalogPage = async ({
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="space-y-1">
-        <p className="text-muted-foreground font-mono text-[10.5px] font-medium tracking-[0.09em] uppercase">
-          Catálogo
-        </p>
-        <h1 className="text-2xl font-semibold tracking-tight">Actividades</h1>
-        <p className="text-muted-foreground text-sm">
-          Catálogo de actividades que se asignan a puestos. No es texto suelto.
-        </p>
-      </header>
+      <ListPageHeader
+        description="Catálogo de actividades que se asignan a puestos. No es texto suelto."
+        descriptionSecondary="Lista de todas las actividades registradas."
+        title="Actividades"
+      />
 
       <CatalogStatusMessages deleted={deleted} saved={saved} />
 

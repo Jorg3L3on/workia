@@ -14,14 +14,13 @@ import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
-  SidebarMenu,
   SidebarMenuButton,
-  SidebarMenuItem,
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { SharedLayoutBg } from "@/components/motion/shared-layout-bg";
 import { CATALOG_NAV_CHILDREN, CATALOG_PATHS } from "@/lib/catalog/paths";
 
 type NavItem = {
@@ -82,11 +81,25 @@ export const AppSidebarNav = ({ items }: AppSidebarNavProps) => {
         Expediente
       </SidebarGroupLabel>
       <SidebarGroupContent>
-        <SidebarMenu>
+        <SharedLayoutBg
+          as="ul"
+          className="flex w-full min-w-0 flex-col gap-0"
+          data-sidebar="menu"
+          data-slot="sidebar-menu"
+          enableLayoutRoot={false}
+          inset={0}
+          pillClassName="rounded-md bg-sidebar-accent"
+        >
           {leadingItems.map((item) => (
-            <SidebarMenuItem key={item.href}>
+            <li
+              className="group/menu-item relative"
+              data-sidebar="menu-item"
+              data-slot="sidebar-menu-item"
+              key={item.href}
+            >
               <SidebarMenuButton
                 asChild
+                className="hover:bg-transparent"
                 isActive={isItemActive(pathname, item)}
                 tooltip={item.title}
               >
@@ -95,19 +108,23 @@ export const AppSidebarNav = ({ items }: AppSidebarNavProps) => {
                   <span>{item.title}</span>
                 </Link>
               </SidebarMenuButton>
-            </SidebarMenuItem>
+            </li>
           ))}
 
           {catalogItem ? (
-            <Collapsible
-              asChild
-              className="group/collapsible"
-              onOpenChange={handleCatalogOpenChange}
-              open={catalogOpen}
+            <li
+              className="group/menu-item relative"
+              data-sidebar="menu-item"
+              data-slot="sidebar-menu-item"
             >
-              <SidebarMenuItem>
+              <Collapsible
+                className="group/collapsible"
+                onOpenChange={handleCatalogOpenChange}
+                open={catalogOpen}
+              >
                 <CollapsibleTrigger asChild>
                   <SidebarMenuButton
+                    className="hover:bg-transparent"
                     isActive={false}
                     tooltip={catalogItem.title}
                     type="button"
@@ -134,14 +151,20 @@ export const AppSidebarNav = ({ items }: AppSidebarNavProps) => {
                     ))}
                   </SidebarMenuSub>
                 </CollapsibleContent>
-              </SidebarMenuItem>
-            </Collapsible>
+              </Collapsible>
+            </li>
           ) : null}
 
           {trailingItems.map((item) => (
-            <SidebarMenuItem key={item.href}>
+            <li
+              className="group/menu-item relative"
+              data-sidebar="menu-item"
+              data-slot="sidebar-menu-item"
+              key={item.href}
+            >
               <SidebarMenuButton
                 asChild
+                className="hover:bg-transparent"
                 isActive={isItemActive(pathname, item)}
                 tooltip={item.title}
               >
@@ -150,9 +173,9 @@ export const AppSidebarNav = ({ items }: AppSidebarNavProps) => {
                   <span>{item.title}</span>
                 </Link>
               </SidebarMenuButton>
-            </SidebarMenuItem>
+            </li>
           ))}
-        </SidebarMenu>
+        </SharedLayoutBg>
       </SidebarGroupContent>
     </SidebarGroup>
   );

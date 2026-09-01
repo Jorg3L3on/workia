@@ -13,10 +13,10 @@ export const ListFilterBar = ({
   footer,
   ...props
 }: ListFilterBarProps) => (
-  <div className="space-y-2">
+  <div className="space-y-3">
     <form
       className={cn(
-        "border-border/70 bg-card flex flex-col gap-3 rounded-xl border p-4 shadow-sm sm:flex-row sm:flex-wrap sm:items-end",
+        "flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end",
         className,
       )}
       {...props}
@@ -26,3 +26,7 @@ export const ListFilterBar = ({
     {footer}
   </div>
 );
+
+/** Shared select chrome for list toolbars (Zigzag-like compact filters). */
+export const listFilterSelectClassName =
+  "border-input bg-card focus-visible:border-ring focus-visible:ring-ring/50 h-10 w-full rounded-xl border px-3 text-sm outline-none focus-visible:ring-3";

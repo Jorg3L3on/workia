@@ -7,6 +7,7 @@ import { useFormStatus } from "react-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
+import { FormSelect } from "@/components/ui/form-select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type {
@@ -50,11 +51,7 @@ const SubmitButton = ({ label }: { label: string }) => {
   const { pending } = useFormStatus();
 
   return (
-    <Button
-      className="workia-accent-gradient border-0 text-white shadow-md hover:opacity-95"
-      disabled={pending}
-      type="submit"
-    >
+    <Button disabled={pending} type="submit">
       {pending ? "Guardando…" : label}
     </Button>
   );
@@ -199,70 +196,70 @@ export const PersonForm = ({
           </div>
           <div className="space-y-2">
             <Label htmlFor="areaId">Área</Label>
-            <select
-              className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-8 w-full rounded-lg border px-2.5 text-sm outline-none focus-visible:ring-3"
+            <FormSelect
               defaultValue={defaultValues.areaId}
               id="areaId"
               name="areaId"
-            >
-              <option value="">Sin área</option>
-              {activeAreas.map((area) => (
-                <option key={area.id} value={area.id}>
-                  {area.name}
-                </option>
-              ))}
-            </select>
+              options={[
+                { value: "", label: "Sin área" },
+                ...activeAreas.map((area) => ({
+                  value: area.id,
+                  label: area.name,
+                })),
+              ]}
+              variant="field"
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="positionId">Puesto</Label>
-            <select
-              className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-8 w-full rounded-lg border px-2.5 text-sm outline-none focus-visible:ring-3"
+            <FormSelect
               defaultValue={defaultValues.positionId}
               id="positionId"
               name="positionId"
-            >
-              <option value="">Sin puesto</option>
-              {activePositions.map((position) => (
-                <option key={position.id} value={position.id}>
-                  {position.name}
-                </option>
-              ))}
-            </select>
+              options={[
+                { value: "", label: "Sin puesto" },
+                ...activePositions.map((position) => ({
+                  value: position.id,
+                  label: position.name,
+                })),
+              ]}
+              variant="field"
+            />
           </div>
           <div className="space-y-2 sm:col-span-2">
             <Label htmlFor="siteId">Ubicación (dónde trabaja)</Label>
-            <select
-              className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-8 w-full rounded-lg border px-2.5 text-sm outline-none focus-visible:ring-3"
+            <FormSelect
               defaultValue={defaultValues.siteId}
               id="siteId"
               name="siteId"
-            >
-              <option value="">Sin ubicación</option>
-              {activeSites.map((site) => (
-                <option key={site.id} value={site.id}>
-                  {site.name} ({siteKindLabels[site.kind]})
-                </option>
-              ))}
-            </select>
+              options={[
+                { value: "", label: "Sin ubicación" },
+                ...activeSites.map((site) => ({
+                  value: site.id,
+                  label: `${site.name} (${siteKindLabels[site.kind]})`,
+                })),
+              ]}
+              variant="field"
+            />
             <p className="text-muted-foreground text-xs">
               Corporativo o sucursal — no confundir con el área (función).
             </p>
           </div>
           <div className="space-y-2 sm:col-span-2">
             <Label htmlFor="managerId">Jefe directo</Label>
-            <select
-              className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-8 w-full rounded-lg border px-2.5 text-sm outline-none focus-visible:ring-3"
+            <FormSelect
               defaultValue={defaultValues.managerId}
               id="managerId"
               name="managerId"
-            >
-              <option value="">Sin jefe directo</option>
-              {managers.map((manager) => (
-                <option key={manager.id} value={manager.id}>
-                  {formatSelectPerson(manager)}
-                </option>
-              ))}
-            </select>
+              options={[
+                { value: "", label: "Sin jefe directo" },
+                ...managers.map((manager) => ({
+                  value: manager.id,
+                  label: formatSelectPerson(manager),
+                })),
+              ]}
+              variant="field"
+            />
           </div>
         </div>
       </section>
@@ -398,19 +395,18 @@ export const PersonForm = ({
 
       <div className="space-y-2">
         <Label htmlFor="status">Relación laboral</Label>
-        <select
-          className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-8 w-full rounded-lg border px-2.5 text-sm outline-none focus-visible:ring-3 sm:w-60"
+        <FormSelect
+          className="sm:w-60"
           defaultValue={defaultValues.status}
           id="status"
           name="status"
+          options={PERSON_STATUSES.map((status) => ({
+            value: status,
+            label: personStatusLabels[status],
+          }))}
           required
-        >
-          {PERSON_STATUSES.map((status) => (
-            <option key={status} value={status}>
-              {personStatusLabels[status]}
-            </option>
-          ))}
-        </select>
+          variant="field"
+        />
         <p className="text-muted-foreground text-xs">
           Baja laboral no borra el expediente. El borrado lógico es una acción
           aparte.

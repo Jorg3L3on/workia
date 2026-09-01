@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState, type ChangeEvent } from "react";
+import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { FormSelect } from "@/components/ui/form-select";
 import { Label } from "@/components/ui/label";
 import { assignActivityToPositionAction } from "@/lib/catalog/actions";
 
@@ -43,8 +44,8 @@ export const PositionActivitiesAssign = ({
     return null;
   }
 
-  const handlePositionChange = (event: ChangeEvent<HTMLSelectElement>) => {
-    setSelectedPositionId(event.target.value);
+  const handlePositionChange = (next: string) => {
+    setSelectedPositionId(next);
   };
 
   return (
@@ -52,40 +53,36 @@ export const PositionActivitiesAssign = ({
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="assign-position">Puesto a asignar</Label>
-          <select
-            className="border-input bg-background h-8 w-full rounded-lg border px-2.5 text-sm"
+          <FormSelect
             id="assign-position"
             name="positionId"
-            onChange={handlePositionChange}
+            onValueChange={handlePositionChange}
+            options={positions.map((position) => ({
+              value: position.id,
+              label: position.name,
+            }))}
             required
             value={selectedPositionId}
-          >
-            {positions.map((position) => (
-              <option key={position.id} value={position.id}>
-                {position.name}
-              </option>
-            ))}
-          </select>
+            variant="field"
+          />
         </div>
         <div className="space-y-2">
           <Label htmlFor="assign-activity">Actividad a asignar</Label>
-          <select
-            className="border-input bg-background h-8 w-full rounded-lg border px-2.5 text-sm"
+          <FormSelect
             disabled={availableActivities.length === 0}
             id="assign-activity"
             name="activityId"
-            required
-          >
-            {availableActivities.length === 0 ? (
-              <option value="">Sin actividades disponibles</option>
-            ) : (
-              availableActivities.map((activity) => (
-                <option key={activity.id} value={activity.id}>
-                  {activity.name}
-                </option>
-              ))
-            )}
-          </select>
+            options={
+              availableActivities.length === 0
+                ? [{ value: "", label: "Sin actividades disponibles" }]
+                : availableActivities.map((activity) => ({
+                    value: activity.id,
+                    label: activity.name,
+                  }))
+            }
+            required={availableActivities.length > 0}
+            variant="field"
+          />
         </div>
       </div>
       <Button

@@ -12,6 +12,7 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));
 
+import { chooseSelectOption } from "@/test/choose-select-option";
 import { DataTable, type DataTableColumn } from "@/components/list/data-table";
 
 type CatalogRow = {
@@ -110,7 +111,7 @@ describe("DataTable", () => {
 
     fireEvent.change(search, { target: { value: "Alpha" } });
 
-    expect(screen.getByText("1 resultado")).toBeTruthy();
+    expect(screen.getByText("1 de 12 resultados")).toBeTruthy();
     expect(screen.getByText("Alpha item")).toBeTruthy();
     expect(screen.queryByText("Zulu item")).toBeNull();
 
@@ -120,7 +121,7 @@ describe("DataTable", () => {
     expect(
       screen.getByText("Prueba con otros términos o limpia la búsqueda."),
     ).toBeTruthy();
-    expect(screen.getByText("0 resultados")).toBeTruthy();
+    expect(screen.getByText("0 de 12 resultados")).toBeTruthy();
   });
 
   it("sorts by column from a keyboard-activable header button", () => {
@@ -157,9 +158,7 @@ describe("DataTable", () => {
     const actionLink = screen.getAllByRole("link", { name: "Ver" })[0];
     expect(actionLink.getAttribute("href")).toMatch(/^\/catalogo\/row-/);
 
-    fireEvent.change(screen.getByLabelText("Filas por página"), {
-      target: { value: "10" },
-    });
+    chooseSelectOption("Filas por página", "10 por página");
 
     expect(screen.getByText("Página 1 de 2")).toBeTruthy();
     expect(screen.getByText("Alpha item")).toBeTruthy();

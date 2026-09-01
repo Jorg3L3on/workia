@@ -19,9 +19,9 @@ test.describe("Authenticated list tables", () => {
       page.getByRole("heading", { name: "Personas", exact: true }),
     ).toBeVisible();
 
-    const tableShell = page
-      .locator(".rounded-xl.border.border-border\\/70")
-      .first();
+    const tableShell = page.locator("div.rounded-2xl.border").filter({
+      has: page.getByRole("table"),
+    });
     await expect(tableShell).toBeVisible();
 
     const verExpediente = page
@@ -56,7 +56,9 @@ test.describe("Authenticated list tables", () => {
 
     await expect(page.getByText("Renovaciones pendientes")).toBeVisible();
     await expect(
-      page.locator(".rounded-xl.border.border-border\\/70").first(),
+      page.locator("div.rounded-2xl.border").filter({
+        has: page.getByRole("table"),
+      }),
     ).toBeVisible();
     await expect(page.getByLabel("Nuevo tipo")).toHaveCount(0);
 

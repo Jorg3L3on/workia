@@ -1,10 +1,19 @@
+import { InboxIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { cn } from "@/lib/utils";
 
-/** Dense dashboard list table styling (Zigzag-aligned). */
+/** Dense product list table styling (Zigzag tickets/clients aligned). */
 export const listTableDensityClassName =
-  "[&_td]:py-3 [&_td]:align-middle [&_th]:h-10 [&_th]:bg-muted/40 [&_th]:px-3 [&_th]:text-xs [&_th]:font-medium [&_th]:tracking-wide [&_th]:text-muted-foreground [&_th]:uppercase [&_th]:py-2 [&_th]:align-middle [&_tr]:border-border/60 [&_td]:px-3";
+  "[&_td]:py-3.5 [&_td]:align-middle [&_th]:h-11 [&_th]:bg-muted/50 [&_th]:px-4 [&_th]:text-sm [&_th]:font-medium [&_th]:text-muted-foreground [&_th]:py-2.5 [&_th]:align-middle [&_tr]:border-border/50 [&_td]:px-4";
 
 type ListTableShellProps = {
   children: ReactNode;
@@ -20,7 +29,7 @@ export const ListTableShell = ({
 }: ListTableShellProps) => (
   <div
     className={cn(
-      "border-border/70 bg-card overflow-hidden rounded-xl border shadow-sm",
+      "border-border/60 bg-card overflow-hidden rounded-2xl border shadow-sm",
       desktopOnly && "hidden md:block",
       className,
     )}
@@ -42,26 +51,23 @@ export const ListEmptyState = ({
   action,
   className,
 }: ListEmptyStateProps) => (
-  <div
-    className={cn(
-      "flex flex-col items-center justify-center px-6 py-12 text-center",
-      className,
-    )}
-  >
-    <p className="text-sm font-medium">{title}</p>
-    {description ? (
-      <p className="text-muted-foreground mt-1 max-w-sm text-sm">
-        {description}
-      </p>
-    ) : null}
-    {action ? <div className="mt-4">{action}</div> : null}
-  </div>
+  <Empty className={cn("border-0 py-12", className)}>
+    <EmptyHeader>
+      <EmptyMedia variant="icon">
+        <InboxIcon />
+      </EmptyMedia>
+      <EmptyTitle>{title}</EmptyTitle>
+      {description ? <EmptyDescription>{description}</EmptyDescription> : null}
+    </EmptyHeader>
+    {action ? <EmptyContent>{action}</EmptyContent> : null}
+  </Empty>
 );
 
 type ListResultCountProps = {
   count: number;
   singular: string;
   plural: string;
+  total?: number;
   className?: string;
 };
 
@@ -69,9 +75,23 @@ export const ListResultCount = ({
   count,
   singular,
   plural,
+  total,
   className,
-}: ListResultCountProps) => (
-  <p className={cn("text-muted-foreground text-xs tabular-nums", className)}>
-    {count} {count === 1 ? singular : plural}
-  </p>
-);
+}: ListResultCountProps) => {
+  const showingPartial = total != null && total !== count;
+  const label = !showingPartial && count === 1 ? singular : plural;
+  const text = showingPartial
+    ? `${count} de ${total} ${label}`
+    : `${count} ${label}`;
+
+  return (
+    <p
+      className={cn(
+        "bg-muted text-muted-foreground inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium tabular-nums",
+        className,
+      )}
+    >
+      {text}
+    </p>
+  );
+};

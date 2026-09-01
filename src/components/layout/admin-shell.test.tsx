@@ -83,6 +83,8 @@ describe("AdminShell", () => {
     const wrapper = document.querySelector('[data-slot="sidebar-wrapper"]');
     expect(wrapper?.className).toContain("h-dvh");
     expect(wrapper?.className).toContain("overflow-hidden");
+    expect(wrapper?.parentElement?.className).toContain("h-dvh");
+    expect(wrapper?.parentElement?.className).toContain("overflow-hidden");
 
     const inset = document.querySelector('[data-slot="sidebar-inset"]');
     expect(inset?.className).toContain("min-h-0");
@@ -94,6 +96,7 @@ describe("AdminShell", () => {
     );
     expect(mainScroll?.className).toContain("min-h-0");
     expect(mainScroll?.className).toContain("overflow-y-auto");
+    expect(mainScroll?.className).toContain("flex-col");
 
     expect(document.querySelector('[data-slot="sidebar-header"]')).toBeTruthy();
     expect(document.querySelector('[data-slot="sidebar-footer"]')).toBeTruthy();

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useActionState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { FormSelect } from "@/components/ui/form-select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -60,19 +61,19 @@ export const AssetForm = () => {
         </div>
         <div className="space-y-2">
           <Label htmlFor="category">Categoría</Label>
-          <select
-            className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-8 w-full rounded-lg border px-2.5 text-sm outline-none focus-visible:ring-3"
+          <FormSelect
             defaultValue="laptop"
             id="category"
             name="category"
+            options={Object.entries(assetCategoryLabels).map(
+              ([value, label]) => ({
+                value,
+                label,
+              }),
+            )}
             required
-          >
-            {Object.entries(assetCategoryLabels).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
+            variant="field"
+          />
         </div>
         <div className="flex items-center gap-3 sm:col-span-2">
           <input

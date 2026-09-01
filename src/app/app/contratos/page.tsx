@@ -3,6 +3,7 @@ import Link from "next/link";
 import { FileTextIcon } from "lucide-react";
 
 import { RenewalTrayList } from "@/components/contracts/renewal-tray-list";
+import { ListPageHeader } from "@/components/list/list-page-header";
 import { pageTitles } from "@/lib/brand/chrome-copy";
 import { Button } from "@/components/ui/button";
 import {
@@ -40,29 +41,25 @@ const ContratosPage = async ({ searchParams }: ContratosPageProps) => {
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex flex-wrap items-start justify-between gap-4">
-        <div className="space-y-1">
-          <p className="text-muted-foreground font-mono text-[10.5px] font-medium tracking-[0.09em] uppercase">
-            Expediente
-          </p>
-          <h1 className="text-2xl font-semibold tracking-tight">Contratos</h1>
-          <p className="text-muted-foreground text-sm">
-            Bandeja de renovaciones según la ventana de aviso de cada contrato.
-          </p>
-        </div>
-        {canManageTemplates ? (
-          <Button asChild variant="outline">
-            <Link href="/app/contratos/plantillas">
-              <FileTextIcon className="size-4" aria-hidden />
-              Plantillas
-            </Link>
-          </Button>
-        ) : null}
-      </header>
+      <ListPageHeader
+        actions={
+          canManageTemplates ? (
+            <Button asChild className="h-10 rounded-full" variant="outline">
+              <Link href="/app/contratos/plantillas">
+                <FileTextIcon className="size-4" aria-hidden />
+                Plantillas
+              </Link>
+            </Button>
+          ) : undefined
+        }
+        description="Bandeja de renovaciones según la ventana de aviso de cada contrato."
+        descriptionSecondary="Lista de contratos en seguimiento."
+        title="Contratos"
+      />
 
       {renewed === "1" ? (
         <p
-          className="text-sm font-medium text-[color:var(--workia-accent-violet)]"
+          className="text-sm font-medium text-[color:var(--workia-accent-blue)]"
           role="status"
         >
           Contrato renovado correctamente.
@@ -71,7 +68,7 @@ const ContratosPage = async ({ searchParams }: ContratosPageProps) => {
 
       {noRenew === "1" ? (
         <p
-          className="text-sm font-medium text-[color:var(--workia-accent-violet)]"
+          className="text-sm font-medium text-[color:var(--workia-accent-blue)]"
           role="status"
         >
           Decisión registrada: no renovar. La persona permanece activa.

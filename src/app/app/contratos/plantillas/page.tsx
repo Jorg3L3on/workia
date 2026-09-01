@@ -3,6 +3,10 @@ import Link from "next/link";
 import { PlusIcon } from "lucide-react";
 
 import { PlantillasDataTable } from "@/components/contracts/plantillas-data-table";
+import {
+  ListPageHeader,
+  listPrimaryActionClassName,
+} from "@/components/list/list-page-header";
 import { pageTitles } from "@/lib/brand/chrome-copy";
 import { Button } from "@/components/ui/button";
 import { listContractTemplates } from "@/lib/contracts";
@@ -35,37 +39,35 @@ const PlantillasPage = async ({ searchParams }: PlantillasPageProps) => {
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex flex-wrap items-start justify-between gap-4">
-        <div className="space-y-1">
-          <p className="text-muted-foreground font-mono text-[10.5px] font-medium tracking-[0.09em] uppercase">
-            Contratos
-          </p>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Plantillas de contrato
-          </h1>
-          <p className="text-muted-foreground text-sm">
+      <ListPageHeader
+        actions={
+          <>
+            <Button asChild className="h-10 rounded-full" variant="outline">
+              <Link href="/app/contratos">Volver a Contratos</Link>
+            </Button>
+            {canCreate ? (
+              <Button asChild className={listPrimaryActionClassName}>
+                <Link href="/app/contratos/plantillas/nueva">
+                  <PlusIcon className="size-4" aria-hidden />
+                  Nueva plantilla
+                </Link>
+              </Button>
+            ) : null}
+          </>
+        }
+        description={
+          <>
             Cuerpo con variables como {"{{nombres}}"}, {"{{puesto}}"} y{" "}
             {"{{sucursal}}"}.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button asChild variant="ghost">
-            <Link href="/app/contratos">Volver a Contratos</Link>
-          </Button>
-          {canCreate ? (
-            <Button asChild variant="outline">
-              <Link href="/app/contratos/plantillas/nueva">
-                <PlusIcon className="size-4" aria-hidden />
-                Nueva plantilla
-              </Link>
-            </Button>
-          ) : null}
-        </div>
-      </header>
+          </>
+        }
+        descriptionSecondary="Lista de todas las plantillas registradas."
+        title="Plantillas de contrato"
+      />
 
       {saved === "1" ? (
         <p
-          className="text-sm font-medium text-[color:var(--workia-accent-violet)]"
+          className="text-sm font-medium text-[color:var(--workia-accent-blue)]"
           role="status"
         >
           Plantilla guardada.
@@ -74,7 +76,7 @@ const PlantillasPage = async ({ searchParams }: PlantillasPageProps) => {
 
       {deactivated === "1" ? (
         <p
-          className="text-sm font-medium text-[color:var(--workia-accent-violet)]"
+          className="text-sm font-medium text-[color:var(--workia-accent-blue)]"
           role="status"
         >
           Plantilla desactivada.
@@ -83,7 +85,7 @@ const PlantillasPage = async ({ searchParams }: PlantillasPageProps) => {
 
       {deleted === "1" ? (
         <p
-          className="text-sm font-medium text-[color:var(--workia-accent-violet)]"
+          className="text-sm font-medium text-[color:var(--workia-accent-blue)]"
           role="status"
         >
           Plantilla eliminada.

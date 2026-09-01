@@ -29,7 +29,13 @@ import {
   listTableDensityClassName,
 } from "@/components/list/list-table-shell";
 import { Button } from "@/components/ui/button";
+import { FormSelect } from "@/components/ui/form-select";
 import { Input } from "@/components/ui/input";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+} from "@/components/ui/pagination";
 import {
   Table,
   TableBody,
@@ -234,9 +240,8 @@ export const DataTable = <TData,>({
     setPagination((current) => ({ ...current, pageIndex: 0 }));
   };
 
-  const handlePageSizeChange = (event: ChangeEvent<HTMLSelectElement>) => {
-    const nextSize = Number(event.target.value);
-    setPagination({ pageIndex: 0, pageSize: nextSize });
+  const handlePageSizeChange = (next: string) => {
+    setPagination({ pageIndex: 0, pageSize: Number(next) });
   };
 
   const filteredCount = table.getFilteredRowModel().rows.length;
@@ -259,25 +264,21 @@ export const DataTable = <TData,>({
 
   return (
     <div className="space-y-3">
-      <div
-        className={cn(
-          "flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end",
-          layout === "page" &&
-            "border-border/70 bg-card rounded-xl border p-4 shadow-sm",
-        )}
-      >
-        <div className="min-w-0 flex-1 space-y-2">
-          <label className="text-sm font-medium" htmlFor={searchId}>
-            Buscar
-          </label>
-          <div className="relative">
+      <div className="flex flex-col gap-3">
+        <div
+          className={cn(
+            "flex flex-col gap-3",
+            layout === "page" && "sm:flex-row sm:flex-wrap sm:items-center",
+          )}
+        >
+          <div className="relative min-w-0 flex-1">
             <SearchIcon
-              className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2"
+              className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
               aria-hidden
             />
             <Input
               aria-label={searchAriaLabel}
-              className="pl-8"
+              className="bg-card h-10 rounded-xl pl-9"
               id={searchId}
               onChange={handleSearchChange}
               placeholder={searchPlaceholder}
@@ -285,32 +286,30 @@ export const DataTable = <TData,>({
               value={globalFilter}
             />
           </div>
-        </div>
-        {toolbar}
-        <div className="space-y-2 sm:w-36">
-          <label className="text-sm font-medium" htmlFor={pageSizeId}>
-            Filas por página
-          </label>
-          <select
-            className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-8 w-full rounded-lg border px-2.5 text-sm outline-none focus-visible:ring-3"
-            id={pageSizeId}
-            onChange={handlePageSizeChange}
-            value={pagination.pageSize}
-          >
-            {pageSizes.map((size) => (
-              <option key={size} value={size}>
-                {size}
-              </option>
-            ))}
-          </select>
+          {toolbar}
+          <div className="sm:w-40">
+            <label className="sr-only" htmlFor={pageSizeId}>
+              Filas por página
+            </label>
+            <FormSelect
+              aria-label="Filas por página"
+              id={pageSizeId}
+              onValueChange={handlePageSizeChange}
+              options={pageSizes.map((size) => ({
+                value: String(size),
+                label: `${size} por página`,
+              }))}
+              value={String(pagination.pageSize)}
+            />
+          </div>
+          <ListResultCount
+            count={filteredCount}
+            plural={resultPlural}
+            singular={resultSingular}
+            total={scopedData.length}
+          />
         </div>
       </div>
-
-      <ListResultCount
-        count={filteredCount}
-        plural={resultPlural}
-        singular={resultSingular}
-      />
 
       {showEmpty || showNoMatches ? (
         <ListTableShell>{emptyState}</ListTableShell>
@@ -436,31 +435,37 @@ export const DataTable = <TData,>({
       )}
 
       {hasVisibleRows && pageCount > 1 ? (
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <Pagination className="mx-0 justify-between">
           <p className="text-muted-foreground text-xs tabular-nums">
             Página {pagination.pageIndex + 1} de {pageCount}
           </p>
-          <div className="flex gap-2">
-            <Button
-              aria-label="Página anterior"
-              disabled={!table.getCanPreviousPage()}
-              onClick={() => table.previousPage()}
-              type="button"
-              variant="outline"
-            >
-              Anterior
-            </Button>
-            <Button
-              aria-label="Página siguiente"
-              disabled={!table.getCanNextPage()}
-              onClick={() => table.nextPage()}
-              type="button"
-              variant="outline"
-            >
-              Siguiente
-            </Button>
-          </div>
-        </div>
+          <PaginationContent>
+            <PaginationItem>
+              <Button
+                aria-label="Página anterior"
+                disabled={!table.getCanPreviousPage()}
+                onClick={() => table.previousPage()}
+                size="sm"
+                type="button"
+                variant="outline"
+              >
+                Anterior
+              </Button>
+            </PaginationItem>
+            <PaginationItem>
+              <Button
+                aria-label="Página siguiente"
+                disabled={!table.getCanNextPage()}
+                onClick={() => table.nextPage()}
+                size="sm"
+                type="button"
+                variant="outline"
+              >
+                Siguiente
+              </Button>
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
       ) : null}
     </div>
   );

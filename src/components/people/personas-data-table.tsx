@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo, useState, type ChangeEvent, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 
 import { DataTable, type DataTableColumn } from "@/components/list/data-table";
 import { ListRowAction } from "@/components/list/list-row-action";
 import { ListStatusBadge } from "@/components/list/list-status-badge";
 import type { PersonaListRow } from "@/components/people/persona-list-row";
 import { PersonasMobileList } from "@/components/people/personas-mobile-list";
+import { FormSelect } from "@/components/ui/form-select";
 import { formatDateMx } from "@/lib/format/date";
 import {
   matchesPersonaListRow,
@@ -36,12 +37,12 @@ export const PersonasDataTable = ({
   const [visibility, setVisibility] =
     useState<PersonListVisibility>(initialVisibility);
 
-  const handleStatusChange = (event: ChangeEvent<HTMLSelectElement>) => {
-    setStatus(event.target.value as typeof initialStatus);
+  const handleStatusChange = (next: string) => {
+    setStatus(next as typeof initialStatus);
   };
 
-  const handleVisibilityChange = (event: ChangeEvent<HTMLSelectElement>) => {
-    setVisibility(event.target.value as PersonListVisibility);
+  const handleVisibilityChange = (next: string) => {
+    setVisibility(next as PersonListVisibility);
   };
 
   const columns = useMemo<DataTableColumn<PersonaListRow>[]>(
@@ -152,39 +153,41 @@ export const PersonasDataTable = ({
       renderMobile={(visiblePeople) => (
         <PersonasMobileList people={visiblePeople} />
       )}
-      resultPlural="resultados"
-      resultSingular="resultado"
-      searchPlaceholder="Nombre, RFC, CURP o correo"
+      resultPlural="personas"
+      resultSingular="persona"
+      searchPlaceholder="Buscar personas..."
       toolbar={
         <div className="flex flex-col gap-3 sm:flex-row">
-          <div className="space-y-2 sm:w-44">
-            <label className="text-sm font-medium" htmlFor="persona-status">
+          <div className="sm:w-48">
+            <label className="sr-only" htmlFor="persona-status">
               Relación
             </label>
-            <select
-              className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-8 w-full rounded-lg border px-2.5 text-sm outline-none focus-visible:ring-3"
+            <FormSelect
+              aria-label="Relación"
               id="persona-status"
-              onChange={handleStatusChange}
+              onValueChange={handleStatusChange}
+              options={[
+                { value: "", label: "Todos los estados" },
+                { value: "activa", label: "Activas" },
+                { value: "baja", label: "Bajas" },
+              ]}
               value={status}
-            >
-              <option value="">Todas</option>
-              <option value="activa">Activas</option>
-              <option value="baja">Bajas</option>
-            </select>
+            />
           </div>
-          <div className="space-y-2 sm:w-44">
-            <label className="text-sm font-medium" htmlFor="persona-visibility">
+          <div className="sm:w-48">
+            <label className="sr-only" htmlFor="persona-visibility">
               Expediente
             </label>
-            <select
-              className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-8 w-full rounded-lg border px-2.5 text-sm outline-none focus-visible:ring-3"
+            <FormSelect
+              aria-label="Expediente"
               id="persona-visibility"
-              onChange={handleVisibilityChange}
+              onValueChange={handleVisibilityChange}
+              options={[
+                { value: "expediente", label: "En expediente" },
+                { value: "deleted", label: "Borrados" },
+              ]}
               value={visibility}
-            >
-              <option value="expediente">En expediente</option>
-              <option value="deleted">Borrados</option>
-            </select>
+            />
           </div>
         </div>
       }

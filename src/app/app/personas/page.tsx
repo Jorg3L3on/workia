@@ -4,6 +4,10 @@ import { PlusIcon } from "lucide-react";
 
 import { pageTitles } from "@/lib/brand/chrome-copy";
 
+import {
+  ListPageHeader,
+  listPrimaryActionClassName,
+} from "@/components/list/list-page-header";
 import { PersonasDataTable } from "@/components/people/personas-data-table";
 import { Button } from "@/components/ui/button";
 import { listPeople } from "@/lib/people";
@@ -53,33 +57,26 @@ const PersonasPage = async ({ searchParams }: PersonasPageProps) => {
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex flex-wrap items-start justify-between gap-4">
-        <div className="space-y-1">
-          <p className="text-muted-foreground font-mono text-[10.5px] font-medium tracking-[0.09em] uppercase">
-            Expediente
-          </p>
-          <h1 className="text-2xl font-semibold tracking-tight">Personas</h1>
-          <p className="text-muted-foreground text-sm">
-            Expediente de empleados con datos de empresa e identificadores.
-          </p>
-        </div>
-        {canCreate ? (
-          <Button
-            asChild
-            className="workia-accent-gradient border-0 text-white shadow-md hover:opacity-95"
-          >
-            <Link href="/app/personas/nueva">
-              <PlusIcon className="size-4" aria-hidden />
-              Nueva persona
-            </Link>
-          </Button>
-        ) : null}
-      </header>
+      <ListPageHeader
+        actions={
+          canCreate ? (
+            <Button asChild className={listPrimaryActionClassName}>
+              <Link href="/app/personas/nueva">
+                <PlusIcon className="size-4" aria-hidden />
+                Nueva persona
+              </Link>
+            </Button>
+          ) : undefined
+        }
+        description="Gestiona expedientes, relación laboral e identificadores."
+        descriptionSecondary="Lista de todas las personas registradas."
+        title="Personas"
+      />
 
       <PersonasDataTable
         emptyAction={
           canCreate ? (
-            <Button asChild variant="outline">
+            <Button asChild className={listPrimaryActionClassName}>
               <Link href="/app/personas/nueva">
                 Dar de alta a la primera persona
               </Link>

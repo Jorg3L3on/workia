@@ -91,12 +91,7 @@ Vigencia: del {{fecha_inicio}} al {{fecha_fin}}.`;
         </label>
 
         <div className="flex gap-2">
-          <Button
-            className="workia-accent-gradient border-0 text-white shadow-md hover:opacity-95"
-            type="submit"
-          >
-            Guardar plantilla
-          </Button>
+          <Button type="submit">Guardar plantilla</Button>
           <Button asChild variant="ghost">
             <Link href="/app/contratos/plantillas">Cancelar</Link>
           </Button>

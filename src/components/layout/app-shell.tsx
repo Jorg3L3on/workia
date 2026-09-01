@@ -15,6 +15,10 @@ import {
   AppBreadcrumbs,
   BreadcrumbLabelsProvider,
 } from "@/components/layout/app-breadcrumbs";
+import {
+  AppCommandPalette,
+  AppCommandPaletteHint,
+} from "@/components/layout/app-command-palette";
 import { AppSidebarNav } from "@/components/layout/app-sidebar-nav";
 import { NavigationProgress } from "@/components/layout/navigation-progress";
 import {
@@ -73,15 +77,11 @@ export const AppShell = ({ children, user }: AppShellProps) => {
           SHELL_VIEWPORT_CLASS_NAME,
         )}
       >
-        <div
-          className="workia-shell-grain pointer-events-none absolute inset-0 z-0"
-          aria-hidden
-        />
-
         <SidebarProvider
           className={cn("relative z-10 flex w-full", SHELL_VIEWPORT_CLASS_NAME)}
         >
           <NavigationProgress />
+          <AppCommandPalette />
           <Sidebar
             collapsible="icon"
             className="border-sidebar-border border-r"
@@ -131,7 +131,8 @@ export const AppShell = ({ children, user }: AppShellProps) => {
                 />
                 <AppBreadcrumbs />
               </div>
-              <div className="px-4">
+              <div className="flex items-center gap-1 px-4">
+                <AppCommandPaletteHint />
                 <ThemeToggle />
               </div>
             </header>

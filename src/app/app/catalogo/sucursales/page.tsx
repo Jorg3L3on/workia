@@ -4,7 +4,9 @@ import { CatalogFormTray } from "@/components/catalog/catalog-form-tray";
 import { CatalogSitesTable } from "@/components/catalog/catalog-data-tables";
 import { pageTitles } from "@/lib/brand/chrome-copy";
 import { CatalogStatusMessages } from "@/components/catalog/catalog-status-messages";
+import { ListPageHeader } from "@/components/list/list-page-header";
 import { Button } from "@/components/ui/button";
+import { FormSelect } from "@/components/ui/form-select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createSiteAction } from "@/lib/sites/actions";
@@ -37,16 +39,11 @@ const SucursalesCatalogPage = async ({
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="space-y-1">
-        <p className="text-muted-foreground font-mono text-[10.5px] font-medium tracking-[0.09em] uppercase">
-          Catálogo
-        </p>
-        <h1 className="text-2xl font-semibold tracking-tight">Sucursales</h1>
-        <p className="text-muted-foreground text-sm">
-          Dónde trabaja la gente: corporativo o sucursal. No es un árbol ni un
-          área.
-        </p>
-      </header>
+      <ListPageHeader
+        description="Dónde trabaja la gente: corporativo o sucursal. No es un árbol ni un área."
+        descriptionSecondary="Lista de todas las ubicaciones registradas."
+        title="Sucursales"
+      />
 
       <CatalogStatusMessages deleted={deleted} saved={saved} />
 
@@ -73,19 +70,17 @@ const SucursalesCatalogPage = async ({
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="site-kind">Tipo</Label>
-                            <select
-                              className="border-input bg-background h-8 w-full rounded-lg border px-2.5 text-sm"
+                            <FormSelect
                               defaultValue="sucursal"
                               id="site-kind"
                               name="kind"
+                              options={SITE_KINDS.map((kind) => ({
+                                value: kind,
+                                label: siteKindLabels[kind],
+                              }))}
                               required
-                            >
-                              {SITE_KINDS.map((kind) => (
-                                <option key={kind} value={kind}>
-                                  {siteKindLabels[kind]}
-                                </option>
-                              ))}
-                            </select>
+                              variant="field"
+                            />
                           </div>
                         </div>
                         <Button type="submit" variant="outline">

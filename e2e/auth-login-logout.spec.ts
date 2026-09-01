@@ -4,6 +4,7 @@ const DEMO_EMAIL = "viewer@workia.local";
 const DEMO_PASSWORD = "Workia123!";
 
 test("login reaches /app and logout returns to login", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/login");
 
@@ -14,6 +15,10 @@ test("login reaches /app and logout returns to login", async ({ page }) => {
   await expect(page).toHaveURL(/\/app/, { timeout: 25_000 });
   await expect(page.getByLabel("Menú de usuario")).toBeVisible({
     timeout: 25_000,
+  });
+
+  await page.evaluate(() => {
+    document.querySelector("nextjs-portal")?.remove();
   });
 
   await page.getByLabel("Menú de usuario").click();

@@ -9,6 +9,7 @@ import {
   UsersIcon,
 } from "lucide-react";
 
+import { LandingEnterButton } from "@/components/landing/landing-enter-button";
 import { LandingAppMock } from "@/components/landing/landing-app-mock";
 import { WorkiaMark } from "@/components/brand/workia-mark";
 import { Badge } from "@/components/ui/badge";
@@ -122,25 +123,14 @@ export const LandingPage = () => {
         <div
           className="login-ambient-blob"
           style={{
-            width: 480,
-            height: 480,
+            width: 360,
+            height: 360,
             background: "var(--workia-accent-blue)",
-            top: -180,
-            left: -140,
-          }}
-        />
-        <div
-          className="login-ambient-blob login-ambient-blob-b"
-          style={{
-            width: 420,
-            height: 420,
-            background: "var(--workia-accent-violet)",
-            bottom: -120,
-            right: -80,
+            top: -160,
+            left: -120,
           }}
         />
       </div>
-      <div className="workia-shell-grain absolute inset-0" aria-hidden />
 
       <header className="relative z-10 mx-auto flex w-full max-w-6xl items-center justify-between px-5 py-6 sm:px-8">
         <Link
@@ -173,7 +163,7 @@ export const LandingPage = () => {
               tiempo. El equipo caro tiene dueño e historial.
             </p>
           </div>
-          <LandingCta className="login-stamp-btn h-10 px-6 text-base" />
+          <LandingEnterButton />
         </section>
 
         {/* El problema */}
@@ -299,7 +289,7 @@ export const LandingPage = () => {
               con datos de demo en tu entorno.
             </p>
           </div>
-          <LandingCta className="login-stamp-btn h-10 px-6 text-base" />
+          <LandingEnterButton />
         </section>
       </main>
 

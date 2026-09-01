@@ -4,7 +4,9 @@ import { AreaTreeView } from "@/components/catalog/area-tree-view";
 import { CatalogFormTray } from "@/components/catalog/catalog-form-tray";
 import { pageTitles } from "@/lib/brand/chrome-copy";
 import { CatalogStatusMessages } from "@/components/catalog/catalog-status-messages";
+import { ListPageHeader } from "@/components/list/list-page-header";
 import { Button } from "@/components/ui/button";
+import { FormSelect } from "@/components/ui/form-select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createAreaAction } from "@/lib/catalog/actions";
@@ -38,15 +40,11 @@ const AreasCatalogPage = async ({ searchParams }: AreasCatalogPageProps) => {
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="space-y-1">
-        <p className="text-muted-foreground font-mono text-[10.5px] font-medium tracking-[0.09em] uppercase">
-          Catálogo
-        </p>
-        <h1 className="text-2xl font-semibold tracking-tight">Áreas</h1>
-        <p className="text-muted-foreground text-sm">
-          Árbol de áreas. Un área borrada desaparece de altas nuevas.
-        </p>
-      </header>
+      <ListPageHeader
+        description="Árbol de áreas. Un área borrada desaparece de altas nuevas."
+        descriptionSecondary="Lista de áreas del catálogo."
+        title="Áreas"
+      />
 
       <CatalogStatusMessages deleted={deleted} saved={saved} />
 
@@ -74,18 +72,18 @@ const AreasCatalogPage = async ({ searchParams }: AreasCatalogPageProps) => {
                           <Label htmlFor="area-parent">
                             Área padre (opcional)
                           </Label>
-                          <select
-                            className="border-input bg-background h-8 w-full rounded-lg border px-2.5 text-sm"
+                          <FormSelect
                             id="area-parent"
                             name="parentAreaId"
-                          >
-                            <option value="">Sin padre</option>
-                            {activeAreas.map((area) => (
-                              <option key={area.id} value={area.id}>
-                                {area.name}
-                              </option>
-                            ))}
-                          </select>
+                            options={[
+                              { value: "", label: "Sin padre" },
+                              ...activeAreas.map((area) => ({
+                                value: area.id,
+                                label: area.name,
+                              })),
+                            ]}
+                            variant="field"
+                          />
                         </div>
                         <label className="flex items-center gap-2 text-sm">
                           <input

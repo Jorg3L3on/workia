@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { chooseSelectOption } from "./choose-select-option";
+
 const loginAsDemoRrhh = async (page: import("@playwright/test").Page) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/login");
@@ -59,12 +61,11 @@ test.describe("Actividades de puesto", () => {
     await page
       .getByRole("button", { name: "Asignar actividad", exact: true })
       .click();
-    await page
-      .getByLabel("Puesto a asignar")
-      .selectOption({ label: puestoName });
-    await page
-      .getByLabel("Actividad a asignar")
-      .selectOption({ label: activityName });
+    await chooseSelectOption(page.getByLabel("Puesto a asignar"), puestoName);
+    await chooseSelectOption(
+      page.getByLabel("Actividad a asignar"),
+      activityName,
+    );
     await page
       .locator("#catalog-form-assign")
       .getByRole("button", { name: "Asignar actividad", exact: true })

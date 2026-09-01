@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { ListEmptyState } from "@/components/list/list-table-shell";
 import {
   Table,
   TableBody,
@@ -34,12 +35,11 @@ export const PersonAssetsSection = ({
       </div>
 
       {assets.length === 0 ? (
-        <div className="workia-empty-state m-4 px-4 py-8 text-center">
-          <p className="text-sm font-medium">Sin equipo asignado</p>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Cuando tenga activos en custodia, aparecerán aquí.
-          </p>
-        </div>
+        <ListEmptyState
+          className="py-8"
+          description="Cuando tenga activos en custodia, aparecerán aquí."
+          title="Sin equipo asignado"
+        />
       ) : (
         <Table>
           <TableHeader>

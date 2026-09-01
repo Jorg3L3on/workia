@@ -10,14 +10,30 @@ const loginAsDemoRrhh = async (page: import("@playwright/test").Page) => {
 };
 
 const stretchContentColumn = async (page: import("@playwright/test").Page) => {
-  await page.evaluate(() => {
-    const scroller = document.querySelector('[data-slot="shell-main-scroll"]');
-    if (!(scroller instanceof HTMLElement)) {
-      return;
-    }
-
-    scroller.style.paddingBottom = "2200px";
+  await expect(page.locator('[data-slot="shell-main-scroll"]')).toBeVisible();
+  await page.addStyleTag({
+    content: `
+      [data-slot="shell-main-scroll"] {
+        max-height: calc(100dvh - 3.5rem) !important;
+        overflow-y: auto !important;
+      }
+      [data-slot="shell-main-scroll"]::after {
+        content: "";
+        display: block;
+        height: 2200px;
+        flex-shrink: 0;
+      }
+    `,
   });
+
+  await expect
+    .poll(async () =>
+      page.locator('[data-slot="shell-main-scroll"]').evaluate((node) => {
+        const el = node as HTMLElement;
+        return el.scrollHeight - el.clientHeight;
+      }),
+    )
+    .toBeGreaterThan(1000);
 };
 
 const readShellMetrics = async (page: import("@playwright/test").Page) =>
@@ -75,12 +91,16 @@ test.describe("Sidebar stays pinned while content scrolls", () => {
 
   test("keeps admin chrome pinned on a tall page", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
+    await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/login");
     await page.getByLabel("Correo electrónico").fill("admin@workia.local");
     await page.getByRole("textbox", { name: "Contraseña" }).fill("Workia123!");
     await page.getByRole("button", { name: "Iniciar sesión" }).click();
     await expect(page).toHaveURL(/\/(app|admin)/, { timeout: 25_000 });
     await page.goto("/admin/rbac");
+    await expect(
+      page.getByRole("heading", { name: "RBAC Administration" }),
+    ).toBeVisible();
 
     await stretchContentColumn(page);
 

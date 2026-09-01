@@ -68,10 +68,7 @@ export const LandingAppMock = () => {
               <h3 className="text-lg font-semibold tracking-tight sm:text-xl">
                 Qué hay que atender hoy
               </h3>
-              <Badge
-                className="workia-accent-gradient shrink-0 border-0 text-white"
-                variant="outline"
-              >
+              <Badge className="shrink-0" variant="secondary">
                 <CheckCircle2Icon className="size-3" aria-hidden />
                 Nada urgente hoy
               </Badge>

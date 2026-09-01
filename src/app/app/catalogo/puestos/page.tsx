@@ -5,7 +5,9 @@ import { CatalogPositionsTable } from "@/components/catalog/catalog-data-tables"
 import { pageTitles } from "@/lib/brand/chrome-copy";
 import { CatalogStatusMessages } from "@/components/catalog/catalog-status-messages";
 import { PositionActivitiesAssign } from "@/components/catalog/position-activities-assign";
+import { ListPageHeader } from "@/components/list/list-page-header";
 import { Button } from "@/components/ui/button";
+import { FormSelect } from "@/components/ui/form-select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createPositionAction } from "@/lib/catalog/actions";
@@ -65,15 +67,11 @@ const PuestosCatalogPage = async ({
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="space-y-1">
-        <p className="text-muted-foreground font-mono text-[10.5px] font-medium tracking-[0.09em] uppercase">
-          Catálogo
-        </p>
-        <h1 className="text-2xl font-semibold tracking-tight">Puestos</h1>
-        <p className="text-muted-foreground text-sm">
-          Puestos opcionalmente ligados a un área, con actividades asignadas.
-        </p>
-      </header>
+      <ListPageHeader
+        description="Puestos opcionalmente ligados a un área, con actividades asignadas."
+        descriptionSecondary="Lista de todos los puestos registrados."
+        title="Puestos"
+      />
 
       <CatalogStatusMessages
         assigned={assigned}
@@ -104,18 +102,18 @@ const PuestosCatalogPage = async ({
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="position-area">Área (opcional)</Label>
-                          <select
-                            className="border-input bg-background h-8 w-full rounded-lg border px-2.5 text-sm"
+                          <FormSelect
                             id="position-area"
                             name="areaId"
-                          >
-                            <option value="">Sin área</option>
-                            {activeAreas.map((area) => (
-                              <option key={area.id} value={area.id}>
-                                {area.name}
-                              </option>
-                            ))}
-                          </select>
+                            options={[
+                              { value: "", label: "Sin área" },
+                              ...activeAreas.map((area) => ({
+                                value: area.id,
+                                label: area.name,
+                              })),
+                            ]}
+                            variant="field"
+                          />
                         </div>
                         <label className="flex items-center gap-2 text-sm">
                           <input

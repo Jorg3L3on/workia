@@ -5,6 +5,7 @@ import { useFormStatus } from "react-dom";
 
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
+import { FormSelect } from "@/components/ui/form-select";
 import { Label } from "@/components/ui/label";
 import type { ContractTemplate } from "@/lib/db/schema";
 import {
@@ -66,36 +67,31 @@ export const RenewContractForm = ({
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1">
           <Label htmlFor={`type-${contractId}`}>Nuevo tipo</Label>
-          <select
-            className="border-input bg-background h-8 w-full rounded-lg border px-2.5 text-sm"
+          <FormSelect
             defaultValue="determinado"
             id={`type-${contractId}`}
             name="type"
-          >
-            {Object.entries(contractTypeLabels).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
+            options={Object.entries(contractTypeLabels).map(
+              ([value, label]) => ({
+                value,
+                label,
+              }),
+            )}
+            variant="field"
+          />
         </div>
 
         <div className="space-y-1">
           <Label htmlFor={`notice-${contractId}`}>Aviso</Label>
-          <select
-            className="border-input bg-background h-8 w-full rounded-lg border px-2.5 text-sm"
+          <FormSelect
             defaultValue="3"
             id={`notice-${contractId}`}
             name="noticeWindow"
-          >
-            {Object.entries(contractNoticeWindowLabels).map(
-              ([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ),
+            options={Object.entries(contractNoticeWindowLabels).map(
+              ([value, label]) => ({ value, label }),
             )}
-          </select>
+            variant="field"
+          />
         </div>
 
         <div className="space-y-1">
@@ -115,19 +111,17 @@ export const RenewContractForm = ({
 
         <div className="space-y-1 sm:col-span-2">
           <Label htmlFor={`template-${contractId}`}>Plantilla</Label>
-          <select
-            className="border-input bg-background h-8 w-full rounded-lg border px-2.5 text-sm"
+          <FormSelect
             defaultValue={templates[0]?.id ?? ""}
             id={`template-${contractId}`}
             name="templateId"
+            options={templates.map((template) => ({
+              value: template.id,
+              label: template.name,
+            }))}
             required
-          >
-            {templates.map((template) => (
-              <option key={template.id} value={template.id}>
-                {template.name}
-              </option>
-            ))}
-          </select>
+            variant="field"
+          />
         </div>
       </div>
 

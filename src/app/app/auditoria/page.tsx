@@ -3,8 +3,10 @@ import type { Metadata } from "next";
 import { AuditEventList } from "@/components/audit/audit-event-list";
 import { pageTitles } from "@/lib/brand/chrome-copy";
 import { ListFilterBar } from "@/components/list/list-filter-bar";
+import { ListPageHeader } from "@/components/list/list-page-header";
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
+import { FormSelect } from "@/components/ui/form-select";
 import { Input } from "@/components/ui/input";
 import { listAuditEvents } from "@/lib/audit";
 import { requireAuditRead } from "@/lib/audit/auth";
@@ -57,34 +59,29 @@ const AuditoriaPage = async ({ searchParams }: AuditoriaPageProps) => {
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="space-y-1">
-        <p className="text-muted-foreground font-mono text-[10.5px] font-medium tracking-[0.09em] uppercase">
-          Trazabilidad
-        </p>
-        <h1 className="text-2xl font-semibold tracking-tight">Auditoría</h1>
-        <p className="text-muted-foreground text-sm">
-          Quién cambió qué, cuándo y sobre qué recurso.
-        </p>
-      </header>
+      <ListPageHeader
+        description="Quién cambió qué, cuándo y sobre qué recurso."
+        descriptionSecondary="Lista de eventos de auditoría registrados."
+        title="Auditoría"
+      />
 
       <ListFilterBar className="md:grid md:grid-cols-2 xl:grid-cols-3">
         <div className="space-y-2">
           <label className="text-sm font-medium" htmlFor="resourceType">
             Tipo de recurso
           </label>
-          <select
-            className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-8 w-full rounded-lg border px-2.5 text-sm outline-none focus-visible:ring-3"
+          <FormSelect
             defaultValue={filters.resourceType ?? ""}
             id="resourceType"
             name="resourceType"
-          >
-            <option value="">Todos</option>
-            {AUDIT_RESOURCE_TYPES.map((type) => (
-              <option key={type} value={type}>
-                {auditResourceTypeLabels[type]}
-              </option>
-            ))}
-          </select>
+            options={[
+              { value: "", label: "Todos" },
+              ...AUDIT_RESOURCE_TYPES.map((type) => ({
+                value: type,
+                label: auditResourceTypeLabels[type],
+              })),
+            ]}
+          />
         </div>
 
         <div className="space-y-2">
@@ -103,38 +100,36 @@ const AuditoriaPage = async ({ searchParams }: AuditoriaPageProps) => {
           <label className="text-sm font-medium" htmlFor="actorUserId">
             Actor
           </label>
-          <select
-            className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-8 w-full rounded-lg border px-2.5 text-sm outline-none focus-visible:ring-3"
+          <FormSelect
             defaultValue={filters.actorUserId ?? ""}
             id="actorUserId"
             name="actorUserId"
-          >
-            <option value="">Todos</option>
-            {actorOptions.map((actor) => (
-              <option key={actor.id} value={actor.id}>
-                {actor.name} ({actor.email})
-              </option>
-            ))}
-          </select>
+            options={[
+              { value: "", label: "Todos" },
+              ...actorOptions.map((actor) => ({
+                value: actor.id,
+                label: `${actor.name} (${actor.email})`,
+              })),
+            ]}
+          />
         </div>
 
         <div className="space-y-2">
           <label className="text-sm font-medium" htmlFor="action">
             Acción
           </label>
-          <select
-            className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-8 w-full rounded-lg border px-2.5 text-sm outline-none focus-visible:ring-3"
+          <FormSelect
             defaultValue={filters.action ?? ""}
             id="action"
             name="action"
-          >
-            <option value="">Todas</option>
-            {AUDIT_ACTIONS.map((action) => (
-              <option key={action} value={action}>
-                {auditActionLabels[action]}
-              </option>
-            ))}
-          </select>
+            options={[
+              { value: "", label: "Todas" },
+              ...AUDIT_ACTIONS.map((action) => ({
+                value: action,
+                label: auditActionLabels[action],
+              })),
+            ]}
+          />
         </div>
 
         <div className="space-y-2">
@@ -152,7 +147,7 @@ const AuditoriaPage = async ({ searchParams }: AuditoriaPageProps) => {
         </div>
 
         <div className="flex items-end md:col-span-2 xl:col-span-3">
-          <Button type="submit" variant="outline">
+          <Button className="h-10 rounded-full" type="submit" variant="outline">
             Filtrar
           </Button>
         </div>
