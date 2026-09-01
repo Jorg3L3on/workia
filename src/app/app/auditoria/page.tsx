@@ -2,7 +2,11 @@ import type { Metadata } from "next";
 
 import { AuditEventList } from "@/components/audit/audit-event-list";
 import { pageTitles } from "@/lib/brand/chrome-copy";
-import { ListFilterBar } from "@/components/list/list-filter-bar";
+import {
+  ListFilterBar,
+  listFilterSelectClassName,
+} from "@/components/list/list-filter-bar";
+import { ListPageHeader } from "@/components/list/list-page-header";
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
 import { Input } from "@/components/ui/input";
@@ -57,15 +61,11 @@ const AuditoriaPage = async ({ searchParams }: AuditoriaPageProps) => {
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="space-y-1">
-        <p className="text-muted-foreground font-mono text-[10.5px] font-medium tracking-[0.09em] uppercase">
-          Trazabilidad
-        </p>
-        <h1 className="text-2xl font-semibold tracking-tight">Auditoría</h1>
-        <p className="text-muted-foreground text-sm">
-          Quién cambió qué, cuándo y sobre qué recurso.
-        </p>
-      </header>
+      <ListPageHeader
+        description="Quién cambió qué, cuándo y sobre qué recurso."
+        descriptionSecondary="Lista de eventos de auditoría registrados."
+        title="Auditoría"
+      />
 
       <ListFilterBar className="md:grid md:grid-cols-2 xl:grid-cols-3">
         <div className="space-y-2">
@@ -73,7 +73,7 @@ const AuditoriaPage = async ({ searchParams }: AuditoriaPageProps) => {
             Tipo de recurso
           </label>
           <select
-            className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-8 w-full rounded-lg border px-2.5 text-sm outline-none focus-visible:ring-3"
+            className={listFilterSelectClassName}
             defaultValue={filters.resourceType ?? ""}
             id="resourceType"
             name="resourceType"
@@ -104,7 +104,7 @@ const AuditoriaPage = async ({ searchParams }: AuditoriaPageProps) => {
             Actor
           </label>
           <select
-            className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-8 w-full rounded-lg border px-2.5 text-sm outline-none focus-visible:ring-3"
+            className={listFilterSelectClassName}
             defaultValue={filters.actorUserId ?? ""}
             id="actorUserId"
             name="actorUserId"
@@ -123,7 +123,7 @@ const AuditoriaPage = async ({ searchParams }: AuditoriaPageProps) => {
             Acción
           </label>
           <select
-            className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-8 w-full rounded-lg border px-2.5 text-sm outline-none focus-visible:ring-3"
+            className={listFilterSelectClassName}
             defaultValue={filters.action ?? ""}
             id="action"
             name="action"
@@ -152,7 +152,7 @@ const AuditoriaPage = async ({ searchParams }: AuditoriaPageProps) => {
         </div>
 
         <div className="flex items-end md:col-span-2 xl:col-span-3">
-          <Button type="submit" variant="outline">
+          <Button className="h-10 rounded-full" type="submit" variant="outline">
             Filtrar
           </Button>
         </div>

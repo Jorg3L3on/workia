@@ -68,7 +68,7 @@ export const PlantillasDataTable = ({
       getRowId={(row) => row.id}
       resultPlural="plantillas"
       resultSingular="plantilla"
-      searchPlaceholder="Buscar plantilla"
+      searchPlaceholder="Buscar plantillas..."
     />
   );
 };

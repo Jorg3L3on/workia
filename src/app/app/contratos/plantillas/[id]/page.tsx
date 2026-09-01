@@ -64,7 +64,7 @@ const PlantillaDetailPage = async ({
 
       {saved === "1" ? (
         <p
-          className="text-sm font-medium text-[color:var(--workia-accent-violet)]"
+          className="text-sm font-medium text-[color:var(--workia-accent-blue)]"
           role="status"
         >
           Cambios guardados.

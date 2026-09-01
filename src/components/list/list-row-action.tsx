@@ -25,7 +25,10 @@ export const ListRowAction = ({
 }: ListRowActionProps) => (
   <Button
     asChild
-    className={cn("h-8 px-3 text-xs font-medium", className)}
+    className={cn(
+      "h-8 rounded-full px-3 text-xs font-medium shadow-none",
+      className,
+    )}
     size="sm"
     variant={variant}
   >

@@ -19,7 +19,7 @@ export const CatalogStatusMessages = ({
     <>
       {saved ? (
         <p
-          className="text-sm font-medium text-[color:var(--workia-accent-violet)]"
+          className="text-sm font-medium text-[color:var(--workia-accent-blue)]"
           role="status"
         >
           Cambios guardados.
@@ -27,7 +27,7 @@ export const CatalogStatusMessages = ({
       ) : null}
       {deleted ? (
         <p
-          className="text-sm font-medium text-[color:var(--workia-accent-violet)]"
+          className="text-sm font-medium text-[color:var(--workia-accent-blue)]"
           role="status"
         >
           Registro borrado lógicamente.
@@ -35,7 +35,7 @@ export const CatalogStatusMessages = ({
       ) : null}
       {assigned ? (
         <p
-          className="text-sm font-medium text-[color:var(--workia-accent-violet)]"
+          className="text-sm font-medium text-[color:var(--workia-accent-blue)]"
           role="status"
         >
           Actividad asignada al puesto.
@@ -43,7 +43,7 @@ export const CatalogStatusMessages = ({
       ) : null}
       {unassigned ? (
         <p
-          className="text-sm font-medium text-[color:var(--workia-accent-violet)]"
+          className="text-sm font-medium text-[color:var(--workia-accent-blue)]"
           role="status"
         >
           Actividad quitada del puesto.

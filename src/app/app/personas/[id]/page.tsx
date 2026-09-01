@@ -182,7 +182,7 @@ const PersonaDetailPage = async ({
 
         {saved === "1" ? (
           <p
-            className="text-sm font-medium text-[color:var(--workia-accent-violet)]"
+            className="text-sm font-medium text-[color:var(--workia-accent-blue)]"
             role="status"
           >
             Cambios guardados.
@@ -191,7 +191,7 @@ const PersonaDetailPage = async ({
 
         {contract === "created" ? (
           <p
-            className="text-sm font-medium text-[color:var(--workia-accent-violet)]"
+            className="text-sm font-medium text-[color:var(--workia-accent-blue)]"
             role="status"
           >
             Contrato emitido y guardado en el expediente.

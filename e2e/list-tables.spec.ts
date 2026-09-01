@@ -20,7 +20,7 @@ test.describe("Authenticated list tables", () => {
     ).toBeVisible();
 
     const tableShell = page
-      .locator(".rounded-xl.border.border-border\\/70")
+      .locator(".rounded-2xl.border.border-border\\/60")
       .first();
     await expect(tableShell).toBeVisible();
 
@@ -56,7 +56,7 @@ test.describe("Authenticated list tables", () => {
 
     await expect(page.getByText("Renovaciones pendientes")).toBeVisible();
     await expect(
-      page.locator(".rounded-xl.border.border-border\\/70").first(),
+      page.locator(".rounded-2xl.border.border-border\\/60").first(),
     ).toBeVisible();
     await expect(page.getByLabel("Nuevo tipo")).toHaveCount(0);
 

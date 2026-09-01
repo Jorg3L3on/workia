@@ -5,6 +5,7 @@ import { CatalogPositionsTable } from "@/components/catalog/catalog-data-tables"
 import { pageTitles } from "@/lib/brand/chrome-copy";
 import { CatalogStatusMessages } from "@/components/catalog/catalog-status-messages";
 import { PositionActivitiesAssign } from "@/components/catalog/position-activities-assign";
+import { ListPageHeader } from "@/components/list/list-page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -65,15 +66,11 @@ const PuestosCatalogPage = async ({
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="space-y-1">
-        <p className="text-muted-foreground font-mono text-[10.5px] font-medium tracking-[0.09em] uppercase">
-          Catálogo
-        </p>
-        <h1 className="text-2xl font-semibold tracking-tight">Puestos</h1>
-        <p className="text-muted-foreground text-sm">
-          Puestos opcionalmente ligados a un área, con actividades asignadas.
-        </p>
-      </header>
+      <ListPageHeader
+        description="Puestos opcionalmente ligados a un área, con actividades asignadas."
+        descriptionSecondary="Lista de todos los puestos registrados."
+        title="Puestos"
+      />
 
       <CatalogStatusMessages
         assigned={assigned}

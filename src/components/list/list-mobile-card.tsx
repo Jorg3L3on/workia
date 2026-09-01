@@ -37,7 +37,7 @@ export const ListMobileCard = ({
     <article
       aria-label={ariaLabel}
       className={cn(
-        "border-border/70 bg-card hover:bg-muted/30 rounded-xl border p-4 shadow-sm transition-colors",
+        "border-border/60 bg-card hover:bg-muted/30 rounded-2xl border p-4 shadow-sm transition-colors",
         className,
       )}
       role="button"

@@ -134,7 +134,7 @@ const AssetDetailPage = async ({
 
         {created === "1" ? (
           <p
-            className="text-sm font-medium text-[color:var(--workia-accent-violet)]"
+            className="text-sm font-medium text-[color:var(--workia-accent-blue)]"
             role="status"
           >
             Activo registrado.
@@ -143,7 +143,7 @@ const AssetDetailPage = async ({
 
         {assigned === "1" ? (
           <p
-            className="text-sm font-medium text-[color:var(--workia-accent-violet)]"
+            className="text-sm font-medium text-[color:var(--workia-accent-blue)]"
             role="status"
           >
             Entrega registrada en el historial.
@@ -152,7 +152,7 @@ const AssetDetailPage = async ({
 
         {returned === "1" ? (
           <p
-            className="text-sm font-medium text-[color:var(--workia-accent-violet)]"
+            className="text-sm font-medium text-[color:var(--workia-accent-blue)]"
             role="status"
           >
             Devolución registrada en el historial.

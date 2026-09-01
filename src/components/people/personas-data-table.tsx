@@ -152,32 +152,34 @@ export const PersonasDataTable = ({
       renderMobile={(visiblePeople) => (
         <PersonasMobileList people={visiblePeople} />
       )}
-      resultPlural="resultados"
-      resultSingular="resultado"
-      searchPlaceholder="Nombre, RFC, CURP o correo"
+      resultPlural="personas"
+      resultSingular="persona"
+      searchPlaceholder="Buscar personas..."
       toolbar={
         <div className="flex flex-col gap-3 sm:flex-row">
-          <div className="space-y-2 sm:w-44">
-            <label className="text-sm font-medium" htmlFor="persona-status">
+          <div className="sm:w-48">
+            <label className="sr-only" htmlFor="persona-status">
               Relación
             </label>
             <select
-              className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-8 w-full rounded-lg border px-2.5 text-sm outline-none focus-visible:ring-3"
+              aria-label="Relación"
+              className="border-input bg-card focus-visible:border-ring focus-visible:ring-ring/50 h-10 w-full rounded-xl border px-3 text-sm outline-none focus-visible:ring-3"
               id="persona-status"
               onChange={handleStatusChange}
               value={status}
             >
-              <option value="">Todas</option>
+              <option value="">Todos los estados</option>
               <option value="activa">Activas</option>
               <option value="baja">Bajas</option>
             </select>
           </div>
-          <div className="space-y-2 sm:w-44">
-            <label className="text-sm font-medium" htmlFor="persona-visibility">
+          <div className="sm:w-48">
+            <label className="sr-only" htmlFor="persona-visibility">
               Expediente
             </label>
             <select
-              className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-8 w-full rounded-lg border px-2.5 text-sm outline-none focus-visible:ring-3"
+              aria-label="Expediente"
+              className="border-input bg-card focus-visible:border-ring focus-visible:ring-ring/50 h-10 w-full rounded-xl border px-3 text-sm outline-none focus-visible:ring-3"
               id="persona-visibility"
               onChange={handleVisibilityChange}
               value={visibility}

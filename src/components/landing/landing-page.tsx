@@ -134,7 +134,7 @@ export const LandingPage = () => {
           style={{
             width: 420,
             height: 420,
-            background: "var(--workia-accent-violet)",
+            background: "var(--workia-accent-blue)",
             bottom: -120,
             right: -80,
           }}

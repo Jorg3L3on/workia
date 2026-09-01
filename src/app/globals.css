@@ -49,17 +49,20 @@
 }
 
 :root {
-  --workia-surface: #e8eef7;
-  --workia-badge-a: #f4f7fc;
-  --workia-badge-b: #edf2f8;
-  --workia-ink: #0d1220;
-  --workia-ink-muted: #5b6478;
-  --workia-ink-faint: #7a8498;
-  --workia-line: rgba(13, 18, 32, 0.1);
-  --workia-line-strong: rgba(13, 18, 32, 0.18);
-  --workia-accent-blue: #4facfe;
-  --workia-accent-violet: #8b5cf6;
-  --workia-shadow: rgba(13, 18, 32, 0.12);
+  /* Product floor — Zigzag-like list chrome: cool grey surface, white cards, solid blue */
+  --workia-surface: #f3f4f6;
+  --workia-badge-a: #ffffff;
+  --workia-badge-b: #f3f4f6;
+  --workia-ink: #111827;
+  --workia-ink-muted: #6b7280;
+  --workia-ink-faint: #9ca3af;
+  --workia-line: rgba(17, 24, 39, 0.1);
+  --workia-line-strong: rgba(17, 24, 39, 0.16);
+  --workia-accent-blue: #2563eb;
+  --workia-accent-blue-hover: #1d4ed8;
+  --workia-accent-violet: #2563eb;
+  --workia-success: #16a34a;
+  --workia-shadow: rgba(17, 24, 39, 0.08);
 
   --background: var(--workia-surface);
   --foreground: var(--workia-ink);
@@ -80,7 +83,7 @@
   --input: var(--workia-line-strong);
   --ring: var(--workia-accent-blue);
   --chart-1: var(--workia-accent-blue);
-  --chart-2: var(--workia-accent-violet);
+  --chart-2: var(--workia-success);
   --chart-3: var(--workia-ink-muted);
   --chart-4: var(--workia-ink-faint);
   --chart-5: var(--workia-ink);
@@ -96,16 +99,18 @@
 }
 
 .dark {
-  --workia-surface: #060914;
-  --workia-badge-a: #12141c;
-  --workia-badge-b: #171a24;
-  --workia-ink: #f7f8ff;
-  --workia-ink-muted: #9aa0b4;
-  --workia-ink-faint: #6b7288;
-  --workia-line: rgba(247, 248, 255, 0.1);
-  --workia-line-strong: rgba(247, 248, 255, 0.18);
-  --workia-accent-blue: #4facfe;
-  --workia-accent-violet: #8b5cf6;
+  --workia-surface: #0b0f19;
+  --workia-badge-a: #121826;
+  --workia-badge-b: #1a2233;
+  --workia-ink: #f8fafc;
+  --workia-ink-muted: #94a3b8;
+  --workia-ink-faint: #64748b;
+  --workia-line: rgba(248, 250, 252, 0.1);
+  --workia-line-strong: rgba(248, 250, 252, 0.18);
+  --workia-accent-blue: #3b82f6;
+  --workia-accent-blue-hover: #2563eb;
+  --workia-accent-violet: #3b82f6;
+  --workia-success: #22c55e;
   --workia-shadow: rgba(0, 0, 0, 0.45);
 
   --background: var(--workia-surface);
@@ -176,7 +181,7 @@
 
 .dark .login-surface {
   --login-grain-op: 0.32;
-  --login-stamp: #6b8cf8;
+  --login-stamp: var(--workia-accent-blue);
 }
 
 /* Product shell — same credential world as login, tuned for daily ops */
@@ -203,11 +208,7 @@
 
 .workia-credential-header {
   border-bottom: 1px solid var(--workia-line);
-  background: linear-gradient(
-    165deg,
-    var(--workia-badge-a),
-    var(--workia-badge-b)
-  );
+  background: var(--workia-badge-a);
   box-shadow: 0 1px 0 var(--workia-line);
 }
 
@@ -237,11 +238,11 @@
 }
 
 .workia-accent-gradient {
-  background: linear-gradient(
-    135deg,
-    var(--workia-accent-blue),
-    var(--workia-accent-violet)
-  );
+  background: var(--workia-accent-blue);
+}
+
+.workia-accent-gradient:hover {
+  background: var(--workia-accent-blue-hover);
 }
 
 .workia-route-progress {
@@ -256,11 +257,7 @@
 .workia-route-progress-bar {
   height: 100%;
   width: 80%;
-  background: linear-gradient(
-    135deg,
-    var(--workia-accent-blue),
-    var(--workia-accent-violet)
-  );
+  background: var(--workia-accent-blue);
   box-shadow: 0 0 10px
     color-mix(in srgb, var(--workia-accent-blue) 55%, transparent);
 }
@@ -285,25 +282,14 @@
 }
 
 .workia-accent-text {
-  background: linear-gradient(
-    135deg,
-    var(--workia-accent-blue),
-    var(--workia-accent-violet)
-  );
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: var(--workia-accent-blue);
 }
 
 .workia-pass-card {
   border: 1px solid var(--workia-line);
   border-radius: calc(var(--radius) * 1.4);
-  background: linear-gradient(
-    165deg,
-    var(--workia-badge-a),
-    var(--workia-badge-b)
-  );
-  box-shadow: 0 8px 24px var(--workia-shadow);
+  background: var(--workia-badge-a);
+  box-shadow: 0 1px 3px var(--workia-shadow);
 }
 
 .workia-pass-card-urgent {
@@ -367,11 +353,7 @@
   overflow: hidden;
   border: 1px solid var(--login-line);
   border-radius: 28px;
-  background: linear-gradient(
-    165deg,
-    var(--login-badge-a),
-    var(--login-badge-b)
-  );
+  background: var(--login-badge-a);
   padding: 22px 0 24px;
 }
 
@@ -386,11 +368,7 @@
   bottom: 0;
   left: 0;
   height: 1.5px;
-  background: linear-gradient(
-    90deg,
-    var(--login-accent-blue),
-    var(--login-accent-violet)
-  );
+  background: var(--login-accent-blue);
   transform: scaleX(0);
   transform-origin: left;
   transition: transform 0.3s ease;
@@ -409,18 +387,17 @@
 .login-stamp-btn {
   position: relative;
   overflow: hidden;
-  background: linear-gradient(
-    135deg,
-    var(--login-accent-blue),
-    var(--login-accent-violet)
-  );
+  background: var(--login-accent-blue);
   color: var(--login-stamp-ink);
-  box-shadow: 0 8px 20px rgba(79, 172, 254, 0.28);
+  box-shadow: 0 8px 20px
+    color-mix(in srgb, var(--login-accent-blue) 28%, transparent);
 }
 
 .login-stamp-btn:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 10px 26px rgba(139, 92, 246, 0.38);
+  background: var(--workia-accent-blue-hover);
+  box-shadow: 0 10px 26px
+    color-mix(in srgb, var(--login-accent-blue) 38%, transparent);
 }
 
 .login-stamp-btn:active:not(:disabled) {
@@ -433,11 +410,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(
-    135deg,
-    var(--login-accent-blue),
-    var(--login-accent-violet)
-  );
+  background: var(--login-accent-blue);
   font-family: var(--font-geist-mono), ui-monospace, monospace;
   font-size: 13px;
   font-weight: 600;

@@ -22,6 +22,7 @@ import {
 } from "react";
 
 import { ClickableTableRow } from "@/components/list/clickable-table-row";
+import { listFilterSelectClassName } from "@/components/list/list-filter-bar";
 import {
   ListEmptyState,
   ListResultCount,
@@ -259,25 +260,21 @@ export const DataTable = <TData,>({
 
   return (
     <div className="space-y-3">
-      <div
-        className={cn(
-          "flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end",
-          layout === "page" &&
-            "border-border/70 bg-card rounded-xl border p-4 shadow-sm",
-        )}
-      >
-        <div className="min-w-0 flex-1 space-y-2">
-          <label className="text-sm font-medium" htmlFor={searchId}>
-            Buscar
-          </label>
-          <div className="relative">
+      <div className="flex flex-col gap-3">
+        <div
+          className={cn(
+            "flex flex-col gap-3",
+            layout === "page" && "sm:flex-row sm:flex-wrap sm:items-center",
+          )}
+        >
+          <div className="relative min-w-0 flex-1">
             <SearchIcon
-              className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2"
+              className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
               aria-hidden
             />
             <Input
               aria-label={searchAriaLabel}
-              className="pl-8"
+              className="bg-card h-10 rounded-xl pl-9"
               id={searchId}
               onChange={handleSearchChange}
               placeholder={searchPlaceholder}
@@ -285,32 +282,33 @@ export const DataTable = <TData,>({
               value={globalFilter}
             />
           </div>
-        </div>
-        {toolbar}
-        <div className="space-y-2 sm:w-36">
-          <label className="text-sm font-medium" htmlFor={pageSizeId}>
-            Filas por página
-          </label>
-          <select
-            className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-8 w-full rounded-lg border px-2.5 text-sm outline-none focus-visible:ring-3"
-            id={pageSizeId}
-            onChange={handlePageSizeChange}
-            value={pagination.pageSize}
-          >
-            {pageSizes.map((size) => (
-              <option key={size} value={size}>
-                {size}
-              </option>
-            ))}
-          </select>
+          {toolbar}
+          <div className="sm:w-40">
+            <label className="sr-only" htmlFor={pageSizeId}>
+              Filas por página
+            </label>
+            <select
+              aria-label="Filas por página"
+              className={listFilterSelectClassName}
+              id={pageSizeId}
+              onChange={handlePageSizeChange}
+              value={pagination.pageSize}
+            >
+              {pageSizes.map((size) => (
+                <option key={size} value={size}>
+                  {size} por página
+                </option>
+              ))}
+            </select>
+          </div>
+          <ListResultCount
+            count={filteredCount}
+            plural={resultPlural}
+            singular={resultSingular}
+            total={scopedData.length}
+          />
         </div>
       </div>
-
-      <ListResultCount
-        count={filteredCount}
-        plural={resultPlural}
-        singular={resultSingular}
-      />
 
       {showEmpty || showNoMatches ? (
         <ListTableShell>{emptyState}</ListTableShell>

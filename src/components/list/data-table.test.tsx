@@ -110,7 +110,7 @@ describe("DataTable", () => {
 
     fireEvent.change(search, { target: { value: "Alpha" } });
 
-    expect(screen.getByText("1 resultado")).toBeTruthy();
+    expect(screen.getByText("1 de 12 resultados")).toBeTruthy();
     expect(screen.getByText("Alpha item")).toBeTruthy();
     expect(screen.queryByText("Zulu item")).toBeNull();
 
@@ -120,7 +120,7 @@ describe("DataTable", () => {
     expect(
       screen.getByText("Prueba con otros términos o limpia la búsqueda."),
     ).toBeTruthy();
-    expect(screen.getByText("0 resultados")).toBeTruthy();
+    expect(screen.getByText("0 de 12 resultados")).toBeTruthy();
   });
 
   it("sorts by column from a keyboard-activable header button", () => {
