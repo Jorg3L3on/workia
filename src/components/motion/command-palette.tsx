@@ -11,6 +11,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 import { createPortal } from "react-dom";
 import { EASE_OUT } from "@/lib/ease";
@@ -82,9 +83,13 @@ export function CommandPalette({
   );
 
   const [query, setQuery] = useState("");
-  // Portal target only exists client-side; render nothing during SSR/hydration.
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  // Portal target only exists client-side; skip during SSR, then subscribe
+  // to a client snapshot so hydration never sets state in an effect.
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
   const uid = useId();
   const reduce = useReducedMotion();
   const canTouch = useTouchCapable();

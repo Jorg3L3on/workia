@@ -1,5 +1,6 @@
 "use client";
 
+import { useReducedMotion } from "motion/react";
 import { useEffect, useState } from "react";
 
 type CountUpProps = {
@@ -8,15 +9,11 @@ type CountUpProps = {
 };
 
 export const CountUp = ({ value, className }: CountUpProps) => {
+  const reduceMotion = useReducedMotion();
   const [shown, setShown] = useState(0);
 
   useEffect(() => {
-    const reduceMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
-
     if (reduceMotion) {
-      setShown(value);
       return;
     }
 
@@ -35,7 +32,7 @@ export const CountUp = ({ value, className }: CountUpProps) => {
 
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [value]);
+  }, [value, reduceMotion]);
 
-  return <span className={className}>{shown}</span>;
+  return <span className={className}>{reduceMotion ? value : shown}</span>;
 };
