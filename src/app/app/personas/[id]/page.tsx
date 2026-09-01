@@ -144,7 +144,9 @@ const PersonaDetailPage = async ({
   }
 
   const defaultTab =
-    emit === "1" && canReadContracts && !isDeleted ? "contratos" : "datos";
+    (emit === "1" || contract === "created") && canReadContracts && !isDeleted
+      ? "contratos"
+      : "datos";
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
@@ -232,6 +234,7 @@ const PersonaDetailPage = async ({
       </div>
 
       <PersonExpedienteTabs
+        key={defaultTab}
         contratos={
           canReadContracts ? (
             <PersonContractsSection

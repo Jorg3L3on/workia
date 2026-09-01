@@ -59,73 +59,80 @@ export const AdminShell = ({ children }: AdminShellProps) => {
   };
 
   return (
-    <SidebarProvider className={SHELL_VIEWPORT_CLASS_NAME}>
-      <NavigationProgress />
-      <Sidebar collapsible="icon">
-        <SidebarHeader className="border-sidebar-border border-b p-4">
-          <Link className="font-semibold tracking-tight" href="/admin">
-            workia admin
-          </Link>
-        </SidebarHeader>
-        <SidebarContent>
-          <SidebarGroup>
-            <SidebarGroupLabel>Administración</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {adminNavItems.map((item) => (
-                  <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={pathname === item.href}
-                    >
-                      <Link href={item.href}>
-                        <item.icon />
-                        <span>{item.title}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        </SidebarContent>
-        <SidebarFooter className="border-sidebar-border border-t p-2">
-          <Button
-            aria-label="Cerrar sesión"
-            className="w-full justify-start"
-            variant="ghost"
-            type="button"
-            onClick={() => {
-              void handleCerrarSesionClick();
-            }}
+    <div className={cn("relative flex flex-col", SHELL_VIEWPORT_CLASS_NAME)}>
+      <SidebarProvider
+        className={cn("relative z-10 flex w-full", SHELL_VIEWPORT_CLASS_NAME)}
+      >
+        <NavigationProgress />
+        <Sidebar collapsible="icon">
+          <SidebarHeader className="border-sidebar-border border-b p-4">
+            <Link className="font-semibold tracking-tight" href="/admin">
+              workia admin
+            </Link>
+          </SidebarHeader>
+          <SidebarContent>
+            <SidebarGroup>
+              <SidebarGroupLabel>Administración</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {adminNavItems.map((item) => (
+                    <SidebarMenuItem key={item.href}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={pathname === item.href}
+                      >
+                        <Link href={item.href}>
+                          <item.icon />
+                          <span>{item.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </SidebarContent>
+          <SidebarFooter className="border-sidebar-border border-t p-2">
+            <Button
+              aria-label="Cerrar sesión"
+              className="w-full justify-start"
+              variant="ghost"
+              type="button"
+              onClick={() => {
+                void handleCerrarSesionClick();
+              }}
+            >
+              <LogOutIcon className="size-4" />
+              Cerrar sesión
+            </Button>
+          </SidebarFooter>
+        </Sidebar>
+        <SidebarInset className={cn("bg-background", SHELL_INSET_CLASS_NAME)}>
+          <header
+            className={cn(
+              "border-border flex h-14 shrink-0 items-center gap-2 border-b px-4",
+              SHELL_TOP_NAV_CLASS_NAME,
+            )}
+            data-slot="shell-top-nav"
           >
-            <LogOutIcon className="size-4" />
-            Cerrar sesión
-          </Button>
-        </SidebarFooter>
-      </Sidebar>
-      <SidebarInset className={SHELL_INSET_CLASS_NAME}>
-        <header
-          className={cn(
-            "border-border flex h-14 shrink-0 items-center gap-2 border-b px-4",
-            SHELL_TOP_NAV_CLASS_NAME,
-          )}
-          data-slot="shell-top-nav"
-        >
-          <SidebarTrigger />
-          <Separator
-            className="mr-2 data-[orientation=vertical]:h-4"
-            orientation="vertical"
-          />
-          <AppBreadcrumbs />
-        </header>
-        <div
-          className={cn("p-6", SHELL_MAIN_SCROLL_CLASS_NAME)}
-          data-slot="shell-main-scroll"
-        >
-          {children}
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
+            <SidebarTrigger />
+            <Separator
+              className="mr-2 data-[orientation=vertical]:h-4"
+              orientation="vertical"
+            />
+            <AppBreadcrumbs />
+          </header>
+          <div
+            className={cn(
+              "flex w-full flex-col p-6",
+              SHELL_MAIN_SCROLL_CLASS_NAME,
+            )}
+            data-slot="shell-main-scroll"
+          >
+            {children}
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
+    </div>
   );
 };

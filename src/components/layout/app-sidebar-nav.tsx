@@ -84,6 +84,9 @@ export const AppSidebarNav = ({ items }: AppSidebarNavProps) => {
         <SharedLayoutBg
           as="ul"
           className="flex w-full min-w-0 flex-col gap-0"
+          data-sidebar="menu"
+          data-slot="sidebar-menu"
+          enableLayoutRoot={false}
           inset={0}
           pillClassName="rounded-md bg-sidebar-accent"
         >

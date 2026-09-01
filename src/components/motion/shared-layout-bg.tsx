@@ -36,6 +36,8 @@ export interface SharedLayoutBgProps extends Omit<
   inset?: number;
   /** Optional positioning override for the pill wrapper inside each item. */
   pillContainerClassName?: string;
+  /** Keep false inside overflow-locked shells so layout projection cannot stretch the viewport. */
+  enableLayoutRoot?: boolean;
 }
 
 const variants: Variants = {
@@ -61,6 +63,7 @@ export const SharedLayoutBg = forwardRef<HTMLElement, SharedLayoutBgProps>(
       pillClassName,
       pillContainerClassName,
       inset = 20,
+      enableLayoutRoot = true,
       ...props
     },
     forwardedRef,
@@ -132,7 +135,7 @@ export const SharedLayoutBg = forwardRef<HTMLElement, SharedLayoutBgProps>(
       <motion.ul
         {...(props as HTMLMotionProps<"ul">)}
         ref={forwardedRef as Ref<HTMLUListElement>}
-        layoutRoot
+        layoutRoot={enableLayoutRoot || undefined}
         onMouseLeave={handleMouseLeave}
         className={cn("flex w-full flex-col", className)}
       >
@@ -142,7 +145,7 @@ export const SharedLayoutBg = forwardRef<HTMLElement, SharedLayoutBgProps>(
       <motion.div
         {...(props as HTMLMotionProps<"div">)}
         ref={forwardedRef as Ref<HTMLDivElement>}
-        layoutRoot
+        layoutRoot={enableLayoutRoot || undefined}
         onMouseLeave={handleMouseLeave}
         className={cn("flex w-full flex-col", className)}
       >
