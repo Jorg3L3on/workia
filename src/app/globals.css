@@ -49,18 +49,18 @@
 }
 
 :root {
-  /* Product floor — Zigzag-like list chrome: cool grey surface, white cards, solid blue */
-  --workia-surface: #f3f4f6;
+  /* Product floor — Workia teal brand: cool surface, white cards, solid ocean-teal accent */
+  --workia-surface: #f2f6f7;
   --workia-badge-a: #ffffff;
-  --workia-badge-b: #f3f4f6;
+  --workia-badge-b: #f2f6f7;
   --workia-ink: #111827;
   --workia-ink-muted: #6b7280;
   --workia-ink-faint: #9ca3af;
   --workia-line: rgba(17, 24, 39, 0.1);
   --workia-line-strong: rgba(17, 24, 39, 0.16);
-  --workia-accent-blue: #2563eb;
-  --workia-accent-blue-hover: #1d4ed8;
-  --workia-accent-violet: #2563eb;
+  --workia-accent-blue: #0b7fa6;
+  --workia-accent-blue-hover: #096889;
+  --workia-accent-violet: #19c8a0;
   --workia-success: #16a34a;
   --workia-shadow: rgba(17, 24, 39, 0.08);
 
@@ -99,17 +99,17 @@
 }
 
 .dark {
-  --workia-surface: #0b0f19;
-  --workia-badge-a: #121826;
-  --workia-badge-b: #1a2233;
+  --workia-surface: #0a1519;
+  --workia-badge-a: #0f1e23;
+  --workia-badge-b: #16282e;
   --workia-ink: #f8fafc;
   --workia-ink-muted: #94a3b8;
   --workia-ink-faint: #64748b;
   --workia-line: rgba(248, 250, 252, 0.1);
   --workia-line-strong: rgba(248, 250, 252, 0.18);
-  --workia-accent-blue: #3b82f6;
-  --workia-accent-blue-hover: #2563eb;
-  --workia-accent-violet: #3b82f6;
+  --workia-accent-blue: #19c8a0;
+  --workia-accent-blue-hover: #14b08c;
+  --workia-accent-violet: #4cb5d6;
   --workia-success: #22c55e;
   --workia-shadow: rgba(0, 0, 0, 0.45);
 
@@ -120,7 +120,7 @@
   --popover: var(--workia-badge-a);
   --popover-foreground: var(--workia-ink);
   --primary: var(--workia-accent-blue);
-  --primary-foreground: #ffffff;
+  --primary-foreground: #05201a;
   --secondary: var(--workia-badge-b);
   --secondary-foreground: var(--workia-ink);
   --muted: var(--workia-badge-b);
@@ -139,7 +139,7 @@
   --sidebar: var(--workia-badge-a);
   --sidebar-foreground: var(--workia-ink);
   --sidebar-primary: var(--workia-accent-blue);
-  --sidebar-primary-foreground: #ffffff;
+  --sidebar-primary-foreground: #05201a;
   --sidebar-accent: var(--workia-badge-b);
   --sidebar-accent-foreground: var(--workia-ink);
   --sidebar-border: var(--workia-line);
@@ -187,6 +187,7 @@
 
 .dark .login-surface {
   --login-grain-op: 0.12;
+  --login-stamp-ink: #05201a;
   --login-stamp: var(--workia-accent-blue);
 }
 
