@@ -99,6 +99,11 @@ export const contracts = pgTable(
     index("contracts_vigente_person_idx")
       .on(table.personId)
       .where(sql`${table.status} = 'vigente' AND ${table.deletedAt} IS NULL`),
+    index("contracts_renewal_end_date_idx")
+      .on(table.endDate)
+      .where(
+        sql`${table.status} = 'vigente' AND ${table.type} = 'determinado' AND ${table.deletedAt} IS NULL`,
+      ),
   ],
 );
 

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import { PencilIcon } from "lucide-react";
 
 import { pageTitles } from "@/lib/brand/chrome-copy";
@@ -11,6 +12,7 @@ import { PersonAssetsSection } from "@/components/resguardo/person-assets-sectio
 import { PersonExpedienteTabs } from "@/components/people/person-expediente-tabs";
 import { DeletePersonButton } from "@/components/people/delete-person-button";
 import { PersonForm } from "@/components/people/person-form";
+import { SectionSkeleton } from "@/components/loading/page-skeletons";
 import { PageBreadcrumbLabel } from "@/components/layout/app-breadcrumbs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,17 +20,14 @@ import { listAuditEvents } from "@/lib/audit";
 import {
   listActiveAreas,
   listActivePositions,
-  listActivitiesForPosition,
+  listActivitiesForPersonPosition,
 } from "@/lib/catalog";
 import {
   listActiveContractTemplates,
   listContractsByPerson,
 } from "@/lib/contracts";
 import { listAssetsByPerson } from "@/lib/resguardo";
-import {
-  getPersonWithRelations,
-  listActivePeopleForSelect,
-} from "@/lib/people";
+import { getPersonWithRelations } from "@/lib/people";
 import { requirePeopleRead } from "@/lib/people/auth";
 import {
   formatDateLabel,
@@ -70,6 +69,22 @@ type PersonaDetailPageProps = {
   }>;
 };
 
+const PersonHistory = async ({ personId }: { personId: string }) => {
+  const auditEvents = await listAuditEvents({
+    resourceType: "person",
+    resourceId: personId,
+    limit: 50,
+  });
+
+  return (
+    <AuditEventList
+      emptyMessage="Aún no hay cambios registrados para esta persona."
+      events={auditEvents}
+      layout="inset"
+    />
+  );
+};
+
 const PersonaDetailPage = async ({
   params,
   searchParams,
@@ -86,14 +101,10 @@ const PersonaDetailPage = async ({
     canReadContracts,
     canCreateContracts,
     canReadAssets,
-    areas,
-    positions,
-    sites,
-    managers,
-    auditEvents,
     personContracts,
     contractTemplates,
     personAssets,
+    positionActivities,
   ] = await Promise.all([
     getPersonWithRelations(id, true),
     userHasPermission(session.user.id, "people:update"),
@@ -102,37 +113,43 @@ const PersonaDetailPage = async ({
     userHasPermission(session.user.id, "contracts:read"),
     userHasPermission(session.user.id, "contracts:create"),
     userHasPermission(session.user.id, "assets:read"),
-    listActiveAreas(),
-    listActivePositions(),
-    listActiveSites(),
-    listActivePeopleForSelect(id),
-    listAuditEvents({ resourceType: "person", resourceId: id, limit: 50 }),
     listContractsByPerson(id),
     listActiveContractTemplates(),
     userHasPermission(session.user.id, "assets:read").then((allowed) =>
       allowed ? listAssetsByPerson(id) : Promise.resolve([]),
     ),
+    listActivitiesForPersonPosition(id),
   ]);
 
   if (!person) {
     notFound();
   }
 
-  const positionActivities = person.position
-    ? await listActivitiesForPosition(person.position.id)
-    : [];
-
   const isDeleted = personIsDeleted(person);
   const isEditing = edit === "1" && canUpdate && !isDeleted;
   const personName = formatPersonName(person);
 
   if (isEditing) {
+    // Form options are only needed here; view mode never loads them.
+    const [areas, positions, sites] = await Promise.all([
+      listActiveAreas(),
+      listActivePositions(),
+      listActiveSites(),
+    ]);
+
     return (
       <div className="mx-auto w-full max-w-3xl">
         <PageBreadcrumbLabel label={personName} />
         <PersonForm
           areas={areas}
-          managers={managers}
+          initialManager={
+            person.manager
+              ? {
+                  id: person.manager.id,
+                  label: formatPersonName(person.manager),
+                }
+              : null
+          }
           mode="edit"
           person={person}
           positions={positions}
@@ -392,11 +409,9 @@ const PersonaDetailPage = async ({
                   Quién cambió qué en este expediente.
                 </p>
               </div>
-              <AuditEventList
-                emptyMessage="Aún no hay cambios registrados para esta persona."
-                events={auditEvents}
-                layout="inset"
-              />
+              <Suspense fallback={<SectionSkeleton rows={3} />}>
+                <PersonHistory personId={id} />
+              </Suspense>
             </div>
           ) : undefined
         }

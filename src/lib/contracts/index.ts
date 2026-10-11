@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNotNull, isNull, sql } from "drizzle-orm";
 
 import {
   buildChanges,
@@ -7,7 +7,7 @@ import {
   snapshotContractTemplate,
 } from "@/lib/audit";
 import { db } from "@/lib/db";
-import { contractTemplates, contracts, people } from "@/lib/db/schema";
+import { areas, contractTemplates, contracts, people } from "@/lib/db/schema";
 import type { ContractStatus } from "@/lib/db/schema/contracts";
 import { getPersonWithRelations } from "@/lib/people";
 import { formatHorarioToken, formatPersonName } from "@/lib/people/schema";
@@ -18,11 +18,7 @@ import type {
   ContractTemplateFormValues,
   RenewContractFormValues,
 } from "./schema";
-import {
-  buildContractScheduleSnapshot,
-  fillContractTemplate,
-  isContractInRenewalWindow,
-} from "./schema";
+import { buildContractScheduleSnapshot, fillContractTemplate } from "./schema";
 
 const normalizeEndDate = (
   type: ContractFormValues["type"],
@@ -271,7 +267,10 @@ export const getVigenteContractForPerson = async (personId: string) => {
 };
 
 export type RenewalTrayItem = {
-  contract: typeof contracts.$inferSelect;
+  contract: Pick<
+    typeof contracts.$inferSelect,
+    "id" | "endDate" | "noticeWindow"
+  >;
   personName: string;
   personId: string;
   areaName: string | null;
@@ -279,67 +278,77 @@ export type RenewalTrayItem = {
   noticeWindow: typeof contracts.$inferSelect.noticeWindow;
 };
 
+// Notice window in months, as SQL; null for "no_avisar".
+const noticeMonthsSql = sql<number | null>`case ${contracts.noticeWindow}
+  when 'no_avisar' then null
+  else substring(${contracts.noticeWindow}::text from '^[0-9]+')::int
+end`;
+
+const renewalTrayWhere = (referenceDate?: string) => {
+  const today = referenceDate ? sql`${referenceDate}::date` : sql`current_date`;
+
+  return and(
+    eq(contracts.status, "vigente"),
+    eq(contracts.type, "determinado"),
+    isNull(contracts.deletedAt),
+    isNull(people.deletedAt),
+    isNotNull(contracts.endDate),
+    sql`${noticeMonthsSql} is not null`,
+    sql`${today} >= (${contracts.endDate}::date - (${noticeMonthsSql} * interval '1 month'))::date`,
+    sql`${today} <= ${contracts.endDate}::date`,
+  );
+};
+
+/** Renewal tray in one query (people + areas joined, window filtered in SQL). */
 export const listRenewalTrayItems = async (
   referenceDate?: string,
+  limit?: number,
 ): Promise<RenewalTrayItem[]> => {
-  const rows = await db
+  const query = db
     .select({
-      contract: contracts,
+      contractId: contracts.id,
+      endDate: contracts.endDate,
+      noticeWindow: contracts.noticeWindow,
+      personId: people.id,
       nombres: people.nombres,
       apellidoPaterno: people.apellidoPaterno,
       apellidoMaterno: people.apellidoMaterno,
-      personId: people.id,
-      areaName: sql<string | null>`null`,
+      areaName: areas.name,
     })
     .from(contracts)
     .innerJoin(people, eq(contracts.personId, people.id))
-    .where(
-      and(
-        eq(contracts.status, "vigente"),
-        eq(contracts.type, "determinado"),
-        isNull(contracts.deletedAt),
-        isNull(people.deletedAt),
-      ),
-    )
+    .leftJoin(areas, eq(people.areaId, areas.id))
+    .where(renewalTrayWhere(referenceDate))
     .orderBy(asc(contracts.endDate));
 
-  const personIds = [...new Set(rows.map((row) => row.personId))];
-  const peopleWithRelations = await Promise.all(
-    personIds.map((id) => getPersonWithRelations(id)),
-  );
-  const areaByPerson = new Map(
-    peopleWithRelations
-      .filter(Boolean)
-      .map((person) => [person!.id, person!.area?.name ?? null]),
-  );
+  const rows = await (limit ? query.limit(limit) : query);
 
-  return rows
-    .filter((row) =>
-      isContractInRenewalWindow({
-        type: row.contract.type,
-        status: row.contract.status,
-        endDate: row.contract.endDate,
-        noticeWindow: row.contract.noticeWindow,
-        referenceDate,
-      }),
-    )
-    .map((row) => ({
-      contract: row.contract,
-      personName: formatPersonName({
-        nombres: row.nombres,
-        apellidoPaterno: row.apellidoPaterno,
-        apellidoMaterno: row.apellidoMaterno,
-      }),
-      personId: row.personId,
-      areaName: areaByPerson.get(row.personId) ?? null,
-      endDate: row.contract.endDate!,
-      noticeWindow: row.contract.noticeWindow,
-    }));
+  return rows.map((row) => ({
+    contract: {
+      id: row.contractId,
+      endDate: row.endDate,
+      noticeWindow: row.noticeWindow,
+    },
+    personName: formatPersonName({
+      nombres: row.nombres,
+      apellidoPaterno: row.apellidoPaterno,
+      apellidoMaterno: row.apellidoMaterno,
+    }),
+    personId: row.personId,
+    areaName: row.areaName ?? null,
+    endDate: row.endDate!,
+    noticeWindow: row.noticeWindow,
+  }));
 };
 
 export const countRenewalTrayItems = async (referenceDate?: string) => {
-  const items = await listRenewalTrayItems(referenceDate);
-  return items.length;
+  const [row] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(contracts)
+    .innerJoin(people, eq(contracts.personId, people.id))
+    .where(renewalTrayWhere(referenceDate));
+
+  return row?.count ?? 0;
 };
 
 const emitContractRecord = async (

@@ -9,6 +9,8 @@ export const AUDIT_RESOURCE_TYPES = [
   "contract_template",
   "asset",
   "asset_movement",
+  "people_import",
+  "people_export",
 ] as const;
 
 export type AuditResourceType = (typeof AUDIT_RESOURCE_TYPES)[number];
@@ -27,6 +29,9 @@ export const AUDIT_ACTIONS = [
   "return",
   "link",
   "unlink",
+  "import",
+  "export",
+  "undo",
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
@@ -45,6 +50,9 @@ export const auditActionLabels: Record<AuditAction, string> = {
   return: "Devolución",
   link: "Asignación",
   unlink: "Desasignación",
+  import: "Importación",
+  export: "Exportación",
+  undo: "Deshacer importación",
 };
 
 export const auditResourceTypeLabels: Record<AuditResourceType, string> = {
@@ -58,6 +66,8 @@ export const auditResourceTypeLabels: Record<AuditResourceType, string> = {
   contract_template: "Plantilla de contrato",
   asset: "Activo",
   asset_movement: "Movimiento de resguardo",
+  people_import: "Importación de personas",
+  people_export: "Exportación de personas",
 };
 
 export type AuditPayload = {
@@ -78,7 +88,7 @@ export type RecordAuditEventInput = {
   resourceId: string;
   action: AuditAction;
   result?: "success" | "failure";
-  source?: "app" | "seed" | "system";
+  source?: "app" | "seed" | "system" | "import";
   payload?: AuditPayload;
   requestMeta?: AuditRequestMeta;
 };
@@ -91,4 +101,5 @@ export type ListAuditEventsOptions = {
   from?: Date;
   to?: Date;
   limit?: number;
+  offset?: number;
 };

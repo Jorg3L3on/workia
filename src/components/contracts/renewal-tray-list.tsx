@@ -15,7 +15,7 @@ import {
 import { TableCell, TableRow } from "@/components/ui/table";
 
 export type RenewalTrayItem = {
-  contract: Contract;
+  contract: Pick<Contract, "id">;
   personName: string;
   personId: string;
   endDate: string;

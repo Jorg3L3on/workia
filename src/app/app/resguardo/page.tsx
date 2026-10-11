@@ -26,7 +26,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { listAssets } from "@/lib/resguardo";
+import { ListPager } from "@/components/list/list-pager";
+import { pageCountFor, parseListPaging } from "@/lib/list/paging";
+import { listAssetsPage } from "@/lib/resguardo";
 import { assertAssetsListAccess } from "@/lib/resguardo/actions";
 import { assetCategoryLabels, assetStatusLabels } from "@/lib/resguardo/schema";
 import { userHasPermission } from "@/lib/rbac";
@@ -43,15 +45,19 @@ type ResguardoPageProps = {
     status?: "disponible" | "asignado" | "baja";
     deleted?: string;
     error?: string;
+    page?: string;
+    pageSize?: string;
   }>;
 };
 
 const ResguardoPage = async ({ searchParams }: ResguardoPageProps) => {
   const session = await assertAssetsListAccess();
-  const { q, status, deleted, error } = await searchParams;
+  const params = await searchParams;
+  const { q, status, deleted, error } = params;
+  const { page, pageSize } = parseListPaging(params);
 
-  const [items, canCreate] = await Promise.all([
-    listAssets({ query: q, status }),
+  const [{ items, total }, canCreate] = await Promise.all([
+    listAssetsPage({ query: q, status, page, pageSize }),
     userHasPermission(session.user.id, "assets:create"),
   ]);
 
@@ -123,11 +129,7 @@ const ResguardoPage = async ({ searchParams }: ResguardoPageProps) => {
         <Button className="h-10 rounded-full" type="submit" variant="outline">
           Filtrar
         </Button>
-        <ListResultCount
-          count={items.length}
-          plural="activos"
-          singular="activo"
-        />
+        <ListResultCount count={total} plural="activos" singular="activo" />
       </form>
 
       <ListTableShell>
@@ -209,6 +211,13 @@ const ResguardoPage = async ({ searchParams }: ResguardoPageProps) => {
           </Table>
         )}
       </ListTableShell>
+
+      <ListPager
+        page={page}
+        pageCount={pageCountFor(total, pageSize)}
+        params={{ q, status }}
+        pathname="/app/resguardo"
+      />
     </div>
   );
 };

@@ -143,3 +143,35 @@ describe("people permissions catalog", () => {
     expect(slugs).toContain("sites:read");
   });
 });
+
+describe("personFormSchema identifiers", () => {
+  const base = {
+    nombres: "Ana",
+    apellidoPaterno: "López",
+    status: "activa" as const,
+  };
+
+  it("normalizes RFC and rejects invalid CURP/NSS", () => {
+    const ok = personFormSchema.safeParse({
+      ...base,
+      rfc: " xaxx 010101 000 ",
+    });
+
+    expect(ok.success && ok.data.rfc).toBe("XAXX010101000");
+
+    const bad = personFormSchema.safeParse({
+      ...base,
+      curp: "NOPE",
+      nss: "123",
+    });
+
+    expect(bad.success).toBe(false);
+  });
+
+  it("accepts blank identifiers", () => {
+    expect(
+      personFormSchema.safeParse({ ...base, rfc: "", curp: "", nss: "" })
+        .success,
+    ).toBe(true);
+  });
+});

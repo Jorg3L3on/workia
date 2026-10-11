@@ -24,6 +24,8 @@ export const pageTitles = {
   inicio: "Inicio",
   personas: "Personas",
   nuevaPersona: "Nueva persona",
+  importarPersonas: "Importar personas",
+  importaciones: "Historial de importaciones",
   expediente: "Expediente",
   contratos: "Contratos",
   plantillas: "Plantillas",

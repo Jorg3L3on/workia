@@ -12,6 +12,7 @@ import { db } from "@/lib/db";
 import {
   activities,
   areas,
+  people,
   positionActivities,
   positions,
 } from "@/lib/db/schema";
@@ -506,6 +507,23 @@ export const listActivitiesForPosition = async (positionId: string) => {
   const grouped = await listActivitiesByPositionIds([positionId]);
   return grouped.get(positionId) ?? [];
 };
+
+/** Activities of the person's position, resolved by person id so pages can fetch them in parallel with the person. */
+export const listActivitiesForPersonPosition = async (personId: string) =>
+  db
+    .select({
+      id: activities.id,
+      name: activities.name,
+      active: activities.active,
+    })
+    .from(people)
+    .innerJoin(
+      positionActivities,
+      eq(positionActivities.positionId, people.positionId),
+    )
+    .innerJoin(activities, eq(positionActivities.activityId, activities.id))
+    .where(and(eq(people.id, personId), isNull(activities.deletedAt)))
+    .orderBy(asc(activities.name));
 
 export const assignActivityToPosition = async (
   positionId: string,

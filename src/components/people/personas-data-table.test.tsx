@@ -1,8 +1,12 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+const replace = vi.fn();
+
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => ({ push: vi.fn(), replace }),
+  usePathname: () => "/app/personas",
+  useSearchParams: () => new URLSearchParams("q=demo&page=2"),
 }));
 
 import { chooseSelectOption } from "@/test/choose-select-option";
@@ -11,6 +15,7 @@ import { OFFICIAL_DELETED_DEMO_FULL_NAME } from "@/lib/people/borrados-cleanup";
 
 afterEach(() => {
   cleanup();
+  replace.mockClear();
 });
 
 const demoPeople = [
@@ -21,49 +26,61 @@ const demoPeople = [
     fechaIngreso: "2026-03-15",
     status: "activa" as const,
     deleted: false,
-    searchText: "Persona Demo XAXX010101000",
-  },
-  {
-    id: "person-borrada",
-    name: OFFICIAL_DELETED_DEMO_FULL_NAME,
-    rfc: "XAXX010101001",
-    fechaIngreso: "2025-01-02",
-    status: "activa" as const,
-    deleted: true,
-    searchText: `${OFFICIAL_DELETED_DEMO_FULL_NAME} XAXX010101001`,
   },
 ];
 
-describe("PersonasDataTable deleted visibility", () => {
-  it("hides soft-deleted people from the default expediente list", () => {
-    render(<PersonasDataTable people={demoPeople} />);
+const baseProps = {
+  page: 2,
+  pageSize: 25,
+  query: "demo",
+  status: "" as const,
+  total: 30,
+  visibility: "expediente" as const,
+};
+
+describe("PersonasDataTable (server paged)", () => {
+  it("renders the rows it is given and the server total", () => {
+    render(<PersonasDataTable {...baseProps} people={demoPeople} />);
 
     expect(screen.getAllByText("Persona Demo").length).toBeGreaterThan(0);
     expect(screen.getAllByText("15/03/2026").length).toBeGreaterThan(0);
     expect(screen.queryByText("03/15/2026")).toBeNull();
-    expect(screen.queryByText(OFFICIAL_DELETED_DEMO_FULL_NAME)).toBeNull();
+    expect(screen.getByText(/30/)).toBeTruthy();
   });
 
-  it("opens the borrados list when initialVisibility is deleted", () => {
+  it("shows the borrados rows when the server sends them", () => {
     render(
-      <PersonasDataTable initialVisibility="deleted" people={demoPeople} />,
+      <PersonasDataTable
+        {...baseProps}
+        people={[
+          {
+            id: "person-borrada",
+            name: OFFICIAL_DELETED_DEMO_FULL_NAME,
+            rfc: null,
+            fechaIngreso: null,
+            status: "activa",
+            deleted: true,
+          },
+        ]}
+        visibility="deleted"
+      />,
     );
 
     expect(
       screen.getAllByText(OFFICIAL_DELETED_DEMO_FULL_NAME).length,
     ).toBeGreaterThan(0);
-    expect(screen.queryByText("Persona Demo")).toBeNull();
+    expect(screen.getAllByText("Borrado").length).toBeGreaterThan(0);
   });
 
-  it("shows soft-deleted people when the borrados filter is selected", () => {
-    render(<PersonasDataTable people={demoPeople} />);
+  it("asks the server for borrados through the URL and resets the page", () => {
+    render(<PersonasDataTable {...baseProps} people={demoPeople} />);
 
     chooseSelectOption("Expediente", "Borrados");
 
-    expect(
-      screen.getAllByText(OFFICIAL_DELETED_DEMO_FULL_NAME).length,
-    ).toBeGreaterThan(0);
-    expect(screen.getAllByText("Borrado").length).toBeGreaterThan(0);
-    expect(screen.queryByText("Persona Demo")).toBeNull();
+    expect(replace).toHaveBeenCalledTimes(1);
+    const url = String(replace.mock.calls[0][0]);
+    expect(url).toContain("deleted=1");
+    expect(url).toContain("q=demo");
+    expect(url).not.toContain("page=");
   });
 });

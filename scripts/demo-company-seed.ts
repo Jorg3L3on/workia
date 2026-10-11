@@ -7,6 +7,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { recordAuditEvent } from "@/lib/audit";
 import { fillContractTemplate } from "@/lib/contracts/schema";
 import { db } from "@/lib/db";
+import { curpCheckDigit, isValidNss } from "@/lib/people/identity";
 import { formatHorarioToken } from "@/lib/people/schema";
 import {
   activities,
@@ -32,14 +33,34 @@ const addDays = (base: Date, days: number) => {
 
 const subtractDays = (base: Date, days: number) => addDays(base, -days);
 
+// Fake identifiers must be unique per person (active people cannot share a
+// CURP or RFC) and pass the same validation as the person form.
+const CURP_CONSONANTS = "BCDFGHJKLMNPQRSTVWXZ";
+
 const fakeRfc = (index: number) =>
-  `XAXX01010${String(index).padStart(1, "0")}000`.slice(0, 13);
+  `XAXX010101${index.toString(36).toUpperCase().padStart(3, "0")}`;
 
-const fakeCurp = (index: number) =>
-  `XAXX010101HDFXXX${String(index).padStart(2, "0")}`.slice(0, 18);
+const fakeCurp = (index: number) => {
+  const consonants = [
+    index % 20,
+    Math.floor(index / 20) % 20,
+    Math.floor(index / 400) % 20,
+  ]
+    .map((digit) => CURP_CONSONANTS[digit])
+    .join("");
+  const base = `XAXX010101HDF${consonants}0`;
 
-const fakeNss = (index: number) =>
-  `999999999${String(index).padStart(2, "0")}`.slice(0, 11);
+  return `${base}${curpCheckDigit(base)}`;
+};
+
+const fakeNss = (index: number) => {
+  const body = `9999999${String(index).padStart(3, "0")}`;
+  const check = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].find((digit) =>
+    isValidNss(`${body}${digit}`),
+  );
+
+  return `${body}${check}`;
+};
 
 const DEFAULT_TEMPLATE_BODY = `Contrato de trabajo
 
@@ -692,9 +713,9 @@ const DEMO_SCHEDULE_PEOPLE = [
     nombres: "Persona",
     apellidoPaterno: "HorarioUno",
     apellidoMaterno: "Demo",
-    rfc: "XAXX010101001",
-    curp: "XAXX010101HDFXXX01",
-    nss: "99999999901",
+    rfc: fakeRfc(901),
+    curp: fakeCurp(901),
+    nss: fakeNss(901),
     schedule: {
       entrada: "08:00",
       salidaComer: "13:00",
@@ -707,9 +728,9 @@ const DEMO_SCHEDULE_PEOPLE = [
     nombres: "Persona",
     apellidoPaterno: "HorarioDos",
     apellidoMaterno: "Demo",
-    rfc: "XAXX010101002",
-    curp: "XAXX010101HDFXXX02",
-    nss: "99999999902",
+    rfc: fakeRfc(902),
+    curp: fakeCurp(902),
+    nss: fakeNss(902),
     schedule: {
       entrada: "09:00",
       salidaComer: "14:00",

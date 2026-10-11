@@ -1,14 +1,19 @@
-import { and, desc, eq, gte, lte } from "drizzle-orm";
+import { createHash } from "node:crypto";
 
-import { db } from "@/lib/db";
+import { and, count, desc, eq, gte, lte, sql } from "drizzle-orm";
+
+import { db, type DbExecutor } from "@/lib/db";
 import { auditEvents, users } from "@/lib/db/schema";
 
 import type { AuditPayload } from "./types";
 import type { ListAuditEventsOptions, RecordAuditEventInput } from "./types";
 
 /** Append-only: audit events are inserted, never updated or deleted via the app. */
-export const recordAuditEvent = async (input: RecordAuditEventInput) => {
-  const [created] = await db
+export const recordAuditEvent = async (
+  input: RecordAuditEventInput,
+  executor: DbExecutor = db,
+) => {
+  const [created] = await executor
     .insert(auditEvents)
     .values({
       actorUserId: input.actorUserId ?? null,
@@ -25,7 +30,7 @@ export const recordAuditEvent = async (input: RecordAuditEventInput) => {
   return created;
 };
 
-export const listAuditEvents = async (options: ListAuditEventsOptions = {}) => {
+const buildAuditFilters = (options: ListAuditEventsOptions) => {
   const filters = [];
 
   if (options.resourceType) {
@@ -52,12 +57,22 @@ export const listAuditEvents = async (options: ListAuditEventsOptions = {}) => {
     filters.push(lte(auditEvents.occurredAt, options.to));
   }
 
-  const whereClause =
-    filters.length === 0
-      ? undefined
-      : filters.length === 1
-        ? filters[0]
-        : and(...filters);
+  return filters.length === 0 ? undefined : and(...filters);
+};
+
+export const countAuditEvents = async (
+  options: ListAuditEventsOptions = {},
+) => {
+  const [row] = await db
+    .select({ total: count() })
+    .from(auditEvents)
+    .where(buildAuditFilters(options));
+
+  return row?.total ?? 0;
+};
+
+export const listAuditEvents = async (options: ListAuditEventsOptions = {}) => {
+  const whereClause = buildAuditFilters(options);
 
   return db
     .select({
@@ -70,15 +85,17 @@ export const listAuditEvents = async (options: ListAuditEventsOptions = {}) => {
       action: auditEvents.action,
       result: auditEvents.result,
       source: auditEvents.source,
-      payload: auditEvents.payload,
+      // Lists only render summary and changes; skip before/after snapshots.
+      payload: sql<AuditPayload | null>`case when ${auditEvents.payload} is null then null else jsonb_strip_nulls(jsonb_build_object('summary', ${auditEvents.payload} -> 'summary', 'changes', ${auditEvents.payload} -> 'changes')) end`,
       requestMeta: auditEvents.requestMeta,
       occurredAt: auditEvents.occurredAt,
     })
     .from(auditEvents)
     .leftJoin(users, eq(auditEvents.actorUserId, users.id))
     .where(whereClause)
-    .orderBy(desc(auditEvents.occurredAt))
+    .orderBy(desc(auditEvents.occurredAt), desc(auditEvents.id))
     .limit(options.limit ?? 200)
+    .offset(options.offset ?? 0)
     .then((rows) =>
       rows.map((row) => ({
         ...row,
@@ -176,6 +193,17 @@ export const snapshotSite = (site: Record<string, unknown>) => ({
   deletedAt: site.deletedAt,
 });
 
+const summarizeGeneratedText = (text: unknown) =>
+  typeof text === "string"
+    ? {
+        generatedTextLength: text.length,
+        generatedTextHash: createHash("sha256")
+          .update(text)
+          .digest("hex")
+          .slice(0, 16),
+      }
+    : { generatedTextLength: null, generatedTextHash: null };
+
 export const snapshotContract = (contract: Record<string, unknown>) => ({
   personId: contract.personId,
   type: contract.type,
@@ -184,7 +212,8 @@ export const snapshotContract = (contract: Record<string, unknown>) => ({
   noticeWindow: contract.noticeWindow,
   templateId: contract.templateId,
   templateName: contract.templateName,
-  generatedText: contract.generatedText,
+  // The full text lives on the contract row; audit keeps only its size and hash.
+  ...summarizeGeneratedText(contract.generatedText),
   scheduleEntrada: contract.scheduleEntrada,
   scheduleSalidaComer: contract.scheduleSalidaComer,
   scheduleRegresoComer: contract.scheduleRegresoComer,

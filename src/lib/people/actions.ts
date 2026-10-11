@@ -5,9 +5,11 @@ import { redirect } from "next/navigation";
 
 import { AuthorizationError } from "@/lib/rbac";
 
+import { DuplicateIdentityError } from "./identity";
 import {
   createPerson,
   getPersonById,
+  searchActivePeopleForSelect,
   softDeletePerson,
   updatePerson,
 } from "./index";
@@ -17,7 +19,11 @@ import {
   requirePeopleRead,
   requirePeopleUpdate,
 } from "./auth";
-import { personFormSchema, type PersonFormValues } from "./schema";
+import {
+  formatPersonName,
+  personFormSchema,
+  type PersonFormValues,
+} from "./schema";
 
 export type PersonActionState = {
   error?: string;
@@ -77,6 +83,19 @@ const parsePersonForm = (
   return parsed.data;
 };
 
+const duplicateIdentityState = (
+  error: DuplicateIdentityError,
+): PersonActionState => ({
+  fieldErrors: Object.fromEntries(
+    error.fields.map((field) => [
+      field,
+      field === "curp"
+        ? "Ya existe una persona activa con esta CURP"
+        : "Ya existe una persona activa con este RFC",
+    ]),
+  ),
+});
+
 const revalidatePersonPaths = (personId?: string) => {
   revalidatePath("/app/personas");
   revalidatePath("/app");
@@ -109,7 +128,17 @@ export const createPersonAction = async (
     return parsed;
   }
 
-  const created = await createPerson(parsed, session.user.id);
+  let created;
+
+  try {
+    created = await createPerson(parsed, session.user.id);
+  } catch (error) {
+    if (error instanceof DuplicateIdentityError) {
+      return duplicateIdentityState(error);
+    }
+
+    throw error;
+  }
 
   revalidatePersonPaths(created.id);
   redirect(`/app/personas/${created.id}`);
@@ -144,7 +173,15 @@ export const updatePersonAction = async (
     return parsed;
   }
 
-  await updatePerson(personId, parsed, session.user.id);
+  try {
+    await updatePerson(personId, parsed, session.user.id);
+  } catch (error) {
+    if (error instanceof DuplicateIdentityError) {
+      return duplicateIdentityState(error);
+    }
+
+    throw error;
+  }
 
   revalidatePersonPaths(personId);
   redirect(`/app/personas/${personId}?saved=1`);
@@ -176,3 +213,24 @@ export const deletePersonAction = async (personId: string): Promise<void> => {
 };
 
 export const assertPeopleListAccess = async () => requirePeopleRead();
+
+export type ManagerOption = { id: string; label: string };
+
+/** Server action behind the manager picker: needs people:update, or create for new records. */
+export const searchManagerOptionsAction = async (
+  query: string,
+  excludeId?: string,
+): Promise<ManagerOption[]> => {
+  try {
+    await requirePeopleRead();
+  } catch {
+    return [];
+  }
+
+  const rows = await searchActivePeopleForSelect(
+    query.slice(0, 80),
+    excludeId || undefined,
+  );
+
+  return rows.map((row) => ({ id: row.id, label: formatPersonName(row) }));
+};

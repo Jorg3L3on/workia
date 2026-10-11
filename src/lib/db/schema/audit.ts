@@ -31,6 +31,11 @@ export const auditEvents = pgTable(
   (table) => [
     index("audit_events_occurred_at_idx").on(table.occurredAt),
     index("audit_events_resource_idx").on(table.resourceType, table.resourceId),
+    index("audit_events_resource_occurred_idx").on(
+      table.resourceType,
+      table.resourceId,
+      table.occurredAt.desc(),
+    ),
     index("audit_events_actor_user_id_idx").on(table.actorUserId),
   ],
 );
