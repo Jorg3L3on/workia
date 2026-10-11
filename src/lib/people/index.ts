@@ -182,6 +182,35 @@ export const listActivePeopleForSelect = async (excludeId?: string) => {
   return excludeId ? rows.filter((row) => row.id !== excludeId) : rows;
 };
 
+/** Search-as-you-type options for the manager picker: active people only, capped. */
+export const searchActivePeopleForSelect = async (
+  query: string,
+  excludeId?: string,
+  limit = 20,
+) => {
+  const filters = [isNull(people.deletedAt), eq(people.status, "activa")];
+
+  if (excludeId) {
+    filters.push(sql`${people.id} <> ${excludeId}`);
+  }
+
+  for (const term of query.trim().split(/\s+/).filter(Boolean)) {
+    filters.push(ilike(personSearchText(people), `%${escapeLike(term)}%`));
+  }
+
+  return db
+    .select({
+      id: people.id,
+      nombres: people.nombres,
+      apellidoPaterno: people.apellidoPaterno,
+      apellidoMaterno: people.apellidoMaterno,
+    })
+    .from(people)
+    .where(and(...filters))
+    .orderBy(asc(people.apellidoPaterno), asc(people.nombres))
+    .limit(limit);
+};
+
 export const getPersonById = async (id: string, includeDeleted = false) => {
   const filters = [eq(people.id, id)];
 

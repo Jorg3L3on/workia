@@ -8,6 +8,7 @@ import { AuthorizationError } from "@/lib/rbac";
 import {
   createPerson,
   getPersonById,
+  searchActivePeopleForSelect,
   softDeletePerson,
   updatePerson,
 } from "./index";
@@ -17,7 +18,11 @@ import {
   requirePeopleRead,
   requirePeopleUpdate,
 } from "./auth";
-import { personFormSchema, type PersonFormValues } from "./schema";
+import {
+  formatPersonName,
+  personFormSchema,
+  type PersonFormValues,
+} from "./schema";
 
 export type PersonActionState = {
   error?: string;
@@ -176,3 +181,24 @@ export const deletePersonAction = async (personId: string): Promise<void> => {
 };
 
 export const assertPeopleListAccess = async () => requirePeopleRead();
+
+export type ManagerOption = { id: string; label: string };
+
+/** Server action behind the manager picker: needs people:update, or create for new records. */
+export const searchManagerOptionsAction = async (
+  query: string,
+  excludeId?: string,
+): Promise<ManagerOption[]> => {
+  try {
+    await requirePeopleRead();
+  } catch {
+    return [];
+  }
+
+  const rows = await searchActivePeopleForSelect(
+    query.slice(0, 80),
+    excludeId || undefined,
+  );
+
+  return rows.map((row) => ({ id: row.id, label: formatPersonName(row) }));
+};

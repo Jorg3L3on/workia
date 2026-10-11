@@ -27,10 +27,7 @@ import {
   listContractsByPerson,
 } from "@/lib/contracts";
 import { listAssetsByPerson } from "@/lib/resguardo";
-import {
-  getPersonWithRelations,
-  listActivePeopleForSelect,
-} from "@/lib/people";
+import { getPersonWithRelations } from "@/lib/people";
 import { requirePeopleRead } from "@/lib/people/auth";
 import {
   formatDateLabel,
@@ -104,10 +101,6 @@ const PersonaDetailPage = async ({
     canReadContracts,
     canCreateContracts,
     canReadAssets,
-    areas,
-    positions,
-    sites,
-    managers,
     personContracts,
     contractTemplates,
     personAssets,
@@ -120,10 +113,6 @@ const PersonaDetailPage = async ({
     userHasPermission(session.user.id, "contracts:read"),
     userHasPermission(session.user.id, "contracts:create"),
     userHasPermission(session.user.id, "assets:read"),
-    listActiveAreas(),
-    listActivePositions(),
-    listActiveSites(),
-    listActivePeopleForSelect(id),
     listContractsByPerson(id),
     listActiveContractTemplates(),
     userHasPermission(session.user.id, "assets:read").then((allowed) =>
@@ -141,12 +130,26 @@ const PersonaDetailPage = async ({
   const personName = formatPersonName(person);
 
   if (isEditing) {
+    // Form options are only needed here; view mode never loads them.
+    const [areas, positions, sites] = await Promise.all([
+      listActiveAreas(),
+      listActivePositions(),
+      listActiveSites(),
+    ]);
+
     return (
       <div className="mx-auto w-full max-w-3xl">
         <PageBreadcrumbLabel label={personName} />
         <PersonForm
           areas={areas}
-          managers={managers}
+          initialManager={
+            person.manager
+              ? {
+                  id: person.manager.id,
+                  label: formatPersonName(person.manager),
+                }
+              : null
+          }
           mode="edit"
           person={person}
           positions={positions}
