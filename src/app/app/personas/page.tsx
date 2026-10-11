@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { PlusIcon } from "lucide-react";
+import { DownloadIcon, PlusIcon } from "lucide-react";
 
 import { pageTitles } from "@/lib/brand/chrome-copy";
 
@@ -33,9 +33,10 @@ const PersonasPage = async ({ searchParams }: PersonasPageProps) => {
   const session = await assertPeopleListAccess();
   const { q, status, deleted } = await searchParams;
 
-  const [people, canCreate] = await Promise.all([
+  const [people, canCreate, canImport] = await Promise.all([
     listPeople({ includeDeleted: true }),
     userHasPermission(session.user.id, "people:create"),
+    userHasPermission(session.user.id, "people:import"),
   ]);
 
   const rows = people.map((person) => ({
@@ -59,13 +60,26 @@ const PersonasPage = async ({ searchParams }: PersonasPageProps) => {
     <div className="flex flex-col gap-6">
       <ListPageHeader
         actions={
-          canCreate ? (
-            <Button asChild className={listPrimaryActionClassName}>
-              <Link href="/app/personas/nueva">
-                <PlusIcon className="size-4" aria-hidden />
-                Nueva persona
-              </Link>
-            </Button>
+          canCreate || canImport ? (
+            <>
+              {canImport ? (
+                <Button asChild className="h-10 rounded-full" variant="outline">
+                  {/* Plain anchor: this is a file download, not a page. */}
+                  <a href="/app/personas/plantilla" download>
+                    <DownloadIcon className="size-4" aria-hidden />
+                    Descargar plantilla
+                  </a>
+                </Button>
+              ) : null}
+              {canCreate ? (
+                <Button asChild className={listPrimaryActionClassName}>
+                  <Link href="/app/personas/nueva">
+                    <PlusIcon className="size-4" aria-hidden />
+                    Nueva persona
+                  </Link>
+                </Button>
+              ) : null}
+            </>
           ) : undefined
         }
         description="Gestiona expedientes, relación laboral e identificadores."
