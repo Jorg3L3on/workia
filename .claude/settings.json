@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__plania__get_context",
+      "mcp__plania__get_resume",
+      "mcp__plania__get_project",
+      "mcp__plania__get_memory",
+      "mcp__plania__get_task",
+      "mcp__plania__get_doc",
+      "mcp__plania__get_next",
+      "mcp__plania__get_inbox",
+      "mcp__plania__list_tasks",
+      "mcp__plania__list_events",
+      "mcp__plania__audit"
+    ]
+  }
+}

@@ -1,5 +1,5 @@
 {
   "name": "workia",
-  "install": "npm ci",
+  "install": "npm ci --legacy-peer-deps",
   "start": "npm run dev"
 }

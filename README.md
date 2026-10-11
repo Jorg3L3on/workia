@@ -2,6 +2,10 @@
 
 A [Next.js](https://nextjs.org) app with shadcn/ui, Drizzle ORM, PostgreSQL, Auth.js, and RBAC — single tenant. The authenticated app surface uses the [shadcn/ui sidebar-07](https://ui.shadcn.com/blocks/sidebar) block — a collapsible sidebar with nested navigation.
 
+## Plan and workflow
+
+The roadmap, tickets and decisions live in Plania (MCP server `plania`, project `workia`), not in this repo. Agent conventions, the branch flow (`jl/<slug>` → `sandbox` → `main`) and deploy rules are in [AGENTS.md](AGENTS.md).
+
 ## Tech stack
 
 - **Next.js** 16 (App Router, Turbopack, `proxy.ts`)
@@ -104,6 +108,8 @@ After seeding:
 RBAC helpers live in `src/lib/rbac/`. Route protection uses `src/proxy.ts` for session checks; fine-grained permission checks run in server components via `requirePermission()`.
 
 ## Deployment (free tier)
+
+Only `main` deploys (see `vercel.json`); work lands on `sandbox` first and Jorge promotes it to `main`.
 
 1. Push to GitHub
 2. Import repo on [Vercel Hobby](https://vercel.com)
