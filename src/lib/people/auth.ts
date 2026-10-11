@@ -34,3 +34,10 @@ export const requirePeopleExport = async () => {
   await requirePermission(session.user.id, "people:read");
   return session;
 };
+
+/** Undoing an import soft-deletes the people it created. */
+export const requirePeopleUndoImport = async () => {
+  const session = await requirePeopleImport();
+  await requirePermission(session.user.id, "people:delete");
+  return session;
+};

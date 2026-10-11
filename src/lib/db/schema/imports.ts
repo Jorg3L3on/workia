@@ -66,6 +66,10 @@ export type ImportJobCounts = {
   skipped?: number;
   managersApplied?: boolean;
   chainApplied?: boolean;
+  /** Catalog entries this import created, so undo can remove them. */
+  createdCatalogs?: { areas: string[]; positions: string[]; sites: string[] };
+  /** Rows reverted so far by an undo. */
+  undone?: number;
 };
 
 export type ImportRowError = {
@@ -141,6 +145,7 @@ export const importRows = pgTable(
       unknown
     > | null>(),
     appliedAt: timestamp("applied_at", { withTimezone: true }),
+    undoneAt: timestamp("undone_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),

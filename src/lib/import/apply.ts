@@ -172,6 +172,12 @@ const ensureCatalogs = async (
     areas: new Map<string, string>(),
     positions: new Map<string, string>(),
     sites: new Map<string, string>(),
+    /** Ids of entries this call inserted, for undo. */
+    inserted: {
+      areas: [] as string[],
+      positions: [] as string[],
+      sites: [] as string[],
+    },
   };
 
   if (needed.length === 0) {
@@ -225,6 +231,7 @@ const ensureCatalogs = async (
           .values({ name: missing.area })
           .returning({ id: areas.id });
         areaByKey.set(key, id);
+        created.inserted.areas.push(id);
         event("area", id, missing.area);
       }
 
@@ -242,6 +249,7 @@ const ensureCatalogs = async (
           .values({ name: missing.position, areaId })
           .returning({ id: positions.id });
         positionByKey.set(key, id);
+        created.inserted.positions.push(id);
         event("position", id, missing.position);
       }
 
@@ -258,6 +266,7 @@ const ensureCatalogs = async (
           .values({ name: missing.site, kind: "sucursal" })
           .returning({ id: sites.id });
         siteByKey.set(key, id);
+        created.inserted.sites.push(id);
         event("site", id, missing.site);
       }
 
@@ -395,6 +404,39 @@ const applyPersonasBatch = async (job: ImportJob) =>
     }
 
     const catalogs = await ensureCatalogs(tx, ready, job.actorUserId);
+    const insertedCatalogs = catalogs.inserted;
+
+    if (
+      insertedCatalogs.areas.length +
+        insertedCatalogs.positions.length +
+        insertedCatalogs.sites.length >
+      0
+    ) {
+      // We hold the job's advisory lock, so read-modify-write is safe.
+      const [{ counts }] = await tx
+        .select({ counts: importJobs.counts })
+        .from(importJobs)
+        .where(eq(importJobs.id, job.id));
+      const known = counts.createdCatalogs ?? {
+        areas: [],
+        positions: [],
+        sites: [],
+      };
+
+      await tx
+        .update(importJobs)
+        .set({
+          counts: {
+            ...counts,
+            createdCatalogs: {
+              areas: [...known.areas, ...insertedCatalogs.areas],
+              positions: [...known.positions, ...insertedCatalogs.positions],
+              sites: [...known.sites, ...insertedCatalogs.sites],
+            },
+          },
+        })
+        .where(eq(importJobs.id, job.id));
+    }
     const resolve = (row: StagedRow) => {
       const values = { ...row.normalized.values };
       const missing = row.normalized.missingCatalogs;

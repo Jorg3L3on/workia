@@ -26,6 +26,8 @@ export const env = createEnv({
     DEMO_RRHH_EMAIL: z.string().email().optional(),
     DEMO_RRHH_PASSWORD: z.string().min(8).optional(),
     DEMO_RRHH_NAME: z.string().min(1).optional(),
+    // Hours after an import is applied during which it can still be undone.
+    IMPORT_UNDO_WINDOW_HOURS: z.coerce.number().int().positive().default(72),
     NODE_ENV: z
       .enum(["development", "test", "production"])
       .default("development"),
@@ -36,6 +38,7 @@ export const env = createEnv({
     AUTH_SECRET: authSecret,
     AUTH_GOOGLE_ID: process.env.AUTH_GOOGLE_ID,
     AUTH_GOOGLE_SECRET: process.env.AUTH_GOOGLE_SECRET,
+    IMPORT_UNDO_WINDOW_HOURS: process.env.IMPORT_UNDO_WINDOW_HOURS,
     DEMO_RRHH_EMAIL: process.env.DEMO_RRHH_EMAIL,
     DEMO_RRHH_PASSWORD: process.env.DEMO_RRHH_PASSWORD,
     DEMO_RRHH_NAME: process.env.DEMO_RRHH_NAME,
