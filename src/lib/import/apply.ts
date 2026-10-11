@@ -37,12 +37,7 @@ import {
 } from "./contract-rows";
 import { catalogKey } from "./format";
 import { classifyPersonRow } from "./person-rows";
-import type {
-  ExistingContract,
-  ManagerRef,
-  NormalizedContract,
-  NormalizedPerson,
-} from "./types";
+import type { ManagerRef, NormalizedContract, NormalizedPerson } from "./types";
 import { loadLookups, restartValidation, validateJobStep } from "./validate";
 
 export const APPLY_BATCH_SIZE = 200;
