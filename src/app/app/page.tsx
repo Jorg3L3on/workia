@@ -26,7 +26,9 @@ export default async function AppPage() {
     await Promise.all([
       canReadPeople ? countActivePeople() : Promise.resolve(0),
       userHasPermission(session.user.id, "people:create"),
-      canReadContracts ? listRenewalTrayItems() : Promise.resolve([]),
+      canReadContracts
+        ? listRenewalTrayItems(undefined, 5)
+        : Promise.resolve([]),
       canReadContracts ? countRenewalTrayItems() : Promise.resolve(0),
     ]);
 
