@@ -261,8 +261,12 @@ export const parseImportFile = async (
 
   const totalRows = sheets.reduce((sum, sheet) => sum + sheet.rows.length, 0);
 
-  if (personas.rows.length === 0) {
-    throw new ImportFileError("empty", "La hoja Personas no tiene filas.");
+  // A corrected error report may only carry rows for Horarios or Contratos.
+  if (totalRows === 0) {
+    throw new ImportFileError(
+      "empty",
+      "El archivo no tiene filas para importar.",
+    );
   }
 
   if (personas.rows.length > IMPORT_LIMITS.maxRows) {

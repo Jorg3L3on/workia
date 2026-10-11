@@ -66,6 +66,8 @@ export type ImportJobCounts = {
 export type ImportRowError = {
   field?: string;
   message: string;
+  /** Warnings are shown in review but do not block the row. Default: error. */
+  severity?: "error" | "warning";
 };
 
 export const importJobs = pgTable(

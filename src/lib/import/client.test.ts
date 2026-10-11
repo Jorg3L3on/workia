@@ -207,3 +207,30 @@ describe("upload", () => {
     expect(chunkRows(parsed.sheets[0].rows)).toHaveLength(10);
   });
 });
+
+describe("error report round trip", () => {
+  it("is a valid import file once corrected (Errores column ignored)", async () => {
+    const { buildErrorReportWorkbook } = await import("./error-report");
+    const workbook = buildErrorReportWorkbook([
+      {
+        sheet: "personas",
+        rowNumber: 7,
+        raw: { nombres: "Ana", apellidoPaterno: "López", curp: "MALA" },
+        errors: [{ field: "curp", message: "CURP inválida" }],
+      },
+    ]);
+    const file = makeFile(await workbook.xlsx.writeBuffer(), "errores.xlsx");
+    const parsed = await parseImportFile(file, readWorkbook);
+    const personas = parsed.sheets.find((s) => s.sheet === "personas")!;
+
+    expect(personas.mapping.unknown).toEqual([
+      { index: 16, header: "Errores" },
+    ]);
+    expect(personas.rows).toHaveLength(1);
+    expect(personas.rows[0].cells).toMatchObject({
+      nombres: "Ana",
+      curp: "MALA",
+    });
+    expect(parsed.totalRows).toBe(1);
+  });
+});
