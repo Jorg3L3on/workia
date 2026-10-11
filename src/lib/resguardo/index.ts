@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, ilike, isNull, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, isNull, or } from "drizzle-orm";
 
 import {
   buildChanges,
@@ -7,6 +7,7 @@ import {
   snapshotAssetMovement,
 } from "@/lib/audit";
 import { db } from "@/lib/db";
+import { escapeLike } from "@/lib/db/like";
 import { assetMovements, assets, people } from "@/lib/db/schema";
 import { formatPersonName } from "@/lib/people/schema";
 
@@ -73,10 +74,12 @@ const buildAssetListSelect = () =>
     .from(assets)
     .leftJoin(people, eq(assets.holderId, people.id));
 
-export const listAssets = async (options?: {
+export const listAssetsPage = async (options: {
   query?: string;
   status?: (typeof assets.$inferSelect)["status"];
   includeDeleted?: boolean;
+  page: number;
+  pageSize: number;
 }) => {
   const filters = [];
 
@@ -89,7 +92,7 @@ export const listAssets = async (options?: {
   }
 
   if (options?.query?.trim()) {
-    const term = `%${options.query.trim()}%`;
+    const term = `%${escapeLike(options.query.trim())}%`;
     filters.push(
       or(
         ilike(assets.name, term),
@@ -99,11 +102,18 @@ export const listAssets = async (options?: {
     );
   }
 
-  const rows = await buildAssetListSelect()
-    .where(filters.length === 0 ? undefined : and(...filters))
-    .orderBy(asc(assets.name));
+  const where = filters.length === 0 ? undefined : and(...filters);
 
-  return rows.map((row): AssetListItem => ({
+  const [rows, [totals]] = await Promise.all([
+    buildAssetListSelect()
+      .where(where)
+      .orderBy(asc(assets.name), asc(assets.id))
+      .limit(options.pageSize)
+      .offset((options.page - 1) * options.pageSize),
+    db.select({ total: count() }).from(assets).where(where),
+  ]);
+
+  const items = rows.map((row): AssetListItem => ({
     id: row.id,
     name: row.name,
     identifier: row.identifier,
@@ -120,6 +130,8 @@ export const listAssets = async (options?: {
         })
       : null,
   }));
+
+  return { items, total: totals?.total ?? 0 };
 };
 
 export const getAssetById = async (id: string) => {

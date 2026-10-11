@@ -10,7 +10,8 @@ import {
 } from "@/components/list/list-page-header";
 import { PersonasDataTable } from "@/components/people/personas-data-table";
 import { Button } from "@/components/ui/button";
-import { listPeople } from "@/lib/people";
+import { parseListPaging } from "@/lib/list/paging";
+import { listPeoplePage } from "@/lib/people";
 import { assertPeopleListAccess } from "@/lib/people/actions";
 import { formatPersonName } from "@/lib/people/schema";
 import { userHasPermission } from "@/lib/rbac";
@@ -24,17 +25,31 @@ export const metadata: Metadata = {
 type PersonasPageProps = {
   searchParams: Promise<{
     q?: string;
-    status?: "activa" | "baja";
+    status?: string;
     deleted?: string;
+    page?: string;
+    pageSize?: string;
   }>;
 };
 
 const PersonasPage = async ({ searchParams }: PersonasPageProps) => {
   const session = await assertPeopleListAccess();
-  const { q, status, deleted } = await searchParams;
+  const params = await searchParams;
+  const { q, deleted } = params;
+  const status =
+    params.status === "activa" || params.status === "baja"
+      ? params.status
+      : undefined;
+  const { page, pageSize } = parseListPaging(params);
 
-  const [people, canCreate] = await Promise.all([
-    listPeople({ includeDeleted: true }),
+  const [{ rows: people, total }, canCreate] = await Promise.all([
+    listPeoplePage({
+      query: q,
+      status,
+      deleted: deleted === "1",
+      page,
+      pageSize,
+    }),
     userHasPermission(session.user.id, "people:create"),
   ]);
 
@@ -45,14 +60,6 @@ const PersonasPage = async ({ searchParams }: PersonasPageProps) => {
     fechaIngreso: person.fechaIngreso,
     status: person.status,
     deleted: Boolean(person.deletedAt),
-    searchText: [
-      formatPersonName(person),
-      person.rfc,
-      person.curp,
-      person.email,
-    ]
-      .filter(Boolean)
-      .join(" "),
   }));
 
   return (
@@ -83,10 +90,13 @@ const PersonasPage = async ({ searchParams }: PersonasPageProps) => {
             </Button>
           ) : undefined
         }
-        initialSearch={q ?? ""}
-        initialStatus={status ?? ""}
-        initialVisibility={deleted === "1" ? "deleted" : "expediente"}
+        page={page}
+        pageSize={pageSize}
         people={rows}
+        query={q?.trim() ?? ""}
+        status={status ?? ""}
+        total={total}
+        visibility={deleted === "1" ? "deleted" : "expediente"}
       />
     </div>
   );

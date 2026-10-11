@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import { FileTextIcon } from "lucide-react";
 
 import { RenewalTrayList } from "@/components/contracts/renewal-tray-list";
+import { SectionSkeleton } from "@/components/loading/page-skeletons";
 import { ListPageHeader } from "@/components/list/list-page-header";
 import { pageTitles } from "@/lib/brand/chrome-copy";
 import { Button } from "@/components/ui/button";
@@ -27,17 +29,29 @@ type ContratosPageProps = {
   }>;
 };
 
+const RenewalTray = async ({ canUpdate }: { canUpdate: boolean }) => {
+  const [renewalItems, templates] = await Promise.all([
+    listRenewalTrayItems(),
+    listActiveContractTemplates(),
+  ]);
+
+  return (
+    <RenewalTrayList
+      canUpdate={canUpdate}
+      items={renewalItems}
+      templates={templates}
+    />
+  );
+};
+
 const ContratosPage = async ({ searchParams }: ContratosPageProps) => {
   const session = await requireContractsRead();
   const { renewed, "no-renew": noRenew, error } = await searchParams;
 
-  const [renewalItems, templates, canUpdate, canManageTemplates] =
-    await Promise.all([
-      listRenewalTrayItems(),
-      listActiveContractTemplates(),
-      userHasPermission(session.user.id, "contracts:update"),
-      userHasPermission(session.user.id, "contract_templates:read"),
-    ]);
+  const [canUpdate, canManageTemplates] = await Promise.all([
+    userHasPermission(session.user.id, "contracts:update"),
+    userHasPermission(session.user.id, "contract_templates:read"),
+  ]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -89,11 +103,9 @@ const ContratosPage = async ({ searchParams }: ContratosPageProps) => {
           </p>
         </div>
 
-        <RenewalTrayList
-          canUpdate={canUpdate}
-          items={renewalItems}
-          templates={templates}
-        />
+        <Suspense fallback={<SectionSkeleton />}>
+          <RenewalTray canUpdate={canUpdate} />
+        </Suspense>
       </div>
     </div>
   );

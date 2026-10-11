@@ -1,4 +1,4 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
   date,
   index,
@@ -12,6 +12,21 @@ import {
 
 import { areas, positions } from "./catalog";
 import { sites } from "./sites";
+
+/**
+ * One text blob per person (name, RFC, CURP, email) that list search runs
+ * ILIKE against; `people_search_trgm_idx` indexes this exact expression, so
+ * the query must use it verbatim.
+ */
+export const personSearchText = (table: {
+  nombres: AnyPgColumn;
+  apellidoPaterno: AnyPgColumn;
+  apellidoMaterno: AnyPgColumn;
+  rfc: AnyPgColumn;
+  curp: AnyPgColumn;
+  email: AnyPgColumn;
+}) =>
+  sql`(${table.nombres} || ' ' || ${table.apellidoPaterno} || ' ' || coalesce(${table.apellidoMaterno}, '') || ' ' || coalesce(${table.rfc}, '') || ' ' || coalesce(${table.curp}, '') || ' ' || coalesce(${table.email}, ''))`;
 
 export const personStatusEnum = pgEnum("person_status", ["activa", "baja"]);
 
@@ -59,6 +74,10 @@ export const people = pgTable(
     index("people_position_id_idx").on(table.positionId),
     index("people_manager_id_idx").on(table.managerId),
     index("people_site_id_idx").on(table.siteId),
+    index("people_search_trgm_idx").using(
+      "gin",
+      sql`${personSearchText(table)} gin_trgm_ops`,
+    ),
   ],
 );
 

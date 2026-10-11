@@ -20,6 +20,7 @@ describe("audit append-only surface", () => {
 
     expect(exportedKeys).toEqual([
       "buildChanges",
+      "countAuditEvents",
       "listAuditEvents",
       "recordAuditEvent",
       "snapshotActivity",
