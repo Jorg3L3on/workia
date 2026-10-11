@@ -71,6 +71,13 @@
       "when": 1787756400000,
       "tag": "0010_person_identity_unique",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1787760000000,
+      "tag": "0011_import_staging",
+      "breakpoints": true
     }
   ]
 }
