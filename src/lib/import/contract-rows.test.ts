@@ -103,6 +103,24 @@ describe("normalizeContractRow", () => {
   });
 });
 
+describe("templates", () => {
+  it("keeps the row with a warning for unknown templates and ignores Importado", () => {
+    const unknown = normalizeContractRow(
+      { ...base, plantilla: "Nada" },
+      options,
+    );
+
+    expect(unknown.normalized?.templateId).toBeNull();
+    expect(unknown.errors[0]).toMatchObject({
+      field: "plantilla",
+      severity: "warning",
+    });
+    expect(
+      normalizeContractRow({ ...base, plantilla: "Importado" }, options).errors,
+    ).toEqual([]);
+  });
+});
+
 describe("deriveContractStatus", () => {
   it("only determinado contracts expire by date", () => {
     expect(deriveContractStatus("indeterminado", null, "2026-10-11")).toBe(

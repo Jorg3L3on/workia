@@ -128,18 +128,28 @@ export const normalizeContractRow = (
   }
 
   const templateName = text(cells, "plantilla");
-  const template = templateName
+  // "Importado" is what exports write for contracts that never had a template.
+  const asksForTemplate =
+    templateName !== "" &&
+    catalogKey(templateName) !== catalogKey(IMPORTED_TEMPLATE_NAME);
+  const template = asksForTemplate
     ? options.templates.get(catalogKey(templateName))
     : undefined;
 
-  if (templateName && !template) {
+  if (asksForTemplate && !template) {
+    // Templates are optional for historical contracts, so keep the row.
     errors.push({
       field: "plantilla",
-      message: `Plantilla "${templateName}" no existe.`,
+      severity: "warning",
+      message: `Plantilla "${templateName}" no existe: el contrato se importa sin plantilla.`,
     });
   }
 
-  if (errors.length > 0 || !type || !noticeWindow) {
+  if (
+    errors.some((error) => error.severity !== "warning") ||
+    !type ||
+    !noticeWindow
+  ) {
     return { normalized: null, errors };
   }
 
