@@ -19,7 +19,8 @@
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx scripts/seed.ts",
     "db:cleanup-borrados": "tsx scripts/cleanup-borrados-residue.ts",
-    "db:report-identity-duplicates": "tsx scripts/report-identity-duplicates.ts"
+    "db:report-identity-duplicates": "tsx scripts/report-identity-duplicates.ts",
+    "import:budgets": "NODE_OPTIONS=--expose-gc tsx scripts/measure-import-budgets.ts"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.3",
