@@ -2,15 +2,18 @@ import { createHash } from "node:crypto";
 
 import { and, count, desc, eq, gte, lte, sql } from "drizzle-orm";
 
-import { db } from "@/lib/db";
+import { db, type DbExecutor } from "@/lib/db";
 import { auditEvents, users } from "@/lib/db/schema";
 
 import type { AuditPayload } from "./types";
 import type { ListAuditEventsOptions, RecordAuditEventInput } from "./types";
 
 /** Append-only: audit events are inserted, never updated or deleted via the app. */
-export const recordAuditEvent = async (input: RecordAuditEventInput) => {
-  const [created] = await db
+export const recordAuditEvent = async (
+  input: RecordAuditEventInput,
+  executor: DbExecutor = db,
+) => {
+  const [created] = await executor
     .insert(auditEvents)
     .values({
       actorUserId: input.actorUserId ?? null,
