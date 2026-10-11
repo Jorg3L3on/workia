@@ -36,7 +36,9 @@ export type RowOutcome = {
   errors: ImportRowError[];
   diff: Record<string, [unknown, unknown]> | null;
   targetPersonId: string | null;
-  normalized: NormalizedPerson | null;
+  targetContractId?: string | null;
+  /** Sheet-specific normalized payload (person, schedule or contract). */
+  normalized: object | null;
 };
 
 export type CatalogIndex = {
@@ -64,4 +66,27 @@ export type ExistingPerson = {
   nss: string | null;
   status: "activa" | "baja";
   managerId: string | null;
+};
+
+export type NormalizedContract = {
+  personKey: { idWorkia: string | null; curp: string | null };
+  type: "determinado" | "indeterminado";
+  startDate: string;
+  endDate: string | null;
+  noticeWindow: "1" | "2" | "3" | "6" | "no_avisar";
+  status: "vigente" | "renovado" | "no_renovado" | "vencido";
+  templateId: string | null;
+  templateName: string | null;
+};
+
+export type ExistingContract = {
+  id: string;
+  personId: string;
+  type: NormalizedContract["type"];
+  startDate: string;
+  endDate: string | null;
+  noticeWindow: NormalizedContract["noticeWindow"];
+  status: NormalizedContract["status"];
+  templateId: string | null;
+  templateName: string | null;
 };

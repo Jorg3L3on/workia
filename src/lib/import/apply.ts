@@ -2,11 +2,17 @@ import { randomUUID } from "node:crypto";
 
 import { and, asc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 
-import { recordAuditEvent, snapshotPerson } from "@/lib/audit";
+import {
+  recordAuditEvent,
+  snapshotContract,
+  snapshotPerson,
+} from "@/lib/audit";
 import { db, withTransaction, type DbTransaction } from "@/lib/db";
 import {
   areas,
   auditEvents,
+  contractTemplates,
+  contracts,
   importJobs,
   importRows,
   people,
@@ -17,15 +23,33 @@ import {
   type ImportJobCounts,
 } from "@/lib/db/schema";
 
+import { formatContractDate } from "@/lib/contracts/schema";
+import {
+  buildContractScheduleSnapshot,
+  fillContractTemplate,
+} from "@/lib/contracts/schema";
+import { formatHorarioToken } from "@/lib/people/schema";
+
+import {
+  contractIdentity,
+  importedContractText,
+  IMPORTED_TEMPLATE_NAME,
+} from "./contract-rows";
 import { catalogKey } from "./format";
 import { classifyPersonRow } from "./person-rows";
-import type { ManagerRef, NormalizedPerson } from "./types";
+import type {
+  ExistingContract,
+  ManagerRef,
+  NormalizedContract,
+  NormalizedPerson,
+} from "./types";
 import { loadLookups, restartValidation, validateJobStep } from "./validate";
 
 export const APPLY_BATCH_SIZE = 200;
 
 /** Phases run in this order; each is resumable because rows carry their mark. */
-export type ApplyPhase = "personas" | "managers" | "horarios" | "done";
+export type ApplyPhase =
+  "personas" | "managers" | "horarios" | "contratos" | "chain" | "done";
 
 export class ImportBlockedError extends Error {
   constructor(
@@ -53,6 +77,7 @@ type StagedRow = {
   normalized: NormalizedPerson & { times?: Record<string, string | null> };
   diff: Record<string, [unknown, unknown]> | null;
   targetPersonId: string | null;
+  targetContractId?: string | null;
 };
 
 const isUniqueViolation = (error: unknown): boolean =>
@@ -255,7 +280,7 @@ const ensureCatalogs = async (
 const personRowsToApply = async (
   tx: DbTransaction,
   jobId: string,
-  sheet: "personas" | "horarios",
+  sheet: "personas" | "horarios" | "contratos",
   limit: number,
 ) =>
   (await tx
@@ -267,6 +292,7 @@ const personRowsToApply = async (
       normalized: importRows.normalized,
       diff: importRows.diff,
       targetPersonId: importRows.targetPersonId,
+      targetContractId: importRows.targetContractId,
     })
     .from(importRows)
     .where(
@@ -282,20 +308,27 @@ const personRowsToApply = async (
 
 const markRows = (
   tx: DbTransaction,
-  marks: { id: string; targetPersonId: string | null; previous: unknown }[],
+  marks: {
+    id: string;
+    targetPersonId: string | null;
+    previous: unknown;
+    targetContractId?: string | null;
+  }[],
 ) =>
   tx.execute(sql`
     update import_rows r set
       applied_at = now(),
       target_person_id = v.target_person_id,
+      target_contract_id = coalesce(v.target_contract_id, r.target_contract_id),
       previous_snapshot = nullif(v.previous, 'null'::jsonb)
     from jsonb_to_recordset(${JSON.stringify(
       marks.map((mark) => ({
         id: mark.id,
         target_person_id: mark.targetPersonId,
+        target_contract_id: mark.targetContractId ?? null,
         previous: mark.previous ?? null,
       })),
-    )}::jsonb) as v(id uuid, target_person_id uuid, previous jsonb)
+    )}::jsonb) as v(id uuid, target_person_id uuid, target_contract_id uuid, previous jsonb)
     where r.id = v.id
   `);
 
@@ -754,6 +787,373 @@ const applyHorariosBatch = async (job: ImportJob) =>
     return rows.length;
   });
 
+/** Contracts: create or update per (person, start date), with text and schedule snapshot. */
+const applyContratosBatch = async (job: ImportJob) =>
+  withTransaction(async (tx) => {
+    await lockJob(tx, job.id);
+
+    const rows = await personRowsToApply(
+      tx,
+      job.id,
+      "contratos",
+      APPLY_BATCH_SIZE,
+    );
+
+    if (rows.length === 0) {
+      return 0;
+    }
+
+    const staged = rows.map((row) => ({
+      row,
+      contract: row.normalized as unknown as NormalizedContract,
+    }));
+    const lookups = await loadLookups(
+      staged.map(({ row, contract }) => ({
+        rowNumber: row.rowNumber,
+        idWorkia: contract.personKey.idWorkia,
+        curp: contract.personKey.curp,
+        rfc: null,
+      })),
+      tx,
+    );
+    const personFor = ({ contract }: (typeof staged)[number]) => {
+      const { idWorkia, curp } = contract.personKey;
+      const person =
+        (idWorkia ? lookups.byId.get(idWorkia.toLowerCase()) : undefined) ??
+        (curp ? lookups.byCurp.get(curp) : undefined);
+
+      return person && !person.deletedAt ? person : undefined;
+    };
+    const unresolved = staged.filter((entry) => !personFor(entry));
+
+    if (unresolved.length > 0) {
+      await failRows(
+        tx,
+        unresolved.map(({ row }) => row.id),
+        "No encontramos a la persona de este contrato.",
+      );
+    }
+
+    const resolved = staged.filter((entry) => personFor(entry));
+
+    if (resolved.length === 0) {
+      return rows.length;
+    }
+
+    const personIds = [
+      ...new Set(resolved.map((entry) => personFor(entry)!.id)),
+    ];
+    const existing = (await tx
+      .select()
+      .from(contracts)
+      .where(
+        and(
+          inArray(contracts.personId, personIds),
+          isNull(contracts.deletedAt),
+        ),
+      )
+      .for("update")) as (typeof contracts.$inferSelect)[];
+    const existingByIdentity = new Map(
+      existing.map((c) => [contractIdentity(c.personId, c.startDate), c]),
+    );
+
+    const stale: string[] = [];
+    const ready: {
+      row: StagedRow;
+      contract: NormalizedContract;
+      personId: string;
+      match?: typeof contracts.$inferSelect;
+    }[] = [];
+
+    for (const entry of resolved) {
+      const personId = personFor(entry)!.id;
+      const match = existingByIdentity.get(
+        contractIdentity(personId, entry.contract.startDate),
+      );
+      const freshAction = match ? "update" : "create";
+
+      if (
+        (entry.row.action === "create" && match) ||
+        (entry.row.action === "update" &&
+          (!match || match.id !== entry.row.targetContractId)) ||
+        freshAction !== entry.row.action
+      ) {
+        stale.push(entry.row.id);
+      } else {
+        ready.push({
+          row: entry.row,
+          contract: entry.contract,
+          personId,
+          match,
+        });
+      }
+    }
+
+    if (stale.length > 0) {
+      if (job.options.mode === "all_or_nothing") {
+        throw new ImportBlockedError(
+          "Los datos cambiaron desde la revisión; vuelve a revisar la importación.",
+          "changed",
+        );
+      }
+
+      await failRows(
+        tx,
+        stale,
+        "Los contratos de esta persona cambiaron desde la revisión.",
+      );
+    }
+
+    if (ready.length === 0) {
+      return rows.length;
+    }
+
+    // Context for contract text and the schedule snapshot, two queries per batch.
+    const readyPersonIds = [...new Set(ready.map((entry) => entry.personId))];
+    const personRows = await tx
+      .select({
+        id: people.id,
+        nombres: people.nombres,
+        apellidoPaterno: people.apellidoPaterno,
+        apellidoMaterno: people.apellidoMaterno,
+        rfc: people.rfc,
+        areaName: areas.name,
+        positionName: positions.name,
+        siteName: sites.name,
+      })
+      .from(people)
+      .leftJoin(areas, eq(people.areaId, areas.id))
+      .leftJoin(positions, eq(people.positionId, positions.id))
+      .leftJoin(sites, eq(people.siteId, sites.id))
+      .where(inArray(people.id, readyPersonIds));
+    const scheduleRows = await tx
+      .select()
+      .from(personSchedules)
+      .where(
+        and(
+          inArray(personSchedules.personId, readyPersonIds),
+          isNull(personSchedules.deletedAt),
+        ),
+      );
+    const templateIds = [
+      ...new Set(
+        ready.flatMap((entry) =>
+          entry.contract.templateId ? [entry.contract.templateId] : [],
+        ),
+      ),
+    ];
+    const templateRows = templateIds.length
+      ? await tx
+          .select()
+          .from(contractTemplates)
+          .where(inArray(contractTemplates.id, templateIds))
+      : [];
+    const personById = new Map(personRows.map((p) => [p.id, p]));
+    const scheduleByPerson = new Map(scheduleRows.map((s) => [s.personId, s]));
+    const templateById = new Map(templateRows.map((t) => [t.id, t]));
+
+    const textFor = (entry: (typeof ready)[number]) => {
+      const person = personById.get(entry.personId)!;
+      const template = entry.contract.templateId
+        ? templateById.get(entry.contract.templateId)
+        : undefined;
+      const fullName = [
+        person.nombres,
+        person.apellidoPaterno,
+        person.apellidoMaterno,
+      ]
+        .filter(Boolean)
+        .join(" ");
+
+      if (!template) {
+        return importedContractText({
+          fullName,
+          type: entry.contract.type,
+          startDate: entry.contract.startDate,
+          endDate: entry.contract.endDate,
+          formatDate: formatContractDate,
+        });
+      }
+
+      return fillContractTemplate(template.body, {
+        nombres: person.nombres,
+        apellidoPaterno: person.apellidoPaterno,
+        apellidoMaterno: person.apellidoMaterno,
+        puesto: person.positionName,
+        area: person.areaName,
+        sucursal: person.siteName,
+        rfc: person.rfc,
+        horario: formatHorarioToken(scheduleByPerson.get(entry.personId)),
+        fechaInicio: entry.contract.startDate,
+        fechaFin: entry.contract.endDate,
+      });
+    };
+
+    const creates = ready.filter((entry) => !entry.match);
+    const updates = ready.filter((entry) => entry.match);
+    const marks: {
+      id: string;
+      targetPersonId: string | null;
+      previous: unknown;
+      targetContractId: string;
+    }[] = [];
+    const audit: (typeof auditEvents.$inferInsert)[] = [];
+
+    if (creates.length > 0) {
+      const inserted = creates.map((entry) => ({
+        entry,
+        id: randomUUID(),
+        values: {
+          personId: entry.personId,
+          type: entry.contract.type,
+          startDate: entry.contract.startDate,
+          endDate: entry.contract.endDate,
+          noticeWindow: entry.contract.noticeWindow,
+          templateId: entry.contract.templateId,
+          templateName: entry.contract.templateName ?? IMPORTED_TEMPLATE_NAME,
+          generatedText: textFor(entry),
+          ...buildContractScheduleSnapshot(
+            scheduleByPerson.get(entry.personId),
+          ),
+          status: entry.contract.status,
+        },
+      }));
+
+      await tx
+        .insert(contracts)
+        .values(inserted.map(({ id, values }) => ({ id, ...values })));
+
+      for (const { entry, id, values } of inserted) {
+        marks.push({
+          id: entry.row.id,
+          targetPersonId: entry.personId,
+          previous: null,
+          targetContractId: id,
+        });
+        audit.push({
+          actorUserId: job.actorUserId,
+          resourceType: "contract",
+          resourceId: id,
+          action: "create",
+          source: "import",
+          payload: {
+            summary: "Contrato importado",
+            after: snapshotContract({ id, ...values }),
+          },
+        });
+      }
+    }
+
+    if (updates.length > 0) {
+      await tx.execute(sql`
+        update contracts c set
+          type = v.type::contract_type,
+          end_date = v.end_date::date,
+          notice_window = v.notice_window::contract_notice_window,
+          status = v.status::contract_status,
+          template_id = coalesce(v.template_id::uuid, c.template_id),
+          template_name = coalesce(v.template_name, c.template_name),
+          generated_text = coalesce(v.generated_text, c.generated_text),
+          updated_at = now()
+        from jsonb_to_recordset(${JSON.stringify(
+          updates.map((entry) => ({
+            id: entry.match!.id,
+            type: entry.contract.type,
+            end_date: entry.contract.endDate,
+            notice_window: entry.contract.noticeWindow,
+            status: entry.contract.status,
+            template_id: entry.contract.templateId,
+            template_name: entry.contract.templateId
+              ? entry.contract.templateName
+              : null,
+            generated_text: entry.contract.templateId ? textFor(entry) : null,
+          })),
+        )}::jsonb) as v(id uuid, type text, end_date text, notice_window text, status text, template_id text, template_name text, generated_text text)
+        where c.id = v.id
+      `);
+
+      for (const entry of updates) {
+        const before = entry.match!;
+
+        marks.push({
+          id: entry.row.id,
+          targetPersonId: entry.personId,
+          targetContractId: before.id,
+          previous: {
+            type: before.type,
+            endDate: before.endDate,
+            noticeWindow: before.noticeWindow,
+            status: before.status,
+            templateId: before.templateId,
+            templateName: before.templateName,
+            generatedText: before.generatedText,
+            previousContractId: before.previousContractId,
+          },
+        });
+        audit.push({
+          actorUserId: job.actorUserId,
+          resourceType: "contract",
+          resourceId: before.id,
+          action: "update",
+          source: "import",
+          payload: {
+            summary: "Contrato actualizado por importación",
+            changes: Object.fromEntries(
+              Object.entries(entry.row.diff ?? {}).map(
+                ([field, [from, to]]) => [field, { from, to }],
+              ),
+            ),
+          },
+        });
+      }
+    }
+
+    await markRows(tx, marks);
+    await tx.insert(auditEvents).values(audit);
+    await tx
+      .update(importJobs)
+      .set({
+        counts: sql`jsonb_set(${importJobs.counts}, '{applied}', to_jsonb(coalesce((${importJobs.counts}->>'applied')::int, 0) + ${marks.length}))`,
+      })
+      .where(eq(importJobs.id, job.id));
+
+    return rows.length;
+  });
+
+/**
+ * Chains contracts by start order per person (previous_contract_id), over the
+ * person's whole history so imported and existing contracts link up. Idempotent.
+ */
+const applyContractChain = async (job: ImportJob) =>
+  withTransaction(async (tx) => {
+    await lockJob(tx, job.id);
+    await tx.execute(sql`
+      with imported as (
+        select distinct target_contract_id as id, target_person_id as person_id
+        from import_rows
+        where job_id = ${job.id} and sheet = 'contratos'
+          and applied_at is not null and target_contract_id is not null
+      ), ordered as (
+        select c.id,
+               lag(c.id) over (partition by c.person_id order by c.start_date, c.created_at, c.id) as prev
+        from contracts c
+        where c.deleted_at is null
+          and c.person_id in (select person_id from imported)
+      )
+      update contracts c set previous_contract_id = o.prev, updated_at = now()
+      from ordered o
+      where c.id = o.id
+        and c.id in (select id from imported)
+        and c.previous_contract_id is distinct from o.prev
+    `);
+    await tx
+      .update(importJobs)
+      .set({
+        counts: sql`${importJobs.counts} || '{"chainApplied": true}'::jsonb`,
+      })
+      .where(eq(importJobs.id, job.id));
+  });
+
 const countRemaining = async (jobId: string, sheet?: string) => {
   const [row] = await db
     .select({ count: sql<number>`count(*)::int` })
@@ -831,6 +1231,18 @@ export const applyJobStep = async (jobId: string): Promise<ApplyProgress> => {
       await applyHorariosBatch(job);
 
       return progress("horarios", jobId);
+    }
+
+    if ((await countRemaining(jobId, "contratos")) > 0) {
+      await applyContratosBatch(job);
+
+      return progress("contratos", jobId);
+    }
+
+    if (!job.counts.chainApplied) {
+      await applyContractChain(job);
+
+      return progress("chain", jobId);
     }
 
     await finish(job);

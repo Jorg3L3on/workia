@@ -12,7 +12,17 @@ import {
   type ImportJobCounts,
   type ImportRowError,
 } from "@/lib/db/schema";
+import { contracts, contractTemplates } from "@/lib/db/schema";
 import { identifierOrNull } from "@/lib/people/identity";
+
+import {
+  contractIdentity,
+  diffContract,
+  findContractFileConflicts,
+  normalizeContractRow,
+  personKeyOf,
+  type ContractFileRow,
+} from "./contract-rows";
 
 import { catalogKey } from "./format";
 import {
@@ -28,7 +38,9 @@ import {
 } from "./person-rows";
 import type {
   CatalogIndex,
+  ExistingContract,
   ExistingPerson,
+  NormalizedContract,
   ManagerRef,
   NormalizedPerson,
   RowOutcome,
@@ -37,6 +49,12 @@ import type {
 export const VALIDATE_CHUNK_SIZE = 500;
 
 type RowUpdate = { id: string; outcome: RowOutcome };
+
+type FileKey = KeyedRow & {
+  id: string;
+  action: RowOutcome["action"];
+  targetPersonId: string | null;
+};
 
 const personColumns = {
   id: people.id,
@@ -105,13 +123,17 @@ const loadFileKeys = async (jobId: string) => {
       id: importRows.id,
       rowNumber: importRows.rowNumber,
       raw: importRows.raw,
+      action: importRows.action,
+      targetPersonId: importRows.targetPersonId,
     })
     .from(importRows)
     .where(and(eq(importRows.jobId, jobId), eq(importRows.sheet, "personas")))
     .orderBy(asc(importRows.rowNumber));
 
-  return rows.map((row): KeyedRow & { id: string } => ({
+  return rows.map((row): FileKey => ({
     id: row.id,
+    action: row.action,
+    targetPersonId: row.targetPersonId,
     rowNumber: row.rowNumber,
     idWorkia: str(row.raw.idWorkia),
     curp: identifierOrNull(str(row.raw.curp)),
@@ -213,6 +235,7 @@ const saveOutcomes = async (updates: RowUpdate[]) => {
     diff: outcome.diff,
     normalized: outcome.normalized,
     target_person_id: outcome.targetPersonId,
+    target_contract_id: outcome.targetContractId ?? null,
   }));
 
   await db.execute(sql`
@@ -221,9 +244,10 @@ const saveOutcomes = async (updates: RowUpdate[]) => {
       errors = v.errors,
       diff = v.diff,
       normalized = nullif(v.normalized, 'null'::jsonb),
-      target_person_id = v.target_person_id
+      target_person_id = v.target_person_id,
+      target_contract_id = v.target_contract_id
     from jsonb_to_recordset(${JSON.stringify(payload)}::jsonb)
-      as v(id uuid, action text, errors jsonb, diff jsonb, normalized jsonb, target_person_id uuid)
+      as v(id uuid, action text, errors jsonb, diff jsonb, normalized jsonb, target_person_id uuid, target_contract_id uuid)
     where r.id = v.id
   `);
 };
@@ -715,6 +739,263 @@ export const validateHorariosChunk = async (
   };
 };
 
+/** Validates pending Contratos rows: person, dates, status, template, one vigente. */
+export const validateContratosChunk = async (
+  jobId: string,
+  limit = VALIDATE_CHUNK_SIZE,
+): Promise<ValidateProgress> => {
+  const pending = await db
+    .select({
+      id: importRows.id,
+      rowNumber: importRows.rowNumber,
+      raw: importRows.raw,
+    })
+    .from(importRows)
+    .where(
+      and(
+        eq(importRows.jobId, jobId),
+        eq(importRows.sheet, "contratos"),
+        eq(importRows.action, "pending"),
+      ),
+    )
+    .orderBy(asc(importRows.rowNumber))
+    .limit(limit);
+
+  if (pending.length === 0) {
+    return { processed: 0, remaining: await countPending(jobId, "contratos") };
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+  const [templateRows, allRows, fileKeys] = await Promise.all([
+    db
+      .select({ id: contractTemplates.id, name: contractTemplates.name })
+      .from(contractTemplates)
+      .where(isNull(contractTemplates.deletedAt)),
+    db
+      .select({ rowNumber: importRows.rowNumber, raw: importRows.raw })
+      .from(importRows)
+      .where(
+        and(eq(importRows.jobId, jobId), eq(importRows.sheet, "contratos")),
+      )
+      .orderBy(asc(importRows.rowNumber)),
+    loadFileKeys(jobId),
+  ]);
+  const templates = new Map(
+    templateRows.map((t) => [catalogKey(t.name), { id: t.id, name: t.name }]),
+  );
+
+  // File-level rules need every contract row of the file, not just this chunk.
+  const personOf = (cells: Cells) => {
+    const key = personKeyOf(cells);
+
+    return key.idWorkia?.toLowerCase() ?? key.curp;
+  };
+  const fileRows: ContractFileRow[] = allRows.map((row) => {
+    const cells = row.raw as Cells;
+    const { normalized } = normalizeContractRow(cells, { today, templates });
+
+    return {
+      rowNumber: row.rowNumber,
+      person: personOf(cells),
+      startDate: normalized?.startDate ?? null,
+      status: normalized?.status ?? null,
+    };
+  });
+  const conflicts = findContractFileConflicts(fileRows);
+  const statusByPersonStart = new Map(
+    fileRows.flatMap((row) =>
+      row.person && row.startDate
+        ? [[`${row.person}|${row.startDate}`, row.status] as const]
+        : [],
+    ),
+  );
+
+  const keys: KeyedRow[] = pending.map((row) => {
+    const key = personKeyOf(row.raw as Cells);
+
+    return {
+      rowNumber: row.rowNumber,
+      idWorkia: key.idWorkia,
+      curp: key.curp,
+      rfc: null,
+    };
+  });
+  const lookups = await loadLookups(keys);
+  const fileByCurp = new Map(
+    fileKeys.flatMap((k) => (k.curp ? [[k.curp, k] as const] : [])),
+  );
+  const fileById = new Map(
+    fileKeys.flatMap((k) =>
+      k.idWorkia ? [[k.idWorkia.toLowerCase(), k] as const] : [],
+    ),
+  );
+  const personIds = [
+    ...new Set([
+      ...lookups.byId.keys(),
+      ...[...lookups.byCurp.values()].map((p) => p.id),
+    ]),
+  ];
+  const existingContracts = (
+    personIds.length
+      ? await db
+          .select({
+            id: contracts.id,
+            personId: contracts.personId,
+            type: contracts.type,
+            startDate: contracts.startDate,
+            endDate: contracts.endDate,
+            noticeWindow: contracts.noticeWindow,
+            status: contracts.status,
+            templateId: contracts.templateId,
+            templateName: contracts.templateName,
+          })
+          .from(contracts)
+          .where(
+            and(
+              inArray(contracts.personId, personIds),
+              isNull(contracts.deletedAt),
+            ),
+          )
+      : []
+  ) as ExistingContract[];
+  const byIdentity = new Map(
+    existingContracts.map((c) => [
+      contractIdentity(c.personId, c.startDate),
+      c,
+    ]),
+  );
+  const vigenteByPerson = new Map<string, ExistingContract[]>();
+
+  for (const contract of existingContracts) {
+    if (contract.status === "vigente") {
+      vigenteByPerson.set(contract.personId, [
+        ...(vigenteByPerson.get(contract.personId) ?? []),
+        contract,
+      ]);
+    }
+  }
+
+  const updates: RowUpdate[] = [];
+
+  for (const row of pending) {
+    const cells = row.raw as Cells;
+    const conflict = conflicts.get(row.rowNumber);
+
+    if (conflict) {
+      updates.push({ id: row.id, outcome: errorOutcome([conflict]) });
+      continue;
+    }
+
+    const { normalized, errors } = normalizeContractRow(cells, {
+      today,
+      templates,
+    });
+
+    if (!normalized) {
+      updates.push({ id: row.id, outcome: errorOutcome(errors) });
+      continue;
+    }
+
+    const { idWorkia, curp } = normalized.personKey;
+    const inFile =
+      (idWorkia ? fileById.get(idWorkia.toLowerCase()) : undefined) ??
+      (curp ? fileByCurp.get(curp) : undefined);
+    const existingPerson =
+      (idWorkia ? lookups.byId.get(idWorkia.toLowerCase()) : undefined) ??
+      (curp ? lookups.byCurp.get(curp) : undefined);
+    const personId =
+      inFile?.targetPersonId ?? (inFile ? null : (existingPerson?.id ?? null));
+
+    if (inFile?.action === "error") {
+      updates.push({
+        id: row.id,
+        outcome: errorOutcome([
+          {
+            field: "curp",
+            message: `La persona (fila ${inFile.rowNumber} de Personas) tiene errores.`,
+          },
+        ]),
+      });
+      continue;
+    }
+
+    if (!inFile && !existingPerson) {
+      updates.push({
+        id: row.id,
+        outcome: errorOutcome([
+          {
+            field: curp ? "curp" : "idWorkia",
+            message:
+              "No encontramos a la persona (ni en el archivo ni en Workia).",
+          },
+        ]),
+      });
+      continue;
+    }
+
+    const match = personId
+      ? byIdentity.get(contractIdentity(personId, normalized.startDate))
+      : undefined;
+
+    if (normalized.status === "vigente" && personId) {
+      const personKey = idWorkia?.toLowerCase() ?? curp;
+      const blocking = (vigenteByPerson.get(personId) ?? []).find(
+        (contract) => {
+          if (contract.startDate === normalized.startDate) return false;
+
+          // The other vigente contract is fine if this file moves it out of vigente.
+          const replaced = statusByPersonStart.get(
+            `${personKey}|${contract.startDate}`,
+          );
+
+          return !replaced || replaced === "vigente";
+        },
+      );
+
+      if (blocking) {
+        updates.push({
+          id: row.id,
+          outcome: errorOutcome([
+            {
+              field: "estatus",
+              message:
+                "La persona ya tiene un contrato vigente en Workia (inicio " +
+                blocking.startDate +
+                ").",
+            },
+          ]),
+        });
+        continue;
+      }
+    }
+
+    const diff = match ? diffContract(normalized, match) : null;
+
+    updates.push({
+      id: row.id,
+      outcome: {
+        action: !match
+          ? "create"
+          : Object.keys(diff!).length
+            ? "update"
+            : "unchanged",
+        errors,
+        diff: match && Object.keys(diff!).length ? diff : null,
+        targetPersonId: personId,
+        targetContractId: match?.id ?? null,
+        normalized: normalized as NormalizedContract,
+      },
+    });
+  }
+
+  await saveOutcomes(updates);
+
+  return {
+    processed: pending.length,
+    remaining: await countPending(jobId, "contratos"),
+  };
+};
+
 export const countJobRows = async (jobId: string): Promise<ImportJobCounts> => {
   const rows = await db
     .select({ action: importRows.action, count: sql<number>`count(*)::int` })
@@ -756,22 +1037,11 @@ export const validateJobStep = async (jobId: string) => {
     return { done: false, remaining: await countPending(jobId) };
   }
 
-  // Contract rows are validated by WRK-I3-8; until then they cannot be applied.
-  await db
-    .update(importRows)
-    .set({
-      action: "error",
-      errors: [
-        { message: "La importación de contratos aún no está disponible." },
-      ],
-    })
-    .where(
-      and(
-        eq(importRows.jobId, jobId),
-        eq(importRows.sheet, "contratos"),
-        eq(importRows.action, "pending"),
-      ),
-    );
+  await validateContratosChunk(jobId);
+
+  if ((await countPending(jobId, "contratos")) > 0) {
+    return { done: false, remaining: await countPending(jobId) };
+  }
 
   await resolveManagers(jobId);
 

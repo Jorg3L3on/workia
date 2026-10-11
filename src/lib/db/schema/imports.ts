@@ -65,6 +65,7 @@ export type ImportJobCounts = {
   /** Rows that changed since the review and were skipped at apply time. */
   skipped?: number;
   managersApplied?: boolean;
+  chainApplied?: boolean;
 };
 
 export type ImportRowError = {
