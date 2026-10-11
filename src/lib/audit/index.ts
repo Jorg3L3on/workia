@@ -1,4 +1,6 @@
-import { and, desc, eq, gte, lte } from "drizzle-orm";
+import { createHash } from "node:crypto";
+
+import { and, desc, eq, gte, lte, sql } from "drizzle-orm";
 
 import { db } from "@/lib/db";
 import { auditEvents, users } from "@/lib/db/schema";
@@ -70,7 +72,8 @@ export const listAuditEvents = async (options: ListAuditEventsOptions = {}) => {
       action: auditEvents.action,
       result: auditEvents.result,
       source: auditEvents.source,
-      payload: auditEvents.payload,
+      // Lists only render summary and changes; skip before/after snapshots.
+      payload: sql<AuditPayload | null>`case when ${auditEvents.payload} is null then null else jsonb_strip_nulls(jsonb_build_object('summary', ${auditEvents.payload} -> 'summary', 'changes', ${auditEvents.payload} -> 'changes')) end`,
       requestMeta: auditEvents.requestMeta,
       occurredAt: auditEvents.occurredAt,
     })
@@ -176,6 +179,17 @@ export const snapshotSite = (site: Record<string, unknown>) => ({
   deletedAt: site.deletedAt,
 });
 
+const summarizeGeneratedText = (text: unknown) =>
+  typeof text === "string"
+    ? {
+        generatedTextLength: text.length,
+        generatedTextHash: createHash("sha256")
+          .update(text)
+          .digest("hex")
+          .slice(0, 16),
+      }
+    : { generatedTextLength: null, generatedTextHash: null };
+
 export const snapshotContract = (contract: Record<string, unknown>) => ({
   personId: contract.personId,
   type: contract.type,
@@ -184,7 +198,8 @@ export const snapshotContract = (contract: Record<string, unknown>) => ({
   noticeWindow: contract.noticeWindow,
   templateId: contract.templateId,
   templateName: contract.templateName,
-  generatedText: contract.generatedText,
+  // The full text lives on the contract row; audit keeps only its size and hash.
+  ...summarizeGeneratedText(contract.generatedText),
   scheduleEntrada: contract.scheduleEntrada,
   scheduleSalidaComer: contract.scheduleSalidaComer,
   scheduleRegresoComer: contract.scheduleRegresoComer,
