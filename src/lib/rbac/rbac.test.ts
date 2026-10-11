@@ -21,3 +21,21 @@ describe("PERMISSIONS catalog", () => {
     expect(slugs).toContain("content:update");
   });
 });
+
+describe("people import/export permissions", () => {
+  it("are in the catalog and granted to super_admin and admin only", async () => {
+    const { PERMISSIONS, ROLES } = await import("@/lib/db/schema/types");
+    const slugs = PERMISSIONS.map((permission) => permission.slug);
+
+    expect(slugs).toContain("people:import");
+    expect(slugs).toContain("people:export");
+
+    for (const role of ROLES) {
+      const permissions: readonly string[] = role.permissions;
+      const granted = permissions.includes("people:import");
+
+      expect(granted).toBe(["super_admin", "admin"].includes(role.slug));
+      expect(permissions.includes("people:export")).toBe(granted);
+    }
+  });
+});

@@ -6,6 +6,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
@@ -78,6 +79,12 @@ export const people = pgTable(
       "gin",
       sql`${personSearchText(table)} gin_trgm_ops`,
     ),
+    uniqueIndex("people_curp_active_unique")
+      .on(table.curp)
+      .where(sql`${table.deletedAt} is null and ${table.curp} is not null`),
+    uniqueIndex("people_rfc_active_unique")
+      .on(table.rfc)
+      .where(sql`${table.deletedAt} is null and ${table.rfc} is not null`),
   ],
 );
 

@@ -2,6 +2,14 @@ import { z } from "zod";
 
 import { formatDateMx } from "@/lib/format/date";
 
+import {
+  isValidCurp,
+  isValidNss,
+  isValidRfc,
+  normalizeIdentifier,
+  normalizeNss,
+} from "./identity";
+
 export const PERSON_STATUSES = ["activa", "baja"] as const;
 
 export type PersonStatusValue = (typeof PERSON_STATUSES)[number];
@@ -42,12 +50,18 @@ export const matchesPersonaListRow = (
 
 const optionalText = z.string().trim().max(120).optional().or(z.literal(""));
 
-const optionalIdentifier = z
-  .string()
-  .trim()
-  .max(32)
-  .optional()
-  .or(z.literal(""));
+const optionalIdentifier = (
+  normalize: (value: string) => string,
+  isValid: (value: string) => boolean,
+  message: string,
+) =>
+  z
+    .string()
+    .trim()
+    .max(32)
+    .transform(normalize)
+    .refine((value) => value === "" || isValid(value), message)
+    .optional();
 
 const optionalDate = z
   .string()
@@ -102,9 +116,9 @@ export const personFormSchema = z.object({
   positionId: optionalUuid,
   managerId: optionalUuid,
   siteId: optionalUuid,
-  rfc: optionalIdentifier,
-  curp: optionalIdentifier,
-  nss: optionalIdentifier,
+  rfc: optionalIdentifier(normalizeIdentifier, isValidRfc, "RFC inválido"),
+  curp: optionalIdentifier(normalizeIdentifier, isValidCurp, "CURP inválida"),
+  nss: optionalIdentifier(normalizeNss, isValidNss, "NSS inválido"),
   horarioEntrada: optionalTime,
   horarioSalidaComer: optionalTime,
   horarioRegresoComer: optionalTime,

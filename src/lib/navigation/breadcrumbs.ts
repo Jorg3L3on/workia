@@ -35,6 +35,20 @@ export const resolveBreadcrumbs = (
     ];
   }
 
+  if (path === "/app/personas/importar") {
+    return [
+      { label: "Personas", href: "/app/personas" },
+      { label: "Importar" },
+    ];
+  }
+
+  if (path === "/app/personas/importaciones") {
+    return [
+      { label: "Personas", href: "/app/personas" },
+      { label: "Importaciones" },
+    ];
+  }
+
   if (path.startsWith("/app/personas/")) {
     return [
       { label: "Personas", href: "/app/personas" },

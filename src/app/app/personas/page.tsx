@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { PlusIcon } from "lucide-react";
+import { DownloadIcon, PlusIcon, UploadIcon } from "lucide-react";
 
 import { pageTitles } from "@/lib/brand/chrome-copy";
 
@@ -42,16 +42,24 @@ const PersonasPage = async ({ searchParams }: PersonasPageProps) => {
       : undefined;
   const { page, pageSize } = parseListPaging(params);
 
-  const [{ rows: people, total }, canCreate] = await Promise.all([
-    listPeoplePage({
-      query: q,
-      status,
-      deleted: deleted === "1",
-      page,
-      pageSize,
-    }),
-    userHasPermission(session.user.id, "people:create"),
-  ]);
+  const [{ rows: people, total }, canCreate, canImport, canExport] =
+    await Promise.all([
+      listPeoplePage({
+        query: q,
+        status,
+        deleted: deleted === "1",
+        page,
+        pageSize,
+      }),
+      userHasPermission(session.user.id, "people:create"),
+      userHasPermission(session.user.id, "people:import"),
+      userHasPermission(session.user.id, "people:export"),
+    ]);
+  const exportQuery = new URLSearchParams();
+
+  if (q) exportQuery.set("q", q);
+  if (status) exportQuery.set("status", status);
+  if (deleted === "1") exportQuery.set("deleted", "1");
 
   const rows = people.map((person) => ({
     id: person.id,
@@ -66,13 +74,75 @@ const PersonasPage = async ({ searchParams }: PersonasPageProps) => {
     <div className="flex flex-col gap-6">
       <ListPageHeader
         actions={
-          canCreate ? (
-            <Button asChild className={listPrimaryActionClassName}>
-              <Link href="/app/personas/nueva">
-                <PlusIcon className="size-4" aria-hidden />
-                Nueva persona
-              </Link>
-            </Button>
+          canCreate || canImport || canExport ? (
+            <>
+              {canImport ? (
+                <>
+                  <Button
+                    asChild
+                    className="h-10 rounded-full"
+                    variant="outline"
+                  >
+                    <Link href="/app/personas/importaciones">
+                      Importaciones
+                    </Link>
+                  </Button>
+                  <Button
+                    asChild
+                    className="h-10 rounded-full"
+                    variant="outline"
+                  >
+                    <Link href="/app/personas/importar">
+                      <UploadIcon className="size-4" aria-hidden />
+                      Importar
+                    </Link>
+                  </Button>
+                </>
+              ) : null}
+              {canImport ? (
+                <Button asChild className="h-10 rounded-full" variant="outline">
+                  {/* Plain anchor: this is a file download, not a page. */}
+                  <a href="/app/personas/plantilla" download>
+                    <DownloadIcon className="size-4" aria-hidden />
+                    Descargar plantilla
+                  </a>
+                </Button>
+              ) : null}
+              {canExport ? (
+                <>
+                  <Button
+                    asChild
+                    className="h-10 rounded-full"
+                    variant="outline"
+                  >
+                    <a href={`/app/personas/exportar?${exportQuery}`} download>
+                      <DownloadIcon className="size-4" aria-hidden />
+                      Exportar Excel
+                    </a>
+                  </Button>
+                  <Button
+                    asChild
+                    className="h-10 rounded-full"
+                    variant="outline"
+                  >
+                    <a
+                      href={`/app/personas/exportar?${new URLSearchParams({ ...Object.fromEntries(exportQuery), format: "csv" })}`}
+                      download
+                    >
+                      CSV
+                    </a>
+                  </Button>
+                </>
+              ) : null}
+              {canCreate ? (
+                <Button asChild className={listPrimaryActionClassName}>
+                  <Link href="/app/personas/nueva">
+                    <PlusIcon className="size-4" aria-hidden />
+                    Nueva persona
+                  </Link>
+                </Button>
+              ) : null}
+            </>
           ) : undefined
         }
         description="Gestiona expedientes, relación laboral e identificadores."

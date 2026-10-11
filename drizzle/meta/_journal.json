@@ -78,6 +78,27 @@
       "when": 1787760000000,
       "tag": "0013_people_search_trgm",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1787767200000,
+      "tag": "0010_person_identity_unique",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1787770800000,
+      "tag": "0011_import_staging",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1787774400000,
+      "tag": "0014_import_undo",
+      "breakpoints": true
     }
   ]
 }

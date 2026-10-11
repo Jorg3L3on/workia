@@ -8,6 +8,7 @@ import {
   ilike,
   isNotNull,
   isNull,
+  ne,
   or,
   sql,
 } from "drizzle-orm";
@@ -30,6 +31,12 @@ import {
 } from "@/lib/db/schema";
 import type { PersonStatus } from "@/lib/db/schema/people";
 
+import {
+  DuplicateIdentityError,
+  identifierOrNull,
+  normalizeNss,
+  type IdentityField,
+} from "./identity";
 import {
   personScheduleHasTimes,
   toPersonScheduleValues,
@@ -62,9 +69,9 @@ const toPersonValues = (input: PersonFormValues) => ({
   positionId: normalizeOptional(input.positionId),
   managerId: normalizeOptional(input.managerId),
   siteId: normalizeOptional(input.siteId),
-  rfc: normalizeOptional(input.rfc),
-  curp: normalizeOptional(input.curp),
-  nss: normalizeOptional(input.nss),
+  rfc: identifierOrNull(input.rfc),
+  curp: identifierOrNull(input.curp),
+  nss: normalizeOptional(normalizeNss(input.nss)),
   status: input.status,
 });
 
@@ -441,6 +448,72 @@ export const upsertPersonSchedule = async (
   return created;
 };
 
+const isUniqueViolation = (error: unknown): boolean =>
+  typeof error === "object" &&
+  error !== null &&
+  ((error as { code?: string }).code === "23505" ||
+    isUniqueViolation((error as { cause?: unknown }).cause));
+
+/** Active people (not deleted) that already use this CURP or RFC. */
+export const findIdentityConflicts = async (
+  input: Pick<PersonFormValues, "curp" | "rfc">,
+  excludeId?: string,
+  client: DbExecutor = db,
+): Promise<IdentityField[]> => {
+  const curp = identifierOrNull(input.curp);
+  const rfc = identifierOrNull(input.rfc);
+  const matchers = [
+    curp ? eq(people.curp, curp) : undefined,
+    rfc ? eq(people.rfc, rfc) : undefined,
+  ].filter((matcher) => matcher !== undefined);
+
+  if (matchers.length === 0) {
+    return [];
+  }
+
+  const rows = await client
+    .select({ curp: people.curp, rfc: people.rfc })
+    .from(people)
+    .where(
+      and(
+        isNull(people.deletedAt),
+        or(...matchers),
+        excludeId ? ne(people.id, excludeId) : undefined,
+      ),
+    );
+
+  const fields = new Set<IdentityField>();
+
+  for (const row of rows) {
+    if (curp && row.curp === curp) fields.add("curp");
+    if (rfc && row.rfc === rfc) fields.add("rfc");
+  }
+
+  return [...fields];
+};
+
+const assertNoIdentityConflicts = async (
+  input: Pick<PersonFormValues, "curp" | "rfc">,
+  excludeId?: string,
+  client: DbExecutor = db,
+) => {
+  const conflicts = await findIdentityConflicts(input, excludeId, client);
+
+  if (conflicts.length > 0) {
+    throw new DuplicateIdentityError(conflicts);
+  }
+};
+
+// A race between the pre-check and the write surfaces as a unique violation
+// on the partial indexes; report it like the pre-check does.
+const rethrowUniqueViolation = (error: unknown): never => {
+  if (isUniqueViolation(error)) {
+    throw new DuplicateIdentityError(["curp", "rfc"]);
+  }
+
+  throw error;
+};
+
 export const createPerson = async (
   input: PersonFormValues,
   actorUserId?: string | null,
@@ -452,7 +525,13 @@ export const createPerson = async (
 
     const values = toPersonValues(input);
 
-    const [created] = await tx.insert(people).values(values).returning();
+    await assertNoIdentityConflicts(input, undefined, tx);
+
+    const [created] = await tx
+      .insert(people)
+      .values(values)
+      .returning()
+      .catch(rethrowUniqueViolation);
 
     await audit({
       actorUserId,
@@ -499,11 +578,14 @@ export const updatePerson = async (
     const before = snapshotPerson(existing);
     const values = toPersonValues(input);
 
+    await assertNoIdentityConflicts(input, id, tx);
+
     const [updated] = await tx
       .update(people)
       .set(values)
       .where(eq(people.id, id))
-      .returning();
+      .returning()
+      .catch(rethrowUniqueViolation);
 
     if (!updated) {
       return null;

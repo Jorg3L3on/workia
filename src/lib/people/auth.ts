@@ -19,3 +19,25 @@ export const requirePeopleUpdate = async () =>
 
 export const requirePeopleDelete = async () =>
   requirePeoplePermission("people:delete");
+
+export const requirePeopleImport = async () => {
+  const session = await requirePeoplePermission("people:import");
+  // Importing creates and updates people, so it implies those writes too.
+  await requirePermission(session.user.id, "people:create");
+  await requirePermission(session.user.id, "people:update");
+  return session;
+};
+
+/** Exporting includes RFC, CURP, NSS and birth date, so it needs people:read. */
+export const requirePeopleExport = async () => {
+  const session = await requirePeoplePermission("people:export");
+  await requirePermission(session.user.id, "people:read");
+  return session;
+};
+
+/** Undoing an import soft-deletes the people it created. */
+export const requirePeopleUndoImport = async () => {
+  const session = await requirePeopleImport();
+  await requirePermission(session.user.id, "people:delete");
+  return session;
+};
