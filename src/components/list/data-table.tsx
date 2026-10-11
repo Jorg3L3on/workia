@@ -14,6 +14,7 @@ import {
 import { ArrowDownIcon, ArrowUpIcon, SearchIcon } from "lucide-react";
 import {
   Fragment,
+  useEffect,
   useId,
   useMemo,
   useState,
@@ -92,7 +93,29 @@ export type DataTableProps<TData> = {
   renderMobile?: (rows: TData[]) => ReactNode;
   /** `inset` drops the extra toolbar card when the table already sits in a panel. */
   layout?: "page" | "inset";
+  /**
+   * Server mode: `data` is already the current page. Search, paging and the
+   * page size are owned by the URL (via the callbacks); sorting is disabled
+   * because it would only reorder one page.
+   */
+  server?: DataTableServerControls;
 };
+
+export type DataTableServerControls = {
+  /** Rows matching the current filters across all pages. */
+  total: number;
+  /** 1-based current page. */
+  page: number;
+  pageSize: number;
+  query: string;
+  /** True when a search or toolbar filter narrows the list. */
+  hasFilters: boolean;
+  onQueryChange: (query: string) => void;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (pageSize: number) => void;
+};
+
+const SEARCH_DEBOUNCE_MS = 300;
 
 const stringifySearchValue = (value: unknown) => {
   if (value === null || value === undefined) {
@@ -172,15 +195,36 @@ export const DataTable = <TData,>({
   renderAfterRow,
   renderMobile,
   layout = "page",
+  server,
 }: DataTableProps<TData>) => {
   const searchId = useId();
   const pageSizeId = useId();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState(initialSearch);
-  const [pagination, setPagination] = useState<PaginationState>({
+  const [localPagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: initialPageSize ?? pageSizes[0] ?? 10,
   });
+  const pagination: PaginationState = server
+    ? { pageIndex: server.page - 1, pageSize: server.pageSize }
+    : localPagination;
+  const [serverSearch, setServerSearch] = useState(server?.query ?? "");
+  const serverQuery = server?.query;
+  const onServerQueryChange = server?.onQueryChange;
+
+  // Debounce typing into the URL; skip when the box already matches it.
+  useEffect(() => {
+    if (!onServerQueryChange || serverSearch.trim() === (serverQuery ?? "")) {
+      return;
+    }
+
+    const timer = setTimeout(
+      () => onServerQueryChange(serverSearch.trim()),
+      SEARCH_DEBOUNCE_MS,
+    );
+
+    return () => clearTimeout(timer);
+  }, [serverSearch, serverQuery, onServerQueryChange]);
 
   const scopedData = useMemo(
     () => (filterRow ? data.filter(filterRow) : data),
@@ -193,7 +237,7 @@ export const DataTable = <TData,>({
         id: column.id,
         accessorFn: (row) => column.accessor(row),
         header: column.header,
-        enableSorting: column.enableSorting ?? true,
+        enableSorting: server ? false : (column.enableSorting ?? true),
         sortingFn: (left, right, columnId) =>
           compareTableValues(left.getValue(columnId), right.getValue(columnId)),
         cell: ({ row }) =>
@@ -204,7 +248,7 @@ export const DataTable = <TData,>({
           cellClassName: column.cellClassName,
         },
       })),
-    [columns],
+    [columns, server],
   );
 
   const table = useReactTable({
@@ -219,6 +263,13 @@ export const DataTable = <TData,>({
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
+    ...(server
+      ? {
+          manualPagination: true,
+          manualFiltering: true,
+          pageCount: Math.max(1, Math.ceil(server.total / server.pageSize)),
+        }
+      : {}),
     globalFilterFn: (row, _columnId, filterValue) => {
       const query = String(filterValue).trim().toLowerCase();
 
@@ -236,19 +287,33 @@ export const DataTable = <TData,>({
   });
 
   const handleSearchChange = (event: ChangeEvent<HTMLInputElement>) => {
+    if (server) {
+      setServerSearch(event.target.value);
+      return;
+    }
+
     setGlobalFilter(event.target.value);
     setPagination((current) => ({ ...current, pageIndex: 0 }));
   };
 
   const handlePageSizeChange = (next: string) => {
+    if (server) {
+      server.onPageSizeChange(Number(next));
+      return;
+    }
+
     setPagination({ pageIndex: 0, pageSize: Number(next) });
   };
 
-  const filteredCount = table.getFilteredRowModel().rows.length;
+  const filteredCount = server
+    ? server.total
+    : table.getFilteredRowModel().rows.length;
   const pageCount = table.getPageCount();
   const pageRows = table.getRowModel().rows;
   const visibleRows = pageRows.map((row) => row.original);
-  const hasSourceRows = data.length > 0;
+  const hasSourceRows = server
+    ? data.length > 0 || server.hasFilters
+    : data.length > 0;
   const hasVisibleRows = pageRows.length > 0;
   const showNoMatches = hasSourceRows && filteredCount === 0;
   const showEmpty = !hasSourceRows;
@@ -283,30 +348,32 @@ export const DataTable = <TData,>({
               onChange={handleSearchChange}
               placeholder={searchPlaceholder}
               type="search"
-              value={globalFilter}
+              value={server ? serverSearch : globalFilter}
             />
           </div>
           {toolbar}
-          <div className="sm:w-40">
-            <label className="sr-only" htmlFor={pageSizeId}>
-              Filas por página
-            </label>
-            <FormSelect
-              aria-label="Filas por página"
-              id={pageSizeId}
-              onValueChange={handlePageSizeChange}
-              options={pageSizes.map((size) => ({
-                value: String(size),
-                label: `${size} por página`,
-              }))}
-              value={String(pagination.pageSize)}
-            />
-          </div>
+          {pageSizes.length > 1 ? (
+            <div className="sm:w-40">
+              <label className="sr-only" htmlFor={pageSizeId}>
+                Filas por página
+              </label>
+              <FormSelect
+                aria-label="Filas por página"
+                id={pageSizeId}
+                onValueChange={handlePageSizeChange}
+                options={pageSizes.map((size) => ({
+                  value: String(size),
+                  label: `${size} por página`,
+                }))}
+                value={String(pagination.pageSize)}
+              />
+            </div>
+          ) : null}
           <ListResultCount
             count={filteredCount}
             plural={resultPlural}
             singular={resultSingular}
-            total={scopedData.length}
+            total={server ? server.total : scopedData.length}
           />
         </div>
       </div>
@@ -444,7 +511,11 @@ export const DataTable = <TData,>({
               <Button
                 aria-label="Página anterior"
                 disabled={!table.getCanPreviousPage()}
-                onClick={() => table.previousPage()}
+                onClick={() =>
+                  server
+                    ? server.onPageChange(server.page - 1)
+                    : table.previousPage()
+                }
                 size="sm"
                 type="button"
                 variant="outline"
@@ -456,7 +527,11 @@ export const DataTable = <TData,>({
               <Button
                 aria-label="Página siguiente"
                 disabled={!table.getCanNextPage()}
-                onClick={() => table.nextPage()}
+                onClick={() =>
+                  server
+                    ? server.onPageChange(server.page + 1)
+                    : table.nextPage()
+                }
                 size="sm"
                 type="button"
                 variant="outline"

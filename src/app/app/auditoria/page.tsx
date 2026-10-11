@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
 import { FormSelect } from "@/components/ui/form-select";
 import { Input } from "@/components/ui/input";
-import { listAuditEvents } from "@/lib/audit";
+import { ListPager } from "@/components/list/list-pager";
+import { countAuditEvents, listAuditEvents } from "@/lib/audit";
 import { requireAuditRead } from "@/lib/audit/auth";
 import {
   AUDIT_ACTIONS,
@@ -18,6 +19,7 @@ import {
   type AuditAction,
   type AuditResourceType,
 } from "@/lib/audit/types";
+import { pageCountFor, parseListPaging } from "@/lib/list/paging";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 
@@ -35,6 +37,8 @@ type AuditoriaPageProps = {
     action?: AuditAction;
     from?: string;
     to?: string;
+    page?: string;
+    pageSize?: string;
   }>;
 };
 
@@ -42,16 +46,23 @@ const AuditoriaPage = async ({ searchParams }: AuditoriaPageProps) => {
   await requireAuditRead();
   const filters = await searchParams;
 
-  const [events, actorOptions] = await Promise.all([
+  const { page, pageSize } = parseListPaging(filters);
+  const auditFilters = {
+    resourceType: filters.resourceType,
+    resourceId: filters.resourceId,
+    actorUserId: filters.actorUserId,
+    action: filters.action,
+    from: filters.from ? new Date(`${filters.from}T00:00:00`) : undefined,
+    to: filters.to ? new Date(`${filters.to}T23:59:59`) : undefined,
+  };
+
+  const [events, total, actorOptions] = await Promise.all([
     listAuditEvents({
-      resourceType: filters.resourceType,
-      resourceId: filters.resourceId,
-      actorUserId: filters.actorUserId,
-      action: filters.action,
-      from: filters.from ? new Date(`${filters.from}T00:00:00`) : undefined,
-      to: filters.to ? new Date(`${filters.to}T23:59:59`) : undefined,
-      limit: 200,
+      ...auditFilters,
+      limit: pageSize,
+      offset: (page - 1) * pageSize,
     }),
+    countAuditEvents(auditFilters),
     db
       .select({ id: users.id, name: users.name, email: users.email })
       .from(users),
@@ -153,7 +164,21 @@ const AuditoriaPage = async ({ searchParams }: AuditoriaPageProps) => {
         </div>
       </ListFilterBar>
 
-      <AuditEventList events={events} />
+      <AuditEventList events={events} pageSize={pageSize} />
+
+      <ListPager
+        page={page}
+        pageCount={pageCountFor(total, pageSize)}
+        params={{
+          resourceType: filters.resourceType,
+          resourceId: filters.resourceId,
+          actorUserId: filters.actorUserId,
+          action: filters.action,
+          from: filters.from,
+          to: filters.to,
+        }}
+        pathname="/app/auditoria"
+      />
     </div>
   );
 };

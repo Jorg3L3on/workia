@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 
 import { DataTable, type DataTableColumn } from "@/components/list/data-table";
+import { useServerListControls } from "@/components/list/use-server-list-controls";
 import { ListRowAction } from "@/components/list/list-row-action";
 import { ListStatusBadge } from "@/components/list/list-status-badge";
 import type { PersonaListRow } from "@/components/people/persona-list-row";
@@ -10,7 +11,6 @@ import { PersonasMobileList } from "@/components/people/personas-mobile-list";
 import { FormSelect } from "@/components/ui/form-select";
 import { formatDateMx } from "@/lib/format/date";
 import {
-  matchesPersonaListRow,
   personDeletedLabel,
   personStatusLabels,
   type PersonListVisibility,
@@ -20,29 +20,33 @@ export type { PersonaListRow } from "@/components/people/persona-list-row";
 
 type PersonasDataTableProps = {
   people: PersonaListRow[];
-  initialSearch?: string;
-  initialStatus?: "activa" | "baja" | "";
-  initialVisibility?: PersonListVisibility;
+  total: number;
+  page: number;
+  pageSize: number;
+  query: string;
+  status: "activa" | "baja" | "";
+  visibility: PersonListVisibility;
   emptyAction?: ReactNode;
 };
 
 export const PersonasDataTable = ({
   people,
-  initialSearch = "",
-  initialStatus = "",
-  initialVisibility = "expediente",
+  total,
+  page,
+  pageSize,
+  query,
+  status,
+  visibility,
   emptyAction,
 }: PersonasDataTableProps) => {
-  const [status, setStatus] = useState(initialStatus);
-  const [visibility, setVisibility] =
-    useState<PersonListVisibility>(initialVisibility);
+  const controls = useServerListControls();
 
   const handleStatusChange = (next: string) => {
-    setStatus(next as typeof initialStatus);
+    controls.setFilter("status", next || null);
   };
 
   const handleVisibilityChange = (next: string) => {
-    setVisibility(next as PersonListVisibility);
+    controls.setFilter("deleted", next === "deleted" ? "1" : null);
   };
 
   const columns = useMemo<DataTableColumn<PersonaListRow>[]>(
@@ -132,7 +136,6 @@ export const PersonasDataTable = ({
           ? "No hay expedientes borrados"
           : "Aún no hay personas en el expediente"
       }
-      filterRow={(row) => matchesPersonaListRow(row, { status, visibility })}
       getRowAriaLabel={(row) =>
         row.deleted
           ? `Ver expediente borrado de ${row.name}`
@@ -140,8 +143,6 @@ export const PersonasDataTable = ({
       }
       getRowHref={(row) => `/app/personas/${row.id}`}
       getRowId={(row) => row.id}
-      getSearchText={(row) => row.searchText}
-      initialSearch={initialSearch}
       noMatchesDescription={
         viewingDeleted
           ? "Los expedientes con borrado lógico aparecen aquí."
@@ -153,9 +154,20 @@ export const PersonasDataTable = ({
       renderMobile={(visiblePeople) => (
         <PersonasMobileList people={visiblePeople} />
       )}
+      pageSizes={controls.pageSizes}
       resultPlural="personas"
       resultSingular="persona"
-      searchPlaceholder="Buscar personas..."
+      searchPlaceholder="Buscar por nombre, RFC o CURP..."
+      server={{
+        total,
+        page,
+        pageSize,
+        query,
+        hasFilters: Boolean(query || status),
+        onQueryChange: controls.setQuery,
+        onPageChange: controls.setPage,
+        onPageSizeChange: controls.setPageSize,
+      }}
       toolbar={
         <div className="flex flex-col gap-3 sm:flex-row">
           <div className="sm:w-48">

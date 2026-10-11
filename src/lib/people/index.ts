@@ -1,5 +1,16 @@
 import { alias } from "drizzle-orm/pg-core";
-import { and, asc, desc, eq, ilike, isNull, or, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  ilike,
+  isNotNull,
+  isNull,
+  or,
+  sql,
+} from "drizzle-orm";
 
 import {
   buildChanges,
@@ -8,6 +19,8 @@ import {
   snapshotPersonSchedule,
 } from "@/lib/audit";
 import { db } from "@/lib/db";
+import { escapeLike } from "@/lib/db/like";
+import { personSearchText } from "@/lib/db/schema/people";
 import {
   areas,
   people,
@@ -98,6 +111,60 @@ export const listPeople = async (options: ListPeopleOptions = {}) => {
       asc(people.apellidoPaterno),
       asc(people.nombres),
     );
+};
+
+export type ListPeoplePageOptions = {
+  query?: string;
+  status?: PersonStatus;
+  /** Show only soft-deleted records instead of only live ones. */
+  deleted?: boolean;
+  page: number;
+  pageSize: number;
+};
+
+/** One page of the Personas list: only the columns the table shows, plus the total. */
+export const listPeoplePage = async (options: ListPeoplePageOptions) => {
+  const filters = [
+    options.deleted ? isNotNull(people.deletedAt) : isNull(people.deletedAt),
+  ];
+
+  if (options.status) {
+    filters.push(eq(people.status, options.status));
+  }
+
+  // Every word must appear somewhere in name/RFC/CURP/email.
+  for (const term of options.query?.trim().split(/\s+/).filter(Boolean) ?? []) {
+    filters.push(ilike(personSearchText(people), `%${escapeLike(term)}%`));
+  }
+
+  const where = and(...filters);
+
+  const [rows, [totals]] = await Promise.all([
+    db
+      .select({
+        id: people.id,
+        nombres: people.nombres,
+        apellidoPaterno: people.apellidoPaterno,
+        apellidoMaterno: people.apellidoMaterno,
+        rfc: people.rfc,
+        fechaIngreso: people.fechaIngreso,
+        status: people.status,
+        deletedAt: people.deletedAt,
+      })
+      .from(people)
+      .where(where)
+      .orderBy(
+        desc(people.updatedAt),
+        asc(people.apellidoPaterno),
+        asc(people.nombres),
+        asc(people.id),
+      )
+      .limit(options.pageSize)
+      .offset((options.page - 1) * options.pageSize),
+    db.select({ total: count() }).from(people).where(where),
+  ]);
+
+  return { rows, total: totals?.total ?? 0 };
 };
 
 export const listActivePeopleForSelect = async (excludeId?: string) => {

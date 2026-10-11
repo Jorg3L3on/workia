@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-import { and, desc, eq, gte, lte, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, lte, sql } from "drizzle-orm";
 
 import { db } from "@/lib/db";
 import { auditEvents, users } from "@/lib/db/schema";
@@ -27,7 +27,7 @@ export const recordAuditEvent = async (input: RecordAuditEventInput) => {
   return created;
 };
 
-export const listAuditEvents = async (options: ListAuditEventsOptions = {}) => {
+const buildAuditFilters = (options: ListAuditEventsOptions) => {
   const filters = [];
 
   if (options.resourceType) {
@@ -54,12 +54,22 @@ export const listAuditEvents = async (options: ListAuditEventsOptions = {}) => {
     filters.push(lte(auditEvents.occurredAt, options.to));
   }
 
-  const whereClause =
-    filters.length === 0
-      ? undefined
-      : filters.length === 1
-        ? filters[0]
-        : and(...filters);
+  return filters.length === 0 ? undefined : and(...filters);
+};
+
+export const countAuditEvents = async (
+  options: ListAuditEventsOptions = {},
+) => {
+  const [row] = await db
+    .select({ total: count() })
+    .from(auditEvents)
+    .where(buildAuditFilters(options));
+
+  return row?.total ?? 0;
+};
+
+export const listAuditEvents = async (options: ListAuditEventsOptions = {}) => {
+  const whereClause = buildAuditFilters(options);
 
   return db
     .select({
@@ -80,8 +90,9 @@ export const listAuditEvents = async (options: ListAuditEventsOptions = {}) => {
     .from(auditEvents)
     .leftJoin(users, eq(auditEvents.actorUserId, users.id))
     .where(whereClause)
-    .orderBy(desc(auditEvents.occurredAt))
+    .orderBy(desc(auditEvents.occurredAt), desc(auditEvents.id))
     .limit(options.limit ?? 200)
+    .offset(options.offset ?? 0)
     .then((rows) =>
       rows.map((row) => ({
         ...row,

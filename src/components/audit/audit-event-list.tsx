@@ -56,6 +56,8 @@ type AuditEventListProps = {
   events: AuditEventRow[];
   emptyMessage?: string;
   layout?: "page" | "inset";
+  /** Rows per page when the server already paged the events. */
+  pageSize?: number;
 };
 
 type AuditTableRow = AuditEventRow & {
@@ -70,6 +72,7 @@ export const AuditEventList = ({
   events,
   emptyMessage = "Sin eventos de auditoría.",
   layout = "page",
+  pageSize,
 }: AuditEventListProps) => {
   const rows = useMemo<AuditTableRow[]>(
     () =>
@@ -160,6 +163,7 @@ export const AuditEventList = ({
         ].join(" ")
       }
       layout={layout}
+      pageSizes={pageSize ? [pageSize] : undefined}
       resultPlural="eventos"
       resultSingular="evento"
       searchPlaceholder="Buscar en los eventos cargados"
