@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 export const workiaIcons = {
   icon: [
     { url: "/favicon.ico", sizes: "any" },
+    { url: "/icon.svg", type: "image/svg+xml" },
     { url: "/icon.png", type: "image/png", sizes: "32x32" },
     { url: "/icon-192.png", type: "image/png", sizes: "192x192" },
   ],

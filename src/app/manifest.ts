@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Plataforma de recursos humanos — personas, nómina y talento.",
     start_url: "/",
     display: "standalone",
-    background_color: "#09090b",
-    theme_color: "#09090b",
+    background_color: "#f2f6f7",
+    theme_color: "#0b7fa6",
     icons: [
       {
         src: "/favicon.ico",
@@ -23,6 +23,11 @@ export default function manifest(): MetadataRoute.Manifest {
       {
         src: "/icon-192.png",
         sizes: "192x192",
+        type: "image/png",
+      },
+      {
+        src: "/icon-512.png",
+        sizes: "512x512",
         type: "image/png",
       },
       {

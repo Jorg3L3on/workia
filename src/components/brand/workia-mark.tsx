@@ -6,13 +6,13 @@ type WorkiaMarkProps = {
   className?: string;
 };
 
-/** Ribbon W mark only — no dark squircle tile. */
+/** Workia W mark (teal gradient, three-person motif) — no tile behind it. */
 export const WorkiaMark = ({ className }: WorkiaMarkProps) => {
   return (
     <Image
-      src="/mark.png"
+      src="/mark.svg"
       alt=""
-      width={48}
+      width={32}
       height={32}
       className={cn("h-8 w-auto shrink-0 object-contain", className)}
       unoptimized
