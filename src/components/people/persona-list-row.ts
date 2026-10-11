@@ -5,5 +5,4 @@ export type PersonaListRow = {
   fechaIngreso: string | null;
   status: "activa" | "baja";
   deleted: boolean;
-  searchText: string;
 };

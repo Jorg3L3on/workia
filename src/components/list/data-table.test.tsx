@@ -165,3 +165,44 @@ describe("DataTable", () => {
     expect(screen.getByText("Juliet item")).toBeTruthy();
   });
 });
+
+describe("DataTable server mode", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  const server = {
+    total: 60,
+    page: 2,
+    pageSize: 25,
+    query: "",
+    hasFilters: false,
+    onQueryChange: vi.fn(),
+    onPageChange: vi.fn(),
+    onPageSizeChange: vi.fn(),
+  };
+
+  it("shows the rows it receives with the server total and page count", () => {
+    renderTable({ data: rows.slice(0, 3), server });
+
+    expect(screen.getByText("Zulu item")).toBeTruthy();
+    expect(screen.getByText("Página 2 de 3")).toBeTruthy();
+    expect(screen.getByText(/60/)).toBeTruthy();
+  });
+
+  it("delegates paging to the server instead of slicing rows", () => {
+    renderTable({ data: rows.slice(0, 3), server });
+
+    fireEvent.click(screen.getByRole("button", { name: "Página siguiente" }));
+    fireEvent.click(screen.getByRole("button", { name: "Página anterior" }));
+
+    expect(server.onPageChange).toHaveBeenNthCalledWith(1, 3);
+    expect(server.onPageChange).toHaveBeenNthCalledWith(2, 1);
+  });
+
+  it("does not offer client sorting, which would only reorder one page", () => {
+    renderTable({ data: rows.slice(0, 3), server });
+
+    expect(screen.queryByRole("button", { name: /Ordenar por/ })).toBeNull();
+  });
+});

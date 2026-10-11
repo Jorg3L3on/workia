@@ -69,13 +69,27 @@
       "idx": 9,
       "version": "7",
       "when": 1787756400000,
-      "tag": "0010_person_identity_unique",
+      "tag": "0012_audit_renewal_indexes",
       "breakpoints": true
     },
     {
       "idx": 10,
       "version": "7",
       "when": 1787760000000,
+      "tag": "0013_people_search_trgm",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1787767200000,
+      "tag": "0010_person_identity_unique",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1787770800000,
       "tag": "0011_import_staging",
       "breakpoints": true
     }

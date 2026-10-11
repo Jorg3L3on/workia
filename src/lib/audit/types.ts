@@ -101,4 +101,5 @@ export type ListAuditEventsOptions = {
   from?: Date;
   to?: Date;
   limit?: number;
+  offset?: number;
 };

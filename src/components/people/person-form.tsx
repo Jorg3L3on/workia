@@ -17,8 +17,10 @@ import type {
   Position,
   Site,
 } from "@/lib/db/schema";
+import { ManagerPicker } from "@/components/people/manager-picker";
 import {
   createPersonAction,
+  type ManagerOption,
   updatePersonAction,
   type PersonActionState,
 } from "@/lib/people/actions";
@@ -30,11 +32,6 @@ import {
 } from "@/lib/people/schema";
 import { siteKindLabels } from "@/lib/sites/schema";
 
-type SelectPerson = Pick<
-  Person,
-  "id" | "nombres" | "apellidoPaterno" | "apellidoMaterno"
->;
-
 type PersonFormProps = {
   mode: "create" | "edit";
   person?: Person;
@@ -42,7 +39,8 @@ type PersonFormProps = {
   areas: Area[];
   positions: Position[];
   sites: Site[];
-  managers: SelectPerson[];
+  /** Current manager, shown in the picker; other candidates load as the user types. */
+  initialManager?: ManagerOption | null;
 };
 
 const initialState: PersonActionState = {};
@@ -57,11 +55,6 @@ const SubmitButton = ({ label }: { label: string }) => {
   );
 };
 
-const formatSelectPerson = (person: SelectPerson) =>
-  [person.nombres, person.apellidoPaterno, person.apellidoMaterno]
-    .filter(Boolean)
-    .join(" ");
-
 export const PersonForm = ({
   mode,
   person,
@@ -69,7 +62,7 @@ export const PersonForm = ({
   areas,
   positions,
   sites,
-  managers,
+  initialManager = null,
 }: PersonFormProps) => {
   const action =
     mode === "create"
@@ -247,18 +240,11 @@ export const PersonForm = ({
           </div>
           <div className="space-y-2 sm:col-span-2">
             <Label htmlFor="managerId">Jefe directo</Label>
-            <FormSelect
-              defaultValue={defaultValues.managerId}
+            <ManagerPicker
+              excludeId={person?.id}
               id="managerId"
+              initial={initialManager}
               name="managerId"
-              options={[
-                { value: "", label: "Sin jefe directo" },
-                ...managers.map((manager) => ({
-                  value: manager.id,
-                  label: formatSelectPerson(manager),
-                })),
-              ]}
-              variant="field"
             />
           </div>
         </div>
