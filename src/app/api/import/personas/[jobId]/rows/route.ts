@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 
 import { appendImportRowsSchema } from "@/lib/import/api-schemas";
-import { appendImportRows } from "@/lib/import/jobs";
+import {
+  appendImportRows,
+  getImportJob,
+  listImportRows,
+} from "@/lib/import/jobs";
 import { importApiError, loadUploadingJob } from "@/lib/import/route-helpers";
 import { requirePeopleImport } from "@/lib/people/auth";
 
@@ -36,4 +40,40 @@ export const POST = async (request: Request, { params }: Context) => {
   await appendImportRows(jobId, parsed.data);
 
   return NextResponse.json({ stored: parsed.data.rows.length });
+};
+
+const ACTIONS = ["create", "update", "unchanged", "error"] as const;
+
+/** Review table: staged rows of a job, filterable by sheet and action. */
+export const GET = async (request: Request, { params }: Context) => {
+  try {
+    await requirePeopleImport();
+  } catch (error) {
+    return importApiError(error);
+  }
+
+  const { jobId } = await params;
+
+  if (!(await getImportJob(jobId))) {
+    return NextResponse.json(
+      { error: "No encontramos esta importación." },
+      { status: 404 },
+    );
+  }
+
+  const query = new URL(request.url).searchParams;
+  const action = query.get("action");
+  const sheet = query.get("sheet");
+
+  return NextResponse.json(
+    await listImportRows(jobId, {
+      sheet:
+        sheet && ["personas", "horarios", "contratos"].includes(sheet)
+          ? sheet
+          : undefined,
+      action: ACTIONS.find((candidate) => candidate === action),
+      page: Number(query.get("page")) || 1,
+      pageSize: Number(query.get("pageSize")) || 50,
+    }),
+  );
 };

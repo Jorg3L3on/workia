@@ -1,9 +1,10 @@
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 
 import { db } from "@/lib/db";
 import {
   importJobs,
   importRows,
+  users,
   type ImportJob,
   type ImportJobStatus,
 } from "@/lib/db/schema";
@@ -131,3 +132,64 @@ export const finalizeImportUpload = async (
 
   return { job: job ?? null, staged, total };
 };
+
+export type ReviewRowFilters = {
+  sheet?: string;
+  action?: "create" | "update" | "unchanged" | "error";
+  page?: number;
+  pageSize?: number;
+};
+
+/** One page of staged rows for the review table, with counts for the filter. */
+export const listImportRows = async (
+  jobId: string,
+  filters: ReviewRowFilters = {},
+) => {
+  const pageSize = Math.min(Math.max(filters.pageSize ?? 50, 1), 200);
+  const page = Math.max(filters.page ?? 1, 1);
+  const where = and(
+    eq(importRows.jobId, jobId),
+    filters.sheet ? eq(importRows.sheet, filters.sheet) : undefined,
+    filters.action ? eq(importRows.action, filters.action) : undefined,
+  );
+
+  const [rows, [totalRow]] = await Promise.all([
+    db
+      .select({
+        id: importRows.id,
+        sheet: importRows.sheet,
+        rowNumber: importRows.rowNumber,
+        action: importRows.action,
+        raw: importRows.raw,
+        errors: importRows.errors,
+        diff: importRows.diff,
+        appliedAt: importRows.appliedAt,
+      })
+      .from(importRows)
+      .where(where)
+      .orderBy(
+        sql`case ${importRows.sheet} when 'personas' then 0 when 'horarios' then 1 else 2 end`,
+        asc(importRows.rowNumber),
+      )
+      .limit(pageSize)
+      .offset((page - 1) * pageSize),
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(importRows)
+      .where(where),
+  ]);
+
+  return { rows, total: totalRow?.count ?? 0, page, pageSize };
+};
+
+export const listImportJobs = async (limit = 50) =>
+  db
+    .select({
+      job: importJobs,
+      actorName: users.name,
+      actorEmail: users.email,
+    })
+    .from(importJobs)
+    .leftJoin(users, eq(importJobs.actorUserId, users.id))
+    .orderBy(desc(importJobs.createdAt))
+    .limit(limit);

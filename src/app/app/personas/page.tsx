@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { DownloadIcon, PlusIcon } from "lucide-react";
+import { DownloadIcon, PlusIcon, UploadIcon } from "lucide-react";
 
 import { pageTitles } from "@/lib/brand/chrome-copy";
 
@@ -76,6 +76,29 @@ const PersonasPage = async ({ searchParams }: PersonasPageProps) => {
         actions={
           canCreate || canImport || canExport ? (
             <>
+              {canImport ? (
+                <>
+                  <Button
+                    asChild
+                    className="h-10 rounded-full"
+                    variant="outline"
+                  >
+                    <Link href="/app/personas/importaciones">
+                      Importaciones
+                    </Link>
+                  </Button>
+                  <Button
+                    asChild
+                    className="h-10 rounded-full"
+                    variant="outline"
+                  >
+                    <Link href="/app/personas/importar">
+                      <UploadIcon className="size-4" aria-hidden />
+                      Importar
+                    </Link>
+                  </Button>
+                </>
+              ) : null}
               {canImport ? (
                 <Button asChild className="h-10 rounded-full" variant="outline">
                   {/* Plain anchor: this is a file download, not a page. */}

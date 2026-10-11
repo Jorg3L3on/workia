@@ -18,6 +18,17 @@ describe("resolveBreadcrumbs", () => {
     ]);
   });
 
+  it("nests the import wizard and its history under Personas", () => {
+    expect(resolveBreadcrumbs("/app/personas/importar")).toEqual([
+      { label: "Personas", href: "/app/personas" },
+      { label: "Importar" },
+    ]);
+    expect(resolveBreadcrumbs("/app/personas/importaciones")).toEqual([
+      { label: "Personas", href: "/app/personas" },
+      { label: "Importaciones" },
+    ]);
+  });
+
   it("nests a resguardo asset under Resguardo", () => {
     expect(
       resolveBreadcrumbs(
