@@ -33,11 +33,17 @@ const PersonasPage = async ({ searchParams }: PersonasPageProps) => {
   const session = await assertPeopleListAccess();
   const { q, status, deleted } = await searchParams;
 
-  const [people, canCreate, canImport] = await Promise.all([
+  const [people, canCreate, canImport, canExport] = await Promise.all([
     listPeople({ includeDeleted: true }),
     userHasPermission(session.user.id, "people:create"),
     userHasPermission(session.user.id, "people:import"),
+    userHasPermission(session.user.id, "people:export"),
   ]);
+  const exportQuery = new URLSearchParams();
+
+  if (q) exportQuery.set("q", q);
+  if (status) exportQuery.set("status", status);
+  if (deleted === "1") exportQuery.set("deleted", "1");
 
   const rows = people.map((person) => ({
     id: person.id,
@@ -60,7 +66,7 @@ const PersonasPage = async ({ searchParams }: PersonasPageProps) => {
     <div className="flex flex-col gap-6">
       <ListPageHeader
         actions={
-          canCreate || canImport ? (
+          canCreate || canImport || canExport ? (
             <>
               {canImport ? (
                 <Button asChild className="h-10 rounded-full" variant="outline">
@@ -70,6 +76,32 @@ const PersonasPage = async ({ searchParams }: PersonasPageProps) => {
                     Descargar plantilla
                   </a>
                 </Button>
+              ) : null}
+              {canExport ? (
+                <>
+                  <Button
+                    asChild
+                    className="h-10 rounded-full"
+                    variant="outline"
+                  >
+                    <a href={`/app/personas/exportar?${exportQuery}`} download>
+                      <DownloadIcon className="size-4" aria-hidden />
+                      Exportar Excel
+                    </a>
+                  </Button>
+                  <Button
+                    asChild
+                    className="h-10 rounded-full"
+                    variant="outline"
+                  >
+                    <a
+                      href={`/app/personas/exportar?${new URLSearchParams({ ...Object.fromEntries(exportQuery), format: "csv" })}`}
+                      download
+                    >
+                      CSV
+                    </a>
+                  </Button>
+                </>
               ) : null}
               {canCreate ? (
                 <Button asChild className={listPrimaryActionClassName}>
