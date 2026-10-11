@@ -60,7 +60,11 @@ export type ImportJobCounts = {
   update?: number;
   unchanged?: number;
   error?: number;
+  /** Rows applied so far (create + update + schedules + contracts). */
   applied?: number;
+  /** Rows that changed since the review and were skipped at apply time. */
+  skipped?: number;
+  managersApplied?: boolean;
 };
 
 export type ImportRowError = {

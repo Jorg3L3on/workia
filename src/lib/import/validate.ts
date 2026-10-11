@@ -1,6 +1,6 @@
 import { and, asc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 
-import { db } from "@/lib/db";
+import { db, type DbExecutor } from "@/lib/db";
 import {
   areas,
   importJobs,
@@ -119,7 +119,10 @@ const loadFileKeys = async (jobId: string) => {
   }));
 };
 
-const loadLookups = async (rows: KeyedRow[]): Promise<PersonLookups> => {
+export const loadLookups = async (
+  rows: KeyedRow[],
+  executor: DbExecutor = db,
+): Promise<PersonLookups> => {
   const ids = [
     ...new Set(
       rows.flatMap((r) =>
@@ -148,7 +151,7 @@ const loadLookups = async (rows: KeyedRow[]): Promise<PersonLookups> => {
     return lookups;
   }
 
-  const found = (await db
+  const found = (await executor
     .select(personColumns)
     .from(people)
     .where(or(...conditions))) as ExistingPerson[];
