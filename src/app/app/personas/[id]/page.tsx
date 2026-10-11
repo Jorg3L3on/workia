@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import { PencilIcon } from "lucide-react";
 
 import { pageTitles } from "@/lib/brand/chrome-copy";
@@ -11,6 +12,7 @@ import { PersonAssetsSection } from "@/components/resguardo/person-assets-sectio
 import { PersonExpedienteTabs } from "@/components/people/person-expediente-tabs";
 import { DeletePersonButton } from "@/components/people/delete-person-button";
 import { PersonForm } from "@/components/people/person-form";
+import { SectionSkeleton } from "@/components/loading/page-skeletons";
 import { PageBreadcrumbLabel } from "@/components/layout/app-breadcrumbs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -70,6 +72,22 @@ type PersonaDetailPageProps = {
   }>;
 };
 
+const PersonHistory = async ({ personId }: { personId: string }) => {
+  const auditEvents = await listAuditEvents({
+    resourceType: "person",
+    resourceId: personId,
+    limit: 50,
+  });
+
+  return (
+    <AuditEventList
+      emptyMessage="Aún no hay cambios registrados para esta persona."
+      events={auditEvents}
+      layout="inset"
+    />
+  );
+};
+
 const PersonaDetailPage = async ({
   params,
   searchParams,
@@ -90,7 +108,6 @@ const PersonaDetailPage = async ({
     positions,
     sites,
     managers,
-    auditEvents,
     personContracts,
     contractTemplates,
     personAssets,
@@ -107,7 +124,6 @@ const PersonaDetailPage = async ({
     listActivePositions(),
     listActiveSites(),
     listActivePeopleForSelect(id),
-    listAuditEvents({ resourceType: "person", resourceId: id, limit: 50 }),
     listContractsByPerson(id),
     listActiveContractTemplates(),
     userHasPermission(session.user.id, "assets:read").then((allowed) =>
@@ -390,11 +406,9 @@ const PersonaDetailPage = async ({
                   Quién cambió qué en este expediente.
                 </p>
               </div>
-              <AuditEventList
-                emptyMessage="Aún no hay cambios registrados para esta persona."
-                events={auditEvents}
-                layout="inset"
-              />
+              <Suspense fallback={<SectionSkeleton rows={3} />}>
+                <PersonHistory personId={id} />
+              </Suspense>
             </div>
           ) : undefined
         }
