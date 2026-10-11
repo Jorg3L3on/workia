@@ -64,6 +64,13 @@
       "when": 1787752800000,
       "tag": "0008_person_schedules",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1787756400000,
+      "tag": "0010_person_identity_unique",
+      "breakpoints": true
     }
   ]
 }

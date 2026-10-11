@@ -1,4 +1,4 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
   date,
   index,
@@ -6,6 +6,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
@@ -59,6 +60,12 @@ export const people = pgTable(
     index("people_position_id_idx").on(table.positionId),
     index("people_manager_id_idx").on(table.managerId),
     index("people_site_id_idx").on(table.siteId),
+    uniqueIndex("people_curp_active_unique")
+      .on(table.curp)
+      .where(sql`${table.deletedAt} is null and ${table.curp} is not null`),
+    uniqueIndex("people_rfc_active_unique")
+      .on(table.rfc)
+      .where(sql`${table.deletedAt} is null and ${table.rfc} is not null`),
   ],
 );
 

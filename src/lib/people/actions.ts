@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { AuthorizationError } from "@/lib/rbac";
 
+import { DuplicateIdentityError } from "./identity";
 import {
   createPerson,
   getPersonById,
@@ -77,6 +78,19 @@ const parsePersonForm = (
   return parsed.data;
 };
 
+const duplicateIdentityState = (
+  error: DuplicateIdentityError,
+): PersonActionState => ({
+  fieldErrors: Object.fromEntries(
+    error.fields.map((field) => [
+      field,
+      field === "curp"
+        ? "Ya existe una persona activa con esta CURP"
+        : "Ya existe una persona activa con este RFC",
+    ]),
+  ),
+});
+
 const revalidatePersonPaths = (personId?: string) => {
   revalidatePath("/app/personas");
   revalidatePath("/app");
@@ -109,7 +123,17 @@ export const createPersonAction = async (
     return parsed;
   }
 
-  const created = await createPerson(parsed, session.user.id);
+  let created;
+
+  try {
+    created = await createPerson(parsed, session.user.id);
+  } catch (error) {
+    if (error instanceof DuplicateIdentityError) {
+      return duplicateIdentityState(error);
+    }
+
+    throw error;
+  }
 
   revalidatePersonPaths(created.id);
   redirect(`/app/personas/${created.id}`);
@@ -144,7 +168,15 @@ export const updatePersonAction = async (
     return parsed;
   }
 
-  await updatePerson(personId, parsed, session.user.id);
+  try {
+    await updatePerson(personId, parsed, session.user.id);
+  } catch (error) {
+    if (error instanceof DuplicateIdentityError) {
+      return duplicateIdentityState(error);
+    }
+
+    throw error;
+  }
 
   revalidatePersonPaths(personId);
   redirect(`/app/personas/${personId}?saved=1`);
