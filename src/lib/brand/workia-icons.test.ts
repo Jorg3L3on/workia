@@ -8,6 +8,7 @@ describe("workiaIcons", () => {
     const appleUrls = workiaIcons.apple.map((icon) => icon.url);
 
     expect(iconUrls).toContain("/favicon.ico");
+    expect(iconUrls).toContain("/icon.svg");
     expect(iconUrls).toContain("/icon.png");
     expect(iconUrls).toContain("/icon-192.png");
     expect(appleUrls).toContain("/apple-icon.png");
