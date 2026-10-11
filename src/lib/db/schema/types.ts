@@ -1,5 +1,5 @@
 export type PermissionAction =
-  "read" | "create" | "update" | "delete" | "manage";
+  "read" | "create" | "update" | "delete" | "manage" | "import" | "export";
 
 export type PermissionResource =
   | "users"
@@ -157,6 +157,20 @@ export const PERMISSIONS: Array<{
     resource: "people",
     action: "delete",
     description: "Logically delete people records",
+  },
+  {
+    slug: "people:import",
+    name: "Import People",
+    resource: "people",
+    action: "import",
+    description: "Load people, schedules and contracts from a file",
+  },
+  {
+    slug: "people:export",
+    name: "Export People",
+    resource: "people",
+    action: "export",
+    description: "Download people, schedules and contracts as a file",
   },
   {
     slug: "audit:read",
@@ -363,6 +377,8 @@ export const ROLES = [
       "people:create",
       "people:update",
       "people:delete",
+      "people:import",
+      "people:export",
       "audit:read",
       "areas:read",
       "areas:create",
