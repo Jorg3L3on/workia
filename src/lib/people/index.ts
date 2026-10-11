@@ -318,12 +318,16 @@ export const upsertPersonSchedule = async (
   input: PersonFormValues,
   actorUserId?: string | null,
   executor: DbExecutor = db,
+  /** The schedule row (any state) when the caller already read it; `null` means none exists. */
+  prefetched?: { schedule: typeof personSchedules.$inferSelect | null },
 ) => {
   const audit = (input: Parameters<typeof recordAuditEvent>[0]) =>
     recordAuditEvent(input, executor);
   const values = toPersonScheduleValues(input);
   const hasTimes = personScheduleHasTimes(values);
-  const existing = await getPersonSchedule(personId, true, executor);
+  const existing = prefetched
+    ? prefetched.schedule
+    : await getPersonSchedule(personId, true, executor);
 
   if (!hasTimes && !existing) {
     return null;
@@ -461,7 +465,9 @@ export const createPerson = async (
       },
     });
 
-    await upsertPersonSchedule(created.id, input, actorUserId, tx);
+    await upsertPersonSchedule(created.id, input, actorUserId, tx, {
+      schedule: null,
+    });
 
     return created;
   });
@@ -477,7 +483,14 @@ export const updatePerson = async (
     const audit = (input: Parameters<typeof recordAuditEvent>[0]) =>
       recordAuditEvent(input, tx);
 
-    const existing = await getPersonById(id, true, tx);
+    // One round trip for the person and their schedule (any state).
+    const [current] = await tx
+      .select({ person: people, schedule: personSchedules })
+      .from(people)
+      .leftJoin(personSchedules, eq(personSchedules.personId, people.id))
+      .where(eq(people.id, id))
+      .limit(1);
+    const existing = current?.person ?? null;
 
     if (!existing || existing.deletedAt) {
       return null;
@@ -529,7 +542,9 @@ export const updatePerson = async (
       payload: { before, after, changes },
     });
 
-    await upsertPersonSchedule(id, input, actorUserId, tx);
+    await upsertPersonSchedule(id, input, actorUserId, tx, {
+      schedule: current?.schedule?.id ? current.schedule : null,
+    });
 
     return updated;
   });
