@@ -1,4 +1,5 @@
 import { forbidden } from "next/navigation";
+import { cache } from "react";
 
 import { auth } from "@/auth";
 import { userHasAnyPermission } from "@/lib/rbac";
@@ -10,7 +11,8 @@ const ADMIN_PERMISSIONS: PermissionSlug[] = [
   "settings:read",
 ];
 
-export const getSession = async () => auth();
+// Per-request: layout, page and guards all read the session.
+export const getSession = cache(async () => auth());
 
 export const getCurrentUserId = async (): Promise<string | null> => {
   const session = await getSession();

@@ -1,4 +1,5 @@
 import { and, eq, inArray } from "drizzle-orm";
+import { cache } from "react";
 
 import { db } from "@/lib/db";
 import {
@@ -14,17 +15,21 @@ import { AuthorizationError } from "./errors";
 
 export { AuthorizationError };
 
-const getUserPermissionSlugs = async (userId: string): Promise<Set<string>> => {
-  const rows = await db
-    .select({ slug: permissions.slug })
-    .from(userRoles)
-    .innerJoin(roles, eq(userRoles.roleId, roles.id))
-    .innerJoin(rolePermissions, eq(roles.id, rolePermissions.roleId))
-    .innerJoin(permissions, eq(rolePermissions.permissionId, permissions.id))
-    .where(eq(userRoles.userId, userId));
+// Per-request cache: a page checks several permissions for one user, and each
+// uncached call is a 4-table join.
+const getUserPermissionSlugs = cache(
+  async (userId: string): Promise<Set<string>> => {
+    const rows = await db
+      .select({ slug: permissions.slug })
+      .from(userRoles)
+      .innerJoin(roles, eq(userRoles.roleId, roles.id))
+      .innerJoin(rolePermissions, eq(roles.id, rolePermissions.roleId))
+      .innerJoin(permissions, eq(rolePermissions.permissionId, permissions.id))
+      .where(eq(userRoles.userId, userId));
 
-  return new Set(rows.map((row) => row.slug));
-};
+    return new Set(rows.map((row) => row.slug));
+  },
+);
 
 export const getUserPermissions = async (
   userId: string,
@@ -69,15 +74,17 @@ export const userHasAllPermissions = async (
   );
 };
 
-export const getUserRoles = async (userId: string): Promise<RoleSlug[]> => {
-  const rows = await db
-    .select({ slug: roles.slug })
-    .from(userRoles)
-    .innerJoin(roles, eq(userRoles.roleId, roles.id))
-    .where(eq(userRoles.userId, userId));
+export const getUserRoles = cache(
+  async (userId: string): Promise<RoleSlug[]> => {
+    const rows = await db
+      .select({ slug: roles.slug })
+      .from(userRoles)
+      .innerJoin(roles, eq(userRoles.roleId, roles.id))
+      .where(eq(userRoles.userId, userId));
 
-  return rows.map((row) => row.slug as RoleSlug);
-};
+    return rows.map((row) => row.slug as RoleSlug);
+  },
+);
 
 export const userHasRole = async (
   userId: string,

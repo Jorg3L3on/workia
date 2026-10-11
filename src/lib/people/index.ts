@@ -1,3 +1,4 @@
+import { alias } from "drizzle-orm/pg-core";
 import { and, asc, desc, eq, ilike, isNull, or, sql } from "drizzle-orm";
 
 import {
@@ -134,55 +135,53 @@ export const getPersonWithRelations = async (
   id: string,
   includeDeleted = false,
 ) => {
-  const person = await getPersonById(id, includeDeleted);
+  const manager = alias(people, "manager");
 
-  if (!person) {
+  const [row] = await db
+    .select({
+      person: people,
+      area: { id: areas.id, name: areas.name },
+      position: { id: positions.id, name: positions.name },
+      manager: {
+        id: manager.id,
+        nombres: manager.nombres,
+        apellidoPaterno: manager.apellidoPaterno,
+        apellidoMaterno: manager.apellidoMaterno,
+      },
+      site: { id: sites.id, name: sites.name, kind: sites.kind },
+      schedule: personSchedules,
+    })
+    .from(people)
+    .leftJoin(areas, eq(people.areaId, areas.id))
+    .leftJoin(positions, eq(people.positionId, positions.id))
+    .leftJoin(manager, eq(people.managerId, manager.id))
+    .leftJoin(sites, eq(people.siteId, sites.id))
+    .leftJoin(
+      personSchedules,
+      and(
+        eq(personSchedules.personId, people.id),
+        isNull(personSchedules.deletedAt),
+      ),
+    )
+    .where(
+      includeDeleted
+        ? eq(people.id, id)
+        : and(eq(people.id, id), isNull(people.deletedAt)),
+    )
+    .limit(1);
+
+  if (!row) {
     return null;
   }
 
-  const [area, position, manager, site] = await Promise.all([
-    person.areaId
-      ? db
-          .select({ id: areas.id, name: areas.name })
-          .from(areas)
-          .where(eq(areas.id, person.areaId))
-          .limit(1)
-          .then((rows) => rows[0] ?? null)
-      : Promise.resolve(null),
-    person.positionId
-      ? db
-          .select({ id: positions.id, name: positions.name })
-          .from(positions)
-          .where(eq(positions.id, person.positionId))
-          .limit(1)
-          .then((rows) => rows[0] ?? null)
-      : Promise.resolve(null),
-    person.managerId
-      ? db
-          .select({
-            id: people.id,
-            nombres: people.nombres,
-            apellidoPaterno: people.apellidoPaterno,
-            apellidoMaterno: people.apellidoMaterno,
-          })
-          .from(people)
-          .where(eq(people.id, person.managerId))
-          .limit(1)
-          .then((rows) => rows[0] ?? null)
-      : Promise.resolve(null),
-    person.siteId
-      ? db
-          .select({ id: sites.id, name: sites.name, kind: sites.kind })
-          .from(sites)
-          .where(eq(sites.id, person.siteId))
-          .limit(1)
-          .then((rows) => rows[0] ?? null)
-      : Promise.resolve(null),
-  ]);
-
-  const schedule = await getPersonSchedule(person.id);
-
-  return { ...person, area, position, manager, site, schedule };
+  return {
+    ...row.person,
+    area: row.area?.id ? row.area : null,
+    position: row.position?.id ? row.position : null,
+    manager: row.manager?.id ? row.manager : null,
+    site: row.site?.id ? row.site : null,
+    schedule: row.schedule?.id ? row.schedule : null,
+  };
 };
 
 export const getPersonSchedule = async (

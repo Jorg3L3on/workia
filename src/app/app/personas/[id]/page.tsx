@@ -18,7 +18,7 @@ import { listAuditEvents } from "@/lib/audit";
 import {
   listActiveAreas,
   listActivePositions,
-  listActivitiesForPosition,
+  listActivitiesForPersonPosition,
 } from "@/lib/catalog";
 import {
   listActiveContractTemplates,
@@ -94,6 +94,7 @@ const PersonaDetailPage = async ({
     personContracts,
     contractTemplates,
     personAssets,
+    positionActivities,
   ] = await Promise.all([
     getPersonWithRelations(id, true),
     userHasPermission(session.user.id, "people:update"),
@@ -112,15 +113,12 @@ const PersonaDetailPage = async ({
     userHasPermission(session.user.id, "assets:read").then((allowed) =>
       allowed ? listAssetsByPerson(id) : Promise.resolve([]),
     ),
+    listActivitiesForPersonPosition(id),
   ]);
 
   if (!person) {
     notFound();
   }
-
-  const positionActivities = person.position
-    ? await listActivitiesForPosition(person.position.id)
-    : [];
 
   const isDeleted = personIsDeleted(person);
   const isEditing = edit === "1" && canUpdate && !isDeleted;
