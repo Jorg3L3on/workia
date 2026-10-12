@@ -6,14 +6,9 @@
  */
 
 import { config } from "dotenv";
-import { isNull } from "drizzle-orm";
 
 config({ path: ".env.local" });
 config();
-
-import { db } from "@/lib/db";
-import { people } from "@/lib/db/schema";
-import { identifierOrNull } from "@/lib/people/identity";
 
 type Row = { id: string; name: string; value: string };
 
@@ -28,6 +23,12 @@ const groupDuplicates = (rows: Row[]) => {
 };
 
 const main = async () => {
+  // Imported after dotenv: static imports are hoisted and would validate env first.
+  const { isNull } = await import("drizzle-orm");
+  const { db } = await import("@/lib/db");
+  const { people } = await import("@/lib/db/schema");
+  const { identifierOrNull } = await import("@/lib/people/identity");
+
   const active = await db.select().from(people).where(isNull(people.deletedAt));
   let total = 0;
 
