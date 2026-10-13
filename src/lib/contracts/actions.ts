@@ -119,7 +119,15 @@ export const createContractAction = async (
     return { error: STALE_COMPANY_MESSAGE };
   }
 
-  const created = await createContract(companyId, parsed.data, session.user.id);
+  let created;
+
+  try {
+    created = await createContract(companyId, parsed.data, session.user.id);
+  } catch (error) {
+    // Unknown person or template (or another company's), or one vigente already.
+    return { error: (error as Error).message };
+  }
+
   revalidateContracts(created.personId);
   redirect(`/app/personas/${created.personId}?contract=created`);
 };
@@ -157,7 +165,14 @@ export const renewContractAction = async (
     return { error: STALE_COMPANY_MESSAGE };
   }
 
-  const renewed = await renewContract(companyId, parsed.data, session.user.id);
+  let renewed;
+
+  try {
+    renewed = await renewContract(companyId, parsed.data, session.user.id);
+  } catch (error) {
+    return { error: (error as Error).message };
+  }
+
   revalidateContracts(renewed.personId);
   redirect(`/app/contratos?renewed=1`);
 };
@@ -179,7 +194,7 @@ export const noRenewContractAction = async (contractId: string) => {
     session.companyId,
     contractId,
     session.user.id,
-  );
+  ).catch(() => redirect("/app/contratos?error=not-found"));
   revalidateContracts(updated.personId);
   redirect("/app/contratos?no-renew=1");
 };
@@ -241,7 +256,7 @@ export const updateContractTemplateAction = async (
     templateId,
     parsed.data,
     session.user.id,
-  );
+  ).catch(() => redirect("/app/contratos/plantillas?error=not-found"));
   revalidateContracts();
   redirect(`/app/contratos/plantillas/${templateId}?saved=1`);
 };
@@ -263,7 +278,7 @@ export const deactivateContractTemplateAction = async (templateId: string) => {
     session.companyId,
     templateId,
     session.user.id,
-  );
+  ).catch(() => redirect("/app/contratos/plantillas?error=not-found"));
   revalidateContracts();
   redirect("/app/contratos/plantillas?deactivated=1");
 };
@@ -285,7 +300,7 @@ export const deleteContractTemplateAction = async (templateId: string) => {
     session.companyId,
     templateId,
     session.user.id,
-  );
+  ).catch(() => redirect("/app/contratos/plantillas?error=not-found"));
   revalidateContracts();
   redirect("/app/contratos/plantillas?deleted=1");
 };

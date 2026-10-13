@@ -55,6 +55,15 @@ jobs:
         if: github.event_name == 'pull_request'
         run: npm run check:migrations
 
+      # Real-Postgres tests: migrations (single company -> multi-company), per-company
+      # uniqueness, and the cross-company (IDOR) suite. Throwaway databases on the service.
+      - name: Database and IDOR tests
+        run: npm run test:db
+
+      # Fails when a server action, route or company-scoped lib function has no IDOR test.
+      - name: IDOR coverage gate
+        run: npm run check:idor
+
       # Every migration applies on an empty database, and a second run applies nothing.
       - name: Apply migrations twice
         run: |

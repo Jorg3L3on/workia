@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { ImportBlockedError } from "@/lib/import/apply";
+import { getImportJob } from "@/lib/import/jobs";
 import { importApiError } from "@/lib/import/route-helpers";
 import { previewUndo, undoJobStep } from "@/lib/import/undo";
 import { requirePeopleUndoImport } from "@/lib/people/auth";
@@ -21,6 +22,13 @@ export const GET = async (_request: Request, { params }: Context) => {
   }
 
   const { jobId } = await params;
+
+  if (!(await getImportJob(session.companyId, jobId))) {
+    return NextResponse.json(
+      { error: "No encontramos esta importación." },
+      { status: 404 },
+    );
+  }
 
   try {
     return NextResponse.json(await previewUndo(session.companyId, jobId));
@@ -44,6 +52,13 @@ export const POST = async (_request: Request, { params }: Context) => {
   }
 
   const { jobId } = await params;
+
+  if (!(await getImportJob(session.companyId, jobId))) {
+    return NextResponse.json(
+      { error: "No encontramos esta importación." },
+      { status: 404 },
+    );
+  }
 
   try {
     return NextResponse.json(await undoJobStep(session.companyId, jobId));

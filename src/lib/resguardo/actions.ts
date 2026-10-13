@@ -245,8 +245,6 @@ export const deleteAssetAction = async (assetId: string) => {
 
   try {
     await softDeleteAsset(session.companyId, assetId, session.user.id);
-    revalidateResguardo();
-    redirect("/app/resguardo?deleted=1");
   } catch (error) {
     redirect(
       `/app/resguardo/${assetId}?error=${encodeURIComponent(
@@ -254,4 +252,8 @@ export const deleteAssetAction = async (assetId: string) => {
       )}`,
     );
   }
+
+  // Outside the try: redirect() throws, and the catch above would swallow it.
+  revalidateResguardo();
+  redirect("/app/resguardo?deleted=1");
 };
