@@ -35,19 +35,19 @@ export const collectSurfaces = () => {
 
   for (const file of libFiles) {
     const source = readFileSync(file, "utf8");
-    const module = rel(file)
+    const modulePath = rel(file)
       .replace(/^src\/lib\//, "")
       .replace(/\.ts$/, "");
 
     if (source.trimStart().startsWith('"use server"')) {
-      const area = module.split("/")[0];
+      const area = modulePath.split("/")[0];
       for (const match of source.matchAll(/^export const (\w+)/gm)) {
         surfaces.add(`action:${area}/${match[1]}`);
       }
       continue;
     }
 
-    const name = module.replace(/\/index$/, "");
+    const name = modulePath.replace(/\/index$/, "");
     for (const match of source.matchAll(
       /export const (\w+) = async \(\s*companyId: string/g,
     )) {
