@@ -23,14 +23,19 @@ export const metadata: Metadata = {
 };
 
 type ActividadesCatalogPageProps = {
-  searchParams: Promise<{ saved?: string; deleted?: string; edit?: string }>;
+  searchParams: Promise<{
+    error?: string;
+    saved?: string;
+    deleted?: string;
+    edit?: string;
+  }>;
 };
 
 const ActividadesCatalogPage = async ({
   searchParams,
 }: ActividadesCatalogPageProps) => {
   const session = await requireActivitiesRead();
-  const { saved, deleted, edit } = await searchParams;
+  const { error, saved, deleted, edit } = await searchParams;
 
   const [
     activityRows,
@@ -58,7 +63,7 @@ const ActividadesCatalogPage = async ({
         title="Actividades"
       />
 
-      <CatalogStatusMessages deleted={deleted} saved={saved} />
+      <CatalogStatusMessages error={error} deleted={deleted} saved={saved} />
 
       <section className="workia-pass-card space-y-4 p-5">
         {isEditing && editingActivity ? (

@@ -22,12 +22,16 @@ export const metadata: Metadata = {
 };
 
 type AreasCatalogPageProps = {
-  searchParams: Promise<{ saved?: string; deleted?: string }>;
+  searchParams: Promise<{
+    error?: string;
+    saved?: string;
+    deleted?: string;
+  }>;
 };
 
 const AreasCatalogPage = async ({ searchParams }: AreasCatalogPageProps) => {
   const session = await requireAreasRead();
-  const { saved, deleted } = await searchParams;
+  const { error, saved, deleted } = await searchParams;
 
   const [areas, canCreateArea, canDeleteArea] = await Promise.all([
     listAreas(session.companyId),
@@ -46,7 +50,7 @@ const AreasCatalogPage = async ({ searchParams }: AreasCatalogPageProps) => {
         title="Áreas"
       />
 
-      <CatalogStatusMessages deleted={deleted} saved={saved} />
+      <CatalogStatusMessages error={error} deleted={deleted} saved={saved} />
 
       <section className="workia-pass-card space-y-4 p-5">
         <CatalogFormTray

@@ -31,6 +31,7 @@ import {
   sites,
 } from "@/lib/db/schema";
 import type { PersonStatus } from "@/lib/db/schema/people";
+import { isUniqueViolation } from "@/lib/db/errors";
 import { withTenant } from "@/lib/tenant/scope";
 
 import {
@@ -491,24 +492,20 @@ export const upsertPersonSchedule = async (
   return created;
 };
 
-const isUniqueViolation = (error: unknown): boolean =>
-  typeof error === "object" &&
-  error !== null &&
-  ((error as { code?: string }).code === "23505" ||
-    isUniqueViolation((error as { cause?: unknown }).cause));
-
-/** Active people (not deleted) that already use this CURP or RFC. */
+/** Active people of the company (not deleted) that already use this CURP, RFC or NSS. */
 export const findIdentityConflicts = async (
   companyId: string,
-  input: Pick<PersonFormValues, "curp" | "rfc">,
+  input: Pick<PersonFormValues, "curp" | "rfc" | "nss">,
   excludeId?: string,
   client: DbExecutor = db,
 ): Promise<IdentityField[]> => {
   const curp = identifierOrNull(input.curp);
   const rfc = identifierOrNull(input.rfc);
+  const nss = normalizeNss(input.nss) || null;
   const matchers = [
     curp ? eq(people.curp, curp) : undefined,
     rfc ? eq(people.rfc, rfc) : undefined,
+    nss ? eq(people.nss, nss) : undefined,
   ].filter((matcher) => matcher !== undefined);
 
   if (matchers.length === 0) {
@@ -516,7 +513,7 @@ export const findIdentityConflicts = async (
   }
 
   const rows = await client
-    .select({ curp: people.curp, rfc: people.rfc })
+    .select({ curp: people.curp, rfc: people.rfc, nss: people.nss })
     .from(people)
     .where(
       and(
@@ -532,6 +529,7 @@ export const findIdentityConflicts = async (
   for (const row of rows) {
     if (curp && row.curp === curp) fields.add("curp");
     if (rfc && row.rfc === rfc) fields.add("rfc");
+    if (nss && row.nss === nss) fields.add("nss");
   }
 
   return [...fields];
@@ -539,7 +537,7 @@ export const findIdentityConflicts = async (
 
 const assertNoIdentityConflicts = async (
   companyId: string,
-  input: Pick<PersonFormValues, "curp" | "rfc">,
+  input: Pick<PersonFormValues, "curp" | "rfc" | "nss">,
   excludeId?: string,
   client: DbExecutor = db,
 ) => {
@@ -557,9 +555,22 @@ const assertNoIdentityConflicts = async (
 
 // A race between the pre-check and the write surfaces as a unique violation
 // on the partial indexes; report it like the pre-check does.
+const IDENTITY_CONSTRAINTS: Record<string, IdentityField> = {
+  people_company_curp_active_unique: "curp",
+  people_company_rfc_active_unique: "rfc",
+  people_company_nss_active_unique: "nss",
+};
+
+const violatedConstraint = (error: unknown): string | undefined =>
+  typeof error === "object" && error !== null
+    ? ((error as { constraint?: string }).constraint ??
+      violatedConstraint((error as { cause?: unknown }).cause))
+    : undefined;
+
 const rethrowUniqueViolation = (error: unknown): never => {
   if (isUniqueViolation(error)) {
-    throw new DuplicateIdentityError(["curp", "rfc"]);
+    const field = IDENTITY_CONSTRAINTS[violatedConstraint(error) ?? ""];
+    throw new DuplicateIdentityError(field ? [field] : ["curp", "rfc"]);
   }
 
   throw error;

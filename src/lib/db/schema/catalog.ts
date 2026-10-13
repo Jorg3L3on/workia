@@ -1,4 +1,4 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
   boolean,
   foreignKey,
@@ -8,11 +8,15 @@ import {
   text,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 
 import { companies } from "./companies";
+
+/** catalog_key(name): the importer's catalogKey() in SQL (migration 0017). */
+const catalogKeyOf = (column: AnyPgColumn) => sql`catalog_key(${column})`;
 
 export const areas = pgTable(
   "areas",
@@ -40,6 +44,9 @@ export const areas = pgTable(
   },
   (table) => [
     unique("areas_company_id_id_unique").on(table.companyId, table.id),
+    uniqueIndex("areas_company_name_active_unique")
+      .on(table.companyId, catalogKeyOf(table.name))
+      .where(sql`${table.deletedAt} is null`),
     foreignKey({
       name: "areas_company_parent_area_fk",
       columns: [table.companyId, table.parentAreaId],
@@ -73,6 +80,9 @@ export const positions = pgTable(
   },
   (table) => [
     unique("positions_company_id_id_unique").on(table.companyId, table.id),
+    uniqueIndex("positions_company_name_active_unique")
+      .on(table.companyId, catalogKeyOf(table.name))
+      .where(sql`${table.deletedAt} is null`),
     foreignKey({
       name: "positions_company_area_fk",
       columns: [table.companyId, table.areaId],
@@ -103,6 +113,9 @@ export const activities = pgTable(
   },
   (table) => [
     unique("activities_company_id_id_unique").on(table.companyId, table.id),
+    uniqueIndex("activities_company_name_active_unique")
+      .on(table.companyId, catalogKeyOf(table.name))
+      .where(sql`${table.deletedAt} is null`),
     index("activities_deleted_at_idx").on(table.deletedAt),
   ],
 );

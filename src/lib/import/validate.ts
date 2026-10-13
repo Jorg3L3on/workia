@@ -13,7 +13,7 @@ import {
   type ImportRowError,
 } from "@/lib/db/schema";
 import { contracts, contractTemplates } from "@/lib/db/schema";
-import { identifierOrNull } from "@/lib/people/identity";
+import { identifierOrNull, normalizeNss } from "@/lib/people/identity";
 
 import {
   contractIdentity,
@@ -148,7 +148,28 @@ const loadFileKeys = async (companyId: string, jobId: string) => {
     idWorkia: str(row.raw.idWorkia),
     curp: identifierOrNull(str(row.raw.curp)),
     rfc: identifierOrNull(str(row.raw.rfc)),
+    nss: normalizeNss(str(row.raw.nss)) || null,
   }));
+};
+
+/** Active people of the company already holding one of these NSS: nss -> person id. */
+const loadNssHolders = async (companyId: string, nssValues: string[]) => {
+  if (nssValues.length === 0) {
+    return new Map<string, string>();
+  }
+
+  const rows = await db
+    .select({ id: people.id, nss: people.nss })
+    .from(people)
+    .where(
+      and(
+        eq(people.companyId, companyId),
+        isNull(people.deletedAt),
+        inArray(people.nss, nssValues),
+      ),
+    );
+
+  return new Map(rows.map((row) => [row.nss!, row.id]));
 };
 
 export const loadLookups = async (
@@ -392,6 +413,32 @@ export const validatePersonasChunk = async (
 
     if (outcome.action === "create" && !hasKey && dobKey) {
       keyless.push({ update, key: dobKey, values: normalized.values });
+    }
+  }
+
+  // NSS is unique per company: an existing person (other than the row's target) blocks it.
+  const nssOf = (outcome: RowOutcome) =>
+    (outcome.normalized as NormalizedPerson | null)?.values?.nss ?? null;
+  const nssHolders = await loadNssHolders(companyId, [
+    ...new Set(
+      updates.flatMap(({ outcome }) => {
+        const nss = nssOf(outcome);
+        return nss ? [nss] : [];
+      }),
+    ),
+  ]);
+
+  for (const update of updates) {
+    const nss = nssOf(update.outcome);
+    const holder = nss ? nssHolders.get(nss) : undefined;
+
+    if (holder && holder !== update.outcome.targetPersonId) {
+      update.outcome = errorOutcome([
+        {
+          field: "nss",
+          message: "Ya existe una persona activa con este NSS en Workia.",
+        },
+      ]);
     }
   }
 

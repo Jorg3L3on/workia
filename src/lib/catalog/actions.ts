@@ -35,6 +35,7 @@ import {
   positionActivityFormSchema,
   positionFormSchema,
 } from "@/lib/catalog/schema";
+import { DuplicateNameError } from "@/lib/db/errors";
 import { AuthorizationError } from "@/lib/rbac/errors";
 import { writableCompanyIdFromForm } from "@/lib/tenant/scope";
 
@@ -50,6 +51,17 @@ const formCompanyOrRedirect = (
     redirect(catalogHref(path, { error: "company-changed" }));
   }
 };
+
+/** `.catch()` for writes: a duplicate name goes back to the list with a message. */
+const duplicateNameRedirect =
+  (path: CatalogPath) =>
+  (error: unknown): never => {
+    if (error instanceof DuplicateNameError) {
+      redirect(catalogHref(path, { error: "duplicate-name" }));
+    }
+
+    throw error;
+  };
 
 const revalidateCatalog = () => {
   revalidatePath(CATALOG_PATHS.index);
@@ -115,7 +127,9 @@ export const createAreaAction = async (formData: FormData) => {
     CATALOG_PATHS.areas,
   );
 
-  await createArea(companyId, parsed.data, session.user.id);
+  await createArea(companyId, parsed.data, session.user.id).catch(
+    duplicateNameRedirect(CATALOG_PATHS.areas),
+  );
   revalidateCatalog();
   redirect(catalogHref(CATALOG_PATHS.areas, { saved: "area" }));
 };
@@ -165,7 +179,9 @@ export const createPositionAction = async (formData: FormData) => {
     CATALOG_PATHS.puestos,
   );
 
-  await createPosition(companyId, parsed.data, session.user.id);
+  await createPosition(companyId, parsed.data, session.user.id).catch(
+    duplicateNameRedirect(CATALOG_PATHS.puestos),
+  );
   revalidateCatalog();
   redirect(catalogHref(CATALOG_PATHS.puestos, { saved: "position" }));
 };
@@ -219,7 +235,9 @@ export const createActivityAction = async (formData: FormData) => {
     CATALOG_PATHS.actividades,
   );
 
-  await createActivity(companyId, parsed.data, session.user.id);
+  await createActivity(companyId, parsed.data, session.user.id).catch(
+    duplicateNameRedirect(CATALOG_PATHS.actividades),
+  );
   revalidateCatalog();
   redirect(catalogHref(CATALOG_PATHS.actividades, { saved: "activity" }));
 };
@@ -259,7 +277,12 @@ export const updateActivityAction = async (
     CATALOG_PATHS.actividades,
   );
 
-  await updateActivity(companyId, activityId, parsed.data, session.user.id);
+  await updateActivity(
+    companyId,
+    activityId,
+    parsed.data,
+    session.user.id,
+  ).catch(duplicateNameRedirect(CATALOG_PATHS.actividades));
   revalidateCatalog();
   redirect(catalogHref(CATALOG_PATHS.actividades, { saved: "activity" }));
 };

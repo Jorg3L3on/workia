@@ -95,7 +95,9 @@ const duplicateIdentityState = (
       field,
       field === "curp"
         ? "Ya existe una persona activa con esta CURP"
-        : "Ya existe una persona activa con este RFC",
+        : field === "rfc"
+          ? "Ya existe una persona activa con este RFC"
+          : "Ya existe una persona activa con este NSS",
     ]),
   ),
 });

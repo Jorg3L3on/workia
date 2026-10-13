@@ -8,6 +8,7 @@ import {
   snapshotPerson,
 } from "@/lib/audit";
 import { db, withTransaction, type DbTransaction } from "@/lib/db";
+import { isUniqueViolation } from "@/lib/db/errors";
 import {
   areas,
   auditEvents,
@@ -74,12 +75,6 @@ type StagedRow = {
   targetPersonId: string | null;
   targetContractId?: string | null;
 };
-
-const isUniqueViolation = (error: unknown): boolean =>
-  typeof error === "object" &&
-  error !== null &&
-  ((error as { code?: string }).code === "23505" ||
-    isUniqueViolation((error as { cause?: unknown }).cause));
 
 const lockJob = (tx: DbTransaction, jobId: string) =>
   // Serializes concurrent apply steps of the same job (two open tabs).

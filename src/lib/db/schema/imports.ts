@@ -118,9 +118,13 @@ export const importJobs = pgTable(
     index("import_jobs_file_hash_idx").on(table.fileHash),
     index("import_jobs_actor_user_id_idx").on(table.actorUserId),
     index("import_jobs_created_at_idx").on(table.createdAt),
-    // At most one import may be applying at a time.
+    index("import_jobs_company_created_idx").on(
+      table.companyId,
+      table.createdAt.desc().nullsFirst(),
+    ),
+    // At most one import may be applying at a time in each company.
     uniqueIndex("import_jobs_single_applying_idx")
-      .on(table.type)
+      .on(table.companyId, table.type)
       .where(sql`${table.status} = 'applying'`),
   ],
 );

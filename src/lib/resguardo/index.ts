@@ -17,6 +17,7 @@ import {
   snapshotAssetMovement,
 } from "@/lib/audit";
 import { db } from "@/lib/db";
+import { rethrowDuplicate } from "@/lib/db/errors";
 import { withTenant } from "@/lib/tenant/scope";
 import { escapeLike } from "@/lib/db/like";
 import { assetMovements, assets, people } from "@/lib/db/schema";
@@ -280,7 +281,8 @@ export const createAsset = async (
       tracksHistory: input.tracksHistory,
       status: "disponible",
     })
-    .returning();
+    .returning()
+    .catch(rethrowDuplicate("Ya existe un activo con ese identificador."));
 
   await recordAuditEvent({
     companyId,

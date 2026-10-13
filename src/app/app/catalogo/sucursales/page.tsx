@@ -22,14 +22,18 @@ export const metadata: Metadata = {
 };
 
 type SucursalesCatalogPageProps = {
-  searchParams: Promise<{ saved?: string; deleted?: string }>;
+  searchParams: Promise<{
+    error?: string;
+    saved?: string;
+    deleted?: string;
+  }>;
 };
 
 const SucursalesCatalogPage = async ({
   searchParams,
 }: SucursalesCatalogPageProps) => {
   const session = await requireSitesRead();
-  const { saved, deleted } = await searchParams;
+  const { error, saved, deleted } = await searchParams;
 
   const [siteRows, canCreateSite, canDeleteSite] = await Promise.all([
     listSites(session.companyId),
@@ -45,7 +49,7 @@ const SucursalesCatalogPage = async ({
         title="Sucursales"
       />
 
-      <CatalogStatusMessages deleted={deleted} saved={saved} />
+      <CatalogStatusMessages error={error} deleted={deleted} saved={saved} />
 
       <section className="workia-pass-card space-y-4 p-5">
         <CatalogFormTray

@@ -20,6 +20,7 @@ import {
   assignAssetFormSchema,
   returnAssetFormSchema,
 } from "@/lib/resguardo/schema";
+import { DuplicateNameError } from "@/lib/db/errors";
 import { AuthorizationError } from "@/lib/rbac/errors";
 import {
   STALE_COMPANY_MESSAGE,
@@ -92,7 +93,18 @@ export const createAssetAction = async (
     return { error: STALE_COMPANY_MESSAGE };
   }
 
-  const created = await createAsset(companyId, parsed.data, session.user.id);
+  let created;
+
+  try {
+    created = await createAsset(companyId, parsed.data, session.user.id);
+  } catch (error) {
+    if (error instanceof DuplicateNameError) {
+      return { error: error.message };
+    }
+
+    throw error;
+  }
+
   revalidateResguardo();
   redirect(`/app/resguardo/${created.id}?created=1`);
 };

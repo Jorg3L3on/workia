@@ -28,6 +28,7 @@ export const metadata: Metadata = {
 
 type PuestosCatalogPageProps = {
   searchParams: Promise<{
+    error?: string;
     saved?: string;
     deleted?: string;
     assigned?: string;
@@ -39,7 +40,7 @@ const PuestosCatalogPage = async ({
   searchParams,
 }: PuestosCatalogPageProps) => {
   const session = await requirePositionsRead();
-  const { saved, deleted, assigned, unassigned } = await searchParams;
+  const { error, saved, deleted, assigned, unassigned } = await searchParams;
 
   const [
     positions,
@@ -75,6 +76,7 @@ const PuestosCatalogPage = async ({
       />
 
       <CatalogStatusMessages
+        error={error}
         assigned={assigned}
         deleted={deleted}
         saved={saved}

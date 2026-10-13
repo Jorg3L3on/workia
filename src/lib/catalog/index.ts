@@ -9,6 +9,7 @@ import {
   snapshotPositionActivity,
 } from "@/lib/audit";
 import { db } from "@/lib/db";
+import { rethrowDuplicate } from "@/lib/db/errors";
 import { withTenant } from "@/lib/tenant/scope";
 import {
   activities,
@@ -79,7 +80,8 @@ export const createArea = async (
       parentAreaId: input.parentAreaId?.trim() ? input.parentAreaId : null,
       active: input.active,
     })
-    .returning();
+    .returning()
+    .catch(rethrowDuplicate("Ya existe un área activa con ese nombre."));
 
   await recordAuditEvent({
     companyId,
@@ -118,7 +120,8 @@ export const updateArea = async (
       active: input.active,
     })
     .where(withTenant(areas, companyId, eq(areas.id, id)))
-    .returning();
+    .returning()
+    .catch(rethrowDuplicate("Ya existe un área activa con ese nombre."));
 
   if (!updated) {
     return null;
@@ -253,7 +256,8 @@ export const createPosition = async (
       areaId: input.areaId?.trim() ? input.areaId : null,
       active: input.active,
     })
-    .returning();
+    .returning()
+    .catch(rethrowDuplicate("Ya existe un puesto activo con ese nombre."));
 
   await recordAuditEvent({
     companyId,
@@ -292,7 +296,8 @@ export const updatePosition = async (
       active: input.active,
     })
     .where(withTenant(positions, companyId, eq(positions.id, id)))
-    .returning();
+    .returning()
+    .catch(rethrowDuplicate("Ya existe un puesto activo con ese nombre."));
 
   if (!updated) {
     return null;
@@ -412,7 +417,8 @@ export const createActivity = async (
       name: input.name,
       active: input.active,
     })
-    .returning();
+    .returning()
+    .catch(rethrowDuplicate("Ya existe una actividad activa con ese nombre."));
 
   await recordAuditEvent({
     companyId,
@@ -450,7 +456,8 @@ export const updateActivity = async (
       active: input.active,
     })
     .where(withTenant(activities, companyId, eq(activities.id, id)))
-    .returning();
+    .returning()
+    .catch(rethrowDuplicate("Ya existe una actividad activa con ese nombre."));
 
   if (!updated) {
     return null;

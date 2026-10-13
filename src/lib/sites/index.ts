@@ -2,6 +2,7 @@ import { asc, eq, isNull } from "drizzle-orm";
 
 import { buildChanges, recordAuditEvent, snapshotSite } from "@/lib/audit";
 import { db } from "@/lib/db";
+import { rethrowDuplicate } from "@/lib/db/errors";
 import { sites } from "@/lib/db/schema";
 import { withTenant } from "@/lib/tenant/scope";
 
@@ -53,7 +54,8 @@ export const createSite = async (
       name: input.name,
       kind: input.kind,
     })
-    .returning();
+    .returning()
+    .catch(rethrowDuplicate("Ya existe una ubicación activa con ese nombre."));
 
   await recordAuditEvent({
     companyId,
@@ -91,7 +93,8 @@ export const updateSite = async (
       kind: input.kind,
     })
     .where(withTenant(sites, companyId, eq(sites.id, id)))
-    .returning();
+    .returning()
+    .catch(rethrowDuplicate("Ya existe una ubicación activa con ese nombre."));
 
   if (!updated) {
     return null;

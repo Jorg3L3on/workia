@@ -53,9 +53,9 @@ by accident.
 4. CI applies every migration to an empty Postgres twice; the second run must
    apply nothing.
 
-Local development may keep using `npm run db:push` on a throwaway database.
-That database has no registry, so do not point `db:migrate` at it; use a fresh
-database instead.
+Set up local databases with `npm run db:migrate` too. `db:push` cannot create
+everything the migrations do (for example the `catalog_key()` function behind
+the per-company catalog indexes), and a pushed database has no registry.
 
 ## Production
 

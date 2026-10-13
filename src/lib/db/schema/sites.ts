@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   index,
   pgEnum,
@@ -5,6 +6,7 @@ import {
   text,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 
@@ -32,6 +34,9 @@ export const sites = pgTable(
   },
   (table) => [
     unique("sites_company_id_id_unique").on(table.companyId, table.id),
+    uniqueIndex("sites_company_name_active_unique")
+      .on(table.companyId, sql`catalog_key(${table.name})`)
+      .where(sql`${table.deletedAt} is null`),
     index("sites_deleted_at_idx").on(table.deletedAt),
   ],
 );

@@ -126,11 +126,11 @@ export const contracts = pgTable(
     index("contracts_status_idx").on(table.status),
     index("contracts_end_date_idx").on(table.endDate),
     index("contracts_deleted_at_idx").on(table.deletedAt),
-    index("contracts_vigente_person_idx")
-      .on(table.personId)
+    index("contracts_company_vigente_person_idx")
+      .on(table.companyId, table.personId)
       .where(sql`${table.status} = 'vigente' AND ${table.deletedAt} IS NULL`),
-    index("contracts_renewal_end_date_idx")
-      .on(table.endDate)
+    index("contracts_company_renewal_end_date_idx")
+      .on(table.companyId, table.endDate)
       .where(
         sql`${table.status} = 'vigente' AND ${table.type} = 'determinado' AND ${table.deletedAt} IS NULL`,
       ),

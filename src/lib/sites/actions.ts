@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { CATALOG_PATHS, catalogHref } from "@/lib/catalog/paths";
+import { DuplicateNameError } from "@/lib/db/errors";
 import { AuthorizationError } from "@/lib/rbac/errors";
 import { writableCompanyIdFromForm } from "@/lib/tenant/scope";
 
@@ -52,7 +53,17 @@ export const createSiteAction = async (formData: FormData) => {
     redirect(catalogHref(CATALOG_PATHS.sucursales, { error: "site-form" }));
   }
 
-  await createSite(companyId, parsed.data, session.user.id);
+  await createSite(companyId, parsed.data, session.user.id).catch(
+    (error: unknown) => {
+      if (error instanceof DuplicateNameError) {
+        redirect(
+          catalogHref(CATALOG_PATHS.sucursales, { error: "duplicate-name" }),
+        );
+      }
+
+      throw error;
+    },
+  );
   revalidateSites();
   redirect(catalogHref(CATALOG_PATHS.sucursales, { saved: "site" }));
 };

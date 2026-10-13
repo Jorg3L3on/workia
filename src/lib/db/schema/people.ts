@@ -107,12 +107,22 @@ export const people = pgTable(
       "gin",
       sql`${personSearchText(table)} gin_trgm_ops`,
     ),
-    uniqueIndex("people_curp_active_unique")
-      .on(table.curp)
+    // Identity is unique per company: the same person may work for two companies.
+    uniqueIndex("people_company_curp_active_unique")
+      .on(table.companyId, table.curp)
       .where(sql`${table.deletedAt} is null and ${table.curp} is not null`),
-    uniqueIndex("people_rfc_active_unique")
-      .on(table.rfc)
+    uniqueIndex("people_company_rfc_active_unique")
+      .on(table.companyId, table.rfc)
       .where(sql`${table.deletedAt} is null and ${table.rfc} is not null`),
+    uniqueIndex("people_company_nss_active_unique")
+      .on(table.companyId, table.nss)
+      .where(sql`${table.deletedAt} is null and ${table.nss} is not null`),
+    index("people_company_live_updated_idx")
+      .on(table.companyId, table.updatedAt)
+      .where(sql`${table.deletedAt} is null`),
+    index("people_company_status_family_idx")
+      .on(table.companyId, table.status, table.apellidoPaterno)
+      .where(sql`${table.deletedAt} is null`),
   ],
 );
 

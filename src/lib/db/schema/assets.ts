@@ -1,4 +1,4 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
   boolean,
   date,
@@ -9,6 +9,7 @@ import {
   text,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 
@@ -54,6 +55,13 @@ export const assets = pgTable(
   },
   (table) => [
     unique("assets_company_id_id_unique").on(table.companyId, table.id),
+    uniqueIndex("assets_company_identifier_active_unique")
+      .on(table.companyId, table.identifier)
+      .where(sql`${table.deletedAt} is null`),
+    index("assets_company_status_name_idx")
+      .on(table.companyId, table.status, table.name)
+      .where(sql`${table.deletedAt} is null`),
+    index("assets_company_holder_idx").on(table.companyId, table.holderId),
     foreignKey({
       name: "assets_company_holder_fk",
       columns: [table.companyId, table.holderId],
