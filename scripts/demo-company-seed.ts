@@ -79,11 +79,20 @@ const appendHorarioToken = (body: string) =>
     ? body
     : `${body.trim()}\n\nHorario: ${HORARIO_TOKEN}.`;
 
-export const seedDemoCompany = async () => {
+/**
+ * Org data for one demo company. `personIndexOffset` shifts the generated
+ * names and identifiers so a second demo company does not mirror the first.
+ */
+export const seedDemoCompany = async (
+  companyId: string,
+  options: { personIndexOffset?: number } = {},
+) => {
   const existing = await db
     .select({ id: areas.id })
     .from(areas)
-    .where(eq(areas.name, DEMO_MARKER_AREA))
+    .where(
+      and(eq(areas.companyId, companyId), eq(areas.name, DEMO_MARKER_AREA)),
+    )
     .limit(1);
 
   if (existing.length > 0) {
@@ -106,12 +115,13 @@ export const seedDemoCompany = async () => {
   for (const name of areaNames) {
     const [area] = await db
       .insert(areas)
-      .values({ name, active: true })
+      .values({ companyId, name, active: true })
       .returning({ id: areas.id });
 
     areaIds.set(name, area.id);
 
     await recordAuditEvent({
+      companyId,
       resourceType: "area",
       resourceId: area.id,
       action: "create",
@@ -132,12 +142,13 @@ export const seedDemoCompany = async () => {
   for (const name of positionNames) {
     const [position] = await db
       .insert(positions)
-      .values({ name, active: true })
+      .values({ companyId, name, active: true })
       .returning({ id: positions.id });
 
     positionIds.set(name, position.id);
 
     await recordAuditEvent({
+      companyId,
       resourceType: "position",
       resourceId: position.id,
       action: "create",
@@ -148,21 +159,22 @@ export const seedDemoCompany = async () => {
 
   const [corporativo] = await db
     .insert(sites)
-    .values({ name: "Corporativo Demo", kind: "corporativo" })
+    .values({ companyId, name: "Corporativo Demo", kind: "corporativo" })
     .returning({ id: sites.id });
 
   const [sucursalCentro] = await db
     .insert(sites)
-    .values({ name: "Sucursal Centro Demo", kind: "sucursal" })
+    .values({ companyId, name: "Sucursal Centro Demo", kind: "sucursal" })
     .returning({ id: sites.id });
 
   const [sucursalNorte] = await db
     .insert(sites)
-    .values({ name: "Sucursal Norte Demo", kind: "sucursal" })
+    .values({ companyId, name: "Sucursal Norte Demo", kind: "sucursal" })
     .returning({ id: sites.id });
 
   for (const site of [corporativo, sucursalCentro, sucursalNorte]) {
     await recordAuditEvent({
+      companyId,
       resourceType: "site",
       resourceId: site.id,
       action: "create",
@@ -202,7 +214,7 @@ export const seedDemoCompany = async () => {
     "Zoe",
   ];
 
-  let personIndex = 1;
+  let personIndex = 1 + (options.personIndexOffset ?? 0);
   let peopleCreated = 0;
   const jefeIds = new Map<string, string>();
 
@@ -219,6 +231,7 @@ export const seedDemoCompany = async () => {
     const [jefe] = await db
       .insert(people)
       .values({
+        companyId,
         nombres: jefeNombres,
         apellidoPaterno: "Demo",
         apellidoMaterno: area === "RRHH" ? "Ejemplo" : "Muestra",
@@ -243,6 +256,7 @@ export const seedDemoCompany = async () => {
     peopleCreated++;
 
     await recordAuditEvent({
+      companyId,
       resourceType: "person",
       resourceId: jefe.id,
       action: "create",
@@ -286,6 +300,7 @@ export const seedDemoCompany = async () => {
       const [created] = await db
         .insert(people)
         .values({
+          companyId,
           nombres: member.nombres,
           apellidoPaterno: "Demo",
           apellidoMaterno: "Ejemplo",
@@ -307,6 +322,7 @@ export const seedDemoCompany = async () => {
       peopleCreated++;
 
       await recordAuditEvent({
+        companyId,
         resourceType: "person",
         resourceId: created.id,
         action: "create",
@@ -319,6 +335,7 @@ export const seedDemoCompany = async () => {
   const [determinadoTemplate] = await db
     .insert(contractTemplates)
     .values({
+      companyId,
       name: "Contrato determinado demo",
       body: DEFAULT_TEMPLATE_BODY,
       active: true,
@@ -328,6 +345,7 @@ export const seedDemoCompany = async () => {
   const templateId = determinadoTemplate.id;
 
   await recordAuditEvent({
+    companyId,
     resourceType: "contract_template",
     resourceId: determinadoTemplate.id,
     action: "create",
@@ -338,6 +356,7 @@ export const seedDemoCompany = async () => {
   const [indeterminadoTemplate] = await db
     .insert(contractTemplates)
     .values({
+      companyId,
       name: "Contrato indeterminado demo",
       body: INDETERMINADO_TEMPLATE_BODY,
       active: true,
@@ -347,6 +366,7 @@ export const seedDemoCompany = async () => {
   const indeterminadoTemplateId = indeterminadoTemplate.id;
 
   await recordAuditEvent({
+    companyId,
     resourceType: "contract_template",
     resourceId: indeterminadoTemplate.id,
     action: "create",
@@ -365,7 +385,12 @@ export const seedDemoCompany = async () => {
     .leftJoin(areas, eq(people.areaId, areas.id))
     .leftJoin(positions, eq(people.positionId, positions.id))
     .leftJoin(sites, eq(people.siteId, sites.id))
-    .where(and(eq(people.status, "activa"), isNull(people.deletedAt)));
+    .where(
+      and(
+        eq(people.companyId, companyId),
+        and(eq(people.status, "activa"), isNull(people.deletedAt)),
+      ),
+    );
 
   let contractCount = 0;
 
@@ -412,6 +437,7 @@ export const seedDemoCompany = async () => {
     const [contract] = await db
       .insert(contracts)
       .values({
+        companyId,
         personId: row.person.id,
         type,
         startDate,
@@ -429,6 +455,7 @@ export const seedDemoCompany = async () => {
       .returning({ id: contracts.id });
 
     await recordAuditEvent({
+      companyId,
       resourceType: "contract",
       resourceId: contract.id,
       action: "create",
@@ -446,11 +473,16 @@ export const seedDemoCompany = async () => {
 
 const DEMO_ASSET_MARKER = "LAP-DEMO-001";
 
-export const seedDemoResguardo = async () => {
+export const seedDemoResguardo = async (companyId: string) => {
   const existing = await db
     .select({ id: assets.id })
     .from(assets)
-    .where(eq(assets.identifier, DEMO_ASSET_MARKER))
+    .where(
+      and(
+        eq(assets.companyId, companyId),
+        eq(assets.identifier, DEMO_ASSET_MARKER),
+      ),
+    )
     .limit(1);
 
   if (existing.length > 0) {
@@ -461,7 +493,12 @@ export const seedDemoResguardo = async () => {
   const activePeople = await db
     .select({ id: people.id, nombres: people.nombres })
     .from(people)
-    .where(and(eq(people.status, "activa"), isNull(people.deletedAt)))
+    .where(
+      and(
+        eq(people.companyId, companyId),
+        and(eq(people.status, "activa"), isNull(people.deletedAt)),
+      ),
+    )
     .limit(5);
 
   if (activePeople.length < 2) {
@@ -477,6 +514,7 @@ export const seedDemoResguardo = async () => {
   const [laptopWarehouse] = await db
     .insert(assets)
     .values({
+      companyId,
       name: "Laptop demo almacén",
       identifier: DEMO_ASSET_MARKER,
       category: "laptop",
@@ -486,6 +524,7 @@ export const seedDemoResguardo = async () => {
     .returning();
 
   await recordAuditEvent({
+    companyId,
     resourceType: "asset",
     resourceId: laptopWarehouse.id,
     action: "create",
@@ -496,6 +535,7 @@ export const seedDemoResguardo = async () => {
   const [laptopAssigned] = await db
     .insert(assets)
     .values({
+      companyId,
       name: "Laptop demo asignada",
       identifier: "LAP-DEMO-002",
       category: "laptop",
@@ -507,6 +547,7 @@ export const seedDemoResguardo = async () => {
     .returning();
 
   await db.insert(assetMovements).values({
+    companyId,
     assetId: laptopAssigned.id,
     type: "entrega",
     personId: holderA.id,
@@ -515,6 +556,7 @@ export const seedDemoResguardo = async () => {
   });
 
   await recordAuditEvent({
+    companyId,
     resourceType: "asset",
     resourceId: laptopAssigned.id,
     action: "create",
@@ -525,6 +567,7 @@ export const seedDemoResguardo = async () => {
   const [moto] = await db
     .insert(assets)
     .values({
+      companyId,
       name: "Motocicleta demo",
       identifier: "MOTO-DEMO-001",
       category: "moto",
@@ -537,6 +580,7 @@ export const seedDemoResguardo = async () => {
 
   await db.insert(assetMovements).values([
     {
+      companyId,
       assetId: moto.id,
       type: "entrega",
       personId: holderA.id,
@@ -544,6 +588,7 @@ export const seedDemoResguardo = async () => {
       conditionNote: "Excelente estado, placas vigentes",
     },
     {
+      companyId,
       assetId: moto.id,
       type: "devolucion",
       personId: holderA.id,
@@ -551,6 +596,7 @@ export const seedDemoResguardo = async () => {
       conditionNote: "Rayón menor en guardabarros",
     },
     {
+      companyId,
       assetId: moto.id,
       type: "entrega",
       personId: holderB.id,
@@ -560,6 +606,7 @@ export const seedDemoResguardo = async () => {
   ]);
 
   await recordAuditEvent({
+    companyId,
     resourceType: "asset",
     resourceId: moto.id,
     action: "create",
@@ -570,6 +617,7 @@ export const seedDemoResguardo = async () => {
   const [consumible] = await db
     .insert(assets)
     .values({
+      companyId,
       name: "Paquete lápices demo",
       identifier: "CON-DEMO-001",
       category: "consumible",
@@ -579,6 +627,7 @@ export const seedDemoResguardo = async () => {
     .returning();
 
   await recordAuditEvent({
+    companyId,
     resourceType: "asset",
     resourceId: consumible.id,
     action: "create",
@@ -589,6 +638,7 @@ export const seedDemoResguardo = async () => {
   const [phone] = await db
     .insert(assets)
     .values({
+      companyId,
       name: "Teléfono demo",
       identifier: "TEL-DEMO-001",
       category: "telefono",
@@ -598,6 +648,7 @@ export const seedDemoResguardo = async () => {
     .returning();
 
   await recordAuditEvent({
+    companyId,
     resourceType: "asset",
     resourceId: phone.id,
     action: "create",
@@ -612,11 +663,16 @@ export const seedDemoResguardo = async () => {
 
 const DEMO_ACTIVITY_MARKER = "Atención a solicitudes internas";
 
-export const seedDemoActivities = async () => {
+export const seedDemoActivities = async (companyId: string) => {
   const existing = await db
     .select({ id: activities.id })
     .from(activities)
-    .where(eq(activities.name, DEMO_ACTIVITY_MARKER))
+    .where(
+      and(
+        eq(activities.companyId, companyId),
+        eq(activities.name, DEMO_ACTIVITY_MARKER),
+      ),
+    )
     .limit(1);
 
   if (existing.length > 0) {
@@ -636,12 +692,13 @@ export const seedDemoActivities = async () => {
   for (const name of activityNames) {
     const [activity] = await db
       .insert(activities)
-      .values({ name, active: true })
+      .values({ companyId, name, active: true })
       .returning({ id: activities.id });
 
     activityIds.set(name, activity.id);
 
     await recordAuditEvent({
+      companyId,
       resourceType: "activity",
       resourceId: activity.id,
       action: "create",
@@ -654,7 +711,12 @@ export const seedDemoActivities = async () => {
     const [row] = await db
       .select({ id: positions.id, name: positions.name })
       .from(positions)
-      .where(and(eq(positions.name, name), isNull(positions.deletedAt)))
+      .where(
+        and(
+          eq(positions.companyId, companyId),
+          and(eq(positions.name, name), isNull(positions.deletedAt)),
+        ),
+      )
       .limit(1);
 
     return row ?? null;
@@ -684,12 +746,14 @@ export const seedDemoActivities = async () => {
     await db
       .insert(positionActivities)
       .values({
+        companyId,
         positionId: assignment.position.id,
         activityId,
       })
       .onConflictDoNothing();
 
     await recordAuditEvent({
+      companyId,
       resourceType: "position_activity",
       resourceId: `${assignment.position.id}:${activityId}`,
       action: "link",
@@ -740,23 +804,38 @@ const DEMO_SCHEDULE_PEOPLE = [
   },
 ] as const;
 
-export const seedDemoSchedules = async () => {
+export const seedDemoSchedules = async (companyId: string) => {
   const [position] = await db
     .select({ id: positions.id })
     .from(positions)
-    .where(and(eq(positions.name, "Analista"), isNull(positions.deletedAt)))
+    .where(
+      and(
+        eq(positions.companyId, companyId),
+        and(eq(positions.name, "Analista"), isNull(positions.deletedAt)),
+      ),
+    )
     .limit(1);
 
   const [site] = await db
     .select({ id: sites.id })
     .from(sites)
-    .where(and(eq(sites.name, "Sucursal Centro Demo"), isNull(sites.deletedAt)))
+    .where(
+      and(
+        eq(sites.companyId, companyId),
+        and(eq(sites.name, "Sucursal Centro Demo"), isNull(sites.deletedAt)),
+      ),
+    )
     .limit(1);
 
   const [area] = await db
     .select({ id: areas.id })
     .from(areas)
-    .where(and(eq(areas.name, "Operaciones"), isNull(areas.deletedAt)))
+    .where(
+      and(
+        eq(areas.companyId, companyId),
+        and(eq(areas.name, "Operaciones"), isNull(areas.deletedAt)),
+      ),
+    )
     .limit(1);
 
   if (!position || !site || !area) {
@@ -769,7 +848,12 @@ export const seedDemoSchedules = async () => {
   const demoTemplates = await db
     .select()
     .from(contractTemplates)
-    .where(isNull(contractTemplates.deletedAt));
+    .where(
+      and(
+        eq(contractTemplates.companyId, companyId),
+        isNull(contractTemplates.deletedAt),
+      ),
+    );
 
   for (const template of demoTemplates) {
     const nextBody = appendHorarioToken(template.body);
@@ -781,7 +865,12 @@ export const seedDemoSchedules = async () => {
     await db
       .update(contractTemplates)
       .set({ body: nextBody })
-      .where(eq(contractTemplates.id, template.id));
+      .where(
+        and(
+          eq(contractTemplates.companyId, companyId),
+          eq(contractTemplates.id, template.id),
+        ),
+      );
   }
 
   let peopleReady = 0;
@@ -790,7 +879,7 @@ export const seedDemoSchedules = async () => {
     const [existing] = await db
       .select({ id: people.id })
       .from(people)
-      .where(eq(people.email, demo.email))
+      .where(and(eq(people.companyId, companyId), eq(people.email, demo.email)))
       .limit(1);
 
     let personId = existing?.id;
@@ -799,6 +888,7 @@ export const seedDemoSchedules = async () => {
       const [created] = await db
         .insert(people)
         .values({
+          companyId,
           nombres: demo.nombres,
           apellidoPaterno: demo.apellidoPaterno,
           apellidoMaterno: demo.apellidoMaterno,
@@ -817,6 +907,7 @@ export const seedDemoSchedules = async () => {
       personId = created.id;
 
       await recordAuditEvent({
+        companyId,
         resourceType: "person",
         resourceId: personId,
         action: "create",
@@ -835,13 +926,18 @@ export const seedDemoSchedules = async () => {
           status: "activa",
           deletedAt: null,
         })
-        .where(eq(people.id, personId));
+        .where(and(eq(people.companyId, companyId), eq(people.id, personId)));
     }
 
     const [existingSchedule] = await db
       .select({ id: personSchedules.id })
       .from(personSchedules)
-      .where(eq(personSchedules.personId, personId))
+      .where(
+        and(
+          eq(personSchedules.companyId, companyId),
+          eq(personSchedules.personId, personId),
+        ),
+      )
       .limit(1);
 
     if (existingSchedule) {
@@ -854,9 +950,15 @@ export const seedDemoSchedules = async () => {
           salida: demo.schedule.salida,
           deletedAt: null,
         })
-        .where(eq(personSchedules.id, existingSchedule.id));
+        .where(
+          and(
+            eq(personSchedules.companyId, companyId),
+            eq(personSchedules.id, existingSchedule.id),
+          ),
+        );
     } else {
       await db.insert(personSchedules).values({
+        companyId,
         personId,
         entrada: demo.schedule.entrada,
         salidaComer: demo.schedule.salidaComer,
@@ -865,6 +967,7 @@ export const seedDemoSchedules = async () => {
       });
 
       await recordAuditEvent({
+        companyId,
         resourceType: "person",
         resourceId: personId,
         action: "create",

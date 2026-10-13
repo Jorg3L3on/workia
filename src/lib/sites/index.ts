@@ -1,47 +1,64 @@
 import { asc, eq, isNull } from "drizzle-orm";
 
 import { buildChanges, recordAuditEvent, snapshotSite } from "@/lib/audit";
-import { db } from "@/lib/db";
+import { tdb } from "@/lib/db";
+import { rethrowDuplicate } from "@/lib/db/errors";
 import { sites } from "@/lib/db/schema";
+import { withTenant } from "@/lib/tenant/scope";
 
 import type { SiteFormValues } from "./schema";
 
-export const listSites = async (options: { includeDeleted?: boolean } = {}) => {
-  const filters = options.includeDeleted ? undefined : isNull(sites.deletedAt);
-
-  return db
+export const listSites = async (
+  companyId: string,
+  options: { includeDeleted?: boolean } = {},
+) => {
+  return tdb(companyId)
     .select()
     .from(sites)
-    .where(filters)
+    .where(
+      withTenant(
+        sites,
+        companyId,
+        options.includeDeleted ? undefined : isNull(sites.deletedAt),
+      ),
+    )
     .orderBy(asc(sites.kind), asc(sites.name));
 };
 
-export const listActiveSites = async () => {
-  return db
+export const listActiveSites = async (companyId: string) => {
+  return tdb(companyId)
     .select()
     .from(sites)
-    .where(isNull(sites.deletedAt))
+    .where(withTenant(sites, companyId, isNull(sites.deletedAt)))
     .orderBy(asc(sites.kind), asc(sites.name));
 };
 
-export const getSiteById = async (id: string) => {
-  const [site] = await db.select().from(sites).where(eq(sites.id, id)).limit(1);
+export const getSiteById = async (companyId: string, id: string) => {
+  const [site] = await tdb(companyId)
+    .select()
+    .from(sites)
+    .where(withTenant(sites, companyId, eq(sites.id, id)))
+    .limit(1);
   return site ?? null;
 };
 
 export const createSite = async (
+  companyId: string,
   input: SiteFormValues,
   actorUserId?: string | null,
 ) => {
-  const [created] = await db
+  const [created] = await tdb(companyId)
     .insert(sites)
     .values({
+      companyId,
       name: input.name,
       kind: input.kind,
     })
-    .returning();
+    .returning()
+    .catch(rethrowDuplicate("Ya existe una ubicación activa con ese nombre."));
 
   await recordAuditEvent({
+    companyId,
     actorUserId,
     resourceType: "site",
     resourceId: created.id,
@@ -56,11 +73,12 @@ export const createSite = async (
 };
 
 export const updateSite = async (
+  companyId: string,
   id: string,
   input: SiteFormValues,
   actorUserId?: string | null,
 ) => {
-  const existing = await getSiteById(id);
+  const existing = await getSiteById(companyId, id);
 
   if (!existing || existing.deletedAt) {
     return null;
@@ -68,14 +86,15 @@ export const updateSite = async (
 
   const before = snapshotSite(existing);
 
-  const [updated] = await db
+  const [updated] = await tdb(companyId)
     .update(sites)
     .set({
       name: input.name,
       kind: input.kind,
     })
-    .where(eq(sites.id, id))
-    .returning();
+    .where(withTenant(sites, companyId, eq(sites.id, id)))
+    .returning()
+    .catch(rethrowDuplicate("Ya existe una ubicación activa con ese nombre."));
 
   if (!updated) {
     return null;
@@ -84,6 +103,7 @@ export const updateSite = async (
   const after = snapshotSite(updated);
 
   await recordAuditEvent({
+    companyId,
     actorUserId,
     resourceType: "site",
     resourceId: id,
@@ -99,10 +119,11 @@ export const updateSite = async (
 };
 
 export const softDeleteSite = async (
+  companyId: string,
   id: string,
   actorUserId?: string | null,
 ) => {
-  const existing = await getSiteById(id);
+  const existing = await getSiteById(companyId, id);
 
   if (!existing || existing.deletedAt) {
     return null;
@@ -111,10 +132,10 @@ export const softDeleteSite = async (
   const before = snapshotSite(existing);
   const deletedAt = new Date();
 
-  const [updated] = await db
+  const [updated] = await tdb(companyId)
     .update(sites)
     .set({ deletedAt })
-    .where(eq(sites.id, id))
+    .where(withTenant(sites, companyId, eq(sites.id, id)))
     .returning();
 
   if (!updated) {
@@ -122,6 +143,7 @@ export const softDeleteSite = async (
   }
 
   await recordAuditEvent({
+    companyId,
     actorUserId,
     resourceType: "site",
     resourceId: id,

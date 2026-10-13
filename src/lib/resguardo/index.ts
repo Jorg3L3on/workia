@@ -1,4 +1,14 @@
-import { and, asc, count, desc, eq, ilike, isNull, or } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  ilike,
+  isNull,
+  or,
+  type SQL,
+} from "drizzle-orm";
 
 import {
   buildChanges,
@@ -6,7 +16,9 @@ import {
   snapshotAsset,
   snapshotAssetMovement,
 } from "@/lib/audit";
-import { db } from "@/lib/db";
+import { tdb } from "@/lib/db";
+import { rethrowDuplicate } from "@/lib/db/errors";
+import { withTenant } from "@/lib/tenant/scope";
 import { escapeLike } from "@/lib/db/like";
 import { assetMovements, assets, people } from "@/lib/db/schema";
 import { formatPersonName } from "@/lib/people/schema";
@@ -56,8 +68,8 @@ export type PersonAssetItem = {
   tracksHistory: boolean;
 };
 
-const buildAssetListSelect = () =>
-  db
+const buildAssetListSelect = (companyId: string) =>
+  tdb(companyId)
     .select({
       id: assets.id,
       name: assets.name,
@@ -74,14 +86,17 @@ const buildAssetListSelect = () =>
     .from(assets)
     .leftJoin(people, eq(assets.holderId, people.id));
 
-export const listAssetsPage = async (options: {
-  query?: string;
-  status?: (typeof assets.$inferSelect)["status"];
-  includeDeleted?: boolean;
-  page: number;
-  pageSize: number;
-}) => {
-  const filters = [];
+export const listAssetsPage = async (
+  companyId: string,
+  options: {
+    query?: string;
+    status?: (typeof assets.$inferSelect)["status"];
+    includeDeleted?: boolean;
+    page: number;
+    pageSize: number;
+  },
+) => {
+  const filters: (SQL | undefined)[] = [eq(assets.companyId, companyId)];
 
   if (!options?.includeDeleted) {
     filters.push(isNull(assets.deletedAt));
@@ -102,15 +117,15 @@ export const listAssetsPage = async (options: {
     );
   }
 
-  const where = filters.length === 0 ? undefined : and(...filters);
+  const where = and(...filters);
 
   const [rows, [totals]] = await Promise.all([
-    buildAssetListSelect()
+    buildAssetListSelect(companyId)
       .where(where)
       .orderBy(asc(assets.name), asc(assets.id))
       .limit(options.pageSize)
       .offset((options.page - 1) * options.pageSize),
-    db.select({ total: count() }).from(assets).where(where),
+    tdb(companyId).select({ total: count() }).from(assets).where(where),
   ]);
 
   const items = rows.map((row): AssetListItem => ({
@@ -134,18 +149,25 @@ export const listAssetsPage = async (options: {
   return { items, total: totals?.total ?? 0 };
 };
 
-export const getAssetById = async (id: string) => {
-  const [asset] = await db
+export const getAssetById = async (companyId: string, id: string) => {
+  const [asset] = await tdb(companyId)
     .select()
     .from(assets)
-    .where(and(eq(assets.id, id), isNull(assets.deletedAt)))
+    .where(
+      withTenant(
+        assets,
+        companyId,
+        eq(assets.id, id),
+        isNull(assets.deletedAt),
+      ),
+    )
     .limit(1);
 
   return asset ?? null;
 };
 
-export const getAssetWithHolder = async (id: string) => {
-  const [row] = await db
+export const getAssetWithHolder = async (companyId: string, id: string) => {
+  const [row] = await tdb(companyId)
     .select({
       asset: assets,
       holderId: people.id,
@@ -155,7 +177,14 @@ export const getAssetWithHolder = async (id: string) => {
     })
     .from(assets)
     .leftJoin(people, eq(assets.holderId, people.id))
-    .where(and(eq(assets.id, id), isNull(assets.deletedAt)))
+    .where(
+      withTenant(
+        assets,
+        companyId,
+        eq(assets.id, id),
+        isNull(assets.deletedAt),
+      ),
+    )
     .limit(1);
 
   if (!row) {
@@ -175,8 +204,11 @@ export const getAssetWithHolder = async (id: string) => {
   } satisfies AssetWithHolder;
 };
 
-export const listAssetMovements = async (assetId: string) => {
-  const rows = await db
+export const listAssetMovements = async (
+  companyId: string,
+  assetId: string,
+) => {
+  const rows = await tdb(companyId)
     .select({
       movement: assetMovements,
       personId: people.id,
@@ -186,7 +218,13 @@ export const listAssetMovements = async (assetId: string) => {
     })
     .from(assetMovements)
     .innerJoin(people, eq(assetMovements.personId, people.id))
-    .where(eq(assetMovements.assetId, assetId))
+    .where(
+      withTenant(
+        assetMovements,
+        companyId,
+        eq(assetMovements.assetId, assetId),
+      ),
+    )
     .orderBy(desc(assetMovements.movementDate), desc(assetMovements.createdAt));
 
   return rows.map((row): AssetMovementWithPerson => ({
@@ -200,8 +238,11 @@ export const listAssetMovements = async (assetId: string) => {
   }));
 };
 
-export const listAssetsByPerson = async (personId: string) => {
-  const rows = await db
+export const listAssetsByPerson = async (
+  companyId: string,
+  personId: string,
+) => {
+  const rows = await tdb(companyId)
     .select({
       id: assets.id,
       name: assets.name,
@@ -212,7 +253,9 @@ export const listAssetsByPerson = async (personId: string) => {
     })
     .from(assets)
     .where(
-      and(
+      withTenant(
+        assets,
+        companyId,
         eq(assets.holderId, personId),
         eq(assets.status, "asignado"),
         isNull(assets.deletedAt),
@@ -224,21 +267,25 @@ export const listAssetsByPerson = async (personId: string) => {
 };
 
 export const createAsset = async (
+  companyId: string,
   input: AssetFormValues,
   actorUserId: string,
 ) => {
-  const [created] = await db
+  const [created] = await tdb(companyId)
     .insert(assets)
     .values({
+      companyId,
       name: input.name.trim(),
       identifier: input.identifier.trim(),
       category: input.category.trim(),
       tracksHistory: input.tracksHistory,
       status: "disponible",
     })
-    .returning();
+    .returning()
+    .catch(rethrowDuplicate("Ya existe un activo con ese identificador."));
 
   await recordAuditEvent({
+    companyId,
     actorUserId,
     resourceType: "asset",
     resourceId: created.id,
@@ -253,10 +300,11 @@ export const createAsset = async (
 };
 
 export const assignAsset = async (
+  companyId: string,
   input: AssignAssetFormValues,
   actorUserId: string,
 ) => {
-  const asset = await getAssetById(input.assetId);
+  const asset = await getAssetById(companyId, input.assetId);
 
   if (!asset) {
     throw new Error("Activo no encontrado.");
@@ -276,19 +324,27 @@ export const assignAsset = async (
     throw new Error("No se puede asignar un activo dado de baja.");
   }
 
-  const [person] = await db
+  const [person] = await tdb(companyId)
     .select({ id: people.id })
     .from(people)
-    .where(and(eq(people.id, input.personId), isNull(people.deletedAt)))
+    .where(
+      withTenant(
+        people,
+        companyId,
+        eq(people.id, input.personId),
+        isNull(people.deletedAt),
+      ),
+    )
     .limit(1);
 
   if (!person) {
     throw new Error("Persona no encontrada.");
   }
 
-  const [movement] = await db
+  const [movement] = await tdb(companyId)
     .insert(assetMovements)
     .values({
+      companyId,
       assetId: asset.id,
       type: "entrega",
       personId: input.personId,
@@ -298,17 +354,18 @@ export const assignAsset = async (
     })
     .returning();
 
-  const [updated] = await db
+  const [updated] = await tdb(companyId)
     .update(assets)
     .set({
       holderId: input.personId,
       conditionNote: input.conditionNote.trim(),
       status: "asignado",
     })
-    .where(eq(assets.id, asset.id))
+    .where(withTenant(assets, companyId, eq(assets.id, asset.id)))
     .returning();
 
   await recordAuditEvent({
+    companyId,
     actorUserId,
     resourceType: "asset_movement",
     resourceId: movement.id,
@@ -320,6 +377,7 @@ export const assignAsset = async (
   });
 
   await recordAuditEvent({
+    companyId,
     actorUserId,
     resourceType: "asset",
     resourceId: asset.id,
@@ -340,10 +398,11 @@ export const assignAsset = async (
 };
 
 export const returnAsset = async (
+  companyId: string,
   input: ReturnAssetFormValues,
   actorUserId: string,
 ) => {
-  const asset = await getAssetById(input.assetId);
+  const asset = await getAssetById(companyId, input.assetId);
 
   if (!asset) {
     throw new Error("Activo no encontrado.");
@@ -359,9 +418,10 @@ export const returnAsset = async (
 
   const holderId = asset.holderId;
 
-  const [movement] = await db
+  const [movement] = await tdb(companyId)
     .insert(assetMovements)
     .values({
+      companyId,
       assetId: asset.id,
       type: "devolucion",
       personId: holderId,
@@ -371,17 +431,18 @@ export const returnAsset = async (
     })
     .returning();
 
-  const [updated] = await db
+  const [updated] = await tdb(companyId)
     .update(assets)
     .set({
       holderId: null,
       conditionNote: input.conditionNote.trim(),
       status: "disponible",
     })
-    .where(eq(assets.id, asset.id))
+    .where(withTenant(assets, companyId, eq(assets.id, asset.id)))
     .returning();
 
   await recordAuditEvent({
+    companyId,
     actorUserId,
     resourceType: "asset_movement",
     resourceId: movement.id,
@@ -393,6 +454,7 @@ export const returnAsset = async (
   });
 
   await recordAuditEvent({
+    companyId,
     actorUserId,
     resourceType: "asset",
     resourceId: asset.id,
@@ -412,8 +474,12 @@ export const returnAsset = async (
   return { asset: updated, movement };
 };
 
-export const softDeleteAsset = async (id: string, actorUserId: string) => {
-  const existing = await getAssetById(id);
+export const softDeleteAsset = async (
+  companyId: string,
+  id: string,
+  actorUserId: string,
+) => {
+  const existing = await getAssetById(companyId, id);
 
   if (!existing) {
     throw new Error("Activo no encontrado.");
@@ -425,13 +491,14 @@ export const softDeleteAsset = async (id: string, actorUserId: string) => {
 
   const deletedAt = new Date();
 
-  const [updated] = await db
+  const [updated] = await tdb(companyId)
     .update(assets)
     .set({ deletedAt, status: "baja" })
-    .where(eq(assets.id, id))
+    .where(withTenant(assets, companyId, eq(assets.id, id)))
     .returning();
 
   await recordAuditEvent({
+    companyId,
     actorUserId,
     resourceType: "asset",
     resourceId: id,
@@ -446,12 +513,14 @@ export const softDeleteAsset = async (id: string, actorUserId: string) => {
   return updated;
 };
 
-export const countAssignedAssets = async () => {
-  const rows = await db
+export const countAssignedAssets = async (companyId: string) => {
+  const rows = await tdb(companyId)
     .select({ id: assets.id })
     .from(assets)
     .where(
-      and(
+      withTenant(
+        assets,
+        companyId,
         eq(assets.status, "asignado"),
         isNull(assets.deletedAt),
         eq(assets.tracksHistory, true),

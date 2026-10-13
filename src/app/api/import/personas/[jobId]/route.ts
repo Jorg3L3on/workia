@@ -9,14 +9,16 @@ export const dynamic = "force-dynamic";
 type Context = { params: Promise<{ jobId: string }> };
 
 export const GET = async (_request: Request, { params }: Context) => {
+  let session;
+
   try {
-    await requirePeopleImport();
+    session = await requirePeopleImport();
   } catch (error) {
     return importApiError(error);
   }
 
   const { jobId } = await params;
-  const job = await getImportJob(jobId);
+  const job = await getImportJob(session.companyId, jobId);
 
   if (!job) {
     return NextResponse.json(

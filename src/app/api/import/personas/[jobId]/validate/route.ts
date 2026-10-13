@@ -17,14 +17,16 @@ const optionsSchema = z.object({
 
 /** One validation step; the page calls it until `done` is true. */
 export const POST = async (request: Request, { params }: Context) => {
+  let session;
+
   try {
-    await requirePeopleImport();
+    session = await requirePeopleImport();
   } catch (error) {
     return importApiError(error);
   }
 
   const { jobId } = await params;
-  const job = await getImportJob(jobId);
+  const job = await getImportJob(session.companyId, jobId);
 
   if (!job) {
     return NextResponse.json(
@@ -40,13 +42,15 @@ export const POST = async (request: Request, { params }: Context) => {
     );
   }
 
-  return NextResponse.json(await validateJobStep(jobId));
+  return NextResponse.json(await validateJobStep(session.companyId, jobId));
 };
 
 /** Changes the review options and validates again from scratch. */
 export const PUT = async (request: Request, { params }: Context) => {
+  let session;
+
   try {
-    await requirePeopleImport();
+    session = await requirePeopleImport();
   } catch (error) {
     return importApiError(error);
   }
@@ -60,7 +64,7 @@ export const PUT = async (request: Request, { params }: Context) => {
     return NextResponse.json({ error: "Solicitud inválida." }, { status: 400 });
   }
 
-  const job = await getImportJob(jobId);
+  const job = await getImportJob(session.companyId, jobId);
 
   if (!job || !["in_review", "validating"].includes(job.status)) {
     return NextResponse.json(
@@ -69,7 +73,7 @@ export const PUT = async (request: Request, { params }: Context) => {
     );
   }
 
-  await restartValidation(jobId, parsed.data);
+  await restartValidation(session.companyId, jobId, parsed.data);
 
   return NextResponse.json({ status: "validating" });
 };

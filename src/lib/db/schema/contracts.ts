@@ -2,16 +2,20 @@ import { relations, sql } from "drizzle-orm";
 import {
   boolean,
   date,
+  foreignKey,
   index,
   pgEnum,
   pgTable,
   text,
   timestamp,
+  unique,
   uuid,
 } from "drizzle-orm/pg-core";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 
 import { people } from "./people";
+
+import { companies } from "./companies";
 
 export const contractTypeEnum = pgEnum("contract_type", [
   "determinado",
@@ -37,6 +41,9 @@ export const contractTemplates = pgTable(
   "contract_templates",
   {
     id: uuid("id").defaultRandom().primaryKey(),
+    companyId: uuid("company_id")
+      .notNull()
+      .references(() => companies.id, { onDelete: "restrict" }),
     name: text("name").notNull(),
     body: text("body").notNull(),
     active: boolean("active").notNull().default(true),
@@ -50,6 +57,10 @@ export const contractTemplates = pgTable(
       .$onUpdate(() => new Date()),
   },
   (table) => [
+    unique("contract_templates_company_id_id_unique").on(
+      table.companyId,
+      table.id,
+    ),
     index("contract_templates_active_idx").on(table.active),
     index("contract_templates_deleted_at_idx").on(table.deletedAt),
   ],
@@ -59,6 +70,9 @@ export const contracts = pgTable(
   "contracts",
   {
     id: uuid("id").defaultRandom().primaryKey(),
+    companyId: uuid("company_id")
+      .notNull()
+      .references(() => companies.id, { onDelete: "restrict" }),
     personId: uuid("person_id")
       .notNull()
       .references(() => people.id, { onDelete: "restrict" }),
@@ -92,15 +106,31 @@ export const contracts = pgTable(
       .$onUpdate(() => new Date()),
   },
   (table) => [
+    unique("contracts_company_id_id_unique").on(table.companyId, table.id),
+    foreignKey({
+      name: "contracts_company_person_fk",
+      columns: [table.companyId, table.personId],
+      foreignColumns: [people.companyId, people.id],
+    }),
+    foreignKey({
+      name: "contracts_company_template_fk",
+      columns: [table.companyId, table.templateId],
+      foreignColumns: [contractTemplates.companyId, contractTemplates.id],
+    }),
+    foreignKey({
+      name: "contracts_company_previous_contract_fk",
+      columns: [table.companyId, table.previousContractId],
+      foreignColumns: [table.companyId, table.id],
+    }),
     index("contracts_person_id_idx").on(table.personId),
     index("contracts_status_idx").on(table.status),
     index("contracts_end_date_idx").on(table.endDate),
     index("contracts_deleted_at_idx").on(table.deletedAt),
-    index("contracts_vigente_person_idx")
-      .on(table.personId)
+    index("contracts_company_vigente_person_idx")
+      .on(table.companyId, table.personId)
       .where(sql`${table.status} = 'vigente' AND ${table.deletedAt} IS NULL`),
-    index("contracts_renewal_end_date_idx")
-      .on(table.endDate)
+    index("contracts_company_renewal_end_date_idx")
+      .on(table.companyId, table.endDate)
       .where(
         sql`${table.status} = 'vigente' AND ${table.type} = 'determinado' AND ${table.deletedAt} IS NULL`,
       ),

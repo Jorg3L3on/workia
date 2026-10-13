@@ -6,7 +6,8 @@ import {
   snapshotContract,
   snapshotContractTemplate,
 } from "@/lib/audit";
-import { db } from "@/lib/db";
+import { tdb } from "@/lib/db";
+import { withTenant } from "@/lib/tenant/scope";
 import { areas, contractTemplates, contracts, people } from "@/lib/db/schema";
 import type { ContractStatus } from "@/lib/db/schema/contracts";
 import { getPersonWithRelations } from "@/lib/people";
@@ -36,11 +37,12 @@ const buildSiteLabel = (
 };
 
 const resolveTemplateFillContext = async (
+  companyId: string,
   personId: string,
   startDate: string,
   endDate: string | null,
 ) => {
-  const person = await getPersonWithRelations(personId);
+  const person = await getPersonWithRelations(companyId, personId);
 
   if (!person) {
     throw new Error("Persona no encontrada.");
@@ -63,38 +65,54 @@ const resolveTemplateFillContext = async (
   };
 };
 
-export const listActiveContractTemplates = async () =>
-  db
+export const listActiveContractTemplates = async (companyId: string) =>
+  tdb(companyId)
     .select()
     .from(contractTemplates)
     .where(
-      and(
+      withTenant(
+        contractTemplates,
+        companyId,
         isNull(contractTemplates.deletedAt),
         eq(contractTemplates.active, true),
       ),
     )
     .orderBy(asc(contractTemplates.name));
 
-export const listContractTemplates = async (includeInactive = false) => {
-  const filters = [isNull(contractTemplates.deletedAt)];
+export const listContractTemplates = async (
+  companyId: string,
+  includeInactive = false,
+) => {
+  const filters = [
+    eq(contractTemplates.companyId, companyId),
+    isNull(contractTemplates.deletedAt),
+  ];
 
   if (!includeInactive) {
     filters.push(eq(contractTemplates.active, true));
   }
 
-  return db
+  return tdb(companyId)
     .select()
     .from(contractTemplates)
-    .where(filters.length === 1 ? filters[0] : and(...filters))
+    .where(and(...filters))
     .orderBy(asc(contractTemplates.name));
 };
 
-export const getContractTemplateById = async (id: string) => {
-  const [template] = await db
+export const getContractTemplateById = async (
+  companyId: string,
+  id: string,
+) => {
+  const [template] = await tdb(companyId)
     .select()
     .from(contractTemplates)
     .where(
-      and(eq(contractTemplates.id, id), isNull(contractTemplates.deletedAt)),
+      withTenant(
+        contractTemplates,
+        companyId,
+        eq(contractTemplates.id, id),
+        isNull(contractTemplates.deletedAt),
+      ),
     )
     .limit(1);
 
@@ -102,12 +120,14 @@ export const getContractTemplateById = async (id: string) => {
 };
 
 export const createContractTemplate = async (
+  companyId: string,
   input: ContractTemplateFormValues,
   actorUserId: string,
 ) => {
-  const [created] = await db
+  const [created] = await tdb(companyId)
     .insert(contractTemplates)
     .values({
+      companyId,
       name: input.name.trim(),
       body: input.body.trim(),
       active: input.active,
@@ -115,6 +135,7 @@ export const createContractTemplate = async (
     .returning();
 
   await recordAuditEvent({
+    companyId,
     actorUserId,
     resourceType: "contract_template",
     resourceId: created.id,
@@ -129,27 +150,31 @@ export const createContractTemplate = async (
 };
 
 export const updateContractTemplate = async (
+  companyId: string,
   id: string,
   input: ContractTemplateFormValues,
   actorUserId: string,
 ) => {
-  const existing = await getContractTemplateById(id);
+  const existing = await getContractTemplateById(companyId, id);
 
   if (!existing) {
     throw new Error("Plantilla no encontrada.");
   }
 
-  const [updated] = await db
+  const [updated] = await tdb(companyId)
     .update(contractTemplates)
     .set({
       name: input.name.trim(),
       body: input.body.trim(),
       active: input.active,
     })
-    .where(eq(contractTemplates.id, id))
+    .where(
+      withTenant(contractTemplates, companyId, eq(contractTemplates.id, id)),
+    )
     .returning();
 
   await recordAuditEvent({
+    companyId,
     actorUserId,
     resourceType: "contract_template",
     resourceId: id,
@@ -170,22 +195,26 @@ export const updateContractTemplate = async (
 };
 
 export const deactivateContractTemplate = async (
+  companyId: string,
   id: string,
   actorUserId: string,
 ) => {
-  const existing = await getContractTemplateById(id);
+  const existing = await getContractTemplateById(companyId, id);
 
   if (!existing) {
     throw new Error("Plantilla no encontrada.");
   }
 
-  const [updated] = await db
+  const [updated] = await tdb(companyId)
     .update(contractTemplates)
     .set({ active: false })
-    .where(eq(contractTemplates.id, id))
+    .where(
+      withTenant(contractTemplates, companyId, eq(contractTemplates.id, id)),
+    )
     .returning();
 
   await recordAuditEvent({
+    companyId,
     actorUserId,
     resourceType: "contract_template",
     resourceId: id,
@@ -201,10 +230,11 @@ export const deactivateContractTemplate = async (
 };
 
 export const softDeleteContractTemplate = async (
+  companyId: string,
   id: string,
   actorUserId: string,
 ) => {
-  const existing = await getContractTemplateById(id);
+  const existing = await getContractTemplateById(companyId, id);
 
   if (!existing) {
     throw new Error("Plantilla no encontrada.");
@@ -212,13 +242,16 @@ export const softDeleteContractTemplate = async (
 
   const deletedAt = new Date();
 
-  const [updated] = await db
+  const [updated] = await tdb(companyId)
     .update(contractTemplates)
     .set({ active: false, deletedAt })
-    .where(eq(contractTemplates.id, id))
+    .where(
+      withTenant(contractTemplates, companyId, eq(contractTemplates.id, id)),
+    )
     .returning();
 
   await recordAuditEvent({
+    companyId,
     actorUserId,
     resourceType: "contract_template",
     resourceId: id,
@@ -233,29 +266,51 @@ export const softDeleteContractTemplate = async (
   return updated;
 };
 
-export const listContractsByPerson = async (personId: string) =>
-  db
+export const listContractsByPerson = async (
+  companyId: string,
+  personId: string,
+) =>
+  tdb(companyId)
     .select()
     .from(contracts)
-    .where(and(eq(contracts.personId, personId), isNull(contracts.deletedAt)))
+    .where(
+      withTenant(
+        contracts,
+        companyId,
+        eq(contracts.personId, personId),
+        isNull(contracts.deletedAt),
+      ),
+    )
     .orderBy(desc(contracts.startDate), desc(contracts.createdAt));
 
-export const getContractById = async (id: string) => {
-  const [contract] = await db
+export const getContractById = async (companyId: string, id: string) => {
+  const [contract] = await tdb(companyId)
     .select()
     .from(contracts)
-    .where(and(eq(contracts.id, id), isNull(contracts.deletedAt)))
+    .where(
+      withTenant(
+        contracts,
+        companyId,
+        eq(contracts.id, id),
+        isNull(contracts.deletedAt),
+      ),
+    )
     .limit(1);
 
   return contract ?? null;
 };
 
-export const getVigenteContractForPerson = async (personId: string) => {
-  const [contract] = await db
+export const getVigenteContractForPerson = async (
+  companyId: string,
+  personId: string,
+) => {
+  const [contract] = await tdb(companyId)
     .select()
     .from(contracts)
     .where(
-      and(
+      withTenant(
+        contracts,
+        companyId,
         eq(contracts.personId, personId),
         eq(contracts.status, "vigente"),
         isNull(contracts.deletedAt),
@@ -284,10 +339,11 @@ const noticeMonthsSql = sql<number | null>`case ${contracts.noticeWindow}
   else substring(${contracts.noticeWindow}::text from '^[0-9]+')::int
 end`;
 
-const renewalTrayWhere = (referenceDate?: string) => {
+const renewalTrayWhere = (companyId: string, referenceDate?: string) => {
   const today = referenceDate ? sql`${referenceDate}::date` : sql`current_date`;
 
   return and(
+    eq(contracts.companyId, companyId),
     eq(contracts.status, "vigente"),
     eq(contracts.type, "determinado"),
     isNull(contracts.deletedAt),
@@ -301,10 +357,11 @@ const renewalTrayWhere = (referenceDate?: string) => {
 
 /** Renewal tray in one query (people + areas joined, window filtered in SQL). */
 export const listRenewalTrayItems = async (
+  companyId: string,
   referenceDate?: string,
   limit?: number,
 ): Promise<RenewalTrayItem[]> => {
-  const query = db
+  const query = tdb(companyId)
     .select({
       contractId: contracts.id,
       endDate: contracts.endDate,
@@ -318,7 +375,7 @@ export const listRenewalTrayItems = async (
     .from(contracts)
     .innerJoin(people, eq(contracts.personId, people.id))
     .leftJoin(areas, eq(people.areaId, areas.id))
-    .where(renewalTrayWhere(referenceDate))
+    .where(renewalTrayWhere(companyId, referenceDate))
     .orderBy(asc(contracts.endDate));
 
   const rows = await (limit ? query.limit(limit) : query);
@@ -341,17 +398,21 @@ export const listRenewalTrayItems = async (
   }));
 };
 
-export const countRenewalTrayItems = async (referenceDate?: string) => {
-  const [row] = await db
+export const countRenewalTrayItems = async (
+  companyId: string,
+  referenceDate?: string,
+) => {
+  const [row] = await tdb(companyId)
     .select({ count: sql<number>`count(*)::int` })
     .from(contracts)
     .innerJoin(people, eq(contracts.personId, people.id))
-    .where(renewalTrayWhere(referenceDate));
+    .where(renewalTrayWhere(companyId, referenceDate));
 
   return row?.count ?? 0;
 };
 
 const emitContractRecord = async (
+  companyId: string,
   input: {
     personId: string;
     type: ContractFormValues["type"];
@@ -364,13 +425,14 @@ const emitContractRecord = async (
   },
   actorUserId: string,
 ) => {
-  const template = await getContractTemplateById(input.templateId);
+  const template = await getContractTemplateById(companyId, input.templateId);
 
   if (!template) {
     throw new Error("Plantilla no encontrada.");
   }
 
   const { person, context } = await resolveTemplateFillContext(
+    companyId,
     input.personId,
     input.startDate,
     input.endDate,
@@ -379,9 +441,10 @@ const emitContractRecord = async (
   const generatedText = fillContractTemplate(template.body, context);
   const scheduleSnapshot = buildContractScheduleSnapshot(person.schedule);
 
-  const [created] = await db
+  const [created] = await tdb(companyId)
     .insert(contracts)
     .values({
+      companyId,
       personId: input.personId,
       type: input.type,
       startDate: input.startDate,
@@ -397,6 +460,7 @@ const emitContractRecord = async (
     .returning();
 
   await recordAuditEvent({
+    companyId,
     actorUserId,
     resourceType: "contract",
     resourceId: created.id,
@@ -413,18 +477,20 @@ const emitContractRecord = async (
 };
 
 export const createContract = async (
+  companyId: string,
   input: ContractFormValues,
   actorUserId: string,
 ) => {
   const endDate = normalizeEndDate(input.type, input.endDate);
 
-  const vigente = await getVigenteContractForPerson(input.personId);
+  const vigente = await getVigenteContractForPerson(companyId, input.personId);
 
   if (vigente) {
     throw new Error("Esta persona ya tiene un contrato vigente.");
   }
 
   return emitContractRecord(
+    companyId,
     {
       personId: input.personId,
       type: input.type,
@@ -438,10 +504,11 @@ export const createContract = async (
 };
 
 export const renewContract = async (
+  companyId: string,
   input: RenewContractFormValues,
   actorUserId: string,
 ) => {
-  const existing = await getContractById(input.contractId);
+  const existing = await getContractById(companyId, input.contractId);
 
   if (!existing || existing.status !== "vigente") {
     throw new Error("Contrato no encontrado o ya no está vigente.");
@@ -449,13 +516,14 @@ export const renewContract = async (
 
   const endDate = normalizeEndDate(input.type, input.endDate);
 
-  const [updatedPrevious] = await db
+  const [updatedPrevious] = await tdb(companyId)
     .update(contracts)
     .set({ status: "renovado" })
-    .where(eq(contracts.id, existing.id))
+    .where(withTenant(contracts, companyId, eq(contracts.id, existing.id)))
     .returning();
 
   await recordAuditEvent({
+    companyId,
     actorUserId,
     resourceType: "contract",
     resourceId: existing.id,
@@ -468,6 +536,7 @@ export const renewContract = async (
   });
 
   return emitContractRecord(
+    companyId,
     {
       personId: existing.personId,
       type: input.type,
@@ -482,22 +551,24 @@ export const renewContract = async (
 };
 
 export const markContractNoRenew = async (
+  companyId: string,
   contractId: string,
   actorUserId: string,
 ) => {
-  const existing = await getContractById(contractId);
+  const existing = await getContractById(companyId, contractId);
 
   if (!existing || existing.status !== "vigente") {
     throw new Error("Contrato no encontrado o ya no está vigente.");
   }
 
-  const [updated] = await db
+  const [updated] = await tdb(companyId)
     .update(contracts)
     .set({ status: "no_renovado" })
-    .where(eq(contracts.id, contractId))
+    .where(withTenant(contracts, companyId, eq(contracts.id, contractId)))
     .returning();
 
   await recordAuditEvent({
+    companyId,
     actorUserId,
     resourceType: "contract",
     resourceId: contractId,
@@ -513,10 +584,11 @@ export const markContractNoRenew = async (
 };
 
 export const softDeleteContract = async (
+  companyId: string,
   contractId: string,
   actorUserId: string,
 ) => {
-  const existing = await getContractById(contractId);
+  const existing = await getContractById(companyId, contractId);
 
   if (!existing) {
     throw new Error("Contrato no encontrado.");
@@ -524,16 +596,17 @@ export const softDeleteContract = async (
 
   const deletedAt = new Date();
 
-  const [updated] = await db
+  const [updated] = await tdb(companyId)
     .update(contracts)
     .set({
       deletedAt,
       status: existing.status === "vigente" ? "vencido" : existing.status,
     })
-    .where(eq(contracts.id, contractId))
+    .where(withTenant(contracts, companyId, eq(contracts.id, contractId)))
     .returning();
 
   await recordAuditEvent({
+    companyId,
     actorUserId,
     resourceType: "contract",
     resourceId: contractId,

@@ -20,7 +20,14 @@
     "db:seed": "tsx scripts/seed.ts",
     "db:cleanup-borrados": "tsx scripts/cleanup-borrados-residue.ts",
     "db:report-identity-duplicates": "tsx scripts/report-identity-duplicates.ts",
-    "import:budgets": "NODE_OPTIONS=--expose-gc tsx scripts/measure-import-budgets.ts"
+    "import:budgets": "NODE_OPTIONS=--expose-gc tsx scripts/measure-import-budgets.ts",
+    "db:migrate": "tsx scripts/db-migrate.ts",
+    "check:migrations": "tsx scripts/check-migration-safety.ts",
+    "test:db": "vitest run -c vitest.db.config.ts",
+    "db:report-duplicates": "tsx scripts/report-duplicates.ts",
+    "check:idor": "tsx scripts/check-idor-coverage.ts",
+    "test:db:rls": "TEST_RLS=1 vitest run -c vitest.db.config.ts",
+    "db:cutover": "tsx scripts/cutover/run.ts"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.3",

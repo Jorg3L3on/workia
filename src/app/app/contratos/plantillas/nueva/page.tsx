@@ -9,6 +9,7 @@ import { createContractTemplateAction } from "@/lib/contracts/actions";
 import { requireContractTemplatesCreate } from "@/lib/contracts/auth";
 import { CONTRACT_TEMPLATE_TOKENS } from "@/lib/contracts/schema";
 import { redirect } from "next/navigation";
+import { CompanyField } from "@/components/tenant/company-context";
 
 export const dynamic = "force-dynamic";
 
@@ -60,6 +61,7 @@ Vigencia: del {{fecha_inicio}} al {{fecha_fin}}.`;
         action={createContractTemplateAction}
         className="workia-pass-card space-y-4 p-5"
       >
+        <CompanyField />
         <div className="space-y-2">
           <Label htmlFor="name">Nombre</Label>
           <Input

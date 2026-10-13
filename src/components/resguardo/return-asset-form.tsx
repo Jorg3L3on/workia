@@ -12,6 +12,7 @@ import {
   returnAssetAction,
   type ResguardoActionState,
 } from "@/lib/resguardo/actions";
+import { CompanyField } from "@/components/tenant/company-context";
 
 type ReturnAssetFormProps = {
   assetId: string;
@@ -33,6 +34,7 @@ export const ReturnAssetForm = ({
 
   return (
     <form action={formAction} className="space-y-4 border-t px-5 py-4">
+      <CompanyField />
       <div className="space-y-1">
         <h3 className="text-base font-semibold">Devolver activo</h3>
         <p className="text-muted-foreground text-sm">

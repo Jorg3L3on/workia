@@ -18,14 +18,22 @@ export const POST = async (request: Request, { params }: Context) => {
   }
 
   const { jobId } = await params;
-  const loaded = await loadUploadingJob(jobId, session.user.id);
+  const loaded = await loadUploadingJob(
+    session.companyId,
+    jobId,
+    session.user.id,
+  );
 
   if (loaded.error) {
     return loaded.error;
   }
 
   const expected = loaded.job.counts.total ?? 0;
-  const { job, staged, total } = await finalizeImportUpload(jobId, expected);
+  const { job, staged, total } = await finalizeImportUpload(
+    session.companyId,
+    jobId,
+    expected,
+  );
 
   // Fewer rows than announced means a chunk never arrived: retry the upload.
   if (!job || total < expected) {

@@ -14,6 +14,7 @@ import { requireSitesRead } from "@/lib/sites/auth";
 import { listSites } from "@/lib/sites";
 import { SITE_KINDS, siteKindLabels } from "@/lib/sites/schema";
 import { userHasPermission } from "@/lib/rbac";
+import { CompanyField } from "@/components/tenant/company-context";
 
 export const dynamic = "force-dynamic";
 
@@ -22,17 +23,21 @@ export const metadata: Metadata = {
 };
 
 type SucursalesCatalogPageProps = {
-  searchParams: Promise<{ saved?: string; deleted?: string }>;
+  searchParams: Promise<{
+    error?: string;
+    saved?: string;
+    deleted?: string;
+  }>;
 };
 
 const SucursalesCatalogPage = async ({
   searchParams,
 }: SucursalesCatalogPageProps) => {
   const session = await requireSitesRead();
-  const { saved, deleted } = await searchParams;
+  const { error, saved, deleted } = await searchParams;
 
   const [siteRows, canCreateSite, canDeleteSite] = await Promise.all([
-    listSites(),
+    listSites(session.companyId),
     userHasPermission(session.user.id, "sites:create"),
     userHasPermission(session.user.id, "sites:delete"),
   ]);
@@ -45,7 +50,7 @@ const SucursalesCatalogPage = async ({
         title="Sucursales"
       />
 
-      <CatalogStatusMessages deleted={deleted} saved={saved} />
+      <CatalogStatusMessages error={error} deleted={deleted} saved={saved} />
 
       <section className="workia-pass-card space-y-4 p-5">
         <CatalogFormTray
@@ -58,6 +63,7 @@ const SucursalesCatalogPage = async ({
                     formTitle: "Nueva sucursal",
                     children: (
                       <form action={createSiteAction} className="space-y-3">
+                        <CompanyField />
                         <div className="grid gap-3 sm:grid-cols-2">
                           <div className="space-y-2">
                             <Label htmlFor="site-name">Nombre</Label>

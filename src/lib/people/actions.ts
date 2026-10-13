@@ -3,7 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { AuthorizationError } from "@/lib/rbac";
+import { CompanyReferenceError } from "@/lib/db/errors";
+import { AuthorizationError } from "@/lib/rbac/errors";
+import {
+  STALE_COMPANY_MESSAGE,
+  writableCompanyIdFromForm,
+} from "@/lib/tenant/scope";
 
 import { DuplicateIdentityError } from "./identity";
 import {
@@ -91,9 +96,18 @@ const duplicateIdentityState = (
       field,
       field === "curp"
         ? "Ya existe una persona activa con esta CURP"
-        : "Ya existe una persona activa con este RFC",
+        : field === "rfc"
+          ? "Ya existe una persona activa con este RFC"
+          : "Ya existe una persona activa con este NSS",
     ]),
   ),
+});
+
+const referenceState = (error: CompanyReferenceError): PersonActionState => ({
+  fieldErrors: {
+    [error.field as keyof PersonFormValues]:
+      "Elige una opción de la lista; esa ya no existe en esta empresa.",
+  },
 });
 
 const revalidatePersonPaths = (personId?: string) => {
@@ -122,6 +136,14 @@ export const createPersonAction = async (
     return { error: "Sesión no válida." };
   }
 
+  let companyId: string;
+
+  try {
+    companyId = writableCompanyIdFromForm(session, formData);
+  } catch {
+    return { error: STALE_COMPANY_MESSAGE };
+  }
+
   const parsed = parsePersonForm(formData);
 
   if (isPersonActionState(parsed)) {
@@ -131,10 +153,14 @@ export const createPersonAction = async (
   let created;
 
   try {
-    created = await createPerson(parsed, session.user.id);
+    created = await createPerson(companyId, parsed, session.user.id);
   } catch (error) {
     if (error instanceof DuplicateIdentityError) {
       return duplicateIdentityState(error);
+    }
+
+    if (error instanceof CompanyReferenceError) {
+      return referenceState(error);
     }
 
     throw error;
@@ -161,7 +187,15 @@ export const updatePersonAction = async (
     return { error: "Sesión no válida." };
   }
 
-  const existing = await getPersonById(personId);
+  let companyId: string;
+
+  try {
+    companyId = writableCompanyIdFromForm(session, formData);
+  } catch {
+    return { error: STALE_COMPANY_MESSAGE };
+  }
+
+  const existing = await getPersonById(companyId, personId);
 
   if (!existing) {
     return { error: "No encontramos a esta persona." };
@@ -174,10 +208,14 @@ export const updatePersonAction = async (
   }
 
   try {
-    await updatePerson(personId, parsed, session.user.id);
+    await updatePerson(companyId, personId, parsed, session.user.id);
   } catch (error) {
     if (error instanceof DuplicateIdentityError) {
       return duplicateIdentityState(error);
+    }
+
+    if (error instanceof CompanyReferenceError) {
+      return referenceState(error);
     }
 
     throw error;
@@ -200,13 +238,13 @@ export const deletePersonAction = async (personId: string): Promise<void> => {
     redirect("/login");
   }
 
-  const existing = await getPersonById(personId);
+  const existing = await getPersonById(session.companyId, personId);
 
   if (!existing) {
     redirect("/app/personas?error=not-found");
   }
 
-  await softDeletePerson(personId, session.user.id);
+  await softDeletePerson(session.companyId, personId, session.user.id);
 
   revalidatePersonPaths(personId);
   redirect(`/app/personas/${personId}`);
@@ -221,13 +259,16 @@ export const searchManagerOptionsAction = async (
   query: string,
   excludeId?: string,
 ): Promise<ManagerOption[]> => {
+  let session;
+
   try {
-    await requirePeopleRead();
+    session = await requirePeopleRead();
   } catch {
     return [];
   }
 
   const rows = await searchActivePeopleForSelect(
+    session.companyId,
     query.slice(0, 80),
     excludeId || undefined,
   );

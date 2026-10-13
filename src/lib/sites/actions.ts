@@ -4,7 +4,9 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { CATALOG_PATHS, catalogHref } from "@/lib/catalog/paths";
-import { AuthorizationError } from "@/lib/rbac";
+import { DuplicateNameError } from "@/lib/db/errors";
+import { AuthorizationError } from "@/lib/rbac/errors";
+import { writableCompanyIdFromForm } from "@/lib/tenant/scope";
 
 import { createSite, softDeleteSite } from "./index";
 import { requireSitesCreate, requireSitesDelete } from "./auth";
@@ -32,6 +34,16 @@ export const createSiteAction = async (formData: FormData) => {
     redirect("/login");
   }
 
+  let companyId: string;
+
+  try {
+    companyId = writableCompanyIdFromForm(session, formData);
+  } catch {
+    redirect(
+      catalogHref(CATALOG_PATHS.sucursales, { error: "company-changed" }),
+    );
+  }
+
   const parsed = siteFormSchema.safeParse({
     name: String(formData.get("name") ?? ""),
     kind: String(formData.get("kind") ?? "sucursal"),
@@ -41,7 +53,17 @@ export const createSiteAction = async (formData: FormData) => {
     redirect(catalogHref(CATALOG_PATHS.sucursales, { error: "site-form" }));
   }
 
-  await createSite(parsed.data, session.user.id);
+  await createSite(companyId, parsed.data, session.user.id).catch(
+    (error: unknown) => {
+      if (error instanceof DuplicateNameError) {
+        redirect(
+          catalogHref(CATALOG_PATHS.sucursales, { error: "duplicate-name" }),
+        );
+      }
+
+      throw error;
+    },
+  );
   revalidateSites();
   redirect(catalogHref(CATALOG_PATHS.sucursales, { saved: "site" }));
 };
@@ -61,7 +83,7 @@ export const deleteSiteAction = async (siteId: string) => {
     redirect("/login");
   }
 
-  await softDeleteSite(siteId, session.user.id);
+  await softDeleteSite(session.companyId, siteId, session.user.id);
   revalidateSites();
   redirect(catalogHref(CATALOG_PATHS.sucursales, { deleted: "site" }));
 };

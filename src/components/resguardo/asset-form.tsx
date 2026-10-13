@@ -12,6 +12,7 @@ import {
   type ResguardoActionState,
 } from "@/lib/resguardo/actions";
 import { assetCategoryLabels } from "@/lib/resguardo/schema";
+import { CompanyField } from "@/components/tenant/company-context";
 
 const initialState: ResguardoActionState = {};
 
@@ -23,6 +24,7 @@ export const AssetForm = () => {
 
   return (
     <form action={formAction} className="workia-pass-card space-y-4 p-5 sm:p-6">
+      <CompanyField />
       <div className="space-y-1">
         <p className="text-muted-foreground font-mono text-[10.5px] font-medium tracking-[0.09em] uppercase">
           Resguardo

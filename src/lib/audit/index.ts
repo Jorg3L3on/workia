@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 
 import { and, count, desc, eq, gte, lte, sql } from "drizzle-orm";
 
-import { db, type DbExecutor } from "@/lib/db";
+import { tdb, type DbExecutor } from "@/lib/db";
 import { auditEvents, users } from "@/lib/db/schema";
 
 import type { AuditPayload } from "./types";
@@ -11,11 +11,12 @@ import type { ListAuditEventsOptions, RecordAuditEventInput } from "./types";
 /** Append-only: audit events are inserted, never updated or deleted via the app. */
 export const recordAuditEvent = async (
   input: RecordAuditEventInput,
-  executor: DbExecutor = db,
+  executor: DbExecutor = tdb(input.companyId),
 ) => {
   const [created] = await executor
     .insert(auditEvents)
     .values({
+      companyId: input.companyId,
       actorUserId: input.actorUserId ?? null,
       resourceType: input.resourceType,
       resourceId: input.resourceId,
@@ -31,7 +32,7 @@ export const recordAuditEvent = async (
 };
 
 const buildAuditFilters = (options: ListAuditEventsOptions) => {
-  const filters = [];
+  const filters = [eq(auditEvents.companyId, options.companyId)];
 
   if (options.resourceType) {
     filters.push(eq(auditEvents.resourceType, options.resourceType));
@@ -57,13 +58,11 @@ const buildAuditFilters = (options: ListAuditEventsOptions) => {
     filters.push(lte(auditEvents.occurredAt, options.to));
   }
 
-  return filters.length === 0 ? undefined : and(...filters);
+  return and(...filters);
 };
 
-export const countAuditEvents = async (
-  options: ListAuditEventsOptions = {},
-) => {
-  const [row] = await db
+export const countAuditEvents = async (options: ListAuditEventsOptions) => {
+  const [row] = await tdb(options.companyId)
     .select({ total: count() })
     .from(auditEvents)
     .where(buildAuditFilters(options));
@@ -71,10 +70,10 @@ export const countAuditEvents = async (
   return row?.total ?? 0;
 };
 
-export const listAuditEvents = async (options: ListAuditEventsOptions = {}) => {
+export const listAuditEvents = async (options: ListAuditEventsOptions) => {
   const whereClause = buildAuditFilters(options);
 
-  return db
+  return tdb(options.companyId)
     .select({
       id: auditEvents.id,
       actorUserId: auditEvents.actorUserId,
@@ -103,6 +102,15 @@ export const listAuditEvents = async (options: ListAuditEventsOptions = {}) => {
       })),
     );
 };
+
+/** Users who have acted in this company, for the actor filter (never other companies' users). */
+export const listAuditActors = async (companyId: string) =>
+  tdb(companyId)
+    .selectDistinct({ id: users.id, name: users.name, email: users.email })
+    .from(auditEvents)
+    .innerJoin(users, eq(auditEvents.actorUserId, users.id))
+    .where(eq(auditEvents.companyId, companyId))
+    .orderBy(users.name);
 
 export const buildChanges = <T extends Record<string, unknown>>(
   before: T,

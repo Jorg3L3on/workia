@@ -19,6 +19,7 @@ import {
   listPositions,
 } from "@/lib/catalog";
 import { userHasPermission } from "@/lib/rbac";
+import { CompanyField } from "@/components/tenant/company-context";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +29,7 @@ export const metadata: Metadata = {
 
 type PuestosCatalogPageProps = {
   searchParams: Promise<{
+    error?: string;
     saved?: string;
     deleted?: string;
     assigned?: string;
@@ -39,7 +41,7 @@ const PuestosCatalogPage = async ({
   searchParams,
 }: PuestosCatalogPageProps) => {
   const session = await requirePositionsRead();
-  const { saved, deleted, assigned, unassigned } = await searchParams;
+  const { error, saved, deleted, assigned, unassigned } = await searchParams;
 
   const [
     positions,
@@ -49,14 +51,15 @@ const PuestosCatalogPage = async ({
     canDeletePosition,
     canAssignActivity,
   ] = await Promise.all([
-    listPositions(),
-    listAreas(),
-    listAssignableActivities(),
+    listPositions(session.companyId),
+    listAreas(session.companyId),
+    listAssignableActivities(session.companyId),
     userHasPermission(session.user.id, "positions:create"),
     userHasPermission(session.user.id, "positions:delete"),
     userHasPermission(session.user.id, "positions:update"),
   ]);
   const activitiesByPosition = await listActivitiesByPositionIds(
+    session.companyId,
     positions.map((position) => position.id),
   );
   const activeAreas = areas.filter((area) => area.active);
@@ -74,6 +77,7 @@ const PuestosCatalogPage = async ({
       />
 
       <CatalogStatusMessages
+        error={error}
         assigned={assigned}
         deleted={deleted}
         saved={saved}
@@ -91,6 +95,7 @@ const PuestosCatalogPage = async ({
                     formTitle: "Nuevo puesto",
                     children: (
                       <form action={createPositionAction} className="space-y-3">
+                        <CompanyField />
                         <div className="space-y-2">
                           <Label htmlFor="position-name">Nombre</Label>
                           <Input

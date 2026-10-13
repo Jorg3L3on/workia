@@ -28,7 +28,8 @@ const isProtectedPath = (pathname: string) =>
   pathname === "/app" ||
   pathname.startsWith("/app/") ||
   pathname === "/admin" ||
-  pathname.startsWith("/admin/");
+  pathname.startsWith("/admin/") ||
+  pathname === "/empresa";
 
 const isAuthPath = (pathname: string) =>
   pathname === "/login" || pathname.startsWith("/api/auth/");
@@ -73,5 +74,11 @@ export function proxy(request: NextRequest) {
 export default proxy;
 
 export const config = {
-  matcher: ["/admin/:path*", "/app/:path*", "/login", "/api/auth/:path*"],
+  matcher: [
+    "/admin/:path*",
+    "/app/:path*",
+    "/empresa",
+    "/login",
+    "/api/auth/:path*",
+  ],
 };

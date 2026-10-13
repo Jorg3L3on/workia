@@ -99,7 +99,7 @@ export const isValidNss = (value: string) => {
   return sum % 10 === 0;
 };
 
-export type IdentityField = "curp" | "rfc";
+export type IdentityField = "curp" | "rfc" | "nss";
 
 export class DuplicateIdentityError extends Error {
   constructor(public readonly fields: IdentityField[]) {

@@ -31,6 +31,7 @@ import {
   type PersonFormValues,
 } from "@/lib/people/schema";
 import { siteKindLabels } from "@/lib/sites/schema";
+import { CompanyField } from "@/components/tenant/company-context";
 
 type PersonFormProps = {
   mode: "create" | "edit";
@@ -101,6 +102,7 @@ export const PersonForm = ({
 
   return (
     <form action={formAction} className="workia-pass-card space-y-6 p-5 sm:p-6">
+      <CompanyField />
       <div className="space-y-1">
         <p className="text-muted-foreground font-mono text-[10.5px] font-medium tracking-[0.09em] uppercase">
           Expediente

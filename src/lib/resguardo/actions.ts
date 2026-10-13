@@ -20,7 +20,12 @@ import {
   assignAssetFormSchema,
   returnAssetFormSchema,
 } from "@/lib/resguardo/schema";
-import { AuthorizationError } from "@/lib/rbac";
+import { DuplicateNameError } from "@/lib/db/errors";
+import { AuthorizationError } from "@/lib/rbac/errors";
+import {
+  STALE_COMPANY_MESSAGE,
+  writableCompanyIdFromForm,
+} from "@/lib/tenant/scope";
 
 const revalidateResguardo = (personId?: string) => {
   revalidatePath("/app");
@@ -80,7 +85,26 @@ export const createAssetAction = async (
     };
   }
 
-  const created = await createAsset(parsed.data, session.user.id);
+  let companyId: string;
+
+  try {
+    companyId = writableCompanyIdFromForm(session, formData);
+  } catch {
+    return { error: STALE_COMPANY_MESSAGE };
+  }
+
+  let created;
+
+  try {
+    created = await createAsset(companyId, parsed.data, session.user.id);
+  } catch (error) {
+    if (error instanceof DuplicateNameError) {
+      return { error: error.message };
+    }
+
+    throw error;
+  }
+
   revalidateResguardo();
   redirect(`/app/resguardo/${created.id}?created=1`);
 };
@@ -116,8 +140,20 @@ export const assignAssetAction = async (
     };
   }
 
+  let companyId: string;
+
   try {
-    const { asset } = await assignAsset(parsed.data, session.user.id);
+    companyId = writableCompanyIdFromForm(session, formData);
+  } catch {
+    return { error: STALE_COMPANY_MESSAGE };
+  }
+
+  try {
+    const { asset } = await assignAsset(
+      companyId,
+      parsed.data,
+      session.user.id,
+    );
     revalidateResguardo(asset.holderId ?? undefined);
     redirect(`/app/resguardo/${asset.id}?assigned=1`);
   } catch (error) {
@@ -164,8 +200,20 @@ export const returnAssetAction = async (
     };
   }
 
+  let companyId: string;
+
   try {
-    const { asset, movement } = await returnAsset(parsed.data, session.user.id);
+    companyId = writableCompanyIdFromForm(session, formData);
+  } catch {
+    return { error: STALE_COMPANY_MESSAGE };
+  }
+
+  try {
+    const { asset, movement } = await returnAsset(
+      companyId,
+      parsed.data,
+      session.user.id,
+    );
     revalidateResguardo(movement.personId);
     redirect(`/app/resguardo/${asset.id}?returned=1`);
   } catch (error) {
@@ -196,9 +244,7 @@ export const deleteAssetAction = async (assetId: string) => {
   }
 
   try {
-    await softDeleteAsset(assetId, session.user.id);
-    revalidateResguardo();
-    redirect("/app/resguardo?deleted=1");
+    await softDeleteAsset(session.companyId, assetId, session.user.id);
   } catch (error) {
     redirect(
       `/app/resguardo/${assetId}?error=${encodeURIComponent(
@@ -206,4 +252,8 @@ export const deleteAssetAction = async (assetId: string) => {
       )}`,
     );
   }
+
+  // Outside the try: redirect() throws, and the catch above would swallow it.
+  revalidateResguardo();
+  redirect("/app/resguardo?deleted=1");
 };

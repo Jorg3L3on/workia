@@ -44,7 +44,7 @@ const PersonasPage = async ({ searchParams }: PersonasPageProps) => {
 
   const [{ rows: people, total }, canCreate, canImport, canExport] =
     await Promise.all([
-      listPeoplePage({
+      listPeoplePage(session.companyId, {
         query: q,
         status,
         deleted: deleted === "1",

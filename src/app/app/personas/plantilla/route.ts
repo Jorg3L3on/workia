@@ -4,7 +4,7 @@ import { listActiveContractTemplates } from "@/lib/contracts";
 import { listActiveAreas, listActivePositions } from "@/lib/catalog";
 import { buildImportTemplate } from "@/lib/import/template";
 import { requirePeopleImport } from "@/lib/people/auth";
-import { AuthorizationError } from "@/lib/rbac";
+import { AuthorizationError } from "@/lib/rbac/errors";
 import { listActiveSites } from "@/lib/sites";
 
 export const dynamic = "force-dynamic";
@@ -13,8 +13,10 @@ const XLSX_CONTENT_TYPE =
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
 export const GET = async () => {
+  let session;
+
   try {
-    await requirePeopleImport();
+    session = await requirePeopleImport();
   } catch (error) {
     return new NextResponse(null, {
       status: error instanceof AuthorizationError ? 403 : 401,
@@ -22,10 +24,10 @@ export const GET = async () => {
   }
 
   const [areas, positions, sites, templates] = await Promise.all([
-    listActiveAreas(),
-    listActivePositions(),
-    listActiveSites(),
-    listActiveContractTemplates(),
+    listActiveAreas(session.companyId),
+    listActivePositions(session.companyId),
+    listActiveSites(session.companyId),
+    listActiveContractTemplates(session.companyId),
   ]);
 
   const file = await buildImportTemplate({

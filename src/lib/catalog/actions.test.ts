@@ -102,7 +102,10 @@ describe("createActivityAction", () => {
   });
 
   it("creates an activity on the happy path", async () => {
-    requireActivitiesCreateMock.mockResolvedValue({ user: { id: "user-1" } });
+    requireActivitiesCreateMock.mockResolvedValue({
+      user: { id: "user-1" },
+      companyId: "company-1",
+    });
     createActivityMock.mockResolvedValue({ id: ACTIVITY_ID });
 
     const { createActivityAction } = await import("@/lib/catalog/actions");
@@ -115,6 +118,7 @@ describe("createActivityAction", () => {
       "NEXT_REDIRECT",
     );
     expect(createActivityMock).toHaveBeenCalledWith(
+      "company-1",
       { name: "Captura de reportes semanales", active: true },
       "user-1",
     );
@@ -202,7 +206,10 @@ describe("assignActivityToPositionAction", () => {
   });
 
   it("assigns an activity on the happy path", async () => {
-    requirePositionsUpdateMock.mockResolvedValue({ user: { id: "user-1" } });
+    requirePositionsUpdateMock.mockResolvedValue({
+      user: { id: "user-1" },
+      companyId: "company-1",
+    });
     assignActivityToPositionMock.mockResolvedValue({
       ok: true,
       created: true,
@@ -219,6 +226,7 @@ describe("assignActivityToPositionAction", () => {
       "NEXT_REDIRECT",
     );
     expect(assignActivityToPositionMock).toHaveBeenCalledWith(
+      "company-1",
       POSITION_ID,
       ACTIVITY_ID,
       "user-1",
@@ -256,7 +264,10 @@ describe("unassignActivityFromPositionAction", () => {
   });
 
   it("unassigns an activity on the happy path", async () => {
-    requirePositionsUpdateMock.mockResolvedValue({ user: { id: "user-1" } });
+    requirePositionsUpdateMock.mockResolvedValue({
+      user: { id: "user-1" },
+      companyId: "company-1",
+    });
     unassignActivityFromPositionMock.mockResolvedValue({
       ok: true,
       removed: true,
@@ -273,6 +284,7 @@ describe("unassignActivityFromPositionAction", () => {
       "NEXT_REDIRECT",
     );
     expect(unassignActivityFromPositionMock).toHaveBeenCalledWith(
+      "company-1",
       POSITION_ID,
       ACTIVITY_ID,
       "user-1",

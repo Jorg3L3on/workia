@@ -133,8 +133,24 @@ export const resolveBreadcrumbs = (
     return [{ label: "Auditoría" }];
   }
 
+  if (path === "/app/miembros") {
+    return [{ label: "Miembros" }];
+  }
+
   if (path === "/admin") {
     return [{ label: "Administración" }];
+  }
+
+  if (path === "/admin/empresas") {
+    return [{ label: "Administración", href: "/admin" }, { label: "Empresas" }];
+  }
+
+  if (path.startsWith("/admin/empresas/")) {
+    return [
+      { label: "Administración", href: "/admin" },
+      { label: "Empresas", href: "/admin/empresas" },
+      { label: labels.current ?? "Empresa" },
+    ];
   }
 
   if (path === "/admin/rbac") {

@@ -57,7 +57,7 @@ const ResguardoPage = async ({ searchParams }: ResguardoPageProps) => {
   const { page, pageSize } = parseListPaging(params);
 
   const [{ items, total }, canCreate] = await Promise.all([
-    listAssetsPage({ query: q, status, page, pageSize }),
+    listAssetsPage(session.companyId, { query: q, status, page, pageSize }),
     userHasPermission(session.user.id, "assets:create"),
   ]);
 

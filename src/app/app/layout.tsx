@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 import { AppShell } from "@/components/layout/app-shell";
 import { pageTitles } from "@/lib/brand/chrome-copy";
-import { requireAuth } from "@/lib/auth/session";
+import { requireCompanyPage } from "@/lib/tenant/context";
 
 export const metadata: Metadata = {
   title: {
@@ -16,7 +16,24 @@ type AppLayoutProps = {
 };
 
 export default async function AppLayout({ children }: AppLayoutProps) {
-  const session = await requireAuth();
+  // No active company: off to /empresa (pick one, or "no perteneces a ninguna").
+  const session = await requireCompanyPage();
 
-  return <AppShell user={session.user}>{children}</AppShell>;
+  const toOption = (membership: (typeof session.memberships)[number]) => ({
+    id: membership.companyId,
+    name: membership.companyName,
+    roleName: membership.roleName,
+  });
+
+  return (
+    <AppShell
+      user={session.user}
+      company={toOption(session.membership)}
+      companies={session.memberships.map(toOption)}
+      canReadMembers={session.permissions.has("members:read")}
+      isPlatformAdmin={session.isPlatformAdmin}
+    >
+      {children}
+    </AppShell>
+  );
 }

@@ -11,6 +11,7 @@ import {
   unassignActivityFromPositionAction,
 } from "@/lib/catalog/actions";
 import { deleteSiteAction } from "@/lib/sites/actions";
+import { CompanyField } from "@/components/tenant/company-context";
 
 export type CatalogPositionActivity = {
   id: string;
@@ -78,6 +79,7 @@ export const CatalogPositionsTable = ({
                   <span>{activity.name}</span>
                   {canAssign ? (
                     <form action={unassignActivityFromPositionAction}>
+                      <CompanyField />
                       <input name="positionId" type="hidden" value={row.id} />
                       <input
                         name="activityId"

@@ -17,6 +17,7 @@ import {
   contractTypeLabels,
   formatContractDate,
 } from "@/lib/contracts/schema";
+import { CompanyField } from "@/components/tenant/company-context";
 
 type RenewContractDialogProps = {
   contractId: string;
@@ -49,6 +50,7 @@ export const RenewContractForm = ({
 
   return (
     <form action={formAction} className="space-y-3 rounded-lg border p-4">
+      <CompanyField />
       <input name="contractId" type="hidden" value={contractId} />
 
       <div>

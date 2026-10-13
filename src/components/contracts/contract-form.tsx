@@ -18,6 +18,7 @@ import {
   fillContractTemplate,
 } from "@/lib/contracts/schema";
 import { isoToday } from "@/lib/format/date";
+import { CompanyField } from "@/components/tenant/company-context";
 
 type ContractFormProps = {
   personId: string;
@@ -58,6 +59,7 @@ export const ContractForm = ({
 
   return (
     <form action={formAction} className="space-y-4">
+      <CompanyField />
       <input name="personId" type="hidden" value={personId} />
 
       {state.error ? (

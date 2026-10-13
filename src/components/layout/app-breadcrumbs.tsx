@@ -21,6 +21,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import { useActiveCompany } from "@/components/tenant/company-context";
 import { chromeCopy } from "@/lib/brand/chrome-copy";
 import {
   resolveBreadcrumbs,
@@ -83,6 +84,7 @@ export const AppBreadcrumbs = () => {
   const pathname = usePathname();
   const context = useContext(BreadcrumbLabelsContext);
   const labels: BreadcrumbLabels = { current: context?.current };
+  const company = useActiveCompany();
   const crumbs = resolveBreadcrumbs(pathname, labels);
 
   if (crumbs.length === 0) {
@@ -92,6 +94,20 @@ export const AppBreadcrumbs = () => {
   return (
     <Breadcrumb aria-label={chromeCopy.breadcrumb}>
       <BreadcrumbList>
+        {company ? (
+          // The company every screen belongs to, so it is never ambiguous.
+          <>
+            <BreadcrumbItem
+              className="hidden md:inline-flex"
+              data-testid="breadcrumb-company"
+            >
+              <BreadcrumbLink asChild>
+                <Link href="/app">{company.name}</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator className="hidden md:block" />
+          </>
+        ) : null}
         {crumbs.map((crumb, index) => {
           const isLast = index === crumbs.length - 1;
 

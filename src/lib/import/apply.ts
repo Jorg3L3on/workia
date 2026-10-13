@@ -7,7 +7,8 @@ import {
   snapshotContract,
   snapshotPerson,
 } from "@/lib/audit";
-import { db, withTransaction, type DbTransaction } from "@/lib/db";
+import { tdb, withTransaction, type DbTransaction } from "@/lib/db";
+import { isUniqueViolation } from "@/lib/db/errors";
 import {
   areas,
   auditEvents,
@@ -75,12 +76,6 @@ type StagedRow = {
   targetContractId?: string | null;
 };
 
-const isUniqueViolation = (error: unknown): boolean =>
-  typeof error === "object" &&
-  error !== null &&
-  ((error as { code?: string }).code === "23505" ||
-    isUniqueViolation((error as { cause?: unknown }).cause));
-
 const lockJob = (tx: DbTransaction, jobId: string) =>
   // Serializes concurrent apply steps of the same job (two open tabs).
   tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${jobId}, 0))`);
@@ -117,11 +112,11 @@ const beginApply = async (job: ImportJob) => {
 
   if (job.options.mode === "all_or_nothing" && job.status === "in_review") {
     // Validate again from scratch: nothing is applied unless it is all valid.
-    await restartValidation(job.id, {});
+    await restartValidation(job.companyId, job.id, {});
     let step;
 
     do {
-      step = await validateJobStep(job.id);
+      step = await validateJobStep(job.companyId, job.id);
     } while (!step.done);
 
     const errors = step.counts?.error ?? 0;
@@ -135,11 +130,12 @@ const beginApply = async (job: ImportJob) => {
   }
 
   try {
-    const [updated] = await db
+    const [updated] = await tdb(job.companyId)
       .update(importJobs)
       .set({ status: "applying", failureMessage: null })
       .where(
         and(
+          eq(importJobs.companyId, job.companyId),
           eq(importJobs.id, job.id),
           inArray(importJobs.status, ["in_review", "failed"]),
         ),
@@ -162,6 +158,7 @@ const beginApply = async (job: ImportJob) => {
 /** Creates catalog entries named in the batch that do not exist yet. */
 const ensureCatalogs = async (
   tx: DbTransaction,
+  companyId: string,
   rows: StagedRow[],
   actorUserId: string | null,
 ) => {
@@ -188,15 +185,17 @@ const ensureCatalogs = async (
   const areaRows = await tx
     .select({ id: areas.id, name: areas.name })
     .from(areas)
-    .where(isNull(areas.deletedAt));
+    .where(and(eq(areas.companyId, companyId), isNull(areas.deletedAt)));
   const positionRows = await tx
     .select({ id: positions.id, name: positions.name })
     .from(positions)
-    .where(isNull(positions.deletedAt));
+    .where(
+      and(eq(positions.companyId, companyId), isNull(positions.deletedAt)),
+    );
   const siteRows = await tx
     .select({ id: sites.id, name: sites.name })
     .from(sites)
-    .where(isNull(sites.deletedAt));
+    .where(and(eq(sites.companyId, companyId), isNull(sites.deletedAt)));
   const areaByKey = new Map(areaRows.map((a) => [catalogKey(a.name), a.id]));
   const siteByKey = new Map(siteRows.map((s) => [catalogKey(s.name), s.id]));
   const positionByKey = new Map(
@@ -209,6 +208,7 @@ const ensureCatalogs = async (
     name: string,
   ) =>
     audit.push({
+      companyId,
       actorUserId,
       resourceType,
       resourceId: id,
@@ -228,7 +228,7 @@ const ensureCatalogs = async (
       if (!id) {
         [{ id }] = await tx
           .insert(areas)
-          .values({ name: missing.area })
+          .values({ companyId, name: missing.area })
           .returning({ id: areas.id });
         areaByKey.set(key, id);
         created.inserted.areas.push(id);
@@ -246,7 +246,7 @@ const ensureCatalogs = async (
       if (!id) {
         [{ id }] = await tx
           .insert(positions)
-          .values({ name: missing.position, areaId })
+          .values({ companyId, name: missing.position, areaId })
           .returning({ id: positions.id });
         positionByKey.set(key, id);
         created.inserted.positions.push(id);
@@ -263,7 +263,7 @@ const ensureCatalogs = async (
       if (!id) {
         [{ id }] = await tx
           .insert(sites)
-          .values({ name: missing.site, kind: "sucursal" })
+          .values({ companyId, name: missing.site, kind: "sucursal" })
           .returning({ id: sites.id });
         siteByKey.set(key, id);
         created.inserted.sites.push(id);
@@ -283,6 +283,7 @@ const ensureCatalogs = async (
 
 const personRowsToApply = async (
   tx: DbTransaction,
+  companyId: string,
   jobId: string,
   sheet: "personas" | "horarios" | "contratos",
   limit: number,
@@ -301,6 +302,7 @@ const personRowsToApply = async (
     .from(importRows)
     .where(
       and(
+        eq(importRows.companyId, companyId),
         eq(importRows.jobId, jobId),
         eq(importRows.sheet, sheet),
         inArray(importRows.action, ["create", "update"]),
@@ -312,6 +314,7 @@ const personRowsToApply = async (
 
 const markRows = (
   tx: DbTransaction,
+  companyId: string,
   marks: {
     id: string;
     targetPersonId: string | null;
@@ -333,14 +336,21 @@ const markRows = (
         previous: mark.previous ?? null,
       })),
     )}::jsonb) as v(id uuid, target_person_id uuid, target_contract_id uuid, previous jsonb)
-    where r.id = v.id
+    where r.id = v.id and r.company_id = ${companyId}
   `);
 
-const failRows = (tx: DbTransaction, ids: string[], message: string) =>
+const failRows = (
+  tx: DbTransaction,
+  companyId: string,
+  ids: string[],
+  message: string,
+) =>
   tx
     .update(importRows)
     .set({ action: "error", errors: [{ message }] })
-    .where(inArray(importRows.id, ids));
+    .where(
+      and(eq(importRows.companyId, companyId), inArray(importRows.id, ids)),
+    );
 
 /** One transaction: ≤ APPLY_BATCH_SIZE people created or updated, audited, marked. */
 const applyPersonasBatch = async (job: ImportJob) =>
@@ -349,6 +359,7 @@ const applyPersonasBatch = async (job: ImportJob) =>
 
     const rows = await personRowsToApply(
       tx,
+      job.companyId,
       job.id,
       "personas",
       APPLY_BATCH_SIZE,
@@ -360,6 +371,7 @@ const applyPersonasBatch = async (job: ImportJob) =>
 
     // The database may have changed since the review: classify again.
     const lookups = await loadLookups(
+      job.companyId,
       rows.map((row) => ({
         rowNumber: row.rowNumber,
         idWorkia: row.normalized.idWorkia,
@@ -394,6 +406,7 @@ const applyPersonasBatch = async (job: ImportJob) =>
 
       await failRows(
         tx,
+        job.companyId,
         stale,
         "Los datos cambiaron desde la revisión; vuelve a importar esta fila.",
       );
@@ -403,7 +416,12 @@ const applyPersonasBatch = async (job: ImportJob) =>
       return stale.length;
     }
 
-    const catalogs = await ensureCatalogs(tx, ready, job.actorUserId);
+    const catalogs = await ensureCatalogs(
+      tx,
+      job.companyId,
+      ready,
+      job.actorUserId,
+    );
     const insertedCatalogs = catalogs.inserted;
 
     if (
@@ -416,7 +434,12 @@ const applyPersonasBatch = async (job: ImportJob) =>
       const [{ counts }] = await tx
         .select({ counts: importJobs.counts })
         .from(importJobs)
-        .where(eq(importJobs.id, job.id));
+        .where(
+          and(
+            eq(importJobs.companyId, job.companyId),
+            eq(importJobs.id, job.id),
+          ),
+        );
       const known = counts.createdCatalogs ?? {
         areas: [],
         positions: [],
@@ -435,7 +458,12 @@ const applyPersonasBatch = async (job: ImportJob) =>
             },
           },
         })
-        .where(eq(importJobs.id, job.id));
+        .where(
+          and(
+            eq(importJobs.companyId, job.companyId),
+            eq(importJobs.id, job.id),
+          ),
+        );
     }
     const resolve = (row: StagedRow) => {
       const values = { ...row.normalized.values };
@@ -475,6 +503,7 @@ const applyPersonasBatch = async (job: ImportJob) =>
         inserted.map(({ id, values }) => ({
           id,
           ...values,
+          companyId: job.companyId,
           status: values.status ?? "activa",
         })),
       );
@@ -482,6 +511,7 @@ const applyPersonasBatch = async (job: ImportJob) =>
       for (const { row, id, values } of inserted) {
         marks.push({ id: row.id, targetPersonId: id, previous: null });
         audit.push({
+          companyId: job.companyId,
           actorUserId: job.actorUserId,
           resourceType: "person",
           resourceId: id,
@@ -503,7 +533,13 @@ const applyPersonasBatch = async (job: ImportJob) =>
       const current = await tx
         .select()
         .from(people)
-        .where(and(inArray(people.id, ids), isNull(people.deletedAt)))
+        .where(
+          and(
+            eq(people.companyId, job.companyId),
+            inArray(people.id, ids),
+            isNull(people.deletedAt),
+          ),
+        )
         .for("update");
       const byId = new Map(current.map((person) => [person.id, person]));
       const live = updates.filter((row) => byId.has(row.targetPersonId!));
@@ -512,6 +548,7 @@ const applyPersonasBatch = async (job: ImportJob) =>
       if (gone.length > 0) {
         await failRows(
           tx,
+          job.companyId,
           gone.map((row) => row.id),
           "La persona fue borrada desde la revisión.",
         );
@@ -563,7 +600,7 @@ const applyPersonasBatch = async (job: ImportJob) =>
             area_id text, position_id text, site_id text, rfc text, curp text,
             nss text, status text
           )
-          where p.id = v.id
+          where p.id = v.id and p.company_id = ${job.companyId}
         `);
 
         for (const row of live) {
@@ -588,6 +625,7 @@ const applyPersonasBatch = async (job: ImportJob) =>
             previous,
           });
           audit.push({
+            companyId: job.companyId,
             actorUserId: job.actorUserId,
             resourceType: "person",
             resourceId: row.targetPersonId!,
@@ -603,7 +641,7 @@ const applyPersonasBatch = async (job: ImportJob) =>
     }
 
     if (marks.length > 0) {
-      await markRows(tx, marks);
+      await markRows(tx, job.companyId, marks);
     }
 
     if (audit.length > 0) {
@@ -615,10 +653,12 @@ const applyPersonasBatch = async (job: ImportJob) =>
       .set({
         counts: sql`jsonb_set(${importJobs.counts}, '{applied}', to_jsonb(coalesce((${importJobs.counts}->>'applied')::int, 0) + ${marks.length}))`,
       })
-      .where(eq(importJobs.id, job.id));
+      .where(
+        and(eq(importJobs.companyId, job.companyId), eq(importJobs.id, job.id)),
+      );
 
     return rows.length;
-  });
+  }, job.companyId);
 
 const MANAGER_BATCH = 1000;
 
@@ -638,6 +678,7 @@ const applyManagers = async (job: ImportJob) =>
       .from(importRows)
       .where(
         and(
+          eq(importRows.companyId, job.companyId),
           eq(importRows.jobId, job.id),
           eq(importRows.sheet, "personas"),
           isNotNull(importRows.appliedAt),
@@ -671,7 +712,8 @@ const applyManagers = async (job: ImportJob) =>
         update people p set manager_id = v.manager_id, updated_at = now()
         from jsonb_to_recordset(${JSON.stringify(links.slice(start, start + MANAGER_BATCH))}::jsonb)
           as v(id uuid, manager_id uuid)
-        where p.id = v.id and p.manager_id is distinct from v.manager_id
+        where p.id = v.id and p.company_id = ${job.companyId}
+          and p.manager_id is distinct from v.manager_id
       `);
     }
 
@@ -680,10 +722,12 @@ const applyManagers = async (job: ImportJob) =>
       .set({
         counts: sql`${importJobs.counts} || '{"managersApplied": true}'::jsonb`,
       })
-      .where(eq(importJobs.id, job.id));
+      .where(
+        and(eq(importJobs.companyId, job.companyId), eq(importJobs.id, job.id)),
+      );
 
     return links.length;
-  });
+  }, job.companyId);
 
 /** Schedules: upsert per person, remembering the previous one for undo. */
 const applyHorariosBatch = async (job: ImportJob) =>
@@ -692,6 +736,7 @@ const applyHorariosBatch = async (job: ImportJob) =>
 
     const rows = await personRowsToApply(
       tx,
+      job.companyId,
       job.id,
       "horarios",
       APPLY_BATCH_SIZE,
@@ -705,9 +750,12 @@ const applyHorariosBatch = async (job: ImportJob) =>
       .select({ id: importRows.id, raw: importRows.raw })
       .from(importRows)
       .where(
-        inArray(
-          importRows.id,
-          rows.map((row) => row.id),
+        and(
+          eq(importRows.companyId, job.companyId),
+          inArray(
+            importRows.id,
+            rows.map((row) => row.id),
+          ),
         ),
       );
     const rawById = new Map(raw.map((row) => [row.id, row.raw]));
@@ -723,7 +771,7 @@ const applyHorariosBatch = async (job: ImportJob) =>
         rfc: null,
       };
     });
-    const lookups = await loadLookups(keys, tx);
+    const lookups = await loadLookups(job.companyId, keys, tx);
     const resolved: { row: StagedRow; personId: string }[] = [];
     const unresolved: string[] = [];
 
@@ -742,6 +790,7 @@ const applyHorariosBatch = async (job: ImportJob) =>
     if (unresolved.length > 0) {
       await failRows(
         tx,
+        job.companyId,
         unresolved,
         "No encontramos a la persona de este horario (¿se omitió su fila?).",
       );
@@ -755,15 +804,20 @@ const applyHorariosBatch = async (job: ImportJob) =>
     const existing = await tx
       .select()
       .from(personSchedules)
-      .where(inArray(personSchedules.personId, personIds));
+      .where(
+        and(
+          eq(personSchedules.companyId, job.companyId),
+          inArray(personSchedules.personId, personIds),
+        ),
+      );
     const existingByPerson = new Map(
       existing.map((schedule) => [schedule.personId, schedule]),
     );
     const audit: (typeof auditEvents.$inferInsert)[] = [];
 
     await tx.execute(sql`
-      insert into person_schedules (person_id, entrada, salida_comer, regreso_comer, salida)
-      select v.person_id, v.entrada, v.salida_comer, v.regreso_comer, v.salida
+      insert into person_schedules (company_id, person_id, entrada, salida_comer, regreso_comer, salida)
+      select ${job.companyId}::uuid, v.person_id, v.entrada, v.salida_comer, v.regreso_comer, v.salida
       from jsonb_to_recordset(${JSON.stringify(
         resolved.map(({ row, personId }) => ({
           person_id: personId,
@@ -780,12 +834,14 @@ const applyHorariosBatch = async (job: ImportJob) =>
         salida = coalesce(excluded.salida, person_schedules.salida),
         deleted_at = null,
         updated_at = now()
+      where person_schedules.company_id = excluded.company_id
     `);
 
     const marks = resolved.map(({ row, personId }) => {
       const before = existingByPerson.get(personId);
 
       audit.push({
+        companyId: job.companyId,
         actorUserId: job.actorUserId,
         resourceType: "person",
         resourceId: personId,
@@ -812,17 +868,19 @@ const applyHorariosBatch = async (job: ImportJob) =>
       };
     });
 
-    await markRows(tx, marks);
+    await markRows(tx, job.companyId, marks);
     await tx.insert(auditEvents).values(audit);
     await tx
       .update(importJobs)
       .set({
         counts: sql`jsonb_set(${importJobs.counts}, '{applied}', to_jsonb(coalesce((${importJobs.counts}->>'applied')::int, 0) + ${marks.length}))`,
       })
-      .where(eq(importJobs.id, job.id));
+      .where(
+        and(eq(importJobs.companyId, job.companyId), eq(importJobs.id, job.id)),
+      );
 
     return rows.length;
-  });
+  }, job.companyId);
 
 /** Contracts: create or update per (person, start date), with text and schedule snapshot. */
 const applyContratosBatch = async (job: ImportJob) =>
@@ -831,6 +889,7 @@ const applyContratosBatch = async (job: ImportJob) =>
 
     const rows = await personRowsToApply(
       tx,
+      job.companyId,
       job.id,
       "contratos",
       APPLY_BATCH_SIZE,
@@ -845,6 +904,7 @@ const applyContratosBatch = async (job: ImportJob) =>
       contract: row.normalized as unknown as NormalizedContract,
     }));
     const lookups = await loadLookups(
+      job.companyId,
       staged.map(({ row, contract }) => ({
         rowNumber: row.rowNumber,
         idWorkia: contract.personKey.idWorkia,
@@ -866,6 +926,7 @@ const applyContratosBatch = async (job: ImportJob) =>
     if (unresolved.length > 0) {
       await failRows(
         tx,
+        job.companyId,
         unresolved.map(({ row }) => row.id),
         "No encontramos a la persona de este contrato.",
       );
@@ -885,6 +946,7 @@ const applyContratosBatch = async (job: ImportJob) =>
       .from(contracts)
       .where(
         and(
+          eq(contracts.companyId, job.companyId),
           inArray(contracts.personId, personIds),
           isNull(contracts.deletedAt),
         ),
@@ -936,6 +998,7 @@ const applyContratosBatch = async (job: ImportJob) =>
 
       await failRows(
         tx,
+        job.companyId,
         stale,
         "Los contratos de esta persona cambiaron desde la revisión.",
       );
@@ -962,12 +1025,18 @@ const applyContratosBatch = async (job: ImportJob) =>
       .leftJoin(areas, eq(people.areaId, areas.id))
       .leftJoin(positions, eq(people.positionId, positions.id))
       .leftJoin(sites, eq(people.siteId, sites.id))
-      .where(inArray(people.id, readyPersonIds));
+      .where(
+        and(
+          eq(people.companyId, job.companyId),
+          inArray(people.id, readyPersonIds),
+        ),
+      );
     const scheduleRows = await tx
       .select()
       .from(personSchedules)
       .where(
         and(
+          eq(personSchedules.companyId, job.companyId),
           inArray(personSchedules.personId, readyPersonIds),
           isNull(personSchedules.deletedAt),
         ),
@@ -983,7 +1052,12 @@ const applyContratosBatch = async (job: ImportJob) =>
       ? await tx
           .select()
           .from(contractTemplates)
-          .where(inArray(contractTemplates.id, templateIds))
+          .where(
+            and(
+              eq(contractTemplates.companyId, job.companyId),
+              inArray(contractTemplates.id, templateIds),
+            ),
+          )
       : [];
     const personById = new Map(personRows.map((p) => [p.id, p]));
     const scheduleByPerson = new Map(scheduleRows.map((s) => [s.personId, s]));
@@ -1041,6 +1115,7 @@ const applyContratosBatch = async (job: ImportJob) =>
         entry,
         id: randomUUID(),
         values: {
+          companyId: job.companyId,
           personId: entry.personId,
           type: entry.contract.type,
           startDate: entry.contract.startDate,
@@ -1068,6 +1143,7 @@ const applyContratosBatch = async (job: ImportJob) =>
           targetContractId: id,
         });
         audit.push({
+          companyId: job.companyId,
           actorUserId: job.actorUserId,
           resourceType: "contract",
           resourceId: id,
@@ -1106,7 +1182,7 @@ const applyContratosBatch = async (job: ImportJob) =>
             generated_text: entry.contract.templateId ? textFor(entry) : null,
           })),
         )}::jsonb) as v(id uuid, type text, end_date text, notice_window text, status text, template_id text, template_name text, generated_text text)
-        where c.id = v.id
+        where c.id = v.id and c.company_id = ${job.companyId}
       `);
 
       for (const entry of updates) {
@@ -1128,6 +1204,7 @@ const applyContratosBatch = async (job: ImportJob) =>
           },
         });
         audit.push({
+          companyId: job.companyId,
           actorUserId: job.actorUserId,
           resourceType: "contract",
           resourceId: before.id,
@@ -1145,17 +1222,19 @@ const applyContratosBatch = async (job: ImportJob) =>
       }
     }
 
-    await markRows(tx, marks);
+    await markRows(tx, job.companyId, marks);
     await tx.insert(auditEvents).values(audit);
     await tx
       .update(importJobs)
       .set({
         counts: sql`jsonb_set(${importJobs.counts}, '{applied}', to_jsonb(coalesce((${importJobs.counts}->>'applied')::int, 0) + ${marks.length}))`,
       })
-      .where(eq(importJobs.id, job.id));
+      .where(
+        and(eq(importJobs.companyId, job.companyId), eq(importJobs.id, job.id)),
+      );
 
     return rows.length;
-  });
+  }, job.companyId);
 
 /**
  * Chains contracts by start order per person (previous_contract_id), over the
@@ -1168,18 +1247,20 @@ const applyContractChain = async (job: ImportJob) =>
       with imported as (
         select distinct target_contract_id as id, target_person_id as person_id
         from import_rows
-        where job_id = ${job.id} and sheet = 'contratos'
+        where company_id = ${job.companyId} and job_id = ${job.id} and sheet = 'contratos'
           and applied_at is not null and target_contract_id is not null
       ), ordered as (
         select c.id,
                lag(c.id) over (partition by c.person_id order by c.start_date, c.created_at, c.id) as prev
         from contracts c
         where c.deleted_at is null
+          and c.company_id = ${job.companyId}
           and c.person_id in (select person_id from imported)
       )
       update contracts c set previous_contract_id = o.prev, updated_at = now()
       from ordered o
       where c.id = o.id
+        and c.company_id = ${job.companyId}
         and c.id in (select id from imported)
         and c.previous_contract_id is distinct from o.prev
     `);
@@ -1188,15 +1269,22 @@ const applyContractChain = async (job: ImportJob) =>
       .set({
         counts: sql`${importJobs.counts} || '{"chainApplied": true}'::jsonb`,
       })
-      .where(eq(importJobs.id, job.id));
-  });
+      .where(
+        and(eq(importJobs.companyId, job.companyId), eq(importJobs.id, job.id)),
+      );
+  }, job.companyId);
 
-const countRemaining = async (jobId: string, sheet?: string) => {
-  const [row] = await db
+const countRemaining = async (
+  companyId: string,
+  jobId: string,
+  sheet?: string,
+) => {
+  const [row] = await tdb(companyId)
     .select({ count: sql<number>`count(*)::int` })
     .from(importRows)
     .where(
       and(
+        eq(importRows.companyId, companyId),
         eq(importRows.jobId, jobId),
         inArray(importRows.action, ["create", "update"]),
         isNull(importRows.appliedAt),
@@ -1208,16 +1296,23 @@ const countRemaining = async (jobId: string, sheet?: string) => {
 };
 
 const finish = async (job: ImportJob) => {
-  const [done] = await db
+  const [done] = await tdb(job.companyId)
     .update(importJobs)
     .set({ status: "applied", appliedAt: new Date() })
-    .where(and(eq(importJobs.id, job.id), eq(importJobs.status, "applying")))
+    .where(
+      and(
+        eq(importJobs.companyId, job.companyId),
+        eq(importJobs.id, job.id),
+        eq(importJobs.status, "applying"),
+      ),
+    )
     .returning();
 
   if (done) {
     const counts = done.counts as ImportJobCounts;
 
     await recordAuditEvent({
+      companyId: job.companyId,
       actorUserId: job.actorUserId,
       resourceType: "people_import",
       resourceId: job.id,
@@ -1235,11 +1330,14 @@ const finish = async (job: ImportJob) => {
  * One apply step: personas batches, then managers, then horarios. The page
  * calls it until `done`; killing the process loses at most the open batch.
  */
-export const applyJobStep = async (jobId: string): Promise<ApplyProgress> => {
-  const [loaded] = await db
+export const applyJobStep = async (
+  companyId: string,
+  jobId: string,
+): Promise<ApplyProgress> => {
+  const [loaded] = await tdb(companyId)
     .select()
     .from(importJobs)
-    .where(eq(importJobs.id, jobId))
+    .where(and(eq(importJobs.companyId, companyId), eq(importJobs.id, jobId)))
     .limit(1);
 
   if (!loaded) {
@@ -1252,48 +1350,54 @@ export const applyJobStep = async (jobId: string): Promise<ApplyProgress> => {
   const job = await beginApply(loaded);
 
   try {
-    if ((await countRemaining(jobId, "personas")) > 0) {
+    if ((await countRemaining(companyId, jobId, "personas")) > 0) {
       await applyPersonasBatch(job);
 
-      return progress("personas", jobId);
+      return progress("personas", companyId, jobId);
     }
 
     if (!job.counts.managersApplied) {
       await applyManagers(job);
 
-      return progress("managers", jobId);
+      return progress("managers", companyId, jobId);
     }
 
-    if ((await countRemaining(jobId, "horarios")) > 0) {
+    if ((await countRemaining(companyId, jobId, "horarios")) > 0) {
       await applyHorariosBatch(job);
 
-      return progress("horarios", jobId);
+      return progress("horarios", companyId, jobId);
     }
 
-    if ((await countRemaining(jobId, "contratos")) > 0) {
+    if ((await countRemaining(companyId, jobId, "contratos")) > 0) {
       await applyContratosBatch(job);
 
-      return progress("contratos", jobId);
+      return progress("contratos", companyId, jobId);
     }
 
     if (!job.counts.chainApplied) {
       await applyContractChain(job);
 
-      return progress("chain", jobId);
+      return progress("chain", companyId, jobId);
     }
 
     await finish(job);
 
-    return progress("done", jobId);
+    return progress("done", companyId, jobId);
   } catch (error) {
     // Keep the rows' state: the user can resume from "Continuar importación".
-    await db
+    await tdb(companyId)
       .update(importJobs)
       .set({
         status: "failed",
         failureMessage: String((error as Error).message).slice(0, 500),
       })
-      .where(and(eq(importJobs.id, jobId), eq(importJobs.status, "applying")));
+      .where(
+        and(
+          eq(importJobs.companyId, companyId),
+          eq(importJobs.id, jobId),
+          eq(importJobs.status, "applying"),
+        ),
+      );
 
     throw error;
   }
@@ -1301,14 +1405,15 @@ export const applyJobStep = async (jobId: string): Promise<ApplyProgress> => {
 
 const progress = async (
   phase: ApplyPhase,
+  companyId: string,
   jobId: string,
 ): Promise<ApplyProgress> => {
-  const [job] = await db
+  const [job] = await tdb(companyId)
     .select()
     .from(importJobs)
-    .where(eq(importJobs.id, jobId))
+    .where(and(eq(importJobs.companyId, companyId), eq(importJobs.id, jobId)))
     .limit(1);
-  const remaining = await countRemaining(jobId);
+  const remaining = await countRemaining(companyId, jobId);
 
   return {
     phase,
@@ -1319,11 +1424,17 @@ const progress = async (
 };
 
 /** Releases the apply lock without losing progress. */
-export const pauseApply = async (jobId: string) => {
-  const [paused] = await db
+export const pauseApply = async (companyId: string, jobId: string) => {
+  const [paused] = await tdb(companyId)
     .update(importJobs)
     .set({ status: "failed", failureMessage: "Pausada por el usuario." })
-    .where(and(eq(importJobs.id, jobId), eq(importJobs.status, "applying")))
+    .where(
+      and(
+        eq(importJobs.companyId, companyId),
+        eq(importJobs.id, jobId),
+        eq(importJobs.status, "applying"),
+      ),
+    )
     .returning({ id: importJobs.id });
 
   return Boolean(paused);

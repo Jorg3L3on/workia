@@ -7,7 +7,8 @@ import { recordAuditEvent } from "@/lib/audit";
 import { writeExport, type ExportFilters } from "@/lib/import/export";
 import { isUuid } from "@/lib/import/person-rows";
 import { requirePeopleExport } from "@/lib/people/auth";
-import { AuthorizationError, userHasPermission } from "@/lib/rbac";
+import { userHasPermission } from "@/lib/rbac";
+import { AuthorizationError } from "@/lib/rbac/errors";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -52,9 +53,15 @@ export const GET = async (request: Request) => {
   const stream = new PassThrough();
   const today = new Date().toISOString().slice(0, 10);
 
-  void writeExport(stream, { format, filters, includeContracts })
+  void writeExport(stream, {
+    companyId: session.companyId,
+    format,
+    filters,
+    includeContracts,
+  })
     .then((count) =>
       recordAuditEvent({
+        companyId: session.companyId,
         actorUserId: session.user.id,
         resourceType: "people_export",
         resourceId: randomUUID(),
@@ -70,7 +77,7 @@ export const GET = async (request: Request) => {
   return new NextResponse(Readable.toWeb(stream) as ReadableStream, {
     headers: {
       "Content-Type": CONTENT_TYPES[format],
-      "Content-Disposition": `attachment; filename="personas-${today}.${format}"`,
+      "Content-Disposition": `attachment; filename="personas-${session.membership.companySlug}-${today}.${format}"`,
       "Cache-Control": "no-store",
     },
   });

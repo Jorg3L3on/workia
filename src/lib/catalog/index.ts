@@ -8,7 +8,9 @@ import {
   snapshotPosition,
   snapshotPositionActivity,
 } from "@/lib/audit";
-import { db } from "@/lib/db";
+import { tdb } from "@/lib/db";
+import { CompanyReferenceError, rethrowDuplicate } from "@/lib/db/errors";
+import { withTenant } from "@/lib/tenant/scope";
 import {
   activities,
   areas,
@@ -24,39 +26,82 @@ import {
   type PositionFormValues,
 } from "./schema";
 
-export const listAreas = async (options: { includeDeleted?: boolean } = {}) => {
-  const filters = options.includeDeleted ? undefined : isNull(areas.deletedAt);
-
-  return db.select().from(areas).where(filters).orderBy(asc(areas.name));
-};
-
-export const listActiveAreas = async () => {
-  return db
+export const listAreas = async (
+  companyId: string,
+  options: { includeDeleted?: boolean } = {},
+) => {
+  return tdb(companyId)
     .select()
     .from(areas)
-    .where(and(isNull(areas.deletedAt), eq(areas.active, true)))
+    .where(
+      withTenant(
+        areas,
+        companyId,
+        options.includeDeleted ? undefined : isNull(areas.deletedAt),
+      ),
+    )
     .orderBy(asc(areas.name));
 };
 
-export const getAreaById = async (id: string) => {
-  const [area] = await db.select().from(areas).where(eq(areas.id, id)).limit(1);
+export const listActiveAreas = async (companyId: string) => {
+  return tdb(companyId)
+    .select()
+    .from(areas)
+    .where(
+      withTenant(
+        areas,
+        companyId,
+        isNull(areas.deletedAt),
+        eq(areas.active, true),
+      ),
+    )
+    .orderBy(asc(areas.name));
+};
+
+export const getAreaById = async (companyId: string, id: string) => {
+  const [area] = await tdb(companyId)
+    .select()
+    .from(areas)
+    .where(withTenant(areas, companyId, eq(areas.id, id)))
+    .limit(1);
   return area ?? null;
 };
 
+/** A parent area or puesto area must be a live area of the same company. */
+const assertAreaInCompany = async (
+  companyId: string,
+  areaId: string | null | undefined,
+  field: string,
+) => {
+  if (!areaId?.trim()) return;
+
+  const area = await getAreaById(companyId, areaId);
+
+  if (!area || area.deletedAt) {
+    throw new CompanyReferenceError(field);
+  }
+};
+
 export const createArea = async (
+  companyId: string,
   input: AreaFormValues,
   actorUserId?: string | null,
 ) => {
-  const [created] = await db
+  await assertAreaInCompany(companyId, input.parentAreaId, "parentAreaId");
+
+  const [created] = await tdb(companyId)
     .insert(areas)
     .values({
+      companyId,
       name: input.name,
       parentAreaId: input.parentAreaId?.trim() ? input.parentAreaId : null,
       active: input.active,
     })
-    .returning();
+    .returning()
+    .catch(rethrowDuplicate("Ya existe un área activa con ese nombre."));
 
   await recordAuditEvent({
+    companyId,
     actorUserId,
     resourceType: "area",
     resourceId: created.id,
@@ -71,11 +116,14 @@ export const createArea = async (
 };
 
 export const updateArea = async (
+  companyId: string,
   id: string,
   input: AreaFormValues,
   actorUserId?: string | null,
 ) => {
-  const existing = await getAreaById(id);
+  await assertAreaInCompany(companyId, input.parentAreaId, "parentAreaId");
+
+  const existing = await getAreaById(companyId, id);
 
   if (!existing || existing.deletedAt) {
     return null;
@@ -83,15 +131,16 @@ export const updateArea = async (
 
   const before = snapshotArea(existing);
 
-  const [updated] = await db
+  const [updated] = await tdb(companyId)
     .update(areas)
     .set({
       name: input.name,
       parentAreaId: input.parentAreaId?.trim() ? input.parentAreaId : null,
       active: input.active,
     })
-    .where(eq(areas.id, id))
-    .returning();
+    .where(withTenant(areas, companyId, eq(areas.id, id)))
+    .returning()
+    .catch(rethrowDuplicate("Ya existe un área activa con ese nombre."));
 
   if (!updated) {
     return null;
@@ -105,6 +154,7 @@ export const updateArea = async (
   ]);
 
   await recordAuditEvent({
+    companyId,
     actorUserId,
     resourceType: "area",
     resourceId: id,
@@ -121,10 +171,11 @@ export const updateArea = async (
 };
 
 export const softDeleteArea = async (
+  companyId: string,
   id: string,
   actorUserId?: string | null,
 ) => {
-  const existing = await getAreaById(id);
+  const existing = await getAreaById(companyId, id);
 
   if (!existing || existing.deletedAt) {
     return null;
@@ -133,10 +184,10 @@ export const softDeleteArea = async (
   const before = snapshotArea(existing);
   const deletedAt = new Date();
 
-  const [updated] = await db
+  const [updated] = await tdb(companyId)
     .update(areas)
     .set({ deletedAt, active: false })
-    .where(eq(areas.id, id))
+    .where(withTenant(areas, companyId, eq(areas.id, id)))
     .returning();
 
   if (!updated) {
@@ -144,6 +195,7 @@ export const softDeleteArea = async (
   }
 
   await recordAuditEvent({
+    companyId,
     actorUserId,
     resourceType: "area",
     resourceId: id,
@@ -159,9 +211,10 @@ export const softDeleteArea = async (
 };
 
 export const listPositions = async (
+  companyId: string,
   options: { includeDeleted?: boolean; areaId?: string } = {},
 ) => {
-  const filters = [];
+  const filters = [eq(positions.companyId, companyId)];
 
   if (!options.includeDeleted) {
     filters.push(isNull(positions.deletedAt));
@@ -171,58 +224,64 @@ export const listPositions = async (
     filters.push(eq(positions.areaId, options.areaId));
   }
 
-  const whereClause =
-    filters.length === 0
-      ? undefined
-      : filters.length === 1
-        ? filters[0]
-        : and(...filters);
-
-  return db
-    .select()
-    .from(positions)
-    .where(whereClause)
-    .orderBy(asc(positions.name));
-};
-
-export const listActivePositions = async (areaId?: string) => {
-  const filters = [isNull(positions.deletedAt), eq(positions.active, true)];
-
-  if (areaId) {
-    filters.push(eq(positions.areaId, areaId));
-  }
-
-  return db
+  return tdb(companyId)
     .select()
     .from(positions)
     .where(and(...filters))
     .orderBy(asc(positions.name));
 };
 
-export const getPositionById = async (id: string) => {
-  const [position] = await db
+export const listActivePositions = async (
+  companyId: string,
+  areaId?: string,
+) => {
+  const filters = [
+    eq(positions.companyId, companyId),
+    isNull(positions.deletedAt),
+    eq(positions.active, true),
+  ];
+
+  if (areaId) {
+    filters.push(eq(positions.areaId, areaId));
+  }
+
+  return tdb(companyId)
     .select()
     .from(positions)
-    .where(eq(positions.id, id))
+    .where(and(...filters))
+    .orderBy(asc(positions.name));
+};
+
+export const getPositionById = async (companyId: string, id: string) => {
+  const [position] = await tdb(companyId)
+    .select()
+    .from(positions)
+    .where(withTenant(positions, companyId, eq(positions.id, id)))
     .limit(1);
 
   return position ?? null;
 };
 
 export const createPosition = async (
+  companyId: string,
   input: PositionFormValues,
   actorUserId?: string | null,
 ) => {
-  const [created] = await db
+  await assertAreaInCompany(companyId, input.areaId, "areaId");
+
+  const [created] = await tdb(companyId)
     .insert(positions)
     .values({
+      companyId,
       name: input.name,
       areaId: input.areaId?.trim() ? input.areaId : null,
       active: input.active,
     })
-    .returning();
+    .returning()
+    .catch(rethrowDuplicate("Ya existe un puesto activo con ese nombre."));
 
   await recordAuditEvent({
+    companyId,
     actorUserId,
     resourceType: "position",
     resourceId: created.id,
@@ -237,11 +296,14 @@ export const createPosition = async (
 };
 
 export const updatePosition = async (
+  companyId: string,
   id: string,
   input: PositionFormValues,
   actorUserId?: string | null,
 ) => {
-  const existing = await getPositionById(id);
+  await assertAreaInCompany(companyId, input.areaId, "areaId");
+
+  const existing = await getPositionById(companyId, id);
 
   if (!existing || existing.deletedAt) {
     return null;
@@ -249,15 +311,16 @@ export const updatePosition = async (
 
   const before = snapshotPosition(existing);
 
-  const [updated] = await db
+  const [updated] = await tdb(companyId)
     .update(positions)
     .set({
       name: input.name,
       areaId: input.areaId?.trim() ? input.areaId : null,
       active: input.active,
     })
-    .where(eq(positions.id, id))
-    .returning();
+    .where(withTenant(positions, companyId, eq(positions.id, id)))
+    .returning()
+    .catch(rethrowDuplicate("Ya existe un puesto activo con ese nombre."));
 
   if (!updated) {
     return null;
@@ -267,6 +330,7 @@ export const updatePosition = async (
   const changes = buildChanges(before, after, ["name", "areaId", "active"]);
 
   await recordAuditEvent({
+    companyId,
     actorUserId,
     resourceType: "position",
     resourceId: id,
@@ -283,10 +347,11 @@ export const updatePosition = async (
 };
 
 export const softDeletePosition = async (
+  companyId: string,
   id: string,
   actorUserId?: string | null,
 ) => {
-  const existing = await getPositionById(id);
+  const existing = await getPositionById(companyId, id);
 
   if (!existing || existing.deletedAt) {
     return null;
@@ -295,10 +360,10 @@ export const softDeletePosition = async (
   const before = snapshotPosition(existing);
   const deletedAt = new Date();
 
-  const [updated] = await db
+  const [updated] = await tdb(companyId)
     .update(positions)
     .set({ deletedAt, active: false })
-    .where(eq(positions.id, id))
+    .where(withTenant(positions, companyId, eq(positions.id, id)))
     .returning();
 
   if (!updated) {
@@ -306,6 +371,7 @@ export const softDeletePosition = async (
   }
 
   await recordAuditEvent({
+    companyId,
     actorUserId,
     resourceType: "position",
     resourceId: id,
@@ -321,50 +387,64 @@ export const softDeletePosition = async (
 };
 
 export const listActivities = async (
+  companyId: string,
   options: { includeDeleted?: boolean } = {},
 ) => {
-  const filters = options.includeDeleted
-    ? undefined
-    : isNull(activities.deletedAt);
-
-  return db
+  return tdb(companyId)
     .select()
     .from(activities)
-    .where(filters)
+    .where(
+      withTenant(
+        activities,
+        companyId,
+        options.includeDeleted ? undefined : isNull(activities.deletedAt),
+      ),
+    )
     .orderBy(asc(activities.name));
 };
 
-export const listAssignableActivities = async () => {
-  return db
+export const listAssignableActivities = async (companyId: string) => {
+  return tdb(companyId)
     .select()
     .from(activities)
-    .where(and(isNull(activities.deletedAt), eq(activities.active, true)))
+    .where(
+      withTenant(
+        activities,
+        companyId,
+        isNull(activities.deletedAt),
+        eq(activities.active, true),
+      ),
+    )
     .orderBy(asc(activities.name));
 };
 
-export const getActivityById = async (id: string) => {
-  const [activity] = await db
+export const getActivityById = async (companyId: string, id: string) => {
+  const [activity] = await tdb(companyId)
     .select()
     .from(activities)
-    .where(eq(activities.id, id))
+    .where(withTenant(activities, companyId, eq(activities.id, id)))
     .limit(1);
 
   return activity ?? null;
 };
 
 export const createActivity = async (
+  companyId: string,
   input: ActivityFormValues,
   actorUserId?: string | null,
 ) => {
-  const [created] = await db
+  const [created] = await tdb(companyId)
     .insert(activities)
     .values({
+      companyId,
       name: input.name,
       active: input.active,
     })
-    .returning();
+    .returning()
+    .catch(rethrowDuplicate("Ya existe una actividad activa con ese nombre."));
 
   await recordAuditEvent({
+    companyId,
     actorUserId,
     resourceType: "activity",
     resourceId: created.id,
@@ -379,11 +459,12 @@ export const createActivity = async (
 };
 
 export const updateActivity = async (
+  companyId: string,
   id: string,
   input: ActivityFormValues,
   actorUserId?: string | null,
 ) => {
-  const existing = await getActivityById(id);
+  const existing = await getActivityById(companyId, id);
 
   if (!existing || existing.deletedAt) {
     return null;
@@ -391,14 +472,15 @@ export const updateActivity = async (
 
   const before = snapshotActivity(existing);
 
-  const [updated] = await db
+  const [updated] = await tdb(companyId)
     .update(activities)
     .set({
       name: input.name,
       active: input.active,
     })
-    .where(eq(activities.id, id))
-    .returning();
+    .where(withTenant(activities, companyId, eq(activities.id, id)))
+    .returning()
+    .catch(rethrowDuplicate("Ya existe una actividad activa con ese nombre."));
 
   if (!updated) {
     return null;
@@ -408,6 +490,7 @@ export const updateActivity = async (
   const changes = buildChanges(before, after, ["name", "active"]);
 
   await recordAuditEvent({
+    companyId,
     actorUserId,
     resourceType: "activity",
     resourceId: id,
@@ -424,10 +507,11 @@ export const updateActivity = async (
 };
 
 export const softDeleteActivity = async (
+  companyId: string,
   id: string,
   actorUserId?: string | null,
 ) => {
-  const existing = await getActivityById(id);
+  const existing = await getActivityById(companyId, id);
 
   if (!existing || existing.deletedAt) {
     return null;
@@ -436,10 +520,10 @@ export const softDeleteActivity = async (
   const before = snapshotActivity(existing);
   const deletedAt = new Date();
 
-  const [updated] = await db
+  const [updated] = await tdb(companyId)
     .update(activities)
     .set({ deletedAt, active: false })
-    .where(eq(activities.id, id))
+    .where(withTenant(activities, companyId, eq(activities.id, id)))
     .returning();
 
   if (!updated) {
@@ -447,6 +531,7 @@ export const softDeleteActivity = async (
   }
 
   await recordAuditEvent({
+    companyId,
     actorUserId,
     resourceType: "activity",
     resourceId: id,
@@ -461,7 +546,10 @@ export const softDeleteActivity = async (
   return updated;
 };
 
-export const listActivitiesByPositionIds = async (positionIds: string[]) => {
+export const listActivitiesByPositionIds = async (
+  companyId: string,
+  positionIds: string[],
+) => {
   const grouped = new Map<
     string,
     Array<{ id: string; name: string; active: boolean }>
@@ -475,7 +563,7 @@ export const listActivitiesByPositionIds = async (positionIds: string[]) => {
     return grouped;
   }
 
-  const rows = await db
+  const rows = await tdb(companyId)
     .select({
       positionId: positionActivities.positionId,
       id: activities.id,
@@ -485,7 +573,9 @@ export const listActivitiesByPositionIds = async (positionIds: string[]) => {
     .from(positionActivities)
     .innerJoin(activities, eq(positionActivities.activityId, activities.id))
     .where(
-      and(
+      withTenant(
+        positionActivities,
+        companyId,
         inArray(positionActivities.positionId, positionIds),
         isNull(activities.deletedAt),
       ),
@@ -503,14 +593,20 @@ export const listActivitiesByPositionIds = async (positionIds: string[]) => {
   return grouped;
 };
 
-export const listActivitiesForPosition = async (positionId: string) => {
-  const grouped = await listActivitiesByPositionIds([positionId]);
+export const listActivitiesForPosition = async (
+  companyId: string,
+  positionId: string,
+) => {
+  const grouped = await listActivitiesByPositionIds(companyId, [positionId]);
   return grouped.get(positionId) ?? [];
 };
 
 /** Activities of the person's position, resolved by person id so pages can fetch them in parallel with the person. */
-export const listActivitiesForPersonPosition = async (personId: string) =>
-  db
+export const listActivitiesForPersonPosition = async (
+  companyId: string,
+  personId: string,
+) =>
+  tdb(companyId)
     .select({
       id: activities.id,
       name: activities.name,
@@ -522,17 +618,25 @@ export const listActivitiesForPersonPosition = async (personId: string) =>
       eq(positionActivities.positionId, people.positionId),
     )
     .innerJoin(activities, eq(positionActivities.activityId, activities.id))
-    .where(and(eq(people.id, personId), isNull(activities.deletedAt)))
+    .where(
+      withTenant(
+        people,
+        companyId,
+        eq(people.id, personId),
+        isNull(activities.deletedAt),
+      ),
+    )
     .orderBy(asc(activities.name));
 
 export const assignActivityToPosition = async (
+  companyId: string,
   positionId: string,
   activityId: string,
   actorUserId?: string | null,
 ) => {
   const [position, activity] = await Promise.all([
-    getPositionById(positionId),
-    getActivityById(activityId),
+    getPositionById(companyId, positionId),
+    getActivityById(companyId, activityId),
   ]);
 
   if (!position || position.deletedAt) {
@@ -543,14 +647,15 @@ export const assignActivityToPosition = async (
     return { ok: false as const, reason: "activity-not-assignable" };
   }
 
-  const [inserted] = await db
+  const [inserted] = await tdb(companyId)
     .insert(positionActivities)
-    .values({ positionId, activityId })
+    .values({ companyId, positionId, activityId })
     .onConflictDoNothing()
     .returning();
 
   if (inserted) {
     await recordAuditEvent({
+      companyId,
       actorUserId,
       resourceType: "position_activity",
       resourceId: `${positionId}:${activityId}`,
@@ -571,19 +676,22 @@ export const assignActivityToPosition = async (
 };
 
 export const unassignActivityFromPosition = async (
+  companyId: string,
   positionId: string,
   activityId: string,
   actorUserId?: string | null,
 ) => {
   const [position, activity] = await Promise.all([
-    getPositionById(positionId),
-    getActivityById(activityId),
+    getPositionById(companyId, positionId),
+    getActivityById(companyId, activityId),
   ]);
 
-  const [removed] = await db
+  const [removed] = await tdb(companyId)
     .delete(positionActivities)
     .where(
-      and(
+      withTenant(
+        positionActivities,
+        companyId,
         eq(positionActivities.positionId, positionId),
         eq(positionActivities.activityId, activityId),
       ),
@@ -592,6 +700,7 @@ export const unassignActivityFromPosition = async (
 
   if (removed) {
     await recordAuditEvent({
+      companyId,
       actorUserId,
       resourceType: "position_activity",
       resourceId: `${positionId}:${activityId}`,
