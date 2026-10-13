@@ -65,6 +65,27 @@ afterEach(() => {
 });
 
 describe("AppShell", () => {
+  it("shows the company but no switcher to someone with a single company", () => {
+    render(
+      <TooltipProvider>
+        <AppShell
+          user={{ name: "Elena Demo", email: "rrhh@workia.local" }}
+          company={companyA}
+          companies={[companyA]}
+        >
+          <p>Contenido</p>
+        </AppShell>
+      </TooltipProvider>,
+    );
+
+    expect(screen.getAllByTestId("active-company")[0].textContent).toBe(
+      "Ferretera Mandiola",
+    );
+    expect(
+      screen.queryByRole("button", { name: "Cambiar de empresa" }),
+    ).toBeNull();
+  });
+
   it("shows the active company in the sidebar and breadcrumbs, with a switcher", () => {
     navigationState.pathname = "/app/personas";
     renderShell();
