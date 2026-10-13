@@ -57,6 +57,10 @@ npm run db:push
 npm run db:seed
 ```
 
+`db:push` is for a throwaway local database. Production applies the SQL in
+`drizzle/` with `npm run db:migrate`, which records every migration it runs;
+see [docs/migrations.md](docs/migrations.md).
+
 ### 4. Run the development server
 
 ```bash
@@ -82,18 +86,20 @@ After seeding:
 
 ## Scripts
 
-| Command             | Description              |
-| ------------------- | ------------------------ |
-| `npm run dev`       | Start development server |
-| `npm run build`     | Production build         |
-| `npm run start`     | Serve production build   |
-| `npm run lint`      | ESLint                   |
-| `npm run typecheck` | TypeScript check         |
-| `npm run test`      | Vitest unit tests        |
-| `npm run test:e2e`  | Playwright E2E tests     |
-| `npm run format`    | Prettier write           |
-| `npm run db:push`   | Push Drizzle schema      |
-| `npm run db:seed`   | Seed RBAC + demo users   |
+| Command                    | Description                                                             |
+| -------------------------- | ----------------------------------------------------------------------- |
+| `npm run dev`              | Start development server                                                |
+| `npm run build`            | Production build                                                        |
+| `npm run start`            | Serve production build                                                  |
+| `npm run lint`             | ESLint                                                                  |
+| `npm run typecheck`        | TypeScript check                                                        |
+| `npm run test`             | Vitest unit tests                                                       |
+| `npm run test:e2e`         | Playwright E2E tests                                                    |
+| `npm run format`           | Prettier write                                                          |
+| `npm run db:push`          | Push Drizzle schema                                                     |
+| `npm run db:seed`          | Seed RBAC + demo users                                                  |
+| `npm run db:migrate`       | Apply pending migrations (see [docs/migrations.md](docs/migrations.md)) |
+| `npm run check:migrations` | Fail on destructive SQL in new migrations                               |
 
 ## Architecture
 
