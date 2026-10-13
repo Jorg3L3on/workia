@@ -248,8 +248,11 @@ const runCli = async () => {
 const invokedDirectly = process.argv[1]?.includes("cleanup-borrados-residue");
 
 if (invokedDirectly) {
-  runCli().catch((error) => {
-    console.error("Borrados cleanup failed:", error);
-    process.exit(1);
-  });
+  runCli()
+    // Exit now: an idle local Postgres pool would keep the process alive ~10 s.
+    .then(() => process.exit(0))
+    .catch((error) => {
+      console.error("Borrados cleanup failed:", error);
+      process.exit(1);
+    });
 }
