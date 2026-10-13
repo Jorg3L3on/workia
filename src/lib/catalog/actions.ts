@@ -24,7 +24,11 @@ import {
   requirePositionsDelete,
   requirePositionsUpdate,
 } from "@/lib/catalog/auth";
-import { CATALOG_PATHS, catalogHref } from "@/lib/catalog/paths";
+import {
+  CATALOG_PATHS,
+  catalogHref,
+  type CatalogPath,
+} from "@/lib/catalog/paths";
 import {
   activityFormSchema,
   areaFormSchema,
@@ -32,6 +36,20 @@ import {
   positionFormSchema,
 } from "@/lib/catalog/schema";
 import { AuthorizationError } from "@/lib/rbac/errors";
+import { writableCompanyIdFromForm } from "@/lib/tenant/scope";
+
+/** The active company, or back to the list when the form was opened in another company. */
+const formCompanyOrRedirect = (
+  session: { companyId: string },
+  formData: FormData,
+  path: CatalogPath,
+) => {
+  try {
+    return writableCompanyIdFromForm(session, formData);
+  } catch {
+    redirect(catalogHref(path, { error: "company-changed" }));
+  }
+};
 
 const revalidateCatalog = () => {
   revalidatePath(CATALOG_PATHS.index);
@@ -91,7 +109,13 @@ export const createAreaAction = async (formData: FormData) => {
     redirect(catalogHref(CATALOG_PATHS.areas, { error: "area-form" }));
   }
 
-  await createArea(parsed.data, session.user.id);
+  const companyId = formCompanyOrRedirect(
+    session,
+    formData,
+    CATALOG_PATHS.areas,
+  );
+
+  await createArea(companyId, parsed.data, session.user.id);
   revalidateCatalog();
   redirect(catalogHref(CATALOG_PATHS.areas, { saved: "area" }));
 };
@@ -109,7 +133,7 @@ export const deleteAreaAction = async (areaId: string) => {
     redirect("/login");
   }
 
-  await softDeleteArea(areaId, session.user.id);
+  await softDeleteArea(session.companyId, areaId, session.user.id);
   revalidateCatalog();
   redirect(catalogHref(CATALOG_PATHS.areas, { deleted: "area" }));
 };
@@ -135,7 +159,13 @@ export const createPositionAction = async (formData: FormData) => {
     redirect(catalogHref(CATALOG_PATHS.puestos, { error: "position-form" }));
   }
 
-  await createPosition(parsed.data, session.user.id);
+  const companyId = formCompanyOrRedirect(
+    session,
+    formData,
+    CATALOG_PATHS.puestos,
+  );
+
+  await createPosition(companyId, parsed.data, session.user.id);
   revalidateCatalog();
   redirect(catalogHref(CATALOG_PATHS.puestos, { saved: "position" }));
 };
@@ -155,7 +185,7 @@ export const deletePositionAction = async (positionId: string) => {
     redirect("/login");
   }
 
-  await softDeletePosition(positionId, session.user.id);
+  await softDeletePosition(session.companyId, positionId, session.user.id);
   revalidateCatalog();
   redirect(catalogHref(CATALOG_PATHS.puestos, { deleted: "position" }));
 };
@@ -183,7 +213,13 @@ export const createActivityAction = async (formData: FormData) => {
     );
   }
 
-  await createActivity(parsed.data, session.user.id);
+  const companyId = formCompanyOrRedirect(
+    session,
+    formData,
+    CATALOG_PATHS.actividades,
+  );
+
+  await createActivity(companyId, parsed.data, session.user.id);
   revalidateCatalog();
   redirect(catalogHref(CATALOG_PATHS.actividades, { saved: "activity" }));
 };
@@ -217,7 +253,13 @@ export const updateActivityAction = async (
     );
   }
 
-  await updateActivity(activityId, parsed.data, session.user.id);
+  const companyId = formCompanyOrRedirect(
+    session,
+    formData,
+    CATALOG_PATHS.actividades,
+  );
+
+  await updateActivity(companyId, activityId, parsed.data, session.user.id);
   revalidateCatalog();
   redirect(catalogHref(CATALOG_PATHS.actividades, { saved: "activity" }));
 };
@@ -237,7 +279,7 @@ export const deleteActivityAction = async (activityId: string) => {
     redirect("/login");
   }
 
-  await softDeleteActivity(activityId, session.user.id);
+  await softDeleteActivity(session.companyId, activityId, session.user.id);
   revalidateCatalog();
   redirect(catalogHref(CATALOG_PATHS.actividades, { deleted: "activity" }));
 };
@@ -263,7 +305,14 @@ export const assignActivityToPositionAction = async (formData: FormData) => {
     redirect(catalogHref(CATALOG_PATHS.puestos, { error: "assign-form" }));
   }
 
+  const companyId = formCompanyOrRedirect(
+    session,
+    formData,
+    CATALOG_PATHS.puestos,
+  );
+
   const result = await assignActivityToPosition(
+    companyId,
     parsed.data.positionId,
     parsed.data.activityId,
     session.user.id,
@@ -300,7 +349,14 @@ export const unassignActivityFromPositionAction = async (
     redirect(catalogHref(CATALOG_PATHS.puestos, { error: "unassign-form" }));
   }
 
+  const companyId = formCompanyOrRedirect(
+    session,
+    formData,
+    CATALOG_PATHS.puestos,
+  );
+
   await unassignActivityFromPosition(
+    companyId,
     parsed.data.positionId,
     parsed.data.activityId,
     session.user.id,

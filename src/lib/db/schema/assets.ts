@@ -2,15 +2,19 @@ import { relations } from "drizzle-orm";
 import {
   boolean,
   date,
+  foreignKey,
   index,
   pgEnum,
   pgTable,
   text,
   timestamp,
+  unique,
   uuid,
 } from "drizzle-orm/pg-core";
 
 import { people } from "./people";
+
+import { companies } from "./companies";
 
 export const assetStatusEnum = pgEnum("asset_status", [
   "disponible",
@@ -27,6 +31,9 @@ export const assets = pgTable(
   "assets",
   {
     id: uuid("id").defaultRandom().primaryKey(),
+    companyId: uuid("company_id")
+      .notNull()
+      .references(() => companies.id, { onDelete: "restrict" }),
     name: text("name").notNull(),
     identifier: text("identifier").notNull(),
     category: text("category").notNull(),
@@ -46,6 +53,12 @@ export const assets = pgTable(
       .$onUpdate(() => new Date()),
   },
   (table) => [
+    unique("assets_company_id_id_unique").on(table.companyId, table.id),
+    foreignKey({
+      name: "assets_company_holder_fk",
+      columns: [table.companyId, table.holderId],
+      foreignColumns: [people.companyId, people.id],
+    }),
     index("assets_identifier_idx").on(table.identifier),
     index("assets_holder_id_idx").on(table.holderId),
     index("assets_status_idx").on(table.status),
@@ -57,6 +70,9 @@ export const assetMovements = pgTable(
   "asset_movements",
   {
     id: uuid("id").defaultRandom().primaryKey(),
+    companyId: uuid("company_id")
+      .notNull()
+      .references(() => companies.id, { onDelete: "restrict" }),
     assetId: uuid("asset_id")
       .notNull()
       .references(() => assets.id, { onDelete: "restrict" }),
@@ -72,6 +88,17 @@ export const assetMovements = pgTable(
       .notNull(),
   },
   (table) => [
+    index("asset_movements_company_id_idx").on(table.companyId),
+    foreignKey({
+      name: "asset_movements_company_asset_fk",
+      columns: [table.companyId, table.assetId],
+      foreignColumns: [assets.companyId, assets.id],
+    }),
+    foreignKey({
+      name: "asset_movements_company_person_fk",
+      columns: [table.companyId, table.personId],
+      foreignColumns: [people.companyId, people.id],
+    }),
     index("asset_movements_asset_id_idx").on(table.assetId),
     index("asset_movements_person_id_idx").on(table.personId),
     index("asset_movements_movement_date_idx").on(table.movementDate),

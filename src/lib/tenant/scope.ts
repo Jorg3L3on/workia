@@ -59,3 +59,23 @@ export const resolveWritableCompanyId = (
 
   return context.companyId;
 };
+
+/** Name of the hidden form field carrying the company a screen was opened in. */
+export const COMPANY_FIELD = "companyId";
+
+/** Shown when a form was opened in another company (another tab switched company). */
+export const STALE_COMPANY_MESSAGE =
+  "Cambiaste de empresa en otra pestaña. Recarga la página para continuar.";
+
+/** The active company, refusing a form opened in a different one. */
+export const writableCompanyIdFromForm = (
+  context: { companyId: string },
+  formData: FormData,
+) => {
+  const requested = formData.get(COMPANY_FIELD);
+
+  return resolveWritableCompanyId(
+    context,
+    typeof requested === "string" && requested !== "" ? requested : null,
+  );
+};

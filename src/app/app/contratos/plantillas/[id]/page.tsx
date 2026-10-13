@@ -37,7 +37,7 @@ const PlantillaDetailPage = async ({
   const { saved, error } = await searchParams;
 
   const [template, canUpdate, canDelete] = await Promise.all([
-    getContractTemplateById(id),
+    getContractTemplateById(session.companyId, id),
     userHasPermission(session.user.id, "contract_templates:update"),
     userHasPermission(session.user.id, "contract_templates:delete"),
   ]);

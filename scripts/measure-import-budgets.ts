@@ -112,11 +112,11 @@ const timed = async <T>(fn: () => Promise<T>) => {
   };
 };
 
-const applyChild = async (jobId: string) => {
+const applyChild = async (companyId: string, jobId: string) => {
   const { applyJobStep } = await import("@/lib/import/apply");
 
   for (;;) {
-    const step = await applyJobStep(jobId);
+    const step = await applyJobStep(companyId, jobId);
 
     if (step.done) break;
   }
@@ -126,7 +126,7 @@ const applyChild = async (jobId: string) => {
 
 const main = async () => {
   if (process.argv[2] === "--apply-child") {
-    return applyChild(process.argv[3]);
+    return applyChild(process.argv[3], process.argv[4]);
   }
 
   const { db } = await import("@/lib/db");
@@ -142,6 +142,9 @@ const main = async () => {
     await import("@/lib/import/testing/fixture");
 
   const [actor] = await db.select().from(users).limit(1);
+  const { companyIdFromArgs } = await import("@/lib/tenant/companies");
+  // Measures run in one company: --company <slug>, default company otherwise.
+  const companyId = await companyIdFromArgs();
   const lastName = `Budget${RUN}`;
   const readWorkbook = async (blob: Blob) =>
     (await readXlsxFile(Buffer.from(await blob.arrayBuffer()))).map(
@@ -160,6 +163,7 @@ const main = async () => {
   ) => {
     const parsed = await parseImportFile(file, readWorkbook);
     const job = await jobs.createImportJob(
+      companyId,
       {
         fileName: file.name,
         fileHash: parsed.fileHash,
@@ -171,14 +175,14 @@ const main = async () => {
 
     for (const sheet of parsed.sheets) {
       for (let i = 0; i < sheet.rows.length; i += 500) {
-        await jobs.appendImportRows(job.id, {
+        await jobs.appendImportRows(companyId, job.id, {
           sheet: sheet.sheet,
           rows: sheet.rows.slice(i, i + 500),
         });
       }
     }
 
-    await jobs.finalizeImportUpload(job.id, parsed.totalRows);
+    await jobs.finalizeImportUpload(companyId, job.id, parsed.totalRows);
     await db
       .update(importJobs)
       .set({ options })
@@ -191,7 +195,7 @@ const main = async () => {
     let step;
 
     do {
-      step = await validate.validateJobStep(jobId);
+      step = await validate.validateJobStep(companyId, jobId);
     } while (!step.done);
 
     return step.counts;
@@ -248,7 +252,13 @@ const main = async () => {
   const apply1 = await timed(async () => {
     const child = spawn(
       "npx",
-      ["tsx", "scripts/measure-import-budgets.ts", "--apply-child", job.id],
+      [
+        "tsx",
+        "scripts/measure-import-budgets.ts",
+        "--apply-child",
+        companyId,
+        job.id,
+      ],
       {
         stdio: "ignore",
         detached: true,
@@ -287,7 +297,7 @@ const main = async () => {
     let step;
 
     do {
-      step = await apply.applyJobStep(job.id);
+      step = await apply.applyJobStep(companyId, job.id);
     } while (!step.done);
 
     return { killedMidway, applied: step.applied };
@@ -339,6 +349,7 @@ const main = async () => {
     stream.pipe(out);
 
     const count = await writeExport(stream, {
+      companyId,
       format: "xlsx",
       filters: { query: lastName },
       includeContracts: true,
@@ -379,7 +390,7 @@ const main = async () => {
     let step;
 
     do {
-      step = await undo.undoJobStep(job.id);
+      step = await undo.undoJobStep(companyId, job.id);
     } while (!step.done);
   });
   const after = await snapshot();

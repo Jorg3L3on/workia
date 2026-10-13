@@ -18,7 +18,7 @@ const PREVIOUS_STATUSES: ImportJobStatus[] = [
   "applied",
 ];
 
-export const findJobsByHash = async (fileHash: string) =>
+export const findJobsByHash = async (companyId: string, fileHash: string) =>
   db
     .select({
       id: importJobs.id,
@@ -28,6 +28,7 @@ export const findJobsByHash = async (fileHash: string) =>
     .from(importJobs)
     .where(
       and(
+        eq(importJobs.companyId, companyId),
         eq(importJobs.fileHash, fileHash),
         inArray(importJobs.status, PREVIOUS_STATUSES),
       ),
@@ -36,12 +37,14 @@ export const findJobsByHash = async (fileHash: string) =>
     .limit(5);
 
 export const createImportJob = async (
+  companyId: string,
   input: CreateImportJobBody,
   actorUserId: string,
 ) => {
   const [job] = await db
     .insert(importJobs)
     .values({
+      companyId,
       type: "people",
       status: "uploading",
       fileName: input.fileName,
@@ -56,12 +59,13 @@ export const createImportJob = async (
 };
 
 export const getImportJob = async (
+  companyId: string,
   jobId: string,
 ): Promise<ImportJob | null> => {
   const [job] = await db
     .select()
     .from(importJobs)
-    .where(eq(importJobs.id, jobId))
+    .where(and(eq(importJobs.companyId, companyId), eq(importJobs.id, jobId)))
     .limit(1);
 
   return job ?? null;
@@ -72,6 +76,7 @@ export const getImportJob = async (
  * replaces the same rows instead of duplicating them.
  */
 export const appendImportRows = async (
+  companyId: string,
   jobId: string,
   body: AppendImportRowsBody,
 ) => {
@@ -79,6 +84,7 @@ export const appendImportRows = async (
     .insert(importRows)
     .values(
       body.rows.map((row) => ({
+        companyId,
         jobId,
         sheet: body.sheet,
         rowNumber: row.rowNumber,
@@ -96,14 +102,16 @@ export const appendImportRows = async (
     });
 };
 
-export const countStagedRows = async (jobId: string) => {
+export const countStagedRows = async (companyId: string, jobId: string) => {
   const rows = await db
     .select({
       sheet: importRows.sheet,
       count: sql<number>`count(*)::int`,
     })
     .from(importRows)
-    .where(eq(importRows.jobId, jobId))
+    .where(
+      and(eq(importRows.companyId, companyId), eq(importRows.jobId, jobId)),
+    )
     .groupBy(importRows.sheet);
 
   return Object.fromEntries(rows.map((row) => [row.sheet, row.count]));
@@ -114,10 +122,11 @@ export const countStagedRows = async (jobId: string) => {
  * is staged, so a chunk that never arrived cannot be validated as a whole file.
  */
 export const finalizeImportUpload = async (
+  companyId: string,
   jobId: string,
   expectedRows: number,
 ) => {
-  const staged = await countStagedRows(jobId);
+  const staged = await countStagedRows(companyId, jobId);
   const total = Object.values(staged).reduce((sum, n) => sum + n, 0);
 
   if (total < expectedRows) {
@@ -127,7 +136,13 @@ export const finalizeImportUpload = async (
   const [job] = await db
     .update(importJobs)
     .set({ status: "validating", counts: { total } })
-    .where(and(eq(importJobs.id, jobId), eq(importJobs.status, "uploading")))
+    .where(
+      and(
+        eq(importJobs.companyId, companyId),
+        eq(importJobs.id, jobId),
+        eq(importJobs.status, "uploading"),
+      ),
+    )
     .returning();
 
   return { job: job ?? null, staged, total };
@@ -142,12 +157,14 @@ export type ReviewRowFilters = {
 
 /** One page of staged rows for the review table, with counts for the filter. */
 export const listImportRows = async (
+  companyId: string,
   jobId: string,
   filters: ReviewRowFilters = {},
 ) => {
   const pageSize = Math.min(Math.max(filters.pageSize ?? 50, 1), 200);
   const page = Math.max(filters.page ?? 1, 1);
   const where = and(
+    eq(importRows.companyId, companyId),
     eq(importRows.jobId, jobId),
     filters.sheet ? eq(importRows.sheet, filters.sheet) : undefined,
     filters.action ? eq(importRows.action, filters.action) : undefined,
@@ -182,7 +199,7 @@ export const listImportRows = async (
   return { rows, total: totalRow?.count ?? 0, page, pageSize };
 };
 
-export const listImportJobs = async (limit = 50) =>
+export const listImportJobs = async (companyId: string, limit = 50) =>
   db
     .select({
       job: importJobs,
@@ -191,5 +208,6 @@ export const listImportJobs = async (limit = 50) =>
     })
     .from(importJobs)
     .leftJoin(users, eq(importJobs.actorUserId, users.id))
+    .where(eq(importJobs.companyId, companyId))
     .orderBy(desc(importJobs.createdAt))
     .limit(limit);

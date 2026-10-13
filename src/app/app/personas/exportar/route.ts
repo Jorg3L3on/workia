@@ -53,9 +53,15 @@ export const GET = async (request: Request) => {
   const stream = new PassThrough();
   const today = new Date().toISOString().slice(0, 10);
 
-  void writeExport(stream, { format, filters, includeContracts })
+  void writeExport(stream, {
+    companyId: session.companyId,
+    format,
+    filters,
+    includeContracts,
+  })
     .then((count) =>
       recordAuditEvent({
+        companyId: session.companyId,
         actorUserId: session.user.id,
         resourceType: "people_export",
         resourceId: randomUUID(),

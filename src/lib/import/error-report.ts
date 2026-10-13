@@ -55,7 +55,10 @@ export const buildErrorReportWorkbook = (rows: ErrorRow[]) => {
   return workbook;
 };
 
-export const loadErrorRows = async (jobId: string): Promise<ErrorRow[]> =>
+export const loadErrorRows = async (
+  companyId: string,
+  jobId: string,
+): Promise<ErrorRow[]> =>
   db
     .select({
       sheet: importRows.sheet,
@@ -64,11 +67,17 @@ export const loadErrorRows = async (jobId: string): Promise<ErrorRow[]> =>
       errors: importRows.errors,
     })
     .from(importRows)
-    .where(and(eq(importRows.jobId, jobId), eq(importRows.action, "error")))
+    .where(
+      and(
+        eq(importRows.companyId, companyId),
+        eq(importRows.jobId, jobId),
+        eq(importRows.action, "error"),
+      ),
+    )
     .orderBy(asc(importRows.sheet), asc(importRows.rowNumber));
 
-export const buildErrorReport = async (jobId: string) => {
-  const rows = await loadErrorRows(jobId);
+export const buildErrorReport = async (companyId: string, jobId: string) => {
+  const rows = await loadErrorRows(companyId, jobId);
 
   return {
     count: rows.length,

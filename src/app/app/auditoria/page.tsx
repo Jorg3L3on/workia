@@ -9,7 +9,11 @@ import { DateInput } from "@/components/ui/date-input";
 import { FormSelect } from "@/components/ui/form-select";
 import { Input } from "@/components/ui/input";
 import { ListPager } from "@/components/list/list-pager";
-import { countAuditEvents, listAuditEvents } from "@/lib/audit";
+import {
+  countAuditEvents,
+  listAuditActors,
+  listAuditEvents,
+} from "@/lib/audit";
 import { requireAuditRead } from "@/lib/audit/auth";
 import {
   AUDIT_ACTIONS,
@@ -20,8 +24,6 @@ import {
   type AuditResourceType,
 } from "@/lib/audit/types";
 import { pageCountFor, parseListPaging } from "@/lib/list/paging";
-import { db } from "@/lib/db";
-import { users } from "@/lib/db/schema";
 
 export const dynamic = "force-dynamic";
 
@@ -43,11 +45,12 @@ type AuditoriaPageProps = {
 };
 
 const AuditoriaPage = async ({ searchParams }: AuditoriaPageProps) => {
-  await requireAuditRead();
+  const session = await requireAuditRead();
   const filters = await searchParams;
 
   const { page, pageSize } = parseListPaging(filters);
   const auditFilters = {
+    companyId: session.companyId,
     resourceType: filters.resourceType,
     resourceId: filters.resourceId,
     actorUserId: filters.actorUserId,
@@ -63,9 +66,7 @@ const AuditoriaPage = async ({ searchParams }: AuditoriaPageProps) => {
       offset: (page - 1) * pageSize,
     }),
     countAuditEvents(auditFilters),
-    db
-      .select({ id: users.id, name: users.name, email: users.email })
-      .from(users),
+    listAuditActors(session.companyId),
   ]);
 
   return (

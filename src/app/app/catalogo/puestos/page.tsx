@@ -49,14 +49,15 @@ const PuestosCatalogPage = async ({
     canDeletePosition,
     canAssignActivity,
   ] = await Promise.all([
-    listPositions(),
-    listAreas(),
-    listAssignableActivities(),
+    listPositions(session.companyId),
+    listAreas(session.companyId),
+    listAssignableActivities(session.companyId),
     userHasPermission(session.user.id, "positions:create"),
     userHasPermission(session.user.id, "positions:delete"),
     userHasPermission(session.user.id, "positions:update"),
   ]);
   const activitiesByPosition = await listActivitiesByPositionIds(
+    session.companyId,
     positions.map((position) => position.id),
   );
   const activeAreas = areas.filter((area) => area.active);

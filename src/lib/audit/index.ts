@@ -16,6 +16,7 @@ export const recordAuditEvent = async (
   const [created] = await executor
     .insert(auditEvents)
     .values({
+      companyId: input.companyId,
       actorUserId: input.actorUserId ?? null,
       resourceType: input.resourceType,
       resourceId: input.resourceId,
@@ -31,7 +32,7 @@ export const recordAuditEvent = async (
 };
 
 const buildAuditFilters = (options: ListAuditEventsOptions) => {
-  const filters = [];
+  const filters = [eq(auditEvents.companyId, options.companyId)];
 
   if (options.resourceType) {
     filters.push(eq(auditEvents.resourceType, options.resourceType));
@@ -57,12 +58,10 @@ const buildAuditFilters = (options: ListAuditEventsOptions) => {
     filters.push(lte(auditEvents.occurredAt, options.to));
   }
 
-  return filters.length === 0 ? undefined : and(...filters);
+  return and(...filters);
 };
 
-export const countAuditEvents = async (
-  options: ListAuditEventsOptions = {},
-) => {
+export const countAuditEvents = async (options: ListAuditEventsOptions) => {
   const [row] = await db
     .select({ total: count() })
     .from(auditEvents)
@@ -71,7 +70,7 @@ export const countAuditEvents = async (
   return row?.total ?? 0;
 };
 
-export const listAuditEvents = async (options: ListAuditEventsOptions = {}) => {
+export const listAuditEvents = async (options: ListAuditEventsOptions) => {
   const whereClause = buildAuditFilters(options);
 
   return db
@@ -103,6 +102,15 @@ export const listAuditEvents = async (options: ListAuditEventsOptions = {}) => {
       })),
     );
 };
+
+/** Users who have acted in this company, for the actor filter (never other companies' users). */
+export const listAuditActors = async (companyId: string) =>
+  db
+    .selectDistinct({ id: users.id, name: users.name, email: users.email })
+    .from(auditEvents)
+    .innerJoin(users, eq(auditEvents.actorUserId, users.id))
+    .where(eq(auditEvents.companyId, companyId))
+    .orderBy(users.name);
 
 export const buildChanges = <T extends Record<string, unknown>>(
   before: T,

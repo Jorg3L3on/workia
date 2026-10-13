@@ -38,14 +38,16 @@ const ActividadesCatalogPage = async ({
     canUpdateActivity,
     canDeleteActivity,
   ] = await Promise.all([
-    listActivities(),
+    listActivities(session.companyId),
     userHasPermission(session.user.id, "positions:create"),
     userHasPermission(session.user.id, "positions:update"),
     userHasPermission(session.user.id, "positions:delete"),
   ]);
 
   const editingActivity =
-    edit && canUpdateActivity ? await getActivityById(edit) : null;
+    edit && canUpdateActivity
+      ? await getActivityById(session.companyId, edit)
+      : null;
   const isEditing = Boolean(editingActivity && !editingActivity.deletedAt);
 
   return (

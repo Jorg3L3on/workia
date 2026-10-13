@@ -30,7 +30,7 @@ const AreasCatalogPage = async ({ searchParams }: AreasCatalogPageProps) => {
   const { saved, deleted } = await searchParams;
 
   const [areas, canCreateArea, canDeleteArea] = await Promise.all([
-    listAreas(),
+    listAreas(session.companyId),
     userHasPermission(session.user.id, "areas:create"),
     userHasPermission(session.user.id, "areas:delete"),
   ]);

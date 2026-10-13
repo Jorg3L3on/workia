@@ -29,10 +29,16 @@ type ContratosPageProps = {
   }>;
 };
 
-const RenewalTray = async ({ canUpdate }: { canUpdate: boolean }) => {
+const RenewalTray = async ({
+  canUpdate,
+  companyId,
+}: {
+  canUpdate: boolean;
+  companyId: string;
+}) => {
   const [renewalItems, templates] = await Promise.all([
-    listRenewalTrayItems(),
-    listActiveContractTemplates(),
+    listRenewalTrayItems(companyId),
+    listActiveContractTemplates(companyId),
   ]);
 
   return (
@@ -104,7 +110,7 @@ const ContratosPage = async ({ searchParams }: ContratosPageProps) => {
         </div>
 
         <Suspense fallback={<SectionSkeleton />}>
-          <RenewalTray canUpdate={canUpdate} />
+          <RenewalTray canUpdate={canUpdate} companyId={session.companyId} />
         </Suspense>
       </div>
     </div>

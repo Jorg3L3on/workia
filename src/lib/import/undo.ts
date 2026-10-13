@@ -64,11 +64,11 @@ const findBlockers = async (
   const result = await executor.execute(sql`
     with r as (
       select * from import_rows
-      where job_id = ${job.id} and applied_at is not null and undone_at is null ${idFilter}
+      where company_id = ${job.companyId} and job_id = ${job.id} and applied_at is not null and undone_at is null ${idFilter}
     ), jobpeople as (
-      select target_person_id as id from import_rows where job_id = ${job.id} and target_person_id is not null
+      select target_person_id as id from import_rows where company_id = ${job.companyId} and job_id = ${job.id} and target_person_id is not null
     ), jobcontracts as (
-      select target_contract_id as id from import_rows where job_id = ${job.id} and target_contract_id is not null
+      select target_contract_id as id from import_rows where company_id = ${job.companyId} and job_id = ${job.id} and target_contract_id is not null
     ), blockers as (
       select 'persona' as type, p.id::text as id,
              p.nombres || ' ' || p.apellido_paterno as name,
@@ -130,12 +130,13 @@ const findBlockers = async (
   };
 };
 
-const countUndoable = async (jobId: string) => {
+const countUndoable = async (companyId: string, jobId: string) => {
   const [row] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(importRows)
     .where(
       and(
+        eq(importRows.companyId, companyId),
         eq(importRows.jobId, jobId),
         isNotNull(importRows.appliedAt),
         isNull(importRows.undoneAt),
@@ -145,11 +146,14 @@ const countUndoable = async (jobId: string) => {
   return row?.count ?? 0;
 };
 
-export const previewUndo = async (jobId: string): Promise<UndoPreview> => {
+export const previewUndo = async (
+  companyId: string,
+  jobId: string,
+): Promise<UndoPreview> => {
   const [job] = await db
     .select()
     .from(importJobs)
-    .where(eq(importJobs.id, jobId))
+    .where(and(eq(importJobs.companyId, companyId), eq(importJobs.id, jobId)))
     .limit(1);
 
   if (!job) {
@@ -159,7 +163,7 @@ export const previewUndo = async (jobId: string): Promise<UndoPreview> => {
     );
   }
 
-  const rows = await countUndoable(jobId);
+  const rows = await countUndoable(companyId, jobId);
   const ends = windowEnd(job);
   const base = {
     windowEndsAt: ends?.toISOString() ?? null,
@@ -248,6 +252,7 @@ const undoBatch = async (
       .from(importRows)
       .where(
         and(
+          eq(importRows.companyId, job.companyId),
           eq(importRows.jobId, job.id),
           eq(importRows.sheet, sheet),
           isNotNull(importRows.appliedAt),
@@ -283,6 +288,7 @@ const undoBatch = async (
       summary: string,
     ) =>
       audit.push({
+        companyId: job.companyId,
         actorUserId: job.actorUserId,
         resourceType,
         resourceId,
@@ -298,7 +304,9 @@ const undoBatch = async (
         await tx
           .update(people)
           .set({ deletedAt: new Date() })
-          .where(inArray(people.id, ids));
+          .where(
+            and(eq(people.companyId, job.companyId), inArray(people.id, ids)),
+          );
         ids.forEach((id) =>
           event("person", id, "Alta revertida: se deshizo la importación"),
         );
@@ -329,7 +337,7 @@ const undoBatch = async (
             position_id text, site_id text, rfc text, curp text, nss text, status text,
             manager_id text
           )
-          where p.id = v.id
+          where p.id = v.id and p.company_id = ${job.companyId}
         `);
         updated.forEach((row) =>
           event(
@@ -354,7 +362,12 @@ const undoBatch = async (
             salida: null,
             deletedAt: new Date(),
           })
-          .where(inArray(personSchedules.personId, createdIds));
+          .where(
+            and(
+              eq(personSchedules.companyId, job.companyId),
+              inArray(personSchedules.personId, createdIds),
+            ),
+          );
         createdIds.forEach((id) =>
           event("person", id, "Horario revertido: se deshizo la importación"),
         );
@@ -376,7 +389,7 @@ const undoBatch = async (
               deleted_at: row.previousSnapshot!.deletedAt ?? null,
             })),
           )}::jsonb) as v(person_id uuid, entrada text, salida_comer text, regreso_comer text, salida text, deleted_at text)
-          where s.person_id = v.person_id
+          where s.person_id = v.person_id and s.company_id = ${job.companyId}
         `);
         updated.forEach((row) =>
           event(
@@ -395,7 +408,12 @@ const undoBatch = async (
         await tx
           .update(contracts)
           .set({ deletedAt: new Date() })
-          .where(inArray(contracts.id, ids));
+          .where(
+            and(
+              eq(contracts.companyId, job.companyId),
+              inArray(contracts.id, ids),
+            ),
+          );
         ids.forEach((id) =>
           event(
             "contract",
@@ -427,7 +445,7 @@ const undoBatch = async (
                 row.previousSnapshot!.previousContractId ?? null,
             })),
           )}::jsonb) as v(id uuid, type text, end_date text, notice_window text, status text, template_id text, template_name text, generated_text text, previous_contract_id text)
-          where c.id = v.id
+          where c.id = v.id and c.company_id = ${job.companyId}
         `);
         updated.forEach((row) =>
           event(
@@ -443,9 +461,12 @@ const undoBatch = async (
       .update(importRows)
       .set({ undoneAt: new Date() })
       .where(
-        inArray(
-          importRows.id,
-          rows.map((row) => row.id),
+        and(
+          eq(importRows.companyId, job.companyId),
+          inArray(
+            importRows.id,
+            rows.map((row) => row.id),
+          ),
         ),
       );
     await tx.insert(auditEvents).values(audit);
@@ -454,7 +475,9 @@ const undoBatch = async (
       .set({
         counts: sql`jsonb_set(${importJobs.counts}, '{undone}', to_jsonb(coalesce((${importJobs.counts}->>'undone')::int, 0) + ${rows.length}))`,
       })
-      .where(eq(importJobs.id, job.id));
+      .where(
+        and(eq(importJobs.companyId, job.companyId), eq(importJobs.id, job.id)),
+      );
 
     return rows.length;
   });
@@ -472,7 +495,7 @@ const removeCreatedCatalogs = async (job: ImportJob) => {
   if (created.positions.length > 0) {
     await db.execute(sql`
       update positions set deleted_at = ${now}
-      where id in ${uuidList(created.positions)} and deleted_at is null
+      where company_id = ${job.companyId} and id in ${uuidList(created.positions)} and deleted_at is null
         and not exists (select 1 from people p where p.position_id = positions.id and p.deleted_at is null)
     `);
   }
@@ -480,7 +503,7 @@ const removeCreatedCatalogs = async (job: ImportJob) => {
   if (created.areas.length > 0) {
     await db.execute(sql`
       update areas set deleted_at = ${now}
-      where id in ${uuidList(created.areas)} and deleted_at is null
+      where company_id = ${job.companyId} and id in ${uuidList(created.areas)} and deleted_at is null
         and not exists (select 1 from people p where p.area_id = areas.id and p.deleted_at is null)
         and not exists (select 1 from positions q where q.area_id = areas.id and q.deleted_at is null)
     `);
@@ -489,7 +512,7 @@ const removeCreatedCatalogs = async (job: ImportJob) => {
   if (created.sites.length > 0) {
     await db.execute(sql`
       update sites set deleted_at = ${now}
-      where id in ${uuidList(created.sites)} and deleted_at is null
+      where company_id = ${job.companyId} and id in ${uuidList(created.sites)} and deleted_at is null
         and not exists (select 1 from people p where p.site_id = sites.id and p.deleted_at is null)
     `);
   }
@@ -498,8 +521,11 @@ const removeCreatedCatalogs = async (job: ImportJob) => {
 export type UndoProgress = { done: boolean; remaining: number; undone: number };
 
 /** One undo step (≤200 rows in a transaction); the page loops until `done`. */
-export const undoJobStep = async (jobId: string): Promise<UndoProgress> => {
-  const preview = await previewUndo(jobId);
+export const undoJobStep = async (
+  companyId: string,
+  jobId: string,
+): Promise<UndoProgress> => {
+  const preview = await previewUndo(companyId, jobId);
 
   if (!preview.allowed) {
     throw new ImportBlockedError(
@@ -511,7 +537,7 @@ export const undoJobStep = async (jobId: string): Promise<UndoProgress> => {
   const [job] = await db
     .select()
     .from(importJobs)
-    .where(eq(importJobs.id, jobId))
+    .where(and(eq(importJobs.companyId, companyId), eq(importJobs.id, jobId)))
     .limit(1);
 
   // Dependents first: contracts and schedules before the people they belong to.
@@ -519,7 +545,7 @@ export const undoJobStep = async (jobId: string): Promise<UndoProgress> => {
     const done = await undoBatch(job, sheet);
 
     if (done > 0) {
-      const remaining = await countUndoable(jobId);
+      const remaining = await countUndoable(companyId, jobId);
 
       return {
         done: false,
@@ -534,11 +560,18 @@ export const undoJobStep = async (jobId: string): Promise<UndoProgress> => {
   const [finished] = await db
     .update(importJobs)
     .set({ status: "undone", undoneAt: new Date() })
-    .where(and(eq(importJobs.id, jobId), eq(importJobs.status, "applied")))
+    .where(
+      and(
+        eq(importJobs.companyId, companyId),
+        eq(importJobs.id, jobId),
+        eq(importJobs.status, "applied"),
+      ),
+    )
     .returning();
 
   if (finished) {
     await recordAuditEvent({
+      companyId,
       actorUserId: job.actorUserId,
       resourceType: "people_import",
       resourceId: jobId,

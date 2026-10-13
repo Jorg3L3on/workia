@@ -2,13 +2,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AuthorizationError } from "@/lib/rbac/errors";
 
-const { requireAuthMock, requirePermissionMock } = vi.hoisted(() => ({
-  requireAuthMock: vi.fn(),
+const { requirePermissionMock } = vi.hoisted(() => ({
   requirePermissionMock: vi.fn(),
 }));
 
-vi.mock("@/lib/auth/session", () => ({ requireAuth: requireAuthMock }));
 vi.mock("@/lib/rbac", () => ({ requirePermission: requirePermissionMock }));
+// The company context checks the first permission; extra ones go through rbac.
+vi.mock("@/lib/tenant/context", () => ({
+  requireCompanyContext: async (permission: string) => {
+    await requirePermissionMock("u1", permission);
+    return { user: { id: "u1" }, companyId: "c1" };
+  },
+}));
 
 const grant = (granted: string[]) =>
   requirePermissionMock.mockImplementation(
@@ -22,7 +27,6 @@ const grant = (granted: string[]) =>
 describe("import/export guards", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    requireAuthMock.mockResolvedValue({ user: { id: "u1" } });
   });
 
   it("rejects import without people:import", async () => {

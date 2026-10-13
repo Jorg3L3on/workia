@@ -6,6 +6,9 @@
  * Keeps the official walkthrough expediente and never touches live
  * seed company people still in the active expediente.
  *
+ * Residue cleanup spans every company (test leftovers); the official demo
+ * person goes to --company <slug> (default: the default company).
+ *
  * Shipper (after merge):
  *   npm run db:cleanup-borrados
  *   npm run db:seed
@@ -113,7 +116,7 @@ export const cleanupBorradosResidue = async (
   return { removed: residue.length, names };
 };
 
-export const ensureOfficialDeletedDemoPerson = async () => {
+export const ensureOfficialDeletedDemoPerson = async (companyId: string) => {
   const { recordAuditEvent } = await import("@/lib/audit");
   const { db } = await import("@/lib/db");
   const { areas, people } = await import("@/lib/db/schema");
@@ -126,6 +129,7 @@ export const ensureOfficialDeletedDemoPerson = async () => {
     .from(people)
     .where(
       and(
+        eq(people.companyId, companyId),
         eq(people.nombres, OFFICIAL_DELETED_DEMO_PERSON.nombres),
         eq(
           people.apellidoPaterno,
@@ -146,9 +150,12 @@ export const ensureOfficialDeletedDemoPerson = async () => {
       await db
         .update(people)
         .set({ deletedAt })
-        .where(eq(people.id, existing.id));
+        .where(
+          and(eq(people.companyId, companyId), eq(people.id, existing.id)),
+        );
 
       await recordAuditEvent({
+        companyId,
         resourceType: "person",
         resourceId: existing.id,
         action: "delete",
@@ -173,7 +180,7 @@ export const ensureOfficialDeletedDemoPerson = async () => {
   const [rrhh] = await db
     .select({ id: areas.id })
     .from(areas)
-    .where(eq(areas.name, "RRHH"))
+    .where(and(eq(areas.companyId, companyId), eq(areas.name, "RRHH")))
     .limit(1);
 
   const today = new Date();
@@ -183,6 +190,7 @@ export const ensureOfficialDeletedDemoPerson = async () => {
   const [created] = await db
     .insert(people)
     .values({
+      companyId,
       nombres: OFFICIAL_DELETED_DEMO_PERSON.nombres,
       apellidoPaterno: OFFICIAL_DELETED_DEMO_PERSON.apellidoPaterno,
       apellidoMaterno: OFFICIAL_DELETED_DEMO_PERSON.apellidoMaterno,
@@ -198,6 +206,7 @@ export const ensureOfficialDeletedDemoPerson = async () => {
     .returning({ id: people.id });
 
   await recordAuditEvent({
+    companyId,
     resourceType: "person",
     resourceId: created.id,
     action: "create",
@@ -208,6 +217,7 @@ export const ensureOfficialDeletedDemoPerson = async () => {
   });
 
   await recordAuditEvent({
+    companyId,
     resourceType: "person",
     resourceId: created.id,
     action: "delete",
@@ -227,7 +237,9 @@ export const ensureOfficialDeletedDemoPerson = async () => {
 const runCli = async () => {
   const options = parseCliOptions();
   await cleanupBorradosResidue(options);
-  await ensureOfficialDeletedDemoPerson();
+
+  const { companyIdFromArgs } = await import("@/lib/tenant/companies");
+  await ensureOfficialDeletedDemoPerson(await companyIdFromArgs());
 };
 
 const invokedDirectly = process.argv[1]?.includes("cleanup-borrados-residue");

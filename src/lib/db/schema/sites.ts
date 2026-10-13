@@ -4,8 +4,11 @@ import {
   pgTable,
   text,
   timestamp,
+  unique,
   uuid,
 } from "drizzle-orm/pg-core";
+
+import { companies } from "./companies";
 
 export const siteKindEnum = pgEnum("site_kind", ["corporativo", "sucursal"]);
 
@@ -13,6 +16,9 @@ export const sites = pgTable(
   "sites",
   {
     id: uuid("id").defaultRandom().primaryKey(),
+    companyId: uuid("company_id")
+      .notNull()
+      .references(() => companies.id, { onDelete: "restrict" }),
     name: text("name").notNull(),
     kind: siteKindEnum("kind").notNull(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
@@ -24,7 +30,10 @@ export const sites = pgTable(
       .notNull()
       .$onUpdate(() => new Date()),
   },
-  (table) => [index("sites_deleted_at_idx").on(table.deletedAt)],
+  (table) => [
+    unique("sites_company_id_id_unique").on(table.companyId, table.id),
+    index("sites_deleted_at_idx").on(table.deletedAt),
+  ],
 );
 
 export type Site = typeof sites.$inferSelect;

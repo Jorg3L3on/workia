@@ -1,11 +1,13 @@
 import { relations, sql } from "drizzle-orm";
 import {
   date,
+  foreignKey,
   index,
   pgEnum,
   pgTable,
   text,
   timestamp,
+  unique,
   uniqueIndex,
   uuid,
   type AnyPgColumn,
@@ -13,6 +15,8 @@ import {
 
 import { areas, positions } from "./catalog";
 import { sites } from "./sites";
+
+import { companies } from "./companies";
 
 /**
  * One text blob per person (name, RFC, CURP, email) that list search runs
@@ -35,6 +39,9 @@ export const people = pgTable(
   "people",
   {
     id: uuid("id").defaultRandom().primaryKey(),
+    companyId: uuid("company_id")
+      .notNull()
+      .references(() => companies.id, { onDelete: "restrict" }),
     nombres: text("nombres").notNull(),
     apellidoPaterno: text("apellido_paterno").notNull(),
     apellidoMaterno: text("apellido_materno"),
@@ -68,6 +75,27 @@ export const people = pgTable(
       .$onUpdate(() => new Date()),
   },
   (table) => [
+    unique("people_company_id_id_unique").on(table.companyId, table.id),
+    foreignKey({
+      name: "people_company_area_fk",
+      columns: [table.companyId, table.areaId],
+      foreignColumns: [areas.companyId, areas.id],
+    }),
+    foreignKey({
+      name: "people_company_position_fk",
+      columns: [table.companyId, table.positionId],
+      foreignColumns: [positions.companyId, positions.id],
+    }),
+    foreignKey({
+      name: "people_company_manager_fk",
+      columns: [table.companyId, table.managerId],
+      foreignColumns: [table.companyId, table.id],
+    }),
+    foreignKey({
+      name: "people_company_site_fk",
+      columns: [table.companyId, table.siteId],
+      foreignColumns: [sites.companyId, sites.id],
+    }),
     index("people_status_idx").on(table.status),
     index("people_apellido_paterno_idx").on(table.apellidoPaterno),
     index("people_deleted_at_idx").on(table.deletedAt),
@@ -92,6 +120,9 @@ export const personSchedules = pgTable(
   "person_schedules",
   {
     id: uuid("id").defaultRandom().primaryKey(),
+    companyId: uuid("company_id")
+      .notNull()
+      .references(() => companies.id, { onDelete: "restrict" }),
     personId: uuid("person_id")
       .notNull()
       .references(() => people.id, { onDelete: "cascade" })
@@ -110,6 +141,12 @@ export const personSchedules = pgTable(
       .$onUpdate(() => new Date()),
   },
   (table) => [
+    index("person_schedules_company_id_idx").on(table.companyId),
+    foreignKey({
+      name: "person_schedules_company_person_fk",
+      columns: [table.companyId, table.personId],
+      foreignColumns: [people.companyId, people.id],
+    }),
     index("person_schedules_person_id_idx").on(table.personId),
     index("person_schedules_deleted_at_idx").on(table.deletedAt),
   ],

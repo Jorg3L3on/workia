@@ -9,6 +9,7 @@ import {
   snapshotPositionActivity,
 } from "@/lib/audit";
 import { db } from "@/lib/db";
+import { withTenant } from "@/lib/tenant/scope";
 import {
   activities,
   areas,
@@ -24,32 +25,56 @@ import {
   type PositionFormValues,
 } from "./schema";
 
-export const listAreas = async (options: { includeDeleted?: boolean } = {}) => {
-  const filters = options.includeDeleted ? undefined : isNull(areas.deletedAt);
-
-  return db.select().from(areas).where(filters).orderBy(asc(areas.name));
-};
-
-export const listActiveAreas = async () => {
+export const listAreas = async (
+  companyId: string,
+  options: { includeDeleted?: boolean } = {},
+) => {
   return db
     .select()
     .from(areas)
-    .where(and(isNull(areas.deletedAt), eq(areas.active, true)))
+    .where(
+      withTenant(
+        areas,
+        companyId,
+        options.includeDeleted ? undefined : isNull(areas.deletedAt),
+      ),
+    )
     .orderBy(asc(areas.name));
 };
 
-export const getAreaById = async (id: string) => {
-  const [area] = await db.select().from(areas).where(eq(areas.id, id)).limit(1);
+export const listActiveAreas = async (companyId: string) => {
+  return db
+    .select()
+    .from(areas)
+    .where(
+      withTenant(
+        areas,
+        companyId,
+        isNull(areas.deletedAt),
+        eq(areas.active, true),
+      ),
+    )
+    .orderBy(asc(areas.name));
+};
+
+export const getAreaById = async (companyId: string, id: string) => {
+  const [area] = await db
+    .select()
+    .from(areas)
+    .where(withTenant(areas, companyId, eq(areas.id, id)))
+    .limit(1);
   return area ?? null;
 };
 
 export const createArea = async (
+  companyId: string,
   input: AreaFormValues,
   actorUserId?: string | null,
 ) => {
   const [created] = await db
     .insert(areas)
     .values({
+      companyId,
       name: input.name,
       parentAreaId: input.parentAreaId?.trim() ? input.parentAreaId : null,
       active: input.active,
@@ -57,6 +82,7 @@ export const createArea = async (
     .returning();
 
   await recordAuditEvent({
+    companyId,
     actorUserId,
     resourceType: "area",
     resourceId: created.id,
@@ -71,11 +97,12 @@ export const createArea = async (
 };
 
 export const updateArea = async (
+  companyId: string,
   id: string,
   input: AreaFormValues,
   actorUserId?: string | null,
 ) => {
-  const existing = await getAreaById(id);
+  const existing = await getAreaById(companyId, id);
 
   if (!existing || existing.deletedAt) {
     return null;
@@ -90,7 +117,7 @@ export const updateArea = async (
       parentAreaId: input.parentAreaId?.trim() ? input.parentAreaId : null,
       active: input.active,
     })
-    .where(eq(areas.id, id))
+    .where(withTenant(areas, companyId, eq(areas.id, id)))
     .returning();
 
   if (!updated) {
@@ -105,6 +132,7 @@ export const updateArea = async (
   ]);
 
   await recordAuditEvent({
+    companyId,
     actorUserId,
     resourceType: "area",
     resourceId: id,
@@ -121,10 +149,11 @@ export const updateArea = async (
 };
 
 export const softDeleteArea = async (
+  companyId: string,
   id: string,
   actorUserId?: string | null,
 ) => {
-  const existing = await getAreaById(id);
+  const existing = await getAreaById(companyId, id);
 
   if (!existing || existing.deletedAt) {
     return null;
@@ -136,7 +165,7 @@ export const softDeleteArea = async (
   const [updated] = await db
     .update(areas)
     .set({ deletedAt, active: false })
-    .where(eq(areas.id, id))
+    .where(withTenant(areas, companyId, eq(areas.id, id)))
     .returning();
 
   if (!updated) {
@@ -144,6 +173,7 @@ export const softDeleteArea = async (
   }
 
   await recordAuditEvent({
+    companyId,
     actorUserId,
     resourceType: "area",
     resourceId: id,
@@ -159,9 +189,10 @@ export const softDeleteArea = async (
 };
 
 export const listPositions = async (
+  companyId: string,
   options: { includeDeleted?: boolean; areaId?: string } = {},
 ) => {
-  const filters = [];
+  const filters = [eq(positions.companyId, companyId)];
 
   if (!options.includeDeleted) {
     filters.push(isNull(positions.deletedAt));
@@ -171,22 +202,22 @@ export const listPositions = async (
     filters.push(eq(positions.areaId, options.areaId));
   }
 
-  const whereClause =
-    filters.length === 0
-      ? undefined
-      : filters.length === 1
-        ? filters[0]
-        : and(...filters);
-
   return db
     .select()
     .from(positions)
-    .where(whereClause)
+    .where(and(...filters))
     .orderBy(asc(positions.name));
 };
 
-export const listActivePositions = async (areaId?: string) => {
-  const filters = [isNull(positions.deletedAt), eq(positions.active, true)];
+export const listActivePositions = async (
+  companyId: string,
+  areaId?: string,
+) => {
+  const filters = [
+    eq(positions.companyId, companyId),
+    isNull(positions.deletedAt),
+    eq(positions.active, true),
+  ];
 
   if (areaId) {
     filters.push(eq(positions.areaId, areaId));
@@ -199,23 +230,25 @@ export const listActivePositions = async (areaId?: string) => {
     .orderBy(asc(positions.name));
 };
 
-export const getPositionById = async (id: string) => {
+export const getPositionById = async (companyId: string, id: string) => {
   const [position] = await db
     .select()
     .from(positions)
-    .where(eq(positions.id, id))
+    .where(withTenant(positions, companyId, eq(positions.id, id)))
     .limit(1);
 
   return position ?? null;
 };
 
 export const createPosition = async (
+  companyId: string,
   input: PositionFormValues,
   actorUserId?: string | null,
 ) => {
   const [created] = await db
     .insert(positions)
     .values({
+      companyId,
       name: input.name,
       areaId: input.areaId?.trim() ? input.areaId : null,
       active: input.active,
@@ -223,6 +256,7 @@ export const createPosition = async (
     .returning();
 
   await recordAuditEvent({
+    companyId,
     actorUserId,
     resourceType: "position",
     resourceId: created.id,
@@ -237,11 +271,12 @@ export const createPosition = async (
 };
 
 export const updatePosition = async (
+  companyId: string,
   id: string,
   input: PositionFormValues,
   actorUserId?: string | null,
 ) => {
-  const existing = await getPositionById(id);
+  const existing = await getPositionById(companyId, id);
 
   if (!existing || existing.deletedAt) {
     return null;
@@ -256,7 +291,7 @@ export const updatePosition = async (
       areaId: input.areaId?.trim() ? input.areaId : null,
       active: input.active,
     })
-    .where(eq(positions.id, id))
+    .where(withTenant(positions, companyId, eq(positions.id, id)))
     .returning();
 
   if (!updated) {
@@ -267,6 +302,7 @@ export const updatePosition = async (
   const changes = buildChanges(before, after, ["name", "areaId", "active"]);
 
   await recordAuditEvent({
+    companyId,
     actorUserId,
     resourceType: "position",
     resourceId: id,
@@ -283,10 +319,11 @@ export const updatePosition = async (
 };
 
 export const softDeletePosition = async (
+  companyId: string,
   id: string,
   actorUserId?: string | null,
 ) => {
-  const existing = await getPositionById(id);
+  const existing = await getPositionById(companyId, id);
 
   if (!existing || existing.deletedAt) {
     return null;
@@ -298,7 +335,7 @@ export const softDeletePosition = async (
   const [updated] = await db
     .update(positions)
     .set({ deletedAt, active: false })
-    .where(eq(positions.id, id))
+    .where(withTenant(positions, companyId, eq(positions.id, id)))
     .returning();
 
   if (!updated) {
@@ -306,6 +343,7 @@ export const softDeletePosition = async (
   }
 
   await recordAuditEvent({
+    companyId,
     actorUserId,
     resourceType: "position",
     resourceId: id,
@@ -321,50 +359,63 @@ export const softDeletePosition = async (
 };
 
 export const listActivities = async (
+  companyId: string,
   options: { includeDeleted?: boolean } = {},
 ) => {
-  const filters = options.includeDeleted
-    ? undefined
-    : isNull(activities.deletedAt);
-
   return db
     .select()
     .from(activities)
-    .where(filters)
+    .where(
+      withTenant(
+        activities,
+        companyId,
+        options.includeDeleted ? undefined : isNull(activities.deletedAt),
+      ),
+    )
     .orderBy(asc(activities.name));
 };
 
-export const listAssignableActivities = async () => {
+export const listAssignableActivities = async (companyId: string) => {
   return db
     .select()
     .from(activities)
-    .where(and(isNull(activities.deletedAt), eq(activities.active, true)))
+    .where(
+      withTenant(
+        activities,
+        companyId,
+        isNull(activities.deletedAt),
+        eq(activities.active, true),
+      ),
+    )
     .orderBy(asc(activities.name));
 };
 
-export const getActivityById = async (id: string) => {
+export const getActivityById = async (companyId: string, id: string) => {
   const [activity] = await db
     .select()
     .from(activities)
-    .where(eq(activities.id, id))
+    .where(withTenant(activities, companyId, eq(activities.id, id)))
     .limit(1);
 
   return activity ?? null;
 };
 
 export const createActivity = async (
+  companyId: string,
   input: ActivityFormValues,
   actorUserId?: string | null,
 ) => {
   const [created] = await db
     .insert(activities)
     .values({
+      companyId,
       name: input.name,
       active: input.active,
     })
     .returning();
 
   await recordAuditEvent({
+    companyId,
     actorUserId,
     resourceType: "activity",
     resourceId: created.id,
@@ -379,11 +430,12 @@ export const createActivity = async (
 };
 
 export const updateActivity = async (
+  companyId: string,
   id: string,
   input: ActivityFormValues,
   actorUserId?: string | null,
 ) => {
-  const existing = await getActivityById(id);
+  const existing = await getActivityById(companyId, id);
 
   if (!existing || existing.deletedAt) {
     return null;
@@ -397,7 +449,7 @@ export const updateActivity = async (
       name: input.name,
       active: input.active,
     })
-    .where(eq(activities.id, id))
+    .where(withTenant(activities, companyId, eq(activities.id, id)))
     .returning();
 
   if (!updated) {
@@ -408,6 +460,7 @@ export const updateActivity = async (
   const changes = buildChanges(before, after, ["name", "active"]);
 
   await recordAuditEvent({
+    companyId,
     actorUserId,
     resourceType: "activity",
     resourceId: id,
@@ -424,10 +477,11 @@ export const updateActivity = async (
 };
 
 export const softDeleteActivity = async (
+  companyId: string,
   id: string,
   actorUserId?: string | null,
 ) => {
-  const existing = await getActivityById(id);
+  const existing = await getActivityById(companyId, id);
 
   if (!existing || existing.deletedAt) {
     return null;
@@ -439,7 +493,7 @@ export const softDeleteActivity = async (
   const [updated] = await db
     .update(activities)
     .set({ deletedAt, active: false })
-    .where(eq(activities.id, id))
+    .where(withTenant(activities, companyId, eq(activities.id, id)))
     .returning();
 
   if (!updated) {
@@ -447,6 +501,7 @@ export const softDeleteActivity = async (
   }
 
   await recordAuditEvent({
+    companyId,
     actorUserId,
     resourceType: "activity",
     resourceId: id,
@@ -461,7 +516,10 @@ export const softDeleteActivity = async (
   return updated;
 };
 
-export const listActivitiesByPositionIds = async (positionIds: string[]) => {
+export const listActivitiesByPositionIds = async (
+  companyId: string,
+  positionIds: string[],
+) => {
   const grouped = new Map<
     string,
     Array<{ id: string; name: string; active: boolean }>
@@ -485,7 +543,9 @@ export const listActivitiesByPositionIds = async (positionIds: string[]) => {
     .from(positionActivities)
     .innerJoin(activities, eq(positionActivities.activityId, activities.id))
     .where(
-      and(
+      withTenant(
+        positionActivities,
+        companyId,
         inArray(positionActivities.positionId, positionIds),
         isNull(activities.deletedAt),
       ),
@@ -503,13 +563,19 @@ export const listActivitiesByPositionIds = async (positionIds: string[]) => {
   return grouped;
 };
 
-export const listActivitiesForPosition = async (positionId: string) => {
-  const grouped = await listActivitiesByPositionIds([positionId]);
+export const listActivitiesForPosition = async (
+  companyId: string,
+  positionId: string,
+) => {
+  const grouped = await listActivitiesByPositionIds(companyId, [positionId]);
   return grouped.get(positionId) ?? [];
 };
 
 /** Activities of the person's position, resolved by person id so pages can fetch them in parallel with the person. */
-export const listActivitiesForPersonPosition = async (personId: string) =>
+export const listActivitiesForPersonPosition = async (
+  companyId: string,
+  personId: string,
+) =>
   db
     .select({
       id: activities.id,
@@ -522,17 +588,25 @@ export const listActivitiesForPersonPosition = async (personId: string) =>
       eq(positionActivities.positionId, people.positionId),
     )
     .innerJoin(activities, eq(positionActivities.activityId, activities.id))
-    .where(and(eq(people.id, personId), isNull(activities.deletedAt)))
+    .where(
+      withTenant(
+        people,
+        companyId,
+        eq(people.id, personId),
+        isNull(activities.deletedAt),
+      ),
+    )
     .orderBy(asc(activities.name));
 
 export const assignActivityToPosition = async (
+  companyId: string,
   positionId: string,
   activityId: string,
   actorUserId?: string | null,
 ) => {
   const [position, activity] = await Promise.all([
-    getPositionById(positionId),
-    getActivityById(activityId),
+    getPositionById(companyId, positionId),
+    getActivityById(companyId, activityId),
   ]);
 
   if (!position || position.deletedAt) {
@@ -545,12 +619,13 @@ export const assignActivityToPosition = async (
 
   const [inserted] = await db
     .insert(positionActivities)
-    .values({ positionId, activityId })
+    .values({ companyId, positionId, activityId })
     .onConflictDoNothing()
     .returning();
 
   if (inserted) {
     await recordAuditEvent({
+      companyId,
       actorUserId,
       resourceType: "position_activity",
       resourceId: `${positionId}:${activityId}`,
@@ -571,19 +646,22 @@ export const assignActivityToPosition = async (
 };
 
 export const unassignActivityFromPosition = async (
+  companyId: string,
   positionId: string,
   activityId: string,
   actorUserId?: string | null,
 ) => {
   const [position, activity] = await Promise.all([
-    getPositionById(positionId),
-    getActivityById(activityId),
+    getPositionById(companyId, positionId),
+    getActivityById(companyId, activityId),
   ]);
 
   const [removed] = await db
     .delete(positionActivities)
     .where(
-      and(
+      withTenant(
+        positionActivities,
+        companyId,
         eq(positionActivities.positionId, positionId),
         eq(positionActivities.activityId, activityId),
       ),
@@ -592,6 +670,7 @@ export const unassignActivityFromPosition = async (
 
   if (removed) {
     await recordAuditEvent({
+      companyId,
       actorUserId,
       resourceType: "position_activity",
       resourceId: `${positionId}:${activityId}`,

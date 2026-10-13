@@ -83,6 +83,8 @@ export type AuditRequestMeta = {
 };
 
 export type RecordAuditEventInput = {
+  /** Company the event belongs to; platform events use the company they affect. */
+  companyId: string;
   actorUserId?: string | null;
   resourceType: AuditResourceType;
   resourceId: string;
@@ -94,6 +96,7 @@ export type RecordAuditEventInput = {
 };
 
 export type ListAuditEventsOptions = {
+  companyId: string;
   resourceType?: AuditResourceType;
   resourceId?: string;
   actorUserId?: string;

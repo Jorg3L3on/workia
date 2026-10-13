@@ -15,6 +15,7 @@ import type { Contract, ContractTemplate } from "@/lib/db/schema";
 
 const buildContract = (id: string, personId: string): Contract => ({
   id,
+  companyId: "company-01",
   personId,
   type: "determinado",
   startDate: "2026-01-01",
@@ -37,6 +38,7 @@ const buildContract = (id: string, personId: string): Contract => ({
 const templates: ContractTemplate[] = [
   {
     id: "template-01",
+    companyId: "company-01",
     name: "Plantilla demo",
     body: "Cuerpo demo",
     active: true,

@@ -35,7 +35,7 @@ const RESUMABLE = ["validating", "in_review", "applying", "failed"];
 const ImportacionesPage = async () => {
   const session = await requirePeopleImport();
   const [jobs, canUndo] = await Promise.all([
-    listImportJobs(),
+    listImportJobs(session.companyId),
     userHasPermission(session.user.id, "people:delete"),
   ]);
 

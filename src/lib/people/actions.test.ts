@@ -89,7 +89,10 @@ describe("createPersonAction", () => {
   });
 
   it("creates a person on happy path", async () => {
-    requirePeopleCreateMock.mockResolvedValue({ user: { id: "user-1" } });
+    requirePeopleCreateMock.mockResolvedValue({
+      user: { id: "user-1" },
+      companyId: "company-1",
+    });
     createPersonMock.mockResolvedValue({ id: "person-1" });
 
     const { createPersonAction } = await import("@/lib/people/actions");
@@ -115,6 +118,7 @@ describe("createPersonAction", () => {
     );
 
     expect(createPersonMock).toHaveBeenCalledWith(
+      "company-1",
       expect.objectContaining({
         nombres: "Persona",
         apellidoPaterno: "Demo",

@@ -10,22 +10,24 @@ export const dynamic = "force-dynamic";
 type Context = { params: Promise<{ jobId: string }> };
 
 export const GET = async (_request: Request, { params }: Context) => {
+  let session;
+
   try {
-    await requirePeopleImport();
+    session = await requirePeopleImport();
   } catch (error) {
     return importApiError(error);
   }
 
   const { jobId } = await params;
 
-  if (!(await getImportJob(jobId))) {
+  if (!(await getImportJob(session.companyId, jobId))) {
     return NextResponse.json(
       { error: "No encontramos esta importación." },
       { status: 404 },
     );
   }
 
-  const { count, file } = await buildErrorReport(jobId);
+  const { count, file } = await buildErrorReport(session.companyId, jobId);
 
   if (count === 0) {
     return NextResponse.json(

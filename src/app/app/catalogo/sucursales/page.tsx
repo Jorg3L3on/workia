@@ -32,7 +32,7 @@ const SucursalesCatalogPage = async ({
   const { saved, deleted } = await searchParams;
 
   const [siteRows, canCreateSite, canDeleteSite] = await Promise.all([
-    listSites(),
+    listSites(session.companyId),
     userHasPermission(session.user.id, "sites:create"),
     userHasPermission(session.user.id, "sites:delete"),
   ]);

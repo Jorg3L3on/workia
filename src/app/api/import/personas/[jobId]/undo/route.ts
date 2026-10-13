@@ -12,8 +12,10 @@ type Context = { params: Promise<{ jobId: string }> };
 
 /** Can this import be undone, and if not, which records got in the way. */
 export const GET = async (_request: Request, { params }: Context) => {
+  let session;
+
   try {
-    await requirePeopleUndoImport();
+    session = await requirePeopleUndoImport();
   } catch (error) {
     return importApiError(error);
   }
@@ -21,7 +23,7 @@ export const GET = async (_request: Request, { params }: Context) => {
   const { jobId } = await params;
 
   try {
-    return NextResponse.json(await previewUndo(jobId));
+    return NextResponse.json(await previewUndo(session.companyId, jobId));
   } catch (error) {
     if (error instanceof ImportBlockedError) {
       return NextResponse.json({ error: error.message }, { status: 404 });
@@ -33,8 +35,10 @@ export const GET = async (_request: Request, { params }: Context) => {
 
 /** One undo step (≤200 rows in one transaction); the page loops until `done`. */
 export const POST = async (_request: Request, { params }: Context) => {
+  let session;
+
   try {
-    await requirePeopleUndoImport();
+    session = await requirePeopleUndoImport();
   } catch (error) {
     return importApiError(error);
   }
@@ -42,7 +46,7 @@ export const POST = async (_request: Request, { params }: Context) => {
   const { jobId } = await params;
 
   try {
-    return NextResponse.json(await undoJobStep(jobId));
+    return NextResponse.json(await undoJobStep(session.companyId, jobId));
   } catch (error) {
     if (error instanceof ImportBlockedError) {
       return NextResponse.json(

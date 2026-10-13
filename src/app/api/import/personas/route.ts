@@ -25,8 +25,8 @@ export const POST = async (request: Request) => {
   }
 
   const [previous, job] = await Promise.all([
-    findJobsByHash(parsed.data.fileHash),
-    createImportJob(parsed.data, session.user.id),
+    findJobsByHash(session.companyId, parsed.data.fileHash),
+    createImportJob(session.companyId, parsed.data, session.user.id),
   ]);
 
   return NextResponse.json({

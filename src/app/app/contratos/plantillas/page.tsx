@@ -33,7 +33,7 @@ const PlantillasPage = async ({ searchParams }: PlantillasPageProps) => {
   const { saved, deactivated, deleted, error } = await searchParams;
 
   const [templates, canCreate] = await Promise.all([
-    listContractTemplates(true),
+    listContractTemplates(session.companyId, true),
     userHasPermission(session.user.id, "contract_templates:create"),
   ]);
 

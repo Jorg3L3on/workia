@@ -49,6 +49,8 @@ export type ExportFilters = {
 };
 
 export type ExportOptions = {
+  /** Only this company's people are exported. */
+  companyId: string;
   format: "xlsx" | "csv";
   filters: ExportFilters;
   /** Contracts need contracts:read; the caller decides. */
@@ -57,8 +59,13 @@ export type ExportOptions = {
 
 const manager = alias(people, "manager");
 
-const buildWhere = (filters: ExportFilters, afterId?: string) =>
+const buildWhere = (
+  companyId: string,
+  filters: ExportFilters,
+  afterId?: string,
+) =>
   and(
+    eq(people.companyId, companyId),
     filters.deleted ? isNotNull(people.deletedAt) : isNull(people.deletedAt),
     filters.status ? eq(people.status, filters.status) : undefined,
     filters.areaId ? eq(people.areaId, filters.areaId) : undefined,
@@ -76,6 +83,7 @@ const buildWhere = (filters: ExportFilters, afterId?: string) =>
 
 /** Keyset page ordered by id: stable under concurrent edits, no OFFSET scans. */
 const fetchPeoplePage = async (
+  companyId: string,
   filters: ExportFilters,
   afterId?: string,
 ): Promise<ExportPerson[]> =>
@@ -104,11 +112,12 @@ const fetchPeoplePage = async (
     .leftJoin(positions, eq(people.positionId, positions.id))
     .leftJoin(sites, eq(people.siteId, sites.id))
     .leftJoin(manager, eq(people.managerId, manager.id))
-    .where(buildWhere(filters, afterId))
+    .where(buildWhere(companyId, filters, afterId))
     .orderBy(asc(people.id))
     .limit(EXPORT_PAGE_SIZE);
 
 const fetchSchedules = async (
+  companyId: string,
   personIds: string[],
 ): Promise<ExportSchedule[]> =>
   personIds.length === 0
@@ -124,12 +133,14 @@ const fetchSchedules = async (
         .from(personSchedules)
         .where(
           and(
+            eq(personSchedules.companyId, companyId),
             inArray(personSchedules.personId, personIds),
             isNull(personSchedules.deletedAt),
           ),
         );
 
 const fetchContracts = async (
+  companyId: string,
   personIds: string[],
 ): Promise<ExportContract[]> =>
   personIds.length === 0
@@ -147,6 +158,7 @@ const fetchContracts = async (
         .from(contracts)
         .where(
           and(
+            eq(contracts.companyId, companyId),
             inArray(contracts.personId, personIds),
             isNull(contracts.deletedAt),
           ),
@@ -225,15 +237,21 @@ export const writeExport = async (
   let written = 0;
 
   for (;;) {
-    const page = await fetchPeoplePage(options.filters, afterId);
+    const page = await fetchPeoplePage(
+      options.companyId,
+      options.filters,
+      afterId,
+    );
 
     if (page.length === 0) break;
 
     const ids = page.map((person) => person.id);
     const [schedules, contractRows] = needsExtras
       ? await Promise.all([
-          fetchSchedules(ids),
-          options.includeContracts ? fetchContracts(ids) : Promise.resolve([]),
+          fetchSchedules(options.companyId, ids),
+          options.includeContracts
+            ? fetchContracts(options.companyId, ids)
+            : Promise.resolve([]),
         ])
       : [[], []];
     const scheduleByPerson = new Map(schedules.map((s) => [s.personId, s]));

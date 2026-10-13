@@ -4,11 +4,19 @@ import bcrypt from "bcryptjs";
 config({ path: ".env.local" });
 config();
 
+const SECOND_DEMO_COMPANY = {
+  name: "Comercial del Norte",
+  slug: "comercial-del-norte",
+  legalName: "Comercial del Norte Demo, S.A. de C.V.",
+};
+
 const seed = async () => {
   const { eq } = await import("drizzle-orm");
   const { db } = await import("@/lib/db");
-  const { permissions, rolePermissions, roles, userRoles, users } =
+  const { companyMemberships, permissions, rolePermissions, roles, users } =
     await import("@/lib/db/schema");
+  const { DEFAULT_COMPANY, ensureCompany } =
+    await import("@/lib/tenant/companies");
   const {
     DEFAULT_USERS,
     DEMO_PASSWORD,
@@ -24,6 +32,19 @@ const seed = async () => {
   } = await import("./demo-company-seed");
   const { cleanupBorradosResidue, ensureOfficialDeletedDemoPerson } =
     await import("./cleanup-borrados-residue");
+
+  const isLocalDatabase = ["localhost", "127.0.0.1", "[::1]"].includes(
+    new URL(process.env.DATABASE_URL ?? "postgresql://x@localhost/x").hostname,
+  );
+  // A second demo company shows isolation locally; never created in production
+  // unless asked for explicitly.
+  const seedSecondCompany =
+    isLocalDatabase || process.env.SEED_DEMO_SECOND_COMPANY === "1";
+
+  const defaultCompany = await ensureCompany(DEFAULT_COMPANY);
+  const secondCompany = seedSecondCompany
+    ? await ensureCompany(SECOND_DEMO_COMPANY)
+    : null;
 
   console.log("Seeding RBAC data...");
 
@@ -58,6 +79,28 @@ const seed = async () => {
 
   const roleRows = await db.select().from(roles);
   const roleBySlug = new Map(roleRows.map((role) => [role.slug, role.id]));
+
+  /** Membership of `userId` in `companyId` with `roleSlug`; re-running keeps it in sync. */
+  const addMembership = async (
+    userId: string,
+    companyId: string,
+    roleSlug: string,
+    isDefault: boolean,
+  ) => {
+    const roleId = roleBySlug.get(roleSlug);
+
+    if (!roleId) {
+      return;
+    }
+
+    await db
+      .insert(companyMemberships)
+      .values({ userId, companyId, roleId, isDefault })
+      .onConflictDoUpdate({
+        target: [companyMemberships.userId, companyMemberships.companyId],
+        set: { roleId, status: "activa" },
+      });
+  };
 
   for (const role of ROLES) {
     const roleId = roleBySlug.get(role.slug);
@@ -103,13 +146,23 @@ const seed = async () => {
           .limit(1)
       )[0]?.id;
 
-    const roleId = roleBySlug.get(user.roleSlug);
-
-    if (!userId || !roleId) {
+    if (!userId) {
       continue;
     }
 
-    await db.insert(userRoles).values({ userId, roleId }).onConflictDoNothing();
+    await addMembership(userId, defaultCompany.id, user.roleSlug, true);
+
+    if (user.roleSlug === "super_admin") {
+      // The demo super admin also runs the platform (companies, members).
+      await db
+        .update(users)
+        .set({ isPlatformAdmin: true })
+        .where(eq(users.id, userId));
+
+      if (secondCompany) {
+        await addMembership(userId, secondCompany.id, "admin", false);
+      }
+    }
   }
 
   const rrhhEmail = process.env.DEMO_RRHH_EMAIL ?? DEMO_RRHH_FALLBACK.email;
@@ -157,23 +210,30 @@ const seed = async () => {
     console.log(`RRHH demo user present — password unchanged (${rrhhEmail}).`);
   }
 
-  const rrhhRoleId = roleBySlug.get(rrhhRoleSlug);
+  if (rrhhUserId) {
+    await addMembership(rrhhUserId, defaultCompany.id, rrhhRoleSlug, true);
 
-  if (rrhhUserId && rrhhRoleId) {
-    await db
-      .insert(userRoles)
-      .values({ userId: rrhhUserId, roleId: rrhhRoleId })
-      .onConflictDoNothing();
+    // Same person, another role elsewhere: admin here, viewer there.
+    if (secondCompany) {
+      await addMembership(rrhhUserId, secondCompany.id, "viewer", false);
+    }
   }
 
   console.log("RBAC seed completed.");
 
-  await seedDemoCompany();
-  await seedDemoResguardo();
-  await seedDemoActivities();
-  await seedDemoSchedules();
+  await seedDemoCompany(defaultCompany.id);
+  await seedDemoResguardo(defaultCompany.id);
+  await seedDemoActivities(defaultCompany.id);
+  await seedDemoSchedules(defaultCompany.id);
   await cleanupBorradosResidue();
-  await ensureOfficialDeletedDemoPerson();
+  await ensureOfficialDeletedDemoPerson(defaultCompany.id);
+
+  if (secondCompany) {
+    await seedDemoCompany(secondCompany.id, { personIndexOffset: 40 });
+    await seedDemoResguardo(secondCompany.id);
+    await seedDemoActivities(secondCompany.id);
+    console.log(`Second demo company seeded: ${secondCompany.name}.`);
+  }
 
   console.log("Seed finished. Use demo credentials documented in README.");
 };
