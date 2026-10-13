@@ -8,7 +8,10 @@ import { createHash, randomUUID } from "node:crypto";
 
 import { eq } from "drizzle-orm";
 
-import { db } from "@/lib/db";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { Pool } from "pg";
+
+import * as schema from "@/lib/db/schema";
 import {
   activities,
   areas,
@@ -32,6 +35,19 @@ import {
   users,
 } from "@/lib/db/schema";
 import { PERMISSIONS, ROLES } from "@/lib/db/schema/types";
+
+/**
+ * The test's own connection, as the database owner: fixtures and assertions
+ * see every company's rows even when the app runs under row-level security.
+ */
+export const ownerDb = drizzle(
+  new Pool({
+    connectionString:
+      process.env.TEST_OWNER_DATABASE_URL ?? process.env.DATABASE_URL,
+  }),
+  { schema },
+);
+const db = ownerDb;
 
 /** Permissions and role templates, as the seed creates them. Idempotent. */
 export const seedRbac = async () => {

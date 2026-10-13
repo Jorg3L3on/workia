@@ -1,7 +1,7 @@
 import { and, asc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 
 import { recordAuditEvent } from "@/lib/audit";
-import { db, withTransaction, type DbTransaction } from "@/lib/db";
+import { db, tdb, withTransaction, type DbTransaction } from "@/lib/db";
 import {
   auditEvents,
   contracts,
@@ -131,7 +131,7 @@ const findBlockers = async (
 };
 
 const countUndoable = async (companyId: string, jobId: string) => {
-  const [row] = await db
+  const [row] = await tdb(companyId)
     .select({ count: sql<number>`count(*)::int` })
     .from(importRows)
     .where(
@@ -150,7 +150,7 @@ export const previewUndo = async (
   companyId: string,
   jobId: string,
 ): Promise<UndoPreview> => {
-  const [job] = await db
+  const [job] = await tdb(companyId)
     .select()
     .from(importJobs)
     .where(and(eq(importJobs.companyId, companyId), eq(importJobs.id, jobId)))
@@ -191,7 +191,7 @@ export const previewUndo = async (
     };
   }
 
-  const { blockers, total } = await findBlockers(db, job);
+  const { blockers, total } = await findBlockers(tdb(companyId), job);
 
   if (total > 0) {
     return {
@@ -480,7 +480,7 @@ const undoBatch = async (
       );
 
     return rows.length;
-  });
+  }, job.companyId);
 
 /** Removes catalog entries the import created, unless something active uses them. */
 const removeCreatedCatalogs = async (job: ImportJob) => {
@@ -493,7 +493,7 @@ const removeCreatedCatalogs = async (job: ImportJob) => {
   const now = new Date();
 
   if (created.positions.length > 0) {
-    await db.execute(sql`
+    await tdb(job.companyId).execute(sql`
       update positions set deleted_at = ${now}
       where company_id = ${job.companyId} and id in ${uuidList(created.positions)} and deleted_at is null
         and not exists (select 1 from people p where p.position_id = positions.id and p.deleted_at is null)
@@ -501,7 +501,7 @@ const removeCreatedCatalogs = async (job: ImportJob) => {
   }
 
   if (created.areas.length > 0) {
-    await db.execute(sql`
+    await tdb(job.companyId).execute(sql`
       update areas set deleted_at = ${now}
       where company_id = ${job.companyId} and id in ${uuidList(created.areas)} and deleted_at is null
         and not exists (select 1 from people p where p.area_id = areas.id and p.deleted_at is null)
@@ -510,7 +510,7 @@ const removeCreatedCatalogs = async (job: ImportJob) => {
   }
 
   if (created.sites.length > 0) {
-    await db.execute(sql`
+    await tdb(job.companyId).execute(sql`
       update sites set deleted_at = ${now}
       where company_id = ${job.companyId} and id in ${uuidList(created.sites)} and deleted_at is null
         and not exists (select 1 from people p where p.site_id = sites.id and p.deleted_at is null)
@@ -534,7 +534,7 @@ export const undoJobStep = async (
     );
   }
 
-  const [job] = await db
+  const [job] = await tdb(companyId)
     .select()
     .from(importJobs)
     .where(and(eq(importJobs.companyId, companyId), eq(importJobs.id, jobId)))
@@ -557,7 +557,7 @@ export const undoJobStep = async (
 
   await removeCreatedCatalogs(job);
 
-  const [finished] = await db
+  const [finished] = await tdb(companyId)
     .update(importJobs)
     .set({ status: "undone", undoneAt: new Date() })
     .where(

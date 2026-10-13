@@ -1,7 +1,7 @@
 import { asc, eq, isNull } from "drizzle-orm";
 
 import { buildChanges, recordAuditEvent, snapshotSite } from "@/lib/audit";
-import { db } from "@/lib/db";
+import { tdb } from "@/lib/db";
 import { rethrowDuplicate } from "@/lib/db/errors";
 import { sites } from "@/lib/db/schema";
 import { withTenant } from "@/lib/tenant/scope";
@@ -12,7 +12,7 @@ export const listSites = async (
   companyId: string,
   options: { includeDeleted?: boolean } = {},
 ) => {
-  return db
+  return tdb(companyId)
     .select()
     .from(sites)
     .where(
@@ -26,7 +26,7 @@ export const listSites = async (
 };
 
 export const listActiveSites = async (companyId: string) => {
-  return db
+  return tdb(companyId)
     .select()
     .from(sites)
     .where(withTenant(sites, companyId, isNull(sites.deletedAt)))
@@ -34,7 +34,7 @@ export const listActiveSites = async (companyId: string) => {
 };
 
 export const getSiteById = async (companyId: string, id: string) => {
-  const [site] = await db
+  const [site] = await tdb(companyId)
     .select()
     .from(sites)
     .where(withTenant(sites, companyId, eq(sites.id, id)))
@@ -47,7 +47,7 @@ export const createSite = async (
   input: SiteFormValues,
   actorUserId?: string | null,
 ) => {
-  const [created] = await db
+  const [created] = await tdb(companyId)
     .insert(sites)
     .values({
       companyId,
@@ -86,7 +86,7 @@ export const updateSite = async (
 
   const before = snapshotSite(existing);
 
-  const [updated] = await db
+  const [updated] = await tdb(companyId)
     .update(sites)
     .set({
       name: input.name,
@@ -132,7 +132,7 @@ export const softDeleteSite = async (
   const before = snapshotSite(existing);
   const deletedAt = new Date();
 
-  const [updated] = await db
+  const [updated] = await tdb(companyId)
     .update(sites)
     .set({ deletedAt })
     .where(withTenant(sites, companyId, eq(sites.id, id)))

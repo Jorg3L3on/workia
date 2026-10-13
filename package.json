@@ -25,7 +25,8 @@
     "check:migrations": "tsx scripts/check-migration-safety.ts",
     "test:db": "vitest run -c vitest.db.config.ts",
     "db:report-duplicates": "tsx scripts/report-duplicates.ts",
-    "check:idor": "tsx scripts/check-idor-coverage.ts"
+    "check:idor": "tsx scripts/check-idor-coverage.ts",
+    "test:db:rls": "TEST_RLS=1 vitest run -c vitest.db.config.ts"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.3",

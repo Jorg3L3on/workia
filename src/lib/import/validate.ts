@@ -1,6 +1,6 @@
 import { and, asc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 
-import { db, type DbExecutor } from "@/lib/db";
+import { tdb, type DbExecutor } from "@/lib/db";
 import {
   areas,
   importJobs,
@@ -80,11 +80,11 @@ export const loadCatalogIndex = async (
   companyId: string,
 ): Promise<CatalogIndex> => {
   const [areaRows, positionRows, siteRows] = await Promise.all([
-    db
+    tdb(companyId)
       .select({ id: areas.id, name: areas.name })
       .from(areas)
       .where(and(eq(areas.companyId, companyId), isNull(areas.deletedAt))),
-    db
+    tdb(companyId)
       .select({
         id: positions.id,
         name: positions.name,
@@ -94,7 +94,7 @@ export const loadCatalogIndex = async (
       .where(
         and(eq(positions.companyId, companyId), isNull(positions.deletedAt)),
       ),
-    db
+    tdb(companyId)
       .select({ id: sites.id, name: sites.name })
       .from(sites)
       .where(and(eq(sites.companyId, companyId), isNull(sites.deletedAt))),
@@ -122,7 +122,7 @@ const str = (value: unknown) =>
 
 /** ID/CURP/RFC of every Personas row in the job, for duplicates and managers. */
 const loadFileKeys = async (companyId: string, jobId: string) => {
-  const rows = await db
+  const rows = await tdb(companyId)
     .select({
       id: importRows.id,
       rowNumber: importRows.rowNumber,
@@ -158,7 +158,7 @@ const loadNssHolders = async (companyId: string, nssValues: string[]) => {
     return new Map<string, string>();
   }
 
-  const rows = await db
+  const rows = await tdb(companyId)
     .select({ id: people.id, nss: people.nss })
     .from(people)
     .where(
@@ -175,7 +175,7 @@ const loadNssHolders = async (companyId: string, nssValues: string[]) => {
 export const loadLookups = async (
   companyId: string,
   rows: KeyedRow[],
-  executor: DbExecutor = db,
+  executor: DbExecutor = tdb(companyId),
 ): Promise<PersonLookups> => {
   const ids = [
     ...new Set(
@@ -234,7 +234,7 @@ const loadPossibleDuplicates = async (
   }
 
   const birthDates = [...new Set(keys.map((key) => key.fechaNacimiento))];
-  const found = await db
+  const found = await tdb(companyId)
     .select({
       nombres: people.nombres,
       apellidoPaterno: people.apellidoPaterno,
@@ -274,7 +274,7 @@ const saveOutcomes = async (companyId: string, updates: RowUpdate[]) => {
     target_contract_id: outcome.targetContractId ?? null,
   }));
 
-  await db.execute(sql`
+  await tdb(companyId).execute(sql`
     update import_rows r set
       action = v.action::import_row_action,
       errors = v.errors,
@@ -306,7 +306,7 @@ const countPending = async (
   jobId: string,
   sheet?: string,
 ) => {
-  const [row] = await db
+  const [row] = await tdb(companyId)
     .select({ count: sql<number>`count(*)::int` })
     .from(importRows)
     .where(
@@ -331,7 +331,7 @@ export const validatePersonasChunk = async (
   jobId: string,
   limit = VALIDATE_CHUNK_SIZE,
 ): Promise<ValidateProgress> => {
-  const [job] = await db
+  const [job] = await tdb(companyId)
     .select()
     .from(importJobs)
     .where(and(eq(importJobs.companyId, companyId), eq(importJobs.id, jobId)))
@@ -341,7 +341,7 @@ export const validatePersonasChunk = async (
     throw new Error("La importación no está en validación.");
   }
 
-  const pending = await db
+  const pending = await tdb(companyId)
     .select({
       id: importRows.id,
       rowNumber: importRows.rowNumber,
@@ -485,7 +485,7 @@ type PersonRow = {
  * cycles, and records the manager change in the row's diff.
  */
 export const resolveManagers = async (companyId: string, jobId: string) => {
-  const rows = (await db
+  const rows = (await tdb(companyId)
     .select({
       id: importRows.id,
       rowNumber: importRows.rowNumber,
@@ -529,7 +529,7 @@ export const resolveManagers = async (companyId: string, jobId: string) => {
     .map((value) => identifierOrNull(value)!);
   const [existingManagers, links] = await Promise.all([
     ids.length || curps.length
-      ? db
+      ? tdb(companyId)
           .select({ id: people.id, curp: people.curp })
           .from(people)
           .where(
@@ -543,7 +543,7 @@ export const resolveManagers = async (companyId: string, jobId: string) => {
             ),
           )
       : Promise.resolve([] as { id: string; curp: string | null }[]),
-    db
+    tdb(companyId)
       .select({ id: people.id, managerId: people.managerId })
       .from(people)
       .where(and(eq(people.companyId, companyId), isNull(people.deletedAt))),
@@ -679,7 +679,7 @@ export const validateHorariosChunk = async (
   jobId: string,
   limit = VALIDATE_CHUNK_SIZE,
 ): Promise<ValidateProgress> => {
-  const pending = await db
+  const pending = await tdb(companyId)
     .select({
       id: importRows.id,
       rowNumber: importRows.rowNumber,
@@ -727,7 +727,7 @@ export const validateHorariosChunk = async (
     ...[...lookups.byCurp.values()].map((p) => p.id),
   ];
   const schedules = personIds.length
-    ? await db
+    ? await tdb(companyId)
         .select()
         .from(personSchedules)
         .where(
@@ -829,7 +829,7 @@ export const validateContratosChunk = async (
   jobId: string,
   limit = VALIDATE_CHUNK_SIZE,
 ): Promise<ValidateProgress> => {
-  const pending = await db
+  const pending = await tdb(companyId)
     .select({
       id: importRows.id,
       rowNumber: importRows.rowNumber,
@@ -856,7 +856,7 @@ export const validateContratosChunk = async (
 
   const today = new Date().toISOString().slice(0, 10);
   const [templateRows, allRows, fileKeys] = await Promise.all([
-    db
+    tdb(companyId)
       .select({ id: contractTemplates.id, name: contractTemplates.name })
       .from(contractTemplates)
       .where(
@@ -865,7 +865,7 @@ export const validateContratosChunk = async (
           isNull(contractTemplates.deletedAt),
         ),
       ),
-    db
+    tdb(companyId)
       .select({ rowNumber: importRows.rowNumber, raw: importRows.raw })
       .from(importRows)
       .where(
@@ -935,7 +935,7 @@ export const validateContratosChunk = async (
   ];
   const existingContracts = (
     personIds.length
-      ? await db
+      ? await tdb(companyId)
           .select({
             id: contracts.id,
             personId: contracts.personId,
@@ -1099,7 +1099,7 @@ export const countJobRows = async (
   companyId: string,
   jobId: string,
 ): Promise<ImportJobCounts> => {
-  const rows = await db
+  const rows = await tdb(companyId)
     .select({ action: importRows.action, count: sql<number>`count(*)::int` })
     .from(importRows)
     .where(
@@ -1151,7 +1151,7 @@ export const validateJobStep = async (companyId: string, jobId: string) => {
 
   const counts = await countJobRows(companyId, jobId);
 
-  await db
+  await tdb(companyId)
     .update(importJobs)
     .set({ status: "in_review", counts })
     .where(
@@ -1174,7 +1174,7 @@ export const restartValidation = async (
     mode?: "all_or_nothing" | "valid_only";
   },
 ) => {
-  await db
+  await tdb(companyId)
     .update(importRows)
     .set({
       action: "pending",
@@ -1186,7 +1186,7 @@ export const restartValidation = async (
     .where(
       and(eq(importRows.companyId, companyId), eq(importRows.jobId, jobId)),
     );
-  await db
+  await tdb(companyId)
     .update(importJobs)
     .set({
       status: "validating",

@@ -29,7 +29,6 @@ import {
 } from "@/app/api/import/personas/[jobId]/validate/route";
 import { GET as exportRoute } from "@/app/app/personas/exportar/route";
 import { GET as templateRoute } from "@/app/app/personas/plantilla/route";
-import { db } from "@/lib/db";
 import { importRows, people } from "@/lib/db/schema";
 import { applyJobStep, pauseApply } from "@/lib/import/apply";
 import { buildErrorReport, loadErrorRows } from "@/lib/import/error-report";
@@ -60,6 +59,7 @@ import { curpCheckDigit } from "@/lib/people/identity";
 
 import {
   idsIn,
+  ownerDb,
   seedTenant,
   snapshotTenant,
   tenantIds,
@@ -319,7 +319,7 @@ describe("import pipeline functions stay inside the company", () => {
       }),
     ).rejects.toThrow();
     expect(
-      await db
+      await ownerDb
         .select()
         .from(importRows)
         .where(eq(importRows.jobId, a.uploadingJob.id)),
@@ -446,14 +446,14 @@ describe("import pipeline functions stay inside the company", () => {
     ],
   ])("%s", async (_surface, run) => {
     const before = await snapshotTenant(a);
-    const rowsBefore = await db
+    const rowsBefore = await ownerDb
       .select()
       .from(importRows)
       .where(eq(importRows.jobId, a.reviewJob.id));
     noLeak(await run());
     expect(await snapshotTenant(a)).toEqual(before);
     expect(
-      await db
+      await ownerDb
         .select()
         .from(importRows)
         .where(eq(importRows.jobId, a.reviewJob.id)),
@@ -464,7 +464,10 @@ describe("import pipeline functions stay inside the company", () => {
 describe("importing into A never touches B", () => {
   it("creates a new person in A for a CURP of B, and refuses B's Workia id", async () => {
     const curp = validCurp("GODE561231HDFRRN0");
-    await db.update(people).set({ curp }).where(eq(people.id, b.person.id));
+    await ownerDb
+      .update(people)
+      .set({ curp })
+      .where(eq(people.id, b.person.id));
 
     const job = await createImportJob(
       a.companyId,
@@ -500,7 +503,7 @@ describe("importing into A never touches B", () => {
       step = await validateJobStep(a.companyId, job.id);
     } while (!step.done);
 
-    const rows = await db
+    const rows = await ownerDb
       .select({
         rowNumber: importRows.rowNumber,
         action: importRows.action,

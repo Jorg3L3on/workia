@@ -11,7 +11,6 @@ import {
   listAuditActors,
   listAuditEvents,
 } from "@/lib/audit";
-import { db } from "@/lib/db";
 import {
   auditEvents,
   companies,
@@ -39,6 +38,7 @@ import {
 
 import {
   idsIn,
+  ownerDb,
   seedRbac,
   seedTenant,
   snapshotTenant,
@@ -65,7 +65,7 @@ const redirectOf = async (run: () => Promise<unknown>) => {
 };
 
 const newUser = async (email: string) =>
-  (await db.insert(users).values({ email, name: email }).returning())[0];
+  (await ownerDb.insert(users).values({ email, name: email }).returning())[0];
 
 beforeAll(async () => {
   a = await seedTenant("A");
@@ -105,7 +105,7 @@ describe("audit stays inside the company", () => {
       },
       a.admin.id,
     );
-    const [event] = await db
+    const [event] = await ownerDb
       .select({ companyId: auditEvents.companyId })
       .from(auditEvents)
       .where(
@@ -122,7 +122,7 @@ describe("company context", () => {
   it("action:tenant/switchCompanyAction", async () => {
     const both = await newUser(`ambas-${Date.now()}@idor.test`);
     const roles = await seedRbac();
-    await db.insert(companyMemberships).values([
+    await ownerDb.insert(companyMemberships).values([
       {
         userId: both.id,
         companyId: a.companyId,
@@ -155,7 +155,7 @@ describe("company context", () => {
       ),
     ).toBe("/app");
     expect(sessionState.current?.activeCompanyId).toBe(b.companyId);
-    const [switched] = await db
+    const [switched] = await ownerDb
       .select()
       .from(auditEvents)
       .where(
@@ -187,12 +187,12 @@ describe("company context", () => {
   it("blocks every member of a suspended company on the next request", async () => {
     actAs(b.viewer, b.companyId);
     expect(await getCompanyContext()).not.toBeNull();
-    await db
+    await ownerDb
       .update(companies)
       .set({ status: "suspendida" })
       .where(eq(companies.id, b.companyId));
     expect(await getCompanyContext()).toBeNull();
-    await db
+    await ownerDb
       .update(companies)
       .set({ status: "activa" })
       .where(eq(companies.id, b.companyId));
@@ -412,7 +412,7 @@ describe("member administration permissions", () => {
 
   it("lets a platform admin create a company whose first admin sees only it", async () => {
     const platform = await newUser(`plataforma-${Date.now()}@idor.test`);
-    await db
+    await ownerDb
       .update(users)
       .set({ isPlatformAdmin: true })
       .where(eq(users.id, platform.id));

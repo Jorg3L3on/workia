@@ -1,7 +1,7 @@
 import ExcelJS from "exceljs";
 import { and, asc, eq } from "drizzle-orm";
 
-import { db } from "@/lib/db";
+import { tdb } from "@/lib/db";
 import { importRows } from "@/lib/db/schema";
 
 import {
@@ -59,7 +59,7 @@ export const loadErrorRows = async (
   companyId: string,
   jobId: string,
 ): Promise<ErrorRow[]> =>
-  db
+  tdb(companyId)
     .select({
       sheet: importRows.sheet,
       rowNumber: importRows.rowNumber,

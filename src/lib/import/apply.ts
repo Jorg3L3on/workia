@@ -7,7 +7,7 @@ import {
   snapshotContract,
   snapshotPerson,
 } from "@/lib/audit";
-import { db, withTransaction, type DbTransaction } from "@/lib/db";
+import { tdb, withTransaction, type DbTransaction } from "@/lib/db";
 import { isUniqueViolation } from "@/lib/db/errors";
 import {
   areas,
@@ -130,7 +130,7 @@ const beginApply = async (job: ImportJob) => {
   }
 
   try {
-    const [updated] = await db
+    const [updated] = await tdb(job.companyId)
       .update(importJobs)
       .set({ status: "applying", failureMessage: null })
       .where(
@@ -658,7 +658,7 @@ const applyPersonasBatch = async (job: ImportJob) =>
       );
 
     return rows.length;
-  });
+  }, job.companyId);
 
 const MANAGER_BATCH = 1000;
 
@@ -727,7 +727,7 @@ const applyManagers = async (job: ImportJob) =>
       );
 
     return links.length;
-  });
+  }, job.companyId);
 
 /** Schedules: upsert per person, remembering the previous one for undo. */
 const applyHorariosBatch = async (job: ImportJob) =>
@@ -880,7 +880,7 @@ const applyHorariosBatch = async (job: ImportJob) =>
       );
 
     return rows.length;
-  });
+  }, job.companyId);
 
 /** Contracts: create or update per (person, start date), with text and schedule snapshot. */
 const applyContratosBatch = async (job: ImportJob) =>
@@ -1234,7 +1234,7 @@ const applyContratosBatch = async (job: ImportJob) =>
       );
 
     return rows.length;
-  });
+  }, job.companyId);
 
 /**
  * Chains contracts by start order per person (previous_contract_id), over the
@@ -1272,14 +1272,14 @@ const applyContractChain = async (job: ImportJob) =>
       .where(
         and(eq(importJobs.companyId, job.companyId), eq(importJobs.id, job.id)),
       );
-  });
+  }, job.companyId);
 
 const countRemaining = async (
   companyId: string,
   jobId: string,
   sheet?: string,
 ) => {
-  const [row] = await db
+  const [row] = await tdb(companyId)
     .select({ count: sql<number>`count(*)::int` })
     .from(importRows)
     .where(
@@ -1296,7 +1296,7 @@ const countRemaining = async (
 };
 
 const finish = async (job: ImportJob) => {
-  const [done] = await db
+  const [done] = await tdb(job.companyId)
     .update(importJobs)
     .set({ status: "applied", appliedAt: new Date() })
     .where(
@@ -1334,7 +1334,7 @@ export const applyJobStep = async (
   companyId: string,
   jobId: string,
 ): Promise<ApplyProgress> => {
-  const [loaded] = await db
+  const [loaded] = await tdb(companyId)
     .select()
     .from(importJobs)
     .where(and(eq(importJobs.companyId, companyId), eq(importJobs.id, jobId)))
@@ -1385,7 +1385,7 @@ export const applyJobStep = async (
     return progress("done", companyId, jobId);
   } catch (error) {
     // Keep the rows' state: the user can resume from "Continuar importación".
-    await db
+    await tdb(companyId)
       .update(importJobs)
       .set({
         status: "failed",
@@ -1408,7 +1408,7 @@ const progress = async (
   companyId: string,
   jobId: string,
 ): Promise<ApplyProgress> => {
-  const [job] = await db
+  const [job] = await tdb(companyId)
     .select()
     .from(importJobs)
     .where(and(eq(importJobs.companyId, companyId), eq(importJobs.id, jobId)))
@@ -1425,7 +1425,7 @@ const progress = async (
 
 /** Releases the apply lock without losing progress. */
 export const pauseApply = async (companyId: string, jobId: string) => {
-  const [paused] = await db
+  const [paused] = await tdb(companyId)
     .update(importJobs)
     .set({ status: "failed", failureMessage: "Pausada por el usuario." })
     .where(

@@ -20,7 +20,7 @@ import {
   snapshotPerson,
   snapshotPersonSchedule,
 } from "@/lib/audit";
-import { db, withTransaction, type DbExecutor } from "@/lib/db";
+import { tdb, withTransaction, type DbExecutor } from "@/lib/db";
 import { escapeLike } from "@/lib/db/like";
 import { personSearchText } from "@/lib/db/schema/people";
 import {
@@ -111,7 +111,7 @@ export const listPeople = async (
     filters.push(eq(people.status, status));
   }
 
-  return db
+  return tdb(companyId)
     .select()
     .from(people)
     .where(and(...filters))
@@ -153,7 +153,7 @@ export const listPeoplePage = async (
   const where = and(...filters);
 
   const [rows, [totals]] = await Promise.all([
-    db
+    tdb(companyId)
       .select({
         id: people.id,
         nombres: people.nombres,
@@ -174,7 +174,7 @@ export const listPeoplePage = async (
       )
       .limit(options.pageSize)
       .offset((options.page - 1) * options.pageSize),
-    db.select({ total: count() }).from(people).where(where),
+    tdb(companyId).select({ total: count() }).from(people).where(where),
   ]);
 
   return { rows, total: totals?.total ?? 0 };
@@ -184,7 +184,7 @@ export const listActivePeopleForSelect = async (
   companyId: string,
   excludeId?: string,
 ) => {
-  const rows = await db
+  const rows = await tdb(companyId)
     .select({
       id: people.id,
       nombres: people.nombres,
@@ -226,7 +226,7 @@ export const searchActivePeopleForSelect = async (
     filters.push(ilike(personSearchText(people), `%${escapeLike(term)}%`));
   }
 
-  return db
+  return tdb(companyId)
     .select({
       id: people.id,
       nombres: people.nombres,
@@ -243,7 +243,7 @@ export const getPersonById = async (
   companyId: string,
   id: string,
   includeDeleted = false,
-  executor: DbExecutor = db,
+  executor: DbExecutor = tdb(companyId),
 ) => {
   const filters = [eq(people.companyId, companyId), eq(people.id, id)];
 
@@ -267,7 +267,7 @@ export const getPersonWithRelations = async (
 ) => {
   const manager = alias(people, "manager");
 
-  const [row] = await db
+  const [row] = await tdb(companyId)
     .select({
       person: people,
       area: { id: areas.id, name: areas.name },
@@ -321,7 +321,7 @@ export const getPersonSchedule = async (
   companyId: string,
   personId: string,
   includeDeleted = false,
-  executor: DbExecutor = db,
+  executor: DbExecutor = tdb(companyId),
 ) => {
   const filters = [
     eq(personSchedules.companyId, companyId),
@@ -355,7 +355,7 @@ export const upsertPersonSchedule = async (
   personId: string,
   input: PersonFormValues,
   actorUserId?: string | null,
-  executor: DbExecutor = db,
+  executor: DbExecutor = tdb(companyId),
   /** The schedule row (any state) when the caller already read it; `null` means none exists. */
   prefetched?: { schedule: typeof personSchedules.$inferSelect | null },
 ) => {
@@ -497,7 +497,7 @@ export const findIdentityConflicts = async (
   companyId: string,
   input: Pick<PersonFormValues, "curp" | "rfc" | "nss">,
   excludeId?: string,
-  client: DbExecutor = db,
+  client: DbExecutor = tdb(companyId),
 ): Promise<IdentityField[]> => {
   const curp = identifierOrNull(input.curp);
   const rfc = identifierOrNull(input.rfc);
@@ -539,7 +539,7 @@ const assertNoIdentityConflicts = async (
   companyId: string,
   input: Pick<PersonFormValues, "curp" | "rfc" | "nss">,
   excludeId?: string,
-  client: DbExecutor = db,
+  client: DbExecutor = tdb(companyId),
 ) => {
   const conflicts = await findIdentityConflicts(
     companyId,
@@ -651,7 +651,7 @@ export const createPerson = async (
     });
 
     return created;
-  });
+  }, companyId);
 };
 
 export const updatePerson = async (
@@ -733,7 +733,7 @@ export const updatePerson = async (
     });
 
     return updated;
-  });
+  }, companyId);
 };
 
 export const softDeletePerson = async (
@@ -793,11 +793,11 @@ export const softDeletePerson = async (
     }
 
     return updated;
-  });
+  }, companyId);
 };
 
 export const countPeopleByStatus = async (companyId: string) => {
-  const rows = await db
+  const rows = await tdb(companyId)
     .select({
       status: people.status,
       count: sql<number>`cast(count(*) as int)`,

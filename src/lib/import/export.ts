@@ -14,7 +14,7 @@ import {
 } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
-import { db } from "@/lib/db";
+import { tdb } from "@/lib/db";
 import {
   areas,
   contracts,
@@ -87,7 +87,7 @@ const fetchPeoplePage = async (
   filters: ExportFilters,
   afterId?: string,
 ): Promise<ExportPerson[]> =>
-  db
+  tdb(companyId)
     .select({
       id: people.id,
       nombres: people.nombres,
@@ -122,7 +122,7 @@ const fetchSchedules = async (
 ): Promise<ExportSchedule[]> =>
   personIds.length === 0
     ? []
-    : db
+    : tdb(companyId)
         .select({
           personId: personSchedules.personId,
           entrada: personSchedules.entrada,
@@ -145,7 +145,7 @@ const fetchContracts = async (
 ): Promise<ExportContract[]> =>
   personIds.length === 0
     ? []
-    : db
+    : tdb(companyId)
         .select({
           personId: contracts.personId,
           type: contracts.type,

@@ -6,7 +6,7 @@ import {
   snapshotContract,
   snapshotContractTemplate,
 } from "@/lib/audit";
-import { db } from "@/lib/db";
+import { tdb } from "@/lib/db";
 import { withTenant } from "@/lib/tenant/scope";
 import { areas, contractTemplates, contracts, people } from "@/lib/db/schema";
 import type { ContractStatus } from "@/lib/db/schema/contracts";
@@ -66,7 +66,7 @@ const resolveTemplateFillContext = async (
 };
 
 export const listActiveContractTemplates = async (companyId: string) =>
-  db
+  tdb(companyId)
     .select()
     .from(contractTemplates)
     .where(
@@ -92,7 +92,7 @@ export const listContractTemplates = async (
     filters.push(eq(contractTemplates.active, true));
   }
 
-  return db
+  return tdb(companyId)
     .select()
     .from(contractTemplates)
     .where(and(...filters))
@@ -103,7 +103,7 @@ export const getContractTemplateById = async (
   companyId: string,
   id: string,
 ) => {
-  const [template] = await db
+  const [template] = await tdb(companyId)
     .select()
     .from(contractTemplates)
     .where(
@@ -124,7 +124,7 @@ export const createContractTemplate = async (
   input: ContractTemplateFormValues,
   actorUserId: string,
 ) => {
-  const [created] = await db
+  const [created] = await tdb(companyId)
     .insert(contractTemplates)
     .values({
       companyId,
@@ -161,7 +161,7 @@ export const updateContractTemplate = async (
     throw new Error("Plantilla no encontrada.");
   }
 
-  const [updated] = await db
+  const [updated] = await tdb(companyId)
     .update(contractTemplates)
     .set({
       name: input.name.trim(),
@@ -205,7 +205,7 @@ export const deactivateContractTemplate = async (
     throw new Error("Plantilla no encontrada.");
   }
 
-  const [updated] = await db
+  const [updated] = await tdb(companyId)
     .update(contractTemplates)
     .set({ active: false })
     .where(
@@ -242,7 +242,7 @@ export const softDeleteContractTemplate = async (
 
   const deletedAt = new Date();
 
-  const [updated] = await db
+  const [updated] = await tdb(companyId)
     .update(contractTemplates)
     .set({ active: false, deletedAt })
     .where(
@@ -270,7 +270,7 @@ export const listContractsByPerson = async (
   companyId: string,
   personId: string,
 ) =>
-  db
+  tdb(companyId)
     .select()
     .from(contracts)
     .where(
@@ -284,7 +284,7 @@ export const listContractsByPerson = async (
     .orderBy(desc(contracts.startDate), desc(contracts.createdAt));
 
 export const getContractById = async (companyId: string, id: string) => {
-  const [contract] = await db
+  const [contract] = await tdb(companyId)
     .select()
     .from(contracts)
     .where(
@@ -304,7 +304,7 @@ export const getVigenteContractForPerson = async (
   companyId: string,
   personId: string,
 ) => {
-  const [contract] = await db
+  const [contract] = await tdb(companyId)
     .select()
     .from(contracts)
     .where(
@@ -361,7 +361,7 @@ export const listRenewalTrayItems = async (
   referenceDate?: string,
   limit?: number,
 ): Promise<RenewalTrayItem[]> => {
-  const query = db
+  const query = tdb(companyId)
     .select({
       contractId: contracts.id,
       endDate: contracts.endDate,
@@ -402,7 +402,7 @@ export const countRenewalTrayItems = async (
   companyId: string,
   referenceDate?: string,
 ) => {
-  const [row] = await db
+  const [row] = await tdb(companyId)
     .select({ count: sql<number>`count(*)::int` })
     .from(contracts)
     .innerJoin(people, eq(contracts.personId, people.id))
@@ -441,7 +441,7 @@ const emitContractRecord = async (
   const generatedText = fillContractTemplate(template.body, context);
   const scheduleSnapshot = buildContractScheduleSnapshot(person.schedule);
 
-  const [created] = await db
+  const [created] = await tdb(companyId)
     .insert(contracts)
     .values({
       companyId,
@@ -516,7 +516,7 @@ export const renewContract = async (
 
   const endDate = normalizeEndDate(input.type, input.endDate);
 
-  const [updatedPrevious] = await db
+  const [updatedPrevious] = await tdb(companyId)
     .update(contracts)
     .set({ status: "renovado" })
     .where(withTenant(contracts, companyId, eq(contracts.id, existing.id)))
@@ -561,7 +561,7 @@ export const markContractNoRenew = async (
     throw new Error("Contrato no encontrado o ya no está vigente.");
   }
 
-  const [updated] = await db
+  const [updated] = await tdb(companyId)
     .update(contracts)
     .set({ status: "no_renovado" })
     .where(withTenant(contracts, companyId, eq(contracts.id, contractId)))
@@ -596,7 +596,7 @@ export const softDeleteContract = async (
 
   const deletedAt = new Date();
 
-  const [updated] = await db
+  const [updated] = await tdb(companyId)
     .update(contracts)
     .set({
       deletedAt,

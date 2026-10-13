@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 
 import { and, count, desc, eq, gte, lte, sql } from "drizzle-orm";
 
-import { db, type DbExecutor } from "@/lib/db";
+import { tdb, type DbExecutor } from "@/lib/db";
 import { auditEvents, users } from "@/lib/db/schema";
 
 import type { AuditPayload } from "./types";
@@ -11,7 +11,7 @@ import type { ListAuditEventsOptions, RecordAuditEventInput } from "./types";
 /** Append-only: audit events are inserted, never updated or deleted via the app. */
 export const recordAuditEvent = async (
   input: RecordAuditEventInput,
-  executor: DbExecutor = db,
+  executor: DbExecutor = tdb(input.companyId),
 ) => {
   const [created] = await executor
     .insert(auditEvents)
@@ -62,7 +62,7 @@ const buildAuditFilters = (options: ListAuditEventsOptions) => {
 };
 
 export const countAuditEvents = async (options: ListAuditEventsOptions) => {
-  const [row] = await db
+  const [row] = await tdb(options.companyId)
     .select({ total: count() })
     .from(auditEvents)
     .where(buildAuditFilters(options));
@@ -73,7 +73,7 @@ export const countAuditEvents = async (options: ListAuditEventsOptions) => {
 export const listAuditEvents = async (options: ListAuditEventsOptions) => {
   const whereClause = buildAuditFilters(options);
 
-  return db
+  return tdb(options.companyId)
     .select({
       id: auditEvents.id,
       actorUserId: auditEvents.actorUserId,
@@ -105,7 +105,7 @@ export const listAuditEvents = async (options: ListAuditEventsOptions) => {
 
 /** Users who have acted in this company, for the actor filter (never other companies' users). */
 export const listAuditActors = async (companyId: string) =>
-  db
+  tdb(companyId)
     .selectDistinct({ id: users.id, name: users.name, email: users.email })
     .from(auditEvents)
     .innerJoin(users, eq(auditEvents.actorUserId, users.id))

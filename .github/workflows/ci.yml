@@ -60,6 +60,11 @@ jobs:
       - name: Database and IDOR tests
         run: npm run test:db
 
+      # The same suite with row-level security on: the app connects as a role
+      # without BYPASSRLS and every business query is scoped to its company.
+      - name: Database and IDOR tests under row-level security
+        run: npm run test:db:rls
+
       # Fails when a server action, route or company-scoped lib function has no IDOR test.
       - name: IDOR coverage gate
         run: npm run check:idor

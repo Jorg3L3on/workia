@@ -12,6 +12,10 @@ import {
 
 import { roles, users } from "./rbac";
 
+// Row-level security per company lives in migration 0018 (SQL), not here:
+// drizzle-kit renders pgPolicy without its USING/WITH CHECK clauses. The
+// database test company-rls.db.test.ts fails if a table with company_id lacks it.
+
 export const companyStatusEnum = pgEnum("company_status", [
   "activa",
   "suspendida",

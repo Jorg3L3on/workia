@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 
-import { db } from "@/lib/db";
+import { tdb } from "@/lib/db";
 import {
   importJobs,
   importRows,
@@ -19,7 +19,7 @@ const PREVIOUS_STATUSES: ImportJobStatus[] = [
 ];
 
 export const findJobsByHash = async (companyId: string, fileHash: string) =>
-  db
+  tdb(companyId)
     .select({
       id: importJobs.id,
       status: importJobs.status,
@@ -41,7 +41,7 @@ export const createImportJob = async (
   input: CreateImportJobBody,
   actorUserId: string,
 ) => {
-  const [job] = await db
+  const [job] = await tdb(companyId)
     .insert(importJobs)
     .values({
       companyId,
@@ -62,7 +62,7 @@ export const getImportJob = async (
   companyId: string,
   jobId: string,
 ): Promise<ImportJob | null> => {
-  const [job] = await db
+  const [job] = await tdb(companyId)
     .select()
     .from(importJobs)
     .where(and(eq(importJobs.companyId, companyId), eq(importJobs.id, jobId)))
@@ -80,7 +80,7 @@ export const appendImportRows = async (
   jobId: string,
   body: AppendImportRowsBody,
 ) => {
-  await db
+  await tdb(companyId)
     .insert(importRows)
     .values(
       body.rows.map((row) => ({
@@ -103,7 +103,7 @@ export const appendImportRows = async (
 };
 
 export const countStagedRows = async (companyId: string, jobId: string) => {
-  const rows = await db
+  const rows = await tdb(companyId)
     .select({
       sheet: importRows.sheet,
       count: sql<number>`count(*)::int`,
@@ -133,7 +133,7 @@ export const finalizeImportUpload = async (
     return { job: null, staged, total };
   }
 
-  const [job] = await db
+  const [job] = await tdb(companyId)
     .update(importJobs)
     .set({ status: "validating", counts: { total } })
     .where(
@@ -171,7 +171,7 @@ export const listImportRows = async (
   );
 
   const [rows, [totalRow]] = await Promise.all([
-    db
+    tdb(companyId)
       .select({
         id: importRows.id,
         sheet: importRows.sheet,
@@ -190,7 +190,7 @@ export const listImportRows = async (
       )
       .limit(pageSize)
       .offset((page - 1) * pageSize),
-    db
+    tdb(companyId)
       .select({ count: sql<number>`count(*)::int` })
       .from(importRows)
       .where(where),
@@ -200,7 +200,7 @@ export const listImportRows = async (
 };
 
 export const listImportJobs = async (companyId: string, limit = 50) =>
-  db
+  tdb(companyId)
     .select({
       job: importJobs,
       actorName: users.name,

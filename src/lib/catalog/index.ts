@@ -8,7 +8,7 @@ import {
   snapshotPosition,
   snapshotPositionActivity,
 } from "@/lib/audit";
-import { db } from "@/lib/db";
+import { tdb } from "@/lib/db";
 import { CompanyReferenceError, rethrowDuplicate } from "@/lib/db/errors";
 import { withTenant } from "@/lib/tenant/scope";
 import {
@@ -30,7 +30,7 @@ export const listAreas = async (
   companyId: string,
   options: { includeDeleted?: boolean } = {},
 ) => {
-  return db
+  return tdb(companyId)
     .select()
     .from(areas)
     .where(
@@ -44,7 +44,7 @@ export const listAreas = async (
 };
 
 export const listActiveAreas = async (companyId: string) => {
-  return db
+  return tdb(companyId)
     .select()
     .from(areas)
     .where(
@@ -59,7 +59,7 @@ export const listActiveAreas = async (companyId: string) => {
 };
 
 export const getAreaById = async (companyId: string, id: string) => {
-  const [area] = await db
+  const [area] = await tdb(companyId)
     .select()
     .from(areas)
     .where(withTenant(areas, companyId, eq(areas.id, id)))
@@ -89,7 +89,7 @@ export const createArea = async (
 ) => {
   await assertAreaInCompany(companyId, input.parentAreaId, "parentAreaId");
 
-  const [created] = await db
+  const [created] = await tdb(companyId)
     .insert(areas)
     .values({
       companyId,
@@ -131,7 +131,7 @@ export const updateArea = async (
 
   const before = snapshotArea(existing);
 
-  const [updated] = await db
+  const [updated] = await tdb(companyId)
     .update(areas)
     .set({
       name: input.name,
@@ -184,7 +184,7 @@ export const softDeleteArea = async (
   const before = snapshotArea(existing);
   const deletedAt = new Date();
 
-  const [updated] = await db
+  const [updated] = await tdb(companyId)
     .update(areas)
     .set({ deletedAt, active: false })
     .where(withTenant(areas, companyId, eq(areas.id, id)))
@@ -224,7 +224,7 @@ export const listPositions = async (
     filters.push(eq(positions.areaId, options.areaId));
   }
 
-  return db
+  return tdb(companyId)
     .select()
     .from(positions)
     .where(and(...filters))
@@ -245,7 +245,7 @@ export const listActivePositions = async (
     filters.push(eq(positions.areaId, areaId));
   }
 
-  return db
+  return tdb(companyId)
     .select()
     .from(positions)
     .where(and(...filters))
@@ -253,7 +253,7 @@ export const listActivePositions = async (
 };
 
 export const getPositionById = async (companyId: string, id: string) => {
-  const [position] = await db
+  const [position] = await tdb(companyId)
     .select()
     .from(positions)
     .where(withTenant(positions, companyId, eq(positions.id, id)))
@@ -269,7 +269,7 @@ export const createPosition = async (
 ) => {
   await assertAreaInCompany(companyId, input.areaId, "areaId");
 
-  const [created] = await db
+  const [created] = await tdb(companyId)
     .insert(positions)
     .values({
       companyId,
@@ -311,7 +311,7 @@ export const updatePosition = async (
 
   const before = snapshotPosition(existing);
 
-  const [updated] = await db
+  const [updated] = await tdb(companyId)
     .update(positions)
     .set({
       name: input.name,
@@ -360,7 +360,7 @@ export const softDeletePosition = async (
   const before = snapshotPosition(existing);
   const deletedAt = new Date();
 
-  const [updated] = await db
+  const [updated] = await tdb(companyId)
     .update(positions)
     .set({ deletedAt, active: false })
     .where(withTenant(positions, companyId, eq(positions.id, id)))
@@ -390,7 +390,7 @@ export const listActivities = async (
   companyId: string,
   options: { includeDeleted?: boolean } = {},
 ) => {
-  return db
+  return tdb(companyId)
     .select()
     .from(activities)
     .where(
@@ -404,7 +404,7 @@ export const listActivities = async (
 };
 
 export const listAssignableActivities = async (companyId: string) => {
-  return db
+  return tdb(companyId)
     .select()
     .from(activities)
     .where(
@@ -419,7 +419,7 @@ export const listAssignableActivities = async (companyId: string) => {
 };
 
 export const getActivityById = async (companyId: string, id: string) => {
-  const [activity] = await db
+  const [activity] = await tdb(companyId)
     .select()
     .from(activities)
     .where(withTenant(activities, companyId, eq(activities.id, id)))
@@ -433,7 +433,7 @@ export const createActivity = async (
   input: ActivityFormValues,
   actorUserId?: string | null,
 ) => {
-  const [created] = await db
+  const [created] = await tdb(companyId)
     .insert(activities)
     .values({
       companyId,
@@ -472,7 +472,7 @@ export const updateActivity = async (
 
   const before = snapshotActivity(existing);
 
-  const [updated] = await db
+  const [updated] = await tdb(companyId)
     .update(activities)
     .set({
       name: input.name,
@@ -520,7 +520,7 @@ export const softDeleteActivity = async (
   const before = snapshotActivity(existing);
   const deletedAt = new Date();
 
-  const [updated] = await db
+  const [updated] = await tdb(companyId)
     .update(activities)
     .set({ deletedAt, active: false })
     .where(withTenant(activities, companyId, eq(activities.id, id)))
@@ -563,7 +563,7 @@ export const listActivitiesByPositionIds = async (
     return grouped;
   }
 
-  const rows = await db
+  const rows = await tdb(companyId)
     .select({
       positionId: positionActivities.positionId,
       id: activities.id,
@@ -606,7 +606,7 @@ export const listActivitiesForPersonPosition = async (
   companyId: string,
   personId: string,
 ) =>
-  db
+  tdb(companyId)
     .select({
       id: activities.id,
       name: activities.name,
@@ -647,7 +647,7 @@ export const assignActivityToPosition = async (
     return { ok: false as const, reason: "activity-not-assignable" };
   }
 
-  const [inserted] = await db
+  const [inserted] = await tdb(companyId)
     .insert(positionActivities)
     .values({ companyId, positionId, activityId })
     .onConflictDoNothing()
@@ -686,7 +686,7 @@ export const unassignActivityFromPosition = async (
     getActivityById(companyId, activityId),
   ]);
 
-  const [removed] = await db
+  const [removed] = await tdb(companyId)
     .delete(positionActivities)
     .where(
       withTenant(

@@ -16,7 +16,7 @@ import {
   snapshotAsset,
   snapshotAssetMovement,
 } from "@/lib/audit";
-import { db } from "@/lib/db";
+import { tdb } from "@/lib/db";
 import { rethrowDuplicate } from "@/lib/db/errors";
 import { withTenant } from "@/lib/tenant/scope";
 import { escapeLike } from "@/lib/db/like";
@@ -68,8 +68,8 @@ export type PersonAssetItem = {
   tracksHistory: boolean;
 };
 
-const buildAssetListSelect = () =>
-  db
+const buildAssetListSelect = (companyId: string) =>
+  tdb(companyId)
     .select({
       id: assets.id,
       name: assets.name,
@@ -120,12 +120,12 @@ export const listAssetsPage = async (
   const where = and(...filters);
 
   const [rows, [totals]] = await Promise.all([
-    buildAssetListSelect()
+    buildAssetListSelect(companyId)
       .where(where)
       .orderBy(asc(assets.name), asc(assets.id))
       .limit(options.pageSize)
       .offset((options.page - 1) * options.pageSize),
-    db.select({ total: count() }).from(assets).where(where),
+    tdb(companyId).select({ total: count() }).from(assets).where(where),
   ]);
 
   const items = rows.map((row): AssetListItem => ({
@@ -150,7 +150,7 @@ export const listAssetsPage = async (
 };
 
 export const getAssetById = async (companyId: string, id: string) => {
-  const [asset] = await db
+  const [asset] = await tdb(companyId)
     .select()
     .from(assets)
     .where(
@@ -167,7 +167,7 @@ export const getAssetById = async (companyId: string, id: string) => {
 };
 
 export const getAssetWithHolder = async (companyId: string, id: string) => {
-  const [row] = await db
+  const [row] = await tdb(companyId)
     .select({
       asset: assets,
       holderId: people.id,
@@ -208,7 +208,7 @@ export const listAssetMovements = async (
   companyId: string,
   assetId: string,
 ) => {
-  const rows = await db
+  const rows = await tdb(companyId)
     .select({
       movement: assetMovements,
       personId: people.id,
@@ -242,7 +242,7 @@ export const listAssetsByPerson = async (
   companyId: string,
   personId: string,
 ) => {
-  const rows = await db
+  const rows = await tdb(companyId)
     .select({
       id: assets.id,
       name: assets.name,
@@ -271,7 +271,7 @@ export const createAsset = async (
   input: AssetFormValues,
   actorUserId: string,
 ) => {
-  const [created] = await db
+  const [created] = await tdb(companyId)
     .insert(assets)
     .values({
       companyId,
@@ -324,7 +324,7 @@ export const assignAsset = async (
     throw new Error("No se puede asignar un activo dado de baja.");
   }
 
-  const [person] = await db
+  const [person] = await tdb(companyId)
     .select({ id: people.id })
     .from(people)
     .where(
@@ -341,7 +341,7 @@ export const assignAsset = async (
     throw new Error("Persona no encontrada.");
   }
 
-  const [movement] = await db
+  const [movement] = await tdb(companyId)
     .insert(assetMovements)
     .values({
       companyId,
@@ -354,7 +354,7 @@ export const assignAsset = async (
     })
     .returning();
 
-  const [updated] = await db
+  const [updated] = await tdb(companyId)
     .update(assets)
     .set({
       holderId: input.personId,
@@ -418,7 +418,7 @@ export const returnAsset = async (
 
   const holderId = asset.holderId;
 
-  const [movement] = await db
+  const [movement] = await tdb(companyId)
     .insert(assetMovements)
     .values({
       companyId,
@@ -431,7 +431,7 @@ export const returnAsset = async (
     })
     .returning();
 
-  const [updated] = await db
+  const [updated] = await tdb(companyId)
     .update(assets)
     .set({
       holderId: null,
@@ -491,7 +491,7 @@ export const softDeleteAsset = async (
 
   const deletedAt = new Date();
 
-  const [updated] = await db
+  const [updated] = await tdb(companyId)
     .update(assets)
     .set({ deletedAt, status: "baja" })
     .where(withTenant(assets, companyId, eq(assets.id, id)))
@@ -514,7 +514,7 @@ export const softDeleteAsset = async (
 };
 
 export const countAssignedAssets = async (companyId: string) => {
-  const rows = await db
+  const rows = await tdb(companyId)
     .select({ id: assets.id })
     .from(assets)
     .where(
