@@ -118,6 +118,90 @@ describe("audit stays inside the company", () => {
   });
 });
 
+describe("every module audits its writes in the company they happened in", () => {
+  it("catalog, sites, contracts, templates, resguardo and members", async () => {
+    const { createArea } = await import("@/lib/catalog");
+    const { createSite } = await import("@/lib/sites");
+    const { createContractTemplate, createContract } =
+      await import("@/lib/contracts");
+    const { createAsset, assignAsset } = await import("@/lib/resguardo");
+
+    const area = await createArea(
+      a.companyId,
+      { name: `Auditada ${Date.now()}`, active: true },
+      a.admin.id,
+    );
+    const site = await createSite(
+      a.companyId,
+      { name: `Auditada ${Date.now()}`, kind: "sucursal" },
+      a.admin.id,
+    );
+    const template = await createContractTemplate(
+      a.companyId,
+      { name: `Auditada ${Date.now()}`, body: "x", active: true },
+      a.admin.id,
+    );
+    const contract = await createContract(
+      a.companyId,
+      {
+        personId: a.teammate.id,
+        templateId: template.id,
+        type: "indeterminado",
+        startDate: "2026-10-01",
+        endDate: "",
+        noticeWindow: "no_avisar",
+      },
+      a.admin.id,
+    );
+    const asset = await createAsset(
+      a.companyId,
+      {
+        name: "Auditado",
+        identifier: `AU-${Date.now()}`,
+        category: "x",
+        tracksHistory: true,
+      },
+      a.admin.id,
+    );
+    const { movement } = await assignAsset(
+      a.companyId,
+      {
+        assetId: asset.id,
+        personId: a.teammate.id,
+        movementDate: "2026-10-02",
+        conditionNote: "ok",
+        notes: "",
+      },
+      a.admin.id,
+    );
+    const membership = await addMember(
+      a.companyId,
+      { email: `auditado-${Date.now()}@idor.test`, roleSlug: "viewer" },
+      a.admin.id,
+    );
+
+    for (const resourceId of [
+      area.id,
+      site.id,
+      template.id,
+      contract.id,
+      asset.id,
+      movement.id,
+      membership.id,
+    ]) {
+      const events = await ownerDb
+        .select({ companyId: auditEvents.companyId })
+        .from(auditEvents)
+        .where(eq(auditEvents.resourceId, resourceId));
+      expect(events.length, resourceId).toBeGreaterThan(0);
+      expect(
+        new Set(events.map((event) => event.companyId)),
+        resourceId,
+      ).toEqual(new Set([a.companyId]));
+    }
+  });
+});
+
 describe("company context", () => {
   it("action:tenant/switchCompanyAction", async () => {
     const both = await newUser(`ambas-${Date.now()}@idor.test`);

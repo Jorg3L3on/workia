@@ -83,6 +83,11 @@ Production ran 0000 to 0014 by hand before the registry existed.
 4. Run `--status` again. Every migration should show as `baseline` and none as
    pending.
 
+### The multi-company cutover (0015–0018)
+
+Follow [multiempresa.md](multiempresa.md) → «Corte a producción»: duplicate
+report, counts snapshot, migrate, `npm run db:cutover -- verify`, deploy.
+
 ### Every release with migrations
 
 1. Take a Neon restore point (branch from the current state) before applying.

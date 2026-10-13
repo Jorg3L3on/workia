@@ -61,8 +61,16 @@ export const DUPLICATE_CHECKS = [
   },
 ] as const;
 
-/** One query per check: duplicated keys per company among live rows. */
-export const duplicateQuery = (check: (typeof DUPLICATE_CHECKS)[number]) => `
+/**
+ * One query per check: duplicated keys per company among live rows. Before
+ * migration 0016 there is no company_id yet: the whole database is one company.
+ */
+export const duplicateQuery = (
+  check: (typeof DUPLICATE_CHECKS)[number],
+  hasCompanies = true,
+) =>
+  hasCompanies
+    ? `
   select c.slug as company, d.key, d.ids, d.names
   from (
     select company_id, ${check.key} as key,
@@ -74,7 +82,16 @@ export const duplicateQuery = (check: (typeof DUPLICATE_CHECKS)[number]) => `
     having count(*) > 1
   ) d
   join companies c on c.id = d.company_id
-  order by c.slug, d.key`;
+  order by c.slug, d.key`
+    : `
+  select 'única' as company, ${check.key} as key,
+         array_agg(id::text order by id) as ids,
+         array_agg(${check.name} order by id) as names
+  from "${check.table}"
+  where deleted_at is null and ${check.key} is not null
+  group by ${check.key}
+  having count(*) > 1
+  order by 2`;
 
 const main = async () => {
   const { Client } = await import("pg");
@@ -83,13 +100,18 @@ const main = async () => {
   let total = 0;
 
   try {
+    const { rows: columns } = await client.query(
+      `select 1 from information_schema.columns where table_name = 'people' and column_name = 'company_id'`,
+    );
+    const hasCompanies = columns.length > 0;
+
     for (const check of DUPLICATE_CHECKS) {
       const { rows } = await client.query<{
         company: string;
         key: string;
         ids: string[];
         names: string[];
-      }>(duplicateQuery(check));
+      }>(duplicateQuery(check, hasCompanies));
 
       for (const row of rows) {
         total += 1;
