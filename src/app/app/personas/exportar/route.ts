@@ -77,7 +77,7 @@ export const GET = async (request: Request) => {
   return new NextResponse(Readable.toWeb(stream) as ReadableStream, {
     headers: {
       "Content-Type": CONTENT_TYPES[format],
-      "Content-Disposition": `attachment; filename="personas-${today}.${format}"`,
+      "Content-Disposition": `attachment; filename="personas-${session.membership.companySlug}-${today}.${format}"`,
       "Cache-Control": "no-store",
     },
   });

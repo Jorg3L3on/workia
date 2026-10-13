@@ -31,7 +31,7 @@ import {
   sites,
 } from "@/lib/db/schema";
 import type { PersonStatus } from "@/lib/db/schema/people";
-import { isUniqueViolation } from "@/lib/db/errors";
+import { CompanyReferenceError, isUniqueViolation } from "@/lib/db/errors";
 import { withTenant } from "@/lib/tenant/scope";
 
 import {
@@ -576,6 +576,44 @@ const rethrowUniqueViolation = (error: unknown): never => {
   throw error;
 };
 
+/**
+ * Area, puesto, sucursal and jefe must be live records of the same company.
+ * The composite foreign keys refuse the rest anyway; this turns it into a
+ * field error instead of a database error.
+ */
+const assertReferencesInCompany = async (
+  companyId: string,
+  values: ReturnType<typeof toPersonValues>,
+  client: DbExecutor,
+) => {
+  const checks = [
+    { field: "areaId", id: values.areaId, table: areas },
+    { field: "positionId", id: values.positionId, table: positions },
+    { field: "siteId", id: values.siteId, table: sites },
+    { field: "managerId", id: values.managerId, table: people },
+  ] as const;
+
+  for (const check of checks) {
+    if (!check.id) continue;
+
+    const [found] = await client
+      .select({ id: check.table.id })
+      .from(check.table)
+      .where(
+        and(
+          eq(check.table.companyId, companyId),
+          eq(check.table.id, check.id),
+          isNull(check.table.deletedAt),
+        ),
+      )
+      .limit(1);
+
+    if (!found) {
+      throw new CompanyReferenceError(check.field);
+    }
+  }
+};
+
 export const createPerson = async (
   companyId: string,
   input: PersonFormValues,
@@ -589,6 +627,7 @@ export const createPerson = async (
     const values = toPersonValues(input);
 
     await assertNoIdentityConflicts(companyId, input, undefined, tx);
+    await assertReferencesInCompany(companyId, values, tx);
 
     const [created] = await tx
       .insert(people)
@@ -643,6 +682,7 @@ export const updatePerson = async (
     const values = toPersonValues(input);
 
     await assertNoIdentityConflicts(companyId, input, id, tx);
+    await assertReferencesInCompany(companyId, values, tx);
 
     const [updated] = await tx
       .update(people)

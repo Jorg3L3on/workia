@@ -35,7 +35,7 @@ import {
   positionActivityFormSchema,
   positionFormSchema,
 } from "@/lib/catalog/schema";
-import { DuplicateNameError } from "@/lib/db/errors";
+import { CompanyReferenceError, DuplicateNameError } from "@/lib/db/errors";
 import { AuthorizationError } from "@/lib/rbac/errors";
 import { writableCompanyIdFromForm } from "@/lib/tenant/scope";
 
@@ -52,12 +52,16 @@ const formCompanyOrRedirect = (
   }
 };
 
-/** `.catch()` for writes: a duplicate name goes back to the list with a message. */
+/** `.catch()` for writes: a duplicate name or a foreign reference goes back to the list with a message. */
 const duplicateNameRedirect =
   (path: CatalogPath) =>
   (error: unknown): never => {
     if (error instanceof DuplicateNameError) {
       redirect(catalogHref(path, { error: "duplicate-name" }));
+    }
+
+    if (error instanceof CompanyReferenceError) {
+      redirect(catalogHref(path, { error: "reference" }));
     }
 
     throw error;

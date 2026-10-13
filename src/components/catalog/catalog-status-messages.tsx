@@ -5,6 +5,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   "duplicate-name":
     "Ya existe un registro activo con ese nombre en esta empresa. Usa otro nombre.",
   "company-changed": STALE_COMPANY_MESSAGE,
+  reference:
+    "El área elegida ya no existe en esta empresa. Elige otra de la lista.",
 };
 
 type CatalogStatusMessagesProps = {

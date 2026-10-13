@@ -23,3 +23,14 @@ export const rethrowDuplicate =
 
     throw error;
   };
+
+/** A form pointed at a record (area, puesto, jefe...) that is not in the active company. */
+export class CompanyReferenceError extends Error {
+  constructor(
+    public readonly field: string,
+    message = "Ese registro no existe en esta empresa.",
+  ) {
+    super(message);
+    this.name = "CompanyReferenceError";
+  }
+}

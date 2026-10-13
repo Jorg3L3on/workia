@@ -36,6 +36,19 @@ export default async function AdminPage() {
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
+            <CardTitle>Empresas</CardTitle>
+            <CardDescription>
+              Alta de empresas, suspensión y miembros de cada una.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild>
+              <Link href="/admin/empresas">Ver empresas</Link>
+            </Button>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
             <CardTitle>RBAC</CardTitle>
             <CardDescription>
               Review roles, permissions, and user assignments.

@@ -30,6 +30,8 @@ export default async function AppLayout({ children }: AppLayoutProps) {
       user={session.user}
       company={toOption(session.membership)}
       companies={session.memberships.map(toOption)}
+      canReadMembers={session.permissions.has("members:read")}
+      isPlatformAdmin={session.isPlatformAdmin}
     >
       {children}
     </AppShell>

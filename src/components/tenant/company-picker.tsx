@@ -3,7 +3,6 @@
 import { useActionState } from "react";
 import { Building2Icon, ChevronRightIcon } from "lucide-react";
 
-import { companyCopy } from "@/lib/brand/chrome-copy";
 import {
   switchCompanyAction,
   type SwitchCompanyState,

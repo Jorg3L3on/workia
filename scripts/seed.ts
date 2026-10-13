@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 config({ path: ".env.local" });
 config();
 
+/** Small second company for local isolation and IDOR checks. */
 const SECOND_DEMO_COMPANY = {
   name: "Comercial del Norte",
   slug: "comercial-del-norte",
@@ -11,11 +12,11 @@ const SECOND_DEMO_COMPANY = {
 };
 
 const seed = async () => {
-  const { eq } = await import("drizzle-orm");
+  const { and, eq, ne } = await import("drizzle-orm");
   const { db } = await import("@/lib/db");
   const { companyMemberships, permissions, rolePermissions, roles, users } =
     await import("@/lib/db/schema");
-  const { DEFAULT_COMPANY, ensureCompany } =
+  const { DEFAULT_COMPANY, DEMO_COMPANY, ensureCompany } =
     await import("@/lib/tenant/companies");
   const {
     DEFAULT_USERS,
@@ -41,7 +42,9 @@ const seed = async () => {
   const seedSecondCompany =
     isLocalDatabase || process.env.SEED_DEMO_SECOND_COMPANY === "1";
 
-  const defaultCompany = await ensureCompany(DEFAULT_COMPANY);
+  // The real company exists (migration 0015) but gets no demo data.
+  await ensureCompany(DEFAULT_COMPANY);
+  const demoCompany = await ensureCompany(DEMO_COMPANY);
   const secondCompany = seedSecondCompany
     ? await ensureCompany(SECOND_DEMO_COMPANY)
     : null;
@@ -93,12 +96,25 @@ const seed = async () => {
       return;
     }
 
+    if (isDefault) {
+      // One default per user: this company becomes where they land.
+      await db
+        .update(companyMemberships)
+        .set({ isDefault: false })
+        .where(
+          and(
+            eq(companyMemberships.userId, userId),
+            ne(companyMemberships.companyId, companyId),
+          ),
+        );
+    }
+
     await db
       .insert(companyMemberships)
       .values({ userId, companyId, roleId, isDefault })
       .onConflictDoUpdate({
         target: [companyMemberships.userId, companyMemberships.companyId],
-        set: { roleId, status: "activa" },
+        set: { roleId, status: "activa", ...(isDefault ? { isDefault } : {}) },
       });
   };
 
@@ -150,7 +166,7 @@ const seed = async () => {
       continue;
     }
 
-    await addMembership(userId, defaultCompany.id, user.roleSlug, true);
+    await addMembership(userId, demoCompany.id, user.roleSlug, true);
 
     if (user.roleSlug === "super_admin") {
       // The demo super admin also runs the platform (companies, members).
@@ -211,7 +227,8 @@ const seed = async () => {
   }
 
   if (rrhhUserId) {
-    await addMembership(rrhhUserId, defaultCompany.id, rrhhRoleSlug, true);
+    // The demo RRHH account lands directly in the demo company.
+    await addMembership(rrhhUserId, demoCompany.id, rrhhRoleSlug, true);
 
     // Same person, another role elsewhere: admin here, viewer there.
     if (secondCompany) {
@@ -221,12 +238,12 @@ const seed = async () => {
 
   console.log("RBAC seed completed.");
 
-  await seedDemoCompany(defaultCompany.id);
-  await seedDemoResguardo(defaultCompany.id);
-  await seedDemoActivities(defaultCompany.id);
-  await seedDemoSchedules(defaultCompany.id);
+  await seedDemoCompany(demoCompany.id);
+  await seedDemoResguardo(demoCompany.id);
+  await seedDemoActivities(demoCompany.id);
+  await seedDemoSchedules(demoCompany.id);
   await cleanupBorradosResidue();
-  await ensureOfficialDeletedDemoPerson(defaultCompany.id);
+  await ensureOfficialDeletedDemoPerson(demoCompany.id);
 
   if (secondCompany) {
     await seedDemoCompany(secondCompany.id, { personIndexOffset: 40 });

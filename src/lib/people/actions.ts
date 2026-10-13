@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { CompanyReferenceError } from "@/lib/db/errors";
 import { AuthorizationError } from "@/lib/rbac/errors";
 import {
   STALE_COMPANY_MESSAGE,
@@ -102,6 +103,13 @@ const duplicateIdentityState = (
   ),
 });
 
+const referenceState = (error: CompanyReferenceError): PersonActionState => ({
+  fieldErrors: {
+    [error.field as keyof PersonFormValues]:
+      "Elige una opción de la lista; esa ya no existe en esta empresa.",
+  },
+});
+
 const revalidatePersonPaths = (personId?: string) => {
   revalidatePath("/app/personas");
   revalidatePath("/app");
@@ -149,6 +157,10 @@ export const createPersonAction = async (
   } catch (error) {
     if (error instanceof DuplicateIdentityError) {
       return duplicateIdentityState(error);
+    }
+
+    if (error instanceof CompanyReferenceError) {
+      return referenceState(error);
     }
 
     throw error;
@@ -200,6 +212,10 @@ export const updatePersonAction = async (
   } catch (error) {
     if (error instanceof DuplicateIdentityError) {
       return duplicateIdentityState(error);
+    }
+
+    if (error instanceof CompanyReferenceError) {
+      return referenceState(error);
     }
 
     throw error;

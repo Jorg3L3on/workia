@@ -7,7 +7,7 @@
  * seed company people still in the active expediente.
  *
  * Residue cleanup spans every company (test leftovers); the official demo
- * person goes to --company <slug> (default: the default company).
+ * person goes to --company <slug> (default: the demo company).
  *
  * Shipper (after merge):
  *   npm run db:cleanup-borrados
@@ -238,8 +238,11 @@ const runCli = async () => {
   const options = parseCliOptions();
   await cleanupBorradosResidue(options);
 
-  const { companyIdFromArgs } = await import("@/lib/tenant/companies");
-  await ensureOfficialDeletedDemoPerson(await companyIdFromArgs());
+  const { companyIdFromArgs, DEMO_COMPANY } =
+    await import("@/lib/tenant/companies");
+  await ensureOfficialDeletedDemoPerson(
+    await companyIdFromArgs(process.argv, DEMO_COMPANY.slug),
+  );
 };
 
 const invokedDirectly = process.argv[1]?.includes("cleanup-borrados-residue");

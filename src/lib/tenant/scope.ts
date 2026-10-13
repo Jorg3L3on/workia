@@ -65,7 +65,7 @@ export const COMPANY_FIELD = "companyId";
 
 /** Shown when a form was opened in another company (another tab switched company). */
 export const STALE_COMPANY_MESSAGE =
-  "Cambiaste de empresa en otra pestaña. Recarga la página para continuar.";
+  "La empresa activa cambió. Recarga la página.";
 
 /** The active company, refusing a form opened in a different one. */
 export const writableCompanyIdFromForm = (

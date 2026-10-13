@@ -2,11 +2,13 @@
 
 import Link from "next/link";
 import {
+  Building2Icon,
   FileTextIcon,
   FolderTreeIcon,
   HomeIcon,
   LaptopIcon,
   ScrollTextIcon,
+  UserCogIcon,
   UsersIcon,
 } from "lucide-react";
 
@@ -52,6 +54,10 @@ type AppShellProps = {
   /** The company this request acts in, and every company the user can switch to. */
   company: CompanyOption;
   companies: CompanyOption[];
+  /** members:read in the active company: shows Miembros. */
+  canReadMembers?: boolean;
+  /** Platform admins also get a link to the platform console. */
+  isPlatformAdmin?: boolean;
   user: {
     name?: string | null;
     email?: string | null;
@@ -68,12 +74,31 @@ const navItems = [
   { title: "Auditoría", href: "/app/auditoria", icon: ScrollTextIcon },
 ] as const;
 
+const membersNavItem = {
+  title: "Miembros",
+  href: "/app/miembros",
+  icon: UserCogIcon,
+} as const;
+
+const platformNavItem = {
+  title: "Plataforma",
+  href: "/admin/empresas",
+  icon: Building2Icon,
+} as const;
+
 export const AppShell = ({
   children,
   user,
   company,
   companies,
+  canReadMembers = false,
+  isPlatformAdmin = false,
 }: AppShellProps) => {
+  const items = [
+    ...navItems,
+    ...(canReadMembers ? [membersNavItem] : []),
+    ...(isPlatformAdmin ? [platformNavItem] : []),
+  ];
   const initials = (user.name ?? "RRHH")
     .split(" ")
     .map((part) => part[0])
@@ -115,7 +140,7 @@ export const AppShell = ({
                 <CompanySwitcher current={company} companies={companies} />
               </SidebarHeader>
               <SidebarContent>
-                <AppSidebarNav items={navItems} />
+                <AppSidebarNav items={items} />
               </SidebarContent>
               <SidebarFooter className="border-sidebar-border border-t">
                 <NavUser

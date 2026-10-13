@@ -9,7 +9,7 @@ import {
   snapshotPositionActivity,
 } from "@/lib/audit";
 import { db } from "@/lib/db";
-import { rethrowDuplicate } from "@/lib/db/errors";
+import { CompanyReferenceError, rethrowDuplicate } from "@/lib/db/errors";
 import { withTenant } from "@/lib/tenant/scope";
 import {
   activities,
@@ -67,11 +67,28 @@ export const getAreaById = async (companyId: string, id: string) => {
   return area ?? null;
 };
 
+/** A parent area or puesto area must be a live area of the same company. */
+const assertAreaInCompany = async (
+  companyId: string,
+  areaId: string | null | undefined,
+  field: string,
+) => {
+  if (!areaId?.trim()) return;
+
+  const area = await getAreaById(companyId, areaId);
+
+  if (!area || area.deletedAt) {
+    throw new CompanyReferenceError(field);
+  }
+};
+
 export const createArea = async (
   companyId: string,
   input: AreaFormValues,
   actorUserId?: string | null,
 ) => {
+  await assertAreaInCompany(companyId, input.parentAreaId, "parentAreaId");
+
   const [created] = await db
     .insert(areas)
     .values({
@@ -104,6 +121,8 @@ export const updateArea = async (
   input: AreaFormValues,
   actorUserId?: string | null,
 ) => {
+  await assertAreaInCompany(companyId, input.parentAreaId, "parentAreaId");
+
   const existing = await getAreaById(companyId, id);
 
   if (!existing || existing.deletedAt) {
@@ -248,6 +267,8 @@ export const createPosition = async (
   input: PositionFormValues,
   actorUserId?: string | null,
 ) => {
+  await assertAreaInCompany(companyId, input.areaId, "areaId");
+
   const [created] = await db
     .insert(positions)
     .values({
@@ -280,6 +301,8 @@ export const updatePosition = async (
   input: PositionFormValues,
   actorUserId?: string | null,
 ) => {
+  await assertAreaInCompany(companyId, input.areaId, "areaId");
+
   const existing = await getPositionById(companyId, id);
 
   if (!existing || existing.deletedAt) {

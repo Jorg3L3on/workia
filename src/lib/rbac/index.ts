@@ -1,11 +1,12 @@
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 
 import { db } from "@/lib/db";
 import {
+  companies,
+  companyMemberships,
   permissions,
   rolePermissions,
   roles,
-  userRoles,
   users,
 } from "@/lib/db/schema";
 import type { PermissionSlug, RoleSlug } from "@/lib/db/schema/types";
@@ -153,6 +154,7 @@ export const getRolePermissionMatrix = async () => {
   };
 };
 
+/** Every user with their memberships ("Empresa: Rol") and platform access. */
 export const getUsersWithRoles = async () => {
   const allUsers = await db.select().from(users).orderBy(users.name);
 
@@ -162,26 +164,29 @@ export const getUsersWithRoles = async () => {
 
   const assignments = await db
     .select({
-      userId: userRoles.userId,
-      roleSlug: roles.slug,
+      userId: companyMemberships.userId,
       roleName: roles.name,
+      companyName: companies.name,
     })
-    .from(userRoles)
-    .innerJoin(roles, eq(userRoles.roleId, roles.id))
+    .from(companyMemberships)
+    .innerJoin(roles, eq(companyMemberships.roleId, roles.id))
+    .innerJoin(companies, eq(companyMemberships.companyId, companies.id))
     .where(
-      inArray(
-        userRoles.userId,
-        allUsers.map((user) => user.id),
+      and(
+        eq(companyMemberships.status, "activa"),
+        inArray(
+          companyMemberships.userId,
+          allUsers.map((user) => user.id),
+        ),
       ),
     );
 
   const rolesByUser = assignments.reduce<Record<string, string[]>>(
     (accumulator, assignment) => {
-      if (!accumulator[assignment.userId]) {
-        accumulator[assignment.userId] = [];
-      }
-
-      accumulator[assignment.userId].push(assignment.roleName);
+      accumulator[assignment.userId] ??= [];
+      accumulator[assignment.userId].push(
+        `${assignment.companyName}: ${assignment.roleName}`,
+      );
       return accumulator;
     },
     {},
@@ -189,6 +194,9 @@ export const getUsersWithRoles = async () => {
 
   return allUsers.map((user) => ({
     ...user,
-    roles: rolesByUser[user.id] ?? [],
+    roles: [
+      ...(user.isPlatformAdmin ? ["Plataforma"] : []),
+      ...(rolesByUser[user.id] ?? []),
+    ],
   }));
 };

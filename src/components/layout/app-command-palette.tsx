@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  Building2Icon,
   FileTextIcon,
   FolderTreeIcon,
   HomeIcon,
@@ -108,6 +109,14 @@ export const AppCommandPalette = () => {
       keywords: ["historial", "eventos"],
       icon: ScrollTextIcon,
       onSelect: go("/app/auditoria"),
+    },
+    {
+      id: "cambiar-empresa",
+      label: "Cambiar de empresa",
+      group: "Empresa",
+      keywords: ["empresa", "compañía", "cambiar"],
+      icon: Building2Icon,
+      onSelect: go("/empresa"),
     },
   ];
 
