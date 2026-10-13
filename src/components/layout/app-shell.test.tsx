@@ -35,13 +35,24 @@ vi.mock("@/components/theme-toggle", () => ({
   ThemeToggle: () => null,
 }));
 
+vi.mock("@/lib/tenant/actions", () => ({
+  switchCompanyAction: vi.fn(),
+}));
+
 import { AppShell } from "@/components/layout/app-shell";
 import { chromeCopy } from "@/lib/brand/chrome-copy";
+
+const companyA = { id: "a", name: "Ferretera Mandiola", roleName: "Admin" };
+const companyB = { id: "b", name: "Comercial del Norte", roleName: "Viewer" };
 
 const renderShell = () =>
   render(
     <TooltipProvider>
-      <AppShell user={{ name: "Elena Demo", email: "rrhh@workia.local" }}>
+      <AppShell
+        user={{ name: "Elena Demo", email: "rrhh@workia.local" }}
+        company={companyA}
+        companies={[companyA, companyB]}
+      >
         <p>Contenido</p>
       </AppShell>
     </TooltipProvider>,
@@ -54,6 +65,21 @@ afterEach(() => {
 });
 
 describe("AppShell", () => {
+  it("shows the active company in the sidebar and breadcrumbs, with a switcher", () => {
+    navigationState.pathname = "/app/personas";
+    renderShell();
+
+    expect(screen.getByTestId("active-company").textContent).toBe(
+      "Ferretera Mandiola",
+    );
+    expect(screen.getByTestId("breadcrumb-company").textContent).toBe(
+      "Ferretera Mandiola",
+    );
+    expect(
+      screen.getAllByRole("button", { name: "Cambiar de empresa" }).length,
+    ).toBeGreaterThan(0);
+  });
+
   it("renders the authenticated shell with Cerrar sesión", () => {
     renderShell();
 

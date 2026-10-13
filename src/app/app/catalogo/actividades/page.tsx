@@ -15,6 +15,7 @@ import {
 import { requireActivitiesRead } from "@/lib/catalog/auth";
 import { getActivityById, listActivities } from "@/lib/catalog";
 import { userHasPermission } from "@/lib/rbac";
+import { CompanyField } from "@/components/tenant/company-context";
 
 export const dynamic = "force-dynamic";
 
@@ -73,6 +74,7 @@ const ActividadesCatalogPage = async ({
               action={updateActivityAction.bind(null, editingActivity.id)}
               className="space-y-3"
             >
+              <CompanyField />
               <div className="space-y-2">
                 <Label htmlFor="activity-name">Nombre</Label>
                 <Input
@@ -111,6 +113,7 @@ const ActividadesCatalogPage = async ({
                           action={createActivityAction}
                           className="space-y-3"
                         >
+                          <CompanyField />
                           <div className="space-y-2">
                             <Label htmlFor="activity-name">Nombre</Label>
                             <Input

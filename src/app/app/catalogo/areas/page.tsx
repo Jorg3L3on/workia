@@ -14,6 +14,7 @@ import { requireAreasRead } from "@/lib/catalog/auth";
 import { listAreas } from "@/lib/catalog";
 import { buildAreaTree } from "@/lib/catalog/schema";
 import { userHasPermission } from "@/lib/rbac";
+import { CompanyField } from "@/components/tenant/company-context";
 
 export const dynamic = "force-dynamic";
 
@@ -63,6 +64,7 @@ const AreasCatalogPage = async ({ searchParams }: AreasCatalogPageProps) => {
                     formTitle: "Nueva área",
                     children: (
                       <form action={createAreaAction} className="space-y-3">
+                        <CompanyField />
                         <div className="space-y-2">
                           <Label htmlFor="area-name">Nombre</Label>
                           <Input

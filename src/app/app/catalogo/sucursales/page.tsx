@@ -14,6 +14,7 @@ import { requireSitesRead } from "@/lib/sites/auth";
 import { listSites } from "@/lib/sites";
 import { SITE_KINDS, siteKindLabels } from "@/lib/sites/schema";
 import { userHasPermission } from "@/lib/rbac";
+import { CompanyField } from "@/components/tenant/company-context";
 
 export const dynamic = "force-dynamic";
 
@@ -62,6 +63,7 @@ const SucursalesCatalogPage = async ({
                     formTitle: "Nueva sucursal",
                     children: (
                       <form action={createSiteAction} className="space-y-3">
+                        <CompanyField />
                         <div className="grid gap-3 sm:grid-cols-2">
                           <div className="space-y-2">
                             <Label htmlFor="site-name">Nombre</Label>

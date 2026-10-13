@@ -19,5 +19,19 @@ export default async function AppLayout({ children }: AppLayoutProps) {
   // No active company: off to /empresa (pick one, or "no perteneces a ninguna").
   const session = await requireCompanyPage();
 
-  return <AppShell user={session.user}>{children}</AppShell>;
+  const toOption = (membership: (typeof session.memberships)[number]) => ({
+    id: membership.companyId,
+    name: membership.companyName,
+    roleName: membership.roleName,
+  });
+
+  return (
+    <AppShell
+      user={session.user}
+      company={toOption(session.membership)}
+      companies={session.memberships.map(toOption)}
+    >
+      {children}
+    </AppShell>
+  );
 }

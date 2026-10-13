@@ -19,6 +19,7 @@ import {
   listPositions,
 } from "@/lib/catalog";
 import { userHasPermission } from "@/lib/rbac";
+import { CompanyField } from "@/components/tenant/company-context";
 
 export const dynamic = "force-dynamic";
 
@@ -94,6 +95,7 @@ const PuestosCatalogPage = async ({
                     formTitle: "Nuevo puesto",
                     children: (
                       <form action={createPositionAction} className="space-y-3">
+                        <CompanyField />
                         <div className="space-y-2">
                           <Label htmlFor="position-name">Nombre</Label>
                           <Input
