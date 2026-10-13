@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 import { AdminShell } from "@/components/layout/admin-shell";
 import { pageTitles } from "@/lib/brand/chrome-copy";
-import { requireAdminAccess } from "@/lib/auth/session";
+import { requirePlatformAdmin } from "@/lib/tenant/context";
 
 export const metadata: Metadata = {
   title: {
@@ -16,7 +16,7 @@ type AdminLayoutProps = {
 };
 
 export default async function AdminLayout({ children }: AdminLayoutProps) {
-  await requireAdminAccess();
+  await requirePlatformAdmin();
 
   return <AdminShell>{children}</AdminShell>;
 }

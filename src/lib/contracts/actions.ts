@@ -24,7 +24,7 @@ import {
   contractTemplateFormSchema,
   renewContractFormSchema,
 } from "@/lib/contracts/schema";
-import { AuthorizationError } from "@/lib/rbac";
+import { AuthorizationError } from "@/lib/rbac/errors";
 
 const revalidateContracts = (personId?: string) => {
   revalidatePath("/app");

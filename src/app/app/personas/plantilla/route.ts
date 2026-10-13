@@ -4,7 +4,7 @@ import { listActiveContractTemplates } from "@/lib/contracts";
 import { listActiveAreas, listActivePositions } from "@/lib/catalog";
 import { buildImportTemplate } from "@/lib/import/template";
 import { requirePeopleImport } from "@/lib/people/auth";
-import { AuthorizationError } from "@/lib/rbac";
+import { AuthorizationError } from "@/lib/rbac/errors";
 import { listActiveSites } from "@/lib/sites";
 
 export const dynamic = "force-dynamic";

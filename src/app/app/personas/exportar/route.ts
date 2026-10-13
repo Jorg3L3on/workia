@@ -7,7 +7,8 @@ import { recordAuditEvent } from "@/lib/audit";
 import { writeExport, type ExportFilters } from "@/lib/import/export";
 import { isUuid } from "@/lib/import/person-rows";
 import { requirePeopleExport } from "@/lib/people/auth";
-import { AuthorizationError, userHasPermission } from "@/lib/rbac";
+import { userHasPermission } from "@/lib/rbac";
+import { AuthorizationError } from "@/lib/rbac/errors";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";

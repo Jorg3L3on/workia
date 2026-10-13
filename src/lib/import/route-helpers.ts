@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { AuthorizationError } from "@/lib/rbac";
+import { AuthorizationError } from "@/lib/rbac/errors";
 
 import { getImportJob } from "./jobs";
 

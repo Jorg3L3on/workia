@@ -29,10 +29,11 @@ describe("proxy", () => {
     expect(source).not.toMatch(/\bauth\s*\(/);
   });
 
-  it("matches app, admin, login, and auth routes with a static matcher literal", () => {
+  it("matches app, admin, empresa, login, and auth routes with a static matcher literal", () => {
     expect(config.matcher).toEqual([
       "/admin/:path*",
       "/app/:path*",
+      "/empresa",
       "/login",
       "/api/auth/:path*",
     ]);

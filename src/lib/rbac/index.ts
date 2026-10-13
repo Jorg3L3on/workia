@@ -1,5 +1,4 @@
-import { and, eq, inArray } from "drizzle-orm";
-import { cache } from "react";
+import { eq, inArray } from "drizzle-orm";
 
 import { db } from "@/lib/db";
 import {
@@ -10,26 +9,16 @@ import {
   users,
 } from "@/lib/db/schema";
 import type { PermissionSlug, RoleSlug } from "@/lib/db/schema/types";
+import { getUserAccess } from "@/lib/tenant/context";
 
 import { AuthorizationError } from "./errors";
 
 export { AuthorizationError };
 
-// Per-request cache: a page checks several permissions for one user, and each
-// uncached call is a 4-table join.
-const getUserPermissionSlugs = cache(
-  async (userId: string): Promise<Set<string>> => {
-    const rows = await db
-      .select({ slug: permissions.slug })
-      .from(userRoles)
-      .innerJoin(roles, eq(userRoles.roleId, roles.id))
-      .innerJoin(rolePermissions, eq(roles.id, rolePermissions.roleId))
-      .innerJoin(permissions, eq(rolePermissions.permissionId, permissions.id))
-      .where(eq(userRoles.userId, userId));
-
-    return new Set(rows.map((row) => row.slug));
-  },
-);
+// Permissions come from the user's membership in the active company (plus
+// platform permissions for platform admins), resolved once per request.
+const getUserPermissionSlugs = async (userId: string): Promise<Set<string>> =>
+  (await getUserAccess(userId)).permissions;
 
 export const getUserPermissions = async (
   userId: string,
@@ -74,17 +63,11 @@ export const userHasAllPermissions = async (
   );
 };
 
-export const getUserRoles = cache(
-  async (userId: string): Promise<RoleSlug[]> => {
-    const rows = await db
-      .select({ slug: roles.slug })
-      .from(userRoles)
-      .innerJoin(roles, eq(userRoles.roleId, roles.id))
-      .where(eq(userRoles.userId, userId));
-
-    return rows.map((row) => row.slug as RoleSlug);
-  },
-);
+/** The role of the user's membership in the active company (empty without one). */
+export const getUserRoles = async (userId: string): Promise<RoleSlug[]> => {
+  const { membership } = await getUserAccess(userId);
+  return membership ? [membership.roleSlug as RoleSlug] : [];
+};
 
 export const userHasRole = async (
   userId: string,
@@ -139,45 +122,6 @@ export const requireRole = async (
   if (!allowed) {
     throw new AuthorizationError(`Missing role: ${roleSlug}`);
   }
-};
-
-export const assignRoleToUser = async (
-  userId: string,
-  roleSlug: RoleSlug,
-): Promise<void> => {
-  const [role] = await db
-    .select({ id: roles.id })
-    .from(roles)
-    .where(eq(roles.slug, roleSlug))
-    .limit(1);
-
-  if (!role) {
-    throw new Error(`Role not found: ${roleSlug}`);
-  }
-
-  await db
-    .insert(userRoles)
-    .values({ userId, roleId: role.id })
-    .onConflictDoNothing();
-};
-
-export const revokeRoleFromUser = async (
-  userId: string,
-  roleSlug: RoleSlug,
-): Promise<void> => {
-  const [role] = await db
-    .select({ id: roles.id })
-    .from(roles)
-    .where(eq(roles.slug, roleSlug))
-    .limit(1);
-
-  if (!role) {
-    throw new Error(`Role not found: ${roleSlug}`);
-  }
-
-  await db
-    .delete(userRoles)
-    .where(and(eq(userRoles.userId, userId), eq(userRoles.roleId, role.id)));
 };
 
 export const getRolePermissionMatrix = async () => {

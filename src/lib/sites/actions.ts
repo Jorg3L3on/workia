@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { CATALOG_PATHS, catalogHref } from "@/lib/catalog/paths";
-import { AuthorizationError } from "@/lib/rbac";
+import { AuthorizationError } from "@/lib/rbac/errors";
 
 import { createSite, softDeleteSite } from "./index";
 import { requireSitesCreate, requireSitesDelete } from "./auth";

@@ -31,7 +31,7 @@ import {
   positionActivityFormSchema,
   positionFormSchema,
 } from "@/lib/catalog/schema";
-import { AuthorizationError } from "@/lib/rbac";
+import { AuthorizationError } from "@/lib/rbac/errors";
 
 const revalidateCatalog = () => {
   revalidatePath(CATALOG_PATHS.index);

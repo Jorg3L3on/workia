@@ -11,7 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { requireAdminAccess } from "@/lib/auth/session";
+import { requirePlatformAdmin } from "@/lib/tenant/context";
 import { getUserPermissions } from "@/lib/rbac";
 
 export const metadata: Metadata = {
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 };
 
 export default async function AdminPage() {
-  const session = await requireAdminAccess();
+  const session = await requirePlatformAdmin();
   const permissions = await getUserPermissions(session.user.id);
 
   return (

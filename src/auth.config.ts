@@ -10,6 +10,10 @@ import { AUTH_SESSION_MAX_AGE_SECONDS } from "@/lib/auth/session-max-age";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { logger } from "@/lib/logger";
+import {
+  listActiveMemberships,
+  pickActiveMembership,
+} from "@/lib/tenant/memberships";
 
 const credentialsSchema = z.object({
   email: z.string().email(),
@@ -92,9 +96,28 @@ export const authConfig = {
       : []),
   ],
   callbacks: {
-    jwt: ({ token, user }) => {
+    jwt: async ({ token, user, trigger, session }) => {
       if (user?.id) {
         token.sub = user.id;
+        // Land in the default company (or the only one). Without any, the
+        // app sends the user to the "no company" screen.
+        token.activeCompanyId =
+          pickActiveMembership(await listActiveMemberships(user.id))
+            ?.companyId ?? null;
+      }
+
+      // switchCompany: accept the new company only if the user belongs to it.
+      const requested = (session as { activeCompanyId?: unknown } | undefined)
+        ?.activeCompanyId;
+
+      if (trigger === "update" && typeof requested === "string" && token.sub) {
+        const memberships = await listActiveMemberships(token.sub);
+
+        if (
+          memberships.some((membership) => membership.companyId === requested)
+        ) {
+          token.activeCompanyId = requested;
+        }
       }
 
       return token;
@@ -103,6 +126,11 @@ export const authConfig = {
       if (session.user && token.sub) {
         session.user.id = token.sub;
       }
+
+      session.activeCompanyId =
+        typeof token.activeCompanyId === "string"
+          ? token.activeCompanyId
+          : null;
 
       return session;
     },

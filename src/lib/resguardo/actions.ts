@@ -20,7 +20,7 @@ import {
   assignAssetFormSchema,
   returnAssetFormSchema,
 } from "@/lib/resguardo/schema";
-import { AuthorizationError } from "@/lib/rbac";
+import { AuthorizationError } from "@/lib/rbac/errors";
 
 const revalidateResguardo = (personId?: string) => {
   revalidatePath("/app");
