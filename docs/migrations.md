@@ -93,8 +93,14 @@ report, counts snapshot, migrate, `npm run db:cutover -- verify`, deploy.
 1. Take a Neon restore point (branch from the current state) before applying.
 2. `--status` to see what is pending, and compare it with the release.
 3. `DATABASE_URL=<prod> npm run db:migrate -- --confirm-host <prod-host>`.
-4. Deploy the code (merge `sandbox` → `main`). Migrations go first, so they
+4. If the release adds permissions to `PERMISSIONS` or grants to `ROLES`
+   (`src/lib/db/schema/types.ts`), also run
+   `DATABASE_URL=<prod> npm run db:sync-permissions -- --confirm-host <prod-host>`.
+   It inserts the missing permissions and role grants and nothing else;
+   the full seed (`db:seed`) is for local and demo databases only. Rerunning
+   it adds nothing.
+5. Deploy the code (merge `sandbox` → `main`). Migrations go first, so they
    must stay compatible with the code that is still running (expand, then
    contract in a later release).
-5. To roll back, restore the Neon branch from step 1; the registry is rolled
+6. To roll back, restore the Neon branch from step 1; the registry is rolled
    back with it.
