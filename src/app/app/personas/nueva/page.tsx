@@ -13,12 +13,12 @@ export const metadata: Metadata = {
 };
 
 const NuevaPersonaPage = async () => {
-  await requirePeopleCreate();
+  const session = await requirePeopleCreate();
 
   const [areas, positions, sites] = await Promise.all([
-    listActiveAreas(),
-    listActivePositions(),
-    listActiveSites(),
+    listActiveAreas(session.companyId),
+    listActivePositions(session.companyId),
+    listActiveSites(session.companyId),
   ]);
 
   return (

@@ -14,6 +14,7 @@ import { requireAreasRead } from "@/lib/catalog/auth";
 import { listAreas } from "@/lib/catalog";
 import { buildAreaTree } from "@/lib/catalog/schema";
 import { userHasPermission } from "@/lib/rbac";
+import { CompanyField } from "@/components/tenant/company-context";
 
 export const dynamic = "force-dynamic";
 
@@ -22,15 +23,19 @@ export const metadata: Metadata = {
 };
 
 type AreasCatalogPageProps = {
-  searchParams: Promise<{ saved?: string; deleted?: string }>;
+  searchParams: Promise<{
+    error?: string;
+    saved?: string;
+    deleted?: string;
+  }>;
 };
 
 const AreasCatalogPage = async ({ searchParams }: AreasCatalogPageProps) => {
   const session = await requireAreasRead();
-  const { saved, deleted } = await searchParams;
+  const { error, saved, deleted } = await searchParams;
 
   const [areas, canCreateArea, canDeleteArea] = await Promise.all([
-    listAreas(),
+    listAreas(session.companyId),
     userHasPermission(session.user.id, "areas:create"),
     userHasPermission(session.user.id, "areas:delete"),
   ]);
@@ -46,7 +51,7 @@ const AreasCatalogPage = async ({ searchParams }: AreasCatalogPageProps) => {
         title="Áreas"
       />
 
-      <CatalogStatusMessages deleted={deleted} saved={saved} />
+      <CatalogStatusMessages error={error} deleted={deleted} saved={saved} />
 
       <section className="workia-pass-card space-y-4 p-5">
         <CatalogFormTray
@@ -59,6 +64,7 @@ const AreasCatalogPage = async ({ searchParams }: AreasCatalogPageProps) => {
                     formTitle: "Nueva área",
                     children: (
                       <form action={createAreaAction} className="space-y-3">
+                        <CompanyField />
                         <div className="space-y-2">
                           <Label htmlFor="area-name">Nombre</Label>
                           <Input

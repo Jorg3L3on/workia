@@ -364,10 +364,12 @@ export type KeyedRow = {
   idWorkia: string | null;
   curp: string | null;
   rfc: string | null;
+  /** Unique per company too (migration 0017); optional where it is not compared. */
+  nss?: string | null;
 };
 
 /**
- * Rows repeating an ID Workia, CURP or RFC already used by an earlier row.
+ * Rows repeating an ID Workia, CURP, RFC or NSS already used by an earlier row.
  * Returns row number -> error, so only the later occurrences are rejected.
  */
 export const findFileDuplicates = (rows: KeyedRow[]) => {
@@ -377,10 +379,11 @@ export const findFileDuplicates = (rows: KeyedRow[]) => {
     idWorkia: "ID Workia repetido",
     curp: "CURP repetida",
     rfc: "RFC repetido",
+    nss: "NSS repetido",
   } as const;
 
   for (const row of rows) {
-    for (const field of ["idWorkia", "curp", "rfc"] as const) {
+    for (const field of ["idWorkia", "curp", "rfc", "nss"] as const) {
       const value = row[field];
 
       if (!value) continue;

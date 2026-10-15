@@ -1,14 +1,10 @@
-import { requireAuth } from "@/lib/auth/session";
-import { requirePermission } from "@/lib/rbac";
+import { requireCompanyContext } from "@/lib/tenant/context";
 import type { PermissionSlug } from "@/lib/db/schema/types";
 
-export const requireContractsPermission = async (
-  permission: PermissionSlug,
-) => {
-  const session = await requireAuth();
-  await requirePermission(session.user.id, permission);
-  return session;
-};
+export const requireContractsPermission = async (permission: PermissionSlug) =>
+  // The company context (active company + membership permissions) is the door
+  // to business data; callers read `session.companyId` for every query.
+  requireCompanyContext(permission);
 
 export const requireContractsRead = () =>
   requireContractsPermission("contracts:read");

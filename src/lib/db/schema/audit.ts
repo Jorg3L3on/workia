@@ -10,10 +10,15 @@ import {
 
 import { users } from "./rbac";
 
+import { companies } from "./companies";
+
 export const auditEvents = pgTable(
   "audit_events",
   {
     id: uuid("id").defaultRandom().primaryKey(),
+    companyId: uuid("company_id")
+      .notNull()
+      .references(() => companies.id, { onDelete: "restrict" }),
     actorUserId: uuid("actor_user_id").references(() => users.id, {
       onDelete: "set null",
     }),
@@ -29,12 +34,18 @@ export const auditEvents = pgTable(
       .notNull(),
   },
   (table) => [
-    index("audit_events_occurred_at_idx").on(table.occurredAt),
-    index("audit_events_resource_idx").on(table.resourceType, table.resourceId),
-    index("audit_events_resource_occurred_idx").on(
+    index("audit_events_company_id_idx").on(table.companyId),
+    index("audit_events_company_occurred_idx").on(
+      table.companyId,
+      // Plain DESC (nulls first) so `order by occurred_at desc` can walk it.
+      table.occurredAt.desc().nullsFirst(),
+    ),
+    index("audit_events_company_resource_occurred_idx").on(
+      table.companyId,
       table.resourceType,
       table.resourceId,
-      table.occurredAt.desc(),
+      // Plain DESC (nulls first) so `order by occurred_at desc` can walk it.
+      table.occurredAt.desc().nullsFirst(),
     ),
     index("audit_events_actor_user_id_idx").on(table.actorUserId),
   ],

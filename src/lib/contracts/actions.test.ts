@@ -112,7 +112,10 @@ describe("renewContractAction", () => {
   });
 
   it("renews without auto-baja on happy path", async () => {
-    requireContractsUpdateMock.mockResolvedValue({ user: { id: "user-1" } });
+    requireContractsUpdateMock.mockResolvedValue({
+      user: { id: "user-1" },
+      companyId: "company-1",
+    });
     renewContractMock.mockResolvedValue({
       id: "contract-new",
       personId: "person-1",
@@ -132,6 +135,7 @@ describe("renewContractAction", () => {
     );
 
     expect(renewContractMock).toHaveBeenCalledWith(
+      "company-1",
       expect.objectContaining({ type: "indeterminado" }),
       "user-1",
     );

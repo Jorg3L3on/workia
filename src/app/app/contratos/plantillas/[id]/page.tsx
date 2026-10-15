@@ -16,6 +16,7 @@ import { getContractTemplateById } from "@/lib/contracts";
 import { requireContractTemplatesRead } from "@/lib/contracts/auth";
 import { CONTRACT_TEMPLATE_TOKENS } from "@/lib/contracts/schema";
 import { userHasPermission } from "@/lib/rbac";
+import { CompanyField } from "@/components/tenant/company-context";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +38,7 @@ const PlantillaDetailPage = async ({
   const { saved, error } = await searchParams;
 
   const [template, canUpdate, canDelete] = await Promise.all([
-    getContractTemplateById(id),
+    getContractTemplateById(session.companyId, id),
     userHasPermission(session.user.id, "contract_templates:update"),
     userHasPermission(session.user.id, "contract_templates:delete"),
   ]);
@@ -79,6 +80,7 @@ const PlantillaDetailPage = async ({
 
       {canUpdate ? (
         <form action={updateAction} className="workia-pass-card space-y-4 p-5">
+          <CompanyField />
           <div className="space-y-2">
             <Label htmlFor="name">Nombre</Label>
             <Input

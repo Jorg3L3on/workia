@@ -24,7 +24,11 @@ import {
   contractTemplateFormSchema,
   renewContractFormSchema,
 } from "@/lib/contracts/schema";
-import { AuthorizationError } from "@/lib/rbac";
+import { AuthorizationError } from "@/lib/rbac/errors";
+import {
+  STALE_COMPANY_MESSAGE,
+  writableCompanyIdFromForm,
+} from "@/lib/tenant/scope";
 
 const revalidateContracts = (personId?: string) => {
   revalidatePath("/app");
@@ -70,6 +74,18 @@ const parseTemplateForm = (formData: FormData) =>
       formData.get("active") === "on" || formData.get("active") === "true",
   });
 
+/** The active company, or back to the templates when the form was opened in another company. */
+const templateCompanyOrRedirect = (
+  session: { companyId: string },
+  formData: FormData,
+) => {
+  try {
+    return writableCompanyIdFromForm(session, formData);
+  } catch {
+    redirect("/app/contratos/plantillas?error=company-changed");
+  }
+};
+
 export const createContractAction = async (
   _prev: ContractActionState,
   formData: FormData,
@@ -95,7 +111,23 @@ export const createContractAction = async (
     };
   }
 
-  const created = await createContract(parsed.data, session.user.id);
+  let companyId: string;
+
+  try {
+    companyId = writableCompanyIdFromForm(session, formData);
+  } catch {
+    return { error: STALE_COMPANY_MESSAGE };
+  }
+
+  let created;
+
+  try {
+    created = await createContract(companyId, parsed.data, session.user.id);
+  } catch (error) {
+    // Unknown person or template (or another company's), or one vigente already.
+    return { error: (error as Error).message };
+  }
+
   revalidateContracts(created.personId);
   redirect(`/app/personas/${created.personId}?contract=created`);
 };
@@ -125,7 +157,22 @@ export const renewContractAction = async (
     };
   }
 
-  const renewed = await renewContract(parsed.data, session.user.id);
+  let companyId: string;
+
+  try {
+    companyId = writableCompanyIdFromForm(session, formData);
+  } catch {
+    return { error: STALE_COMPANY_MESSAGE };
+  }
+
+  let renewed;
+
+  try {
+    renewed = await renewContract(companyId, parsed.data, session.user.id);
+  } catch (error) {
+    return { error: (error as Error).message };
+  }
+
   revalidateContracts(renewed.personId);
   redirect(`/app/contratos?renewed=1`);
 };
@@ -143,7 +190,11 @@ export const noRenewContractAction = async (contractId: string) => {
     redirect("/login");
   }
 
-  const updated = await markContractNoRenew(contractId, session.user.id);
+  const updated = await markContractNoRenew(
+    session.companyId,
+    contractId,
+    session.user.id,
+  ).catch(() => redirect("/app/contratos?error=not-found"));
   revalidateContracts(updated.personId);
   redirect("/app/contratos?no-renew=1");
 };
@@ -167,7 +218,9 @@ export const createContractTemplateAction = async (formData: FormData) => {
     redirect("/app/contratos/plantillas?error=form");
   }
 
-  await createContractTemplate(parsed.data, session.user.id);
+  const companyId = templateCompanyOrRedirect(session, formData);
+
+  await createContractTemplate(companyId, parsed.data, session.user.id);
   revalidateContracts();
   redirect("/app/contratos/plantillas?saved=1");
 };
@@ -196,7 +249,14 @@ export const updateContractTemplateAction = async (
     redirect(`/app/contratos/plantillas/${templateId}?error=form`);
   }
 
-  await updateContractTemplate(templateId, parsed.data, session.user.id);
+  const companyId = templateCompanyOrRedirect(session, formData);
+
+  await updateContractTemplate(
+    companyId,
+    templateId,
+    parsed.data,
+    session.user.id,
+  ).catch(() => redirect("/app/contratos/plantillas?error=not-found"));
   revalidateContracts();
   redirect(`/app/contratos/plantillas/${templateId}?saved=1`);
 };
@@ -214,7 +274,11 @@ export const deactivateContractTemplateAction = async (templateId: string) => {
     redirect("/login");
   }
 
-  await deactivateContractTemplate(templateId, session.user.id);
+  await deactivateContractTemplate(
+    session.companyId,
+    templateId,
+    session.user.id,
+  ).catch(() => redirect("/app/contratos/plantillas?error=not-found"));
   revalidateContracts();
   redirect("/app/contratos/plantillas?deactivated=1");
 };
@@ -232,7 +296,11 @@ export const deleteContractTemplateAction = async (templateId: string) => {
     redirect("/login");
   }
 
-  await softDeleteContractTemplate(templateId, session.user.id);
+  await softDeleteContractTemplate(
+    session.companyId,
+    templateId,
+    session.user.id,
+  ).catch(() => redirect("/app/contratos/plantillas?error=not-found"));
   revalidateContracts();
   redirect("/app/contratos/plantillas?deleted=1");
 };

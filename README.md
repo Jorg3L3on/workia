@@ -53,9 +53,16 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
 ### 3. Set up the database
 
 ```bash
-npm run db:push
+npm run db:migrate
 npm run db:seed
 ```
+
+`db:migrate` applies the SQL in `drizzle/` and records each migration (see
+[docs/migrations.md](docs/migrations.md)). The schema relies on SQL that
+`db:push` cannot create (the `catalog_key()` function behind the per-company
+catalog indexes), so use `db:migrate` on a new database. Locally the seed
+creates two demo companies, «Ferretera Mandiola» and «Comercial del Norte»
+(see [docs/multiempresa.md](docs/multiempresa.md)).
 
 ### 4. Run the development server
 
@@ -82,18 +89,20 @@ After seeding:
 
 ## Scripts
 
-| Command             | Description              |
-| ------------------- | ------------------------ |
-| `npm run dev`       | Start development server |
-| `npm run build`     | Production build         |
-| `npm run start`     | Serve production build   |
-| `npm run lint`      | ESLint                   |
-| `npm run typecheck` | TypeScript check         |
-| `npm run test`      | Vitest unit tests        |
-| `npm run test:e2e`  | Playwright E2E tests     |
-| `npm run format`    | Prettier write           |
-| `npm run db:push`   | Push Drizzle schema      |
-| `npm run db:seed`   | Seed RBAC + demo users   |
+| Command                    | Description                                                             |
+| -------------------------- | ----------------------------------------------------------------------- |
+| `npm run dev`              | Start development server                                                |
+| `npm run build`            | Production build                                                        |
+| `npm run start`            | Serve production build                                                  |
+| `npm run lint`             | ESLint                                                                  |
+| `npm run typecheck`        | TypeScript check                                                        |
+| `npm run test`             | Vitest unit tests                                                       |
+| `npm run test:e2e`         | Playwright E2E tests                                                    |
+| `npm run format`           | Prettier write                                                          |
+| `npm run db:push`          | Push Drizzle schema (prefer `db:migrate`)                               |
+| `npm run db:seed`          | Seed RBAC + demo users                                                  |
+| `npm run db:migrate`       | Apply pending migrations (see [docs/migrations.md](docs/migrations.md)) |
+| `npm run check:migrations` | Fail on destructive SQL in new migrations                               |
 
 ## Architecture
 

@@ -16,10 +16,13 @@ export const metadata: Metadata = {
 type Props = { searchParams: Promise<{ job?: string }> };
 
 const ImportarPersonasPage = async ({ searchParams }: Props) => {
-  await requirePeopleImport();
+  const session = await requirePeopleImport();
 
   const { job: jobId } = await searchParams;
-  const job = jobId && isUuid(jobId) ? await getImportJob(jobId) : null;
+  const job =
+    jobId && isUuid(jobId)
+      ? await getImportJob(session.companyId, jobId)
+      : null;
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">

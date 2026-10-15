@@ -69,8 +69,15 @@ type PersonaDetailPageProps = {
   }>;
 };
 
-const PersonHistory = async ({ personId }: { personId: string }) => {
+const PersonHistory = async ({
+  companyId,
+  personId,
+}: {
+  companyId: string;
+  personId: string;
+}) => {
   const auditEvents = await listAuditEvents({
+    companyId,
     resourceType: "person",
     resourceId: personId,
     limit: 50,
@@ -106,19 +113,19 @@ const PersonaDetailPage = async ({
     personAssets,
     positionActivities,
   ] = await Promise.all([
-    getPersonWithRelations(id, true),
+    getPersonWithRelations(session.companyId, id, true),
     userHasPermission(session.user.id, "people:update"),
     userHasPermission(session.user.id, "people:delete"),
     userHasPermission(session.user.id, "audit:read"),
     userHasPermission(session.user.id, "contracts:read"),
     userHasPermission(session.user.id, "contracts:create"),
     userHasPermission(session.user.id, "assets:read"),
-    listContractsByPerson(id),
-    listActiveContractTemplates(),
+    listContractsByPerson(session.companyId, id),
+    listActiveContractTemplates(session.companyId),
     userHasPermission(session.user.id, "assets:read").then((allowed) =>
-      allowed ? listAssetsByPerson(id) : Promise.resolve([]),
+      allowed ? listAssetsByPerson(session.companyId, id) : Promise.resolve([]),
     ),
-    listActivitiesForPersonPosition(id),
+    listActivitiesForPersonPosition(session.companyId, id),
   ]);
 
   if (!person) {
@@ -132,9 +139,9 @@ const PersonaDetailPage = async ({
   if (isEditing) {
     // Form options are only needed here; view mode never loads them.
     const [areas, positions, sites] = await Promise.all([
-      listActiveAreas(),
-      listActivePositions(),
-      listActiveSites(),
+      listActiveAreas(session.companyId),
+      listActivePositions(session.companyId),
+      listActiveSites(session.companyId),
     ]);
 
     return (
@@ -410,7 +417,7 @@ const PersonaDetailPage = async ({
                 </p>
               </div>
               <Suspense fallback={<SectionSkeleton rows={3} />}>
-                <PersonHistory personId={id} />
+                <PersonHistory companyId={session.companyId} personId={id} />
               </Suspense>
             </div>
           ) : undefined

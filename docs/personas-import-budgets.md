@@ -37,6 +37,16 @@ counts are the portable number, because every statement adds a network round
 trip. Statement counts are bounded per chunk of 500 rows (validate) or batch
 of 200 rows (apply, undo), not per row.
 
+### With several companies (WRK-I4-11)
+
+`npm run import:budgets -- --company <slug>` runs in one company (default
+company otherwise). Measured with three companies loaded (Empresa Demo,
+Comercial del Norte and Ferretera Mandiola): parse 0.2 s, stage 1.1 s / 36,
+validate 1.9 s / 393, apply 6.4 s / 924, export 0.6 s (+12 MB), re-import 3.5 s
+/ 451, undo 9.6 s / 1,421. Same statement counts as with one company; every
+budget holds. On a freshly seeded database run `ANALYZE` first: before the
+planner has statistics, undo took up to 70 s.
+
 ## Limits
 
 - 5,000 people (Personas rows) and 10 MB per file.

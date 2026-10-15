@@ -2,11 +2,13 @@
 
 import Link from "next/link";
 import {
+  Building2Icon,
   FileTextIcon,
   FolderTreeIcon,
   HomeIcon,
   LaptopIcon,
   ScrollTextIcon,
+  UserCogIcon,
   UsersIcon,
 } from "lucide-react";
 
@@ -28,6 +30,8 @@ import {
   SHELL_VIEWPORT_CLASS_NAME,
 } from "@/components/layout/shell-top-nav";
 import { NavUser } from "@/components/nav-user";
+import { CompanyProvider } from "@/components/tenant/company-context";
+import { CompanySwitcher } from "@/components/tenant/company-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -43,8 +47,17 @@ import {
 import { CATALOG_PATHS } from "@/lib/catalog/paths";
 import { cn } from "@/lib/utils";
 
+type CompanyOption = { id: string; name: string; roleName: string };
+
 type AppShellProps = {
   children: React.ReactNode;
+  /** The company this request acts in, and every company the user can switch to. */
+  company: CompanyOption;
+  companies: CompanyOption[];
+  /** members:read in the active company: shows Miembros. */
+  canReadMembers?: boolean;
+  /** Platform admins also get a link to the platform console. */
+  isPlatformAdmin?: boolean;
   user: {
     name?: string | null;
     email?: string | null;
@@ -61,7 +74,31 @@ const navItems = [
   { title: "Auditoría", href: "/app/auditoria", icon: ScrollTextIcon },
 ] as const;
 
-export const AppShell = ({ children, user }: AppShellProps) => {
+const membersNavItem = {
+  title: "Miembros",
+  href: "/app/miembros",
+  icon: UserCogIcon,
+} as const;
+
+const platformNavItem = {
+  title: "Plataforma",
+  href: "/admin/empresas",
+  icon: Building2Icon,
+} as const;
+
+export const AppShell = ({
+  children,
+  user,
+  company,
+  companies,
+  canReadMembers = false,
+  isPlatformAdmin = false,
+}: AppShellProps) => {
+  const items = [
+    ...navItems,
+    ...(canReadMembers ? [membersNavItem] : []),
+    ...(isPlatformAdmin ? [platformNavItem] : []),
+  ];
   const initials = (user.name ?? "RRHH")
     .split(" ")
     .map((part) => part[0])
@@ -70,84 +107,90 @@ export const AppShell = ({ children, user }: AppShellProps) => {
     .toUpperCase();
 
   return (
-    <BreadcrumbLabelsProvider>
-      <div
-        className={cn(
-          "workia-shell relative flex flex-col",
-          SHELL_VIEWPORT_CLASS_NAME,
-        )}
-      >
-        <SidebarProvider
-          className={cn("relative z-10 flex w-full", SHELL_VIEWPORT_CLASS_NAME)}
+    <CompanyProvider company={{ id: company.id, name: company.name }}>
+      <BreadcrumbLabelsProvider>
+        <div
+          className={cn(
+            "workia-shell relative flex flex-col",
+            SHELL_VIEWPORT_CLASS_NAME,
+          )}
         >
-          <NavigationProgress />
-          <AppCommandPalette />
-          <Sidebar
-            collapsible="icon"
-            className="border-sidebar-border border-r"
+          <SidebarProvider
+            className={cn(
+              "relative z-10 flex w-full",
+              SHELL_VIEWPORT_CLASS_NAME,
+            )}
           >
-            <SidebarHeader className="border-sidebar-border border-b p-3">
-              <Link
-                className="flex items-center gap-2.5 px-1 font-semibold tracking-tight"
-                href="/app"
-              >
-                <WorkiaMark className="size-7" />
-                <span className="truncate group-data-[collapsible=icon]:hidden">
-                  workia
-                </span>
-              </Link>
-            </SidebarHeader>
-            <SidebarContent>
-              <AppSidebarNav items={navItems} />
-            </SidebarContent>
-            <SidebarFooter className="border-sidebar-border border-t">
-              <NavUser
-                user={{
-                  name: user.name ?? "Usuario",
-                  email: user.email ?? "",
-                  avatar: user.image ?? "",
-                  initials,
-                }}
-              />
-            </SidebarFooter>
-            <SidebarRail />
-          </Sidebar>
-
-          <SidebarInset
-            className={cn("bg-transparent", SHELL_INSET_CLASS_NAME)}
-          >
-            <header
-              className={cn(
-                "workia-credential-header flex h-14 shrink-0 items-center gap-2 border-b",
-                SHELL_TOP_NAV_CLASS_NAME,
-              )}
-              data-slot="shell-top-nav"
+            <NavigationProgress />
+            <AppCommandPalette />
+            <Sidebar
+              collapsible="icon"
+              className="border-sidebar-border border-r"
             >
-              <div className="flex flex-1 items-center gap-2 px-4">
-                <SidebarTrigger className="-ml-1" />
-                <Separator
-                  className="mr-2 data-[orientation=vertical]:h-4"
-                  orientation="vertical"
+              <SidebarHeader className="border-sidebar-border border-b p-3">
+                <Link
+                  className="flex items-center gap-2.5 px-1 font-semibold tracking-tight"
+                  href="/app"
+                >
+                  <WorkiaMark className="size-7" />
+                  <span className="truncate group-data-[collapsible=icon]:hidden">
+                    workia
+                  </span>
+                </Link>
+                <CompanySwitcher current={company} companies={companies} />
+              </SidebarHeader>
+              <SidebarContent>
+                <AppSidebarNav items={items} />
+              </SidebarContent>
+              <SidebarFooter className="border-sidebar-border border-t">
+                <NavUser
+                  user={{
+                    name: user.name ?? "Usuario",
+                    email: user.email ?? "",
+                    avatar: user.image ?? "",
+                    initials,
+                  }}
                 />
-                <AppBreadcrumbs />
-              </div>
-              <div className="flex items-center gap-1 px-4">
-                <AppCommandPaletteHint />
-                <ThemeToggle />
-              </div>
-            </header>
-            <div
-              className={cn(
-                "mx-auto flex w-full max-w-6xl flex-col gap-4 p-4 md:p-6",
-                SHELL_MAIN_SCROLL_CLASS_NAME,
-              )}
-              data-slot="shell-main-scroll"
+              </SidebarFooter>
+              <SidebarRail />
+            </Sidebar>
+
+            <SidebarInset
+              className={cn("bg-transparent", SHELL_INSET_CLASS_NAME)}
             >
-              {children}
-            </div>
-          </SidebarInset>
-        </SidebarProvider>
-      </div>
-    </BreadcrumbLabelsProvider>
+              <header
+                className={cn(
+                  "workia-credential-header flex h-14 shrink-0 items-center gap-2 border-b",
+                  SHELL_TOP_NAV_CLASS_NAME,
+                )}
+                data-slot="shell-top-nav"
+              >
+                <div className="flex flex-1 items-center gap-2 px-4">
+                  <SidebarTrigger className="-ml-1" />
+                  <Separator
+                    className="mr-2 data-[orientation=vertical]:h-4"
+                    orientation="vertical"
+                  />
+                  <AppBreadcrumbs />
+                </div>
+                <div className="flex items-center gap-1 px-4">
+                  <AppCommandPaletteHint />
+                  <ThemeToggle />
+                </div>
+              </header>
+              <div
+                className={cn(
+                  "mx-auto flex w-full max-w-6xl flex-col gap-4 p-4 md:p-6",
+                  SHELL_MAIN_SCROLL_CLASS_NAME,
+                )}
+                data-slot="shell-main-scroll"
+              >
+                {children}
+              </div>
+            </SidebarInset>
+          </SidebarProvider>
+        </div>
+      </BreadcrumbLabelsProvider>
+    </CompanyProvider>
   );
 };

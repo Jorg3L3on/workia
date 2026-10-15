@@ -44,4 +44,21 @@ export const pageTitles = {
   rbac: "RBAC",
   notFound: "Página no encontrada",
   forbidden: "Acceso no permitido",
+  empresa: "Elegir empresa",
+  empresas: "Empresas",
+  miembros: "Miembros",
+} as const;
+
+export const companyCopy = {
+  pickerEyebrow: "Empresa",
+  pickerTitle: "¿En qué empresa vas a trabajar?",
+  pickerDescription:
+    "Tienes acceso a varias empresas. Elige una; puedes cambiar después desde la barra lateral.",
+  noCompanyStamp: "SIN EMPRESA",
+  noCompanyTitle: "No perteneces a ninguna empresa",
+  noCompanyDescription:
+    "Tu cuenta está activa, pero nadie te ha dado acceso a una empresa todavía. Pide a la persona administradora de tu empresa que te agregue.",
+  signOut: "Cerrar sesión",
+  switchLabel: "Cambiar de empresa",
+  switchDenied: "Acceso no permitido",
 } as const;

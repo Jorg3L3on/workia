@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { AuthorizationError } from "@/lib/rbac";
+import { AuthorizationError } from "@/lib/rbac/errors";
 
 import { getImportJob } from "./jobs";
 
@@ -15,9 +15,13 @@ export const importApiError = (error: unknown) =>
     { status: error instanceof AuthorizationError ? 403 : 401 },
   );
 
-/** The job must exist, belong to the caller and still be uploading. */
-export const loadUploadingJob = async (jobId: string, userId: string) => {
-  const job = await getImportJob(jobId);
+/** The job must exist in the active company, belong to the caller and still be uploading. */
+export const loadUploadingJob = async (
+  companyId: string,
+  jobId: string,
+  userId: string,
+) => {
+  const job = await getImportJob(companyId, jobId);
 
   if (!job || job.actorUserId !== userId) {
     return {

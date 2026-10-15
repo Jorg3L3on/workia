@@ -10,12 +10,30 @@ jobs:
   verify:
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: workia
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
     env:
       DATABASE_URL: postgresql://user:password@localhost:5432/workia?sslmode=disable
       AUTH_SECRET: ci-auth-secret-with-at-least-32-characters
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The migration safety check diffs against the base branch.
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -31,5 +49,31 @@ jobs:
       - run: npm run lint
 
       - run: npm run test
+
+      # Fails when a PR adds a migration that can lose data without a `-- data-loss-ok:` line.
+      - name: Migration safety (no destructive SQL)
+        if: github.event_name == 'pull_request'
+        run: npm run check:migrations
+
+      # Real-Postgres tests: migrations (single company -> multi-company), per-company
+      # uniqueness, and the cross-company (IDOR) suite. Throwaway databases on the service.
+      - name: Database and IDOR tests
+        run: npm run test:db
+
+      # The same suite with row-level security on: the app connects as a role
+      # without BYPASSRLS and every business query is scoped to its company.
+      - name: Database and IDOR tests under row-level security
+        run: npm run test:db:rls
+
+      # Fails when a server action, route or company-scoped lib function has no IDOR test.
+      - name: IDOR coverage gate
+        run: npm run check:idor
+
+      # Every migration applies on an empty database, and a second run applies nothing.
+      - name: Apply migrations twice
+        run: |
+          npm run db:migrate
+          npm run db:migrate | tee second-run.log
+          grep -q "Nothing to apply" second-run.log
 
       - run: npm run build

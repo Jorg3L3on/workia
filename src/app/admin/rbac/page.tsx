@@ -133,7 +133,7 @@ const AdminRbacPage = async () => {
             <CardHeader>
               <CardTitle>Users</CardTitle>
               <CardDescription>
-                Seeded demo users with assigned roles.
+                Role of each user per company (memberships) and platform access.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -142,7 +142,7 @@ const AdminRbacPage = async () => {
                   <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
-                    <TableHead>Roles</TableHead>
+                    <TableHead>Acceso</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

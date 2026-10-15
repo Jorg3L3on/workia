@@ -1,5 +1,6 @@
 import { relations, sql } from "drizzle-orm";
 import {
+  foreignKey,
   index,
   integer,
   jsonb,
@@ -7,6 +8,7 @@ import {
   pgTable,
   text,
   timestamp,
+  unique,
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
@@ -14,6 +16,8 @@ import {
 import { contracts } from "./contracts";
 import { people } from "./people";
 import { users } from "./rbac";
+
+import { companies } from "./companies";
 
 export const IMPORT_JOB_TYPES = ["people"] as const;
 export const IMPORT_JOB_STATUSES = [
@@ -83,6 +87,9 @@ export const importJobs = pgTable(
   "import_jobs",
   {
     id: uuid("id").defaultRandom().primaryKey(),
+    companyId: uuid("company_id")
+      .notNull()
+      .references(() => companies.id, { onDelete: "restrict" }),
     type: importJobTypeEnum("type").notNull().default("people"),
     status: importJobStatusEnum("status").notNull().default("uploading"),
     fileName: text("file_name").notNull(),
@@ -106,13 +113,18 @@ export const importJobs = pgTable(
     undoneAt: timestamp("undone_at", { withTimezone: true }),
   },
   (table) => [
+    unique("import_jobs_company_id_id_unique").on(table.companyId, table.id),
     index("import_jobs_status_idx").on(table.status),
     index("import_jobs_file_hash_idx").on(table.fileHash),
     index("import_jobs_actor_user_id_idx").on(table.actorUserId),
     index("import_jobs_created_at_idx").on(table.createdAt),
-    // At most one import may be applying at a time.
+    index("import_jobs_company_created_idx").on(
+      table.companyId,
+      table.createdAt.desc().nullsFirst(),
+    ),
+    // At most one import may be applying at a time in each company.
     uniqueIndex("import_jobs_single_applying_idx")
-      .on(table.type)
+      .on(table.companyId, table.type)
       .where(sql`${table.status} = 'applying'`),
   ],
 );
@@ -121,6 +133,9 @@ export const importRows = pgTable(
   "import_rows",
   {
     id: uuid("id").defaultRandom().primaryKey(),
+    companyId: uuid("company_id")
+      .notNull()
+      .references(() => companies.id, { onDelete: "restrict" }),
     jobId: uuid("job_id")
       .notNull()
       .references(() => importJobs.id, { onDelete: "cascade" }),
@@ -151,6 +166,22 @@ export const importRows = pgTable(
       .notNull(),
   },
   (table) => [
+    index("import_rows_company_id_idx").on(table.companyId),
+    foreignKey({
+      name: "import_rows_company_job_fk",
+      columns: [table.companyId, table.jobId],
+      foreignColumns: [importJobs.companyId, importJobs.id],
+    }),
+    foreignKey({
+      name: "import_rows_company_target_person_fk",
+      columns: [table.companyId, table.targetPersonId],
+      foreignColumns: [people.companyId, people.id],
+    }),
+    foreignKey({
+      name: "import_rows_company_target_contract_fk",
+      columns: [table.companyId, table.targetContractId],
+      foreignColumns: [contracts.companyId, contracts.id],
+    }),
     // Re-sending a chunk replaces the same rows instead of duplicating them.
     uniqueIndex("import_rows_job_sheet_row_idx").on(
       table.jobId,

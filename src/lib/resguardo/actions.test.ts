@@ -115,7 +115,10 @@ describe("returnAssetAction", () => {
   });
 
   it("registers devolución on happy path", async () => {
-    requireAssetsUpdateMock.mockResolvedValue({ user: { id: "user-1" } });
+    requireAssetsUpdateMock.mockResolvedValue({
+      user: { id: "user-1" },
+      companyId: "company-1",
+    });
     returnAssetMock.mockResolvedValue({
       asset: { id: "asset-1", holderId: null },
       movement: { personId: "person-1" },
@@ -133,6 +136,7 @@ describe("returnAssetAction", () => {
     );
 
     expect(returnAssetMock).toHaveBeenCalledWith(
+      "company-1",
       expect.objectContaining({ conditionNote: "Buen estado" }),
       "user-1",
     );

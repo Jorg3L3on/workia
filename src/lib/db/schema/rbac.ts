@@ -1,5 +1,6 @@
 import { relations } from "drizzle-orm";
 import {
+  boolean,
   pgTable,
   primaryKey,
   text,
@@ -14,6 +15,8 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   image: text("image"),
   passwordHash: text("password_hash"),
+  /** Platform access: manages companies and memberships. Not a company role. */
+  isPlatformAdmin: boolean("is_platform_admin").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),

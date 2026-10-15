@@ -74,13 +74,18 @@ const AssetDetailPage = async ({
     people,
     auditEvents,
   ] = await Promise.all([
-    getAssetWithHolder(id),
-    listAssetMovements(id),
+    getAssetWithHolder(session.companyId, id),
+    listAssetMovements(session.companyId, id),
     userHasPermission(session.user.id, "assets:update"),
     userHasPermission(session.user.id, "assets:delete"),
     userHasPermission(session.user.id, "audit:read"),
-    listActivePeopleForSelect(),
-    listAuditEvents({ resourceType: "asset", resourceId: id, limit: 20 }),
+    listActivePeopleForSelect(session.companyId),
+    listAuditEvents({
+      companyId: session.companyId,
+      resourceType: "asset",
+      resourceId: id,
+      limit: 20,
+    }),
   ]);
 
   if (!asset) {

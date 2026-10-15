@@ -14,7 +14,9 @@ export type PermissionResource =
   | "sites"
   | "contracts"
   | "contract_templates"
-  | "assets";
+  | "assets"
+  | "companies"
+  | "members";
 
 export type PermissionSlug = `${PermissionResource}:${PermissionAction}`;
 
@@ -347,26 +349,75 @@ export const PERMISSIONS: Array<{
     action: "delete",
     description: "Logically delete asset records",
   },
+  {
+    slug: "members:read",
+    name: "Read Members",
+    resource: "members",
+    action: "read",
+    description: "View who has access to the company and with which role",
+  },
+  {
+    slug: "members:manage",
+    name: "Manage Members",
+    resource: "members",
+    action: "manage",
+    description:
+      "Add members to the company, change their role, or revoke them",
+  },
+  {
+    slug: "companies:read",
+    name: "Read Companies",
+    resource: "companies",
+    action: "read",
+    description: "Platform: view every company",
+  },
+  {
+    slug: "companies:manage",
+    name: "Manage Companies",
+    resource: "companies",
+    action: "manage",
+    description:
+      "Platform: create, edit and suspend companies and their members",
+  },
 ];
+
+/**
+ * Permissions of the platform, not of a company: users and roles are shared by
+ * every company, and companies are managed from above them. They come from
+ * `users.is_platform_admin`, never from a company membership's role.
+ */
+export const PLATFORM_PERMISSIONS = [
+  "users:read",
+  "users:create",
+  "users:update",
+  "users:delete",
+  "roles:read",
+  "roles:create",
+  "roles:update",
+  "roles:delete",
+  "permissions:read",
+  "companies:read",
+  "companies:manage",
+] as const satisfies PermissionSlug[];
+
+const isPlatformPermission = (slug: PermissionSlug) =>
+  (PLATFORM_PERMISSIONS as readonly PermissionSlug[]).includes(slug);
 
 export const ROLES = [
   {
     slug: "super_admin",
     name: "Super Admin",
     description: "Full access to all resources and administration",
-    permissions: PERMISSIONS.map((permission) => permission.slug),
+    permissions: PERMISSIONS.map((permission) => permission.slug).filter(
+      (slug) => !isPlatformPermission(slug),
+    ),
   },
   {
     slug: "admin",
     name: "Admin",
-    description: "Manage users, roles, and application settings",
+    description:
+      "Manage the company: its people, catalogs, settings and members",
     permissions: [
-      "users:read",
-      "users:create",
-      "users:update",
-      "roles:read",
-      "roles:update",
-      "permissions:read",
       "content:read",
       "content:create",
       "content:update",
@@ -404,6 +455,8 @@ export const ROLES = [
       "assets:create",
       "assets:update",
       "assets:delete",
+      "members:read",
+      "members:manage",
     ] satisfies PermissionSlug[],
   },
   {

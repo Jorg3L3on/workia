@@ -15,6 +15,7 @@ import {
 import { requireActivitiesRead } from "@/lib/catalog/auth";
 import { getActivityById, listActivities } from "@/lib/catalog";
 import { userHasPermission } from "@/lib/rbac";
+import { CompanyField } from "@/components/tenant/company-context";
 
 export const dynamic = "force-dynamic";
 
@@ -23,14 +24,19 @@ export const metadata: Metadata = {
 };
 
 type ActividadesCatalogPageProps = {
-  searchParams: Promise<{ saved?: string; deleted?: string; edit?: string }>;
+  searchParams: Promise<{
+    error?: string;
+    saved?: string;
+    deleted?: string;
+    edit?: string;
+  }>;
 };
 
 const ActividadesCatalogPage = async ({
   searchParams,
 }: ActividadesCatalogPageProps) => {
   const session = await requireActivitiesRead();
-  const { saved, deleted, edit } = await searchParams;
+  const { error, saved, deleted, edit } = await searchParams;
 
   const [
     activityRows,
@@ -38,14 +44,16 @@ const ActividadesCatalogPage = async ({
     canUpdateActivity,
     canDeleteActivity,
   ] = await Promise.all([
-    listActivities(),
+    listActivities(session.companyId),
     userHasPermission(session.user.id, "positions:create"),
     userHasPermission(session.user.id, "positions:update"),
     userHasPermission(session.user.id, "positions:delete"),
   ]);
 
   const editingActivity =
-    edit && canUpdateActivity ? await getActivityById(edit) : null;
+    edit && canUpdateActivity
+      ? await getActivityById(session.companyId, edit)
+      : null;
   const isEditing = Boolean(editingActivity && !editingActivity.deletedAt);
 
   return (
@@ -56,7 +64,7 @@ const ActividadesCatalogPage = async ({
         title="Actividades"
       />
 
-      <CatalogStatusMessages deleted={deleted} saved={saved} />
+      <CatalogStatusMessages error={error} deleted={deleted} saved={saved} />
 
       <section className="workia-pass-card space-y-4 p-5">
         {isEditing && editingActivity ? (
@@ -66,6 +74,7 @@ const ActividadesCatalogPage = async ({
               action={updateActivityAction.bind(null, editingActivity.id)}
               className="space-y-3"
             >
+              <CompanyField />
               <div className="space-y-2">
                 <Label htmlFor="activity-name">Nombre</Label>
                 <Input
@@ -104,6 +113,7 @@ const ActividadesCatalogPage = async ({
                           action={createActivityAction}
                           className="space-y-3"
                         >
+                          <CompanyField />
                           <div className="space-y-2">
                             <Label htmlFor="activity-name">Nombre</Label>
                             <Input

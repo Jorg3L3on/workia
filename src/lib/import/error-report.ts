@@ -1,7 +1,7 @@
 import ExcelJS from "exceljs";
 import { and, asc, eq } from "drizzle-orm";
 
-import { db } from "@/lib/db";
+import { tdb } from "@/lib/db";
 import { importRows } from "@/lib/db/schema";
 
 import {
@@ -55,8 +55,11 @@ export const buildErrorReportWorkbook = (rows: ErrorRow[]) => {
   return workbook;
 };
 
-export const loadErrorRows = async (jobId: string): Promise<ErrorRow[]> =>
-  db
+export const loadErrorRows = async (
+  companyId: string,
+  jobId: string,
+): Promise<ErrorRow[]> =>
+  tdb(companyId)
     .select({
       sheet: importRows.sheet,
       rowNumber: importRows.rowNumber,
@@ -64,11 +67,17 @@ export const loadErrorRows = async (jobId: string): Promise<ErrorRow[]> =>
       errors: importRows.errors,
     })
     .from(importRows)
-    .where(and(eq(importRows.jobId, jobId), eq(importRows.action, "error")))
+    .where(
+      and(
+        eq(importRows.companyId, companyId),
+        eq(importRows.jobId, jobId),
+        eq(importRows.action, "error"),
+      ),
+    )
     .orderBy(asc(importRows.sheet), asc(importRows.rowNumber));
 
-export const buildErrorReport = async (jobId: string) => {
-  const rows = await loadErrorRows(jobId);
+export const buildErrorReport = async (companyId: string, jobId: string) => {
+  const rows = await loadErrorRows(companyId, jobId);
 
   return {
     count: rows.length,

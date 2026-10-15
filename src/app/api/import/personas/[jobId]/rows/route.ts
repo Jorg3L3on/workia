@@ -23,7 +23,11 @@ export const POST = async (request: Request, { params }: Context) => {
   }
 
   const { jobId } = await params;
-  const loaded = await loadUploadingJob(jobId, session.user.id);
+  const loaded = await loadUploadingJob(
+    session.companyId,
+    jobId,
+    session.user.id,
+  );
 
   if (loaded.error) {
     return loaded.error;
@@ -37,7 +41,7 @@ export const POST = async (request: Request, { params }: Context) => {
     return NextResponse.json({ error: "Solicitud inválida." }, { status: 400 });
   }
 
-  await appendImportRows(jobId, parsed.data);
+  await appendImportRows(session.companyId, jobId, parsed.data);
 
   return NextResponse.json({ stored: parsed.data.rows.length });
 };
@@ -46,15 +50,17 @@ const ACTIONS = ["create", "update", "unchanged", "error"] as const;
 
 /** Review table: staged rows of a job, filterable by sheet and action. */
 export const GET = async (request: Request, { params }: Context) => {
+  let session;
+
   try {
-    await requirePeopleImport();
+    session = await requirePeopleImport();
   } catch (error) {
     return importApiError(error);
   }
 
   const { jobId } = await params;
 
-  if (!(await getImportJob(jobId))) {
+  if (!(await getImportJob(session.companyId, jobId))) {
     return NextResponse.json(
       { error: "No encontramos esta importación." },
       { status: 404 },
@@ -66,7 +72,7 @@ export const GET = async (request: Request, { params }: Context) => {
   const sheet = query.get("sheet");
 
   return NextResponse.json(
-    await listImportRows(jobId, {
+    await listImportRows(session.companyId, jobId, {
       sheet:
         sheet && ["personas", "horarios", "contratos"].includes(sheet)
           ? sheet

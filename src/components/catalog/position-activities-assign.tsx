@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { FormSelect } from "@/components/ui/form-select";
 import { Label } from "@/components/ui/label";
 import { assignActivityToPositionAction } from "@/lib/catalog/actions";
+import { CompanyField } from "@/components/tenant/company-context";
 
 export type AssignableActivityOption = {
   id: string;
@@ -50,6 +51,7 @@ export const PositionActivitiesAssign = ({
 
   return (
     <form action={assignActivityToPositionAction} className="space-y-3">
+      <CompanyField />
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="assign-position">Puesto a asignar</Label>

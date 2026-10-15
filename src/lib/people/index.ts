@@ -11,6 +11,7 @@ import {
   ne,
   or,
   sql,
+  type SQL,
 } from "drizzle-orm";
 
 import {
@@ -19,7 +20,7 @@ import {
   snapshotPerson,
   snapshotPersonSchedule,
 } from "@/lib/audit";
-import { db, withTransaction, type DbExecutor } from "@/lib/db";
+import { tdb, withTransaction, type DbExecutor } from "@/lib/db";
 import { escapeLike } from "@/lib/db/like";
 import { personSearchText } from "@/lib/db/schema/people";
 import {
@@ -30,6 +31,8 @@ import {
   sites,
 } from "@/lib/db/schema";
 import type { PersonStatus } from "@/lib/db/schema/people";
+import { CompanyReferenceError, isUniqueViolation } from "@/lib/db/errors";
+import { withTenant } from "@/lib/tenant/scope";
 
 import {
   DuplicateIdentityError,
@@ -43,6 +46,9 @@ import {
   type PersonFormValues,
   type PersonScheduleValues,
 } from "./schema";
+
+/** Audit input without the company: the module adds the one it works in. */
+type AuditInput = Omit<Parameters<typeof recordAuditEvent>[0], "companyId">;
 
 export type ListPeopleOptions = {
   query?: string;
@@ -75,10 +81,13 @@ const toPersonValues = (input: PersonFormValues) => ({
   status: input.status,
 });
 
-export const listPeople = async (options: ListPeopleOptions = {}) => {
+export const listPeople = async (
+  companyId: string,
+  options: ListPeopleOptions = {},
+) => {
   const { query, status, includeDeleted } = options;
 
-  const filters = [];
+  const filters: (SQL | undefined)[] = [eq(people.companyId, companyId)];
 
   if (!includeDeleted) {
     filters.push(isNull(people.deletedAt));
@@ -102,17 +111,10 @@ export const listPeople = async (options: ListPeopleOptions = {}) => {
     filters.push(eq(people.status, status));
   }
 
-  const whereClause =
-    filters.length === 0
-      ? undefined
-      : filters.length === 1
-        ? filters[0]
-        : and(...filters);
-
-  return db
+  return tdb(companyId)
     .select()
     .from(people)
-    .where(whereClause)
+    .where(and(...filters))
     .orderBy(
       desc(people.updatedAt),
       asc(people.apellidoPaterno),
@@ -130,8 +132,12 @@ export type ListPeoplePageOptions = {
 };
 
 /** One page of the Personas list: only the columns the table shows, plus the total. */
-export const listPeoplePage = async (options: ListPeoplePageOptions) => {
+export const listPeoplePage = async (
+  companyId: string,
+  options: ListPeoplePageOptions,
+) => {
   const filters = [
+    eq(people.companyId, companyId),
     options.deleted ? isNotNull(people.deletedAt) : isNull(people.deletedAt),
   ];
 
@@ -147,7 +153,7 @@ export const listPeoplePage = async (options: ListPeoplePageOptions) => {
   const where = and(...filters);
 
   const [rows, [totals]] = await Promise.all([
-    db
+    tdb(companyId)
       .select({
         id: people.id,
         nombres: people.nombres,
@@ -168,14 +174,17 @@ export const listPeoplePage = async (options: ListPeoplePageOptions) => {
       )
       .limit(options.pageSize)
       .offset((options.page - 1) * options.pageSize),
-    db.select({ total: count() }).from(people).where(where),
+    tdb(companyId).select({ total: count() }).from(people).where(where),
   ]);
 
   return { rows, total: totals?.total ?? 0 };
 };
 
-export const listActivePeopleForSelect = async (excludeId?: string) => {
-  const rows = await db
+export const listActivePeopleForSelect = async (
+  companyId: string,
+  excludeId?: string,
+) => {
+  const rows = await tdb(companyId)
     .select({
       id: people.id,
       nombres: people.nombres,
@@ -183,7 +192,14 @@ export const listActivePeopleForSelect = async (excludeId?: string) => {
       apellidoMaterno: people.apellidoMaterno,
     })
     .from(people)
-    .where(and(isNull(people.deletedAt), eq(people.status, "activa")))
+    .where(
+      withTenant(
+        people,
+        companyId,
+        isNull(people.deletedAt),
+        eq(people.status, "activa"),
+      ),
+    )
     .orderBy(asc(people.apellidoPaterno), asc(people.nombres));
 
   return excludeId ? rows.filter((row) => row.id !== excludeId) : rows;
@@ -191,11 +207,16 @@ export const listActivePeopleForSelect = async (excludeId?: string) => {
 
 /** Search-as-you-type options for the manager picker: active people only, capped. */
 export const searchActivePeopleForSelect = async (
+  companyId: string,
   query: string,
   excludeId?: string,
   limit = 20,
 ) => {
-  const filters = [isNull(people.deletedAt), eq(people.status, "activa")];
+  const filters = [
+    eq(people.companyId, companyId),
+    isNull(people.deletedAt),
+    eq(people.status, "activa"),
+  ];
 
   if (excludeId) {
     filters.push(sql`${people.id} <> ${excludeId}`);
@@ -205,7 +226,7 @@ export const searchActivePeopleForSelect = async (
     filters.push(ilike(personSearchText(people), `%${escapeLike(term)}%`));
   }
 
-  return db
+  return tdb(companyId)
     .select({
       id: people.id,
       nombres: people.nombres,
@@ -219,11 +240,12 @@ export const searchActivePeopleForSelect = async (
 };
 
 export const getPersonById = async (
+  companyId: string,
   id: string,
   includeDeleted = false,
-  executor: DbExecutor = db,
+  executor: DbExecutor = tdb(companyId),
 ) => {
-  const filters = [eq(people.id, id)];
+  const filters = [eq(people.companyId, companyId), eq(people.id, id)];
 
   if (!includeDeleted) {
     filters.push(isNull(people.deletedAt));
@@ -232,19 +254,20 @@ export const getPersonById = async (
   const [person] = await executor
     .select()
     .from(people)
-    .where(filters.length === 1 ? filters[0] : and(...filters))
+    .where(and(...filters))
     .limit(1);
 
   return person ?? null;
 };
 
 export const getPersonWithRelations = async (
+  companyId: string,
   id: string,
   includeDeleted = false,
 ) => {
   const manager = alias(people, "manager");
 
-  const [row] = await db
+  const [row] = await tdb(companyId)
     .select({
       person: people,
       area: { id: areas.id, name: areas.name },
@@ -271,9 +294,12 @@ export const getPersonWithRelations = async (
       ),
     )
     .where(
-      includeDeleted
-        ? eq(people.id, id)
-        : and(eq(people.id, id), isNull(people.deletedAt)),
+      withTenant(
+        people,
+        companyId,
+        eq(people.id, id),
+        includeDeleted ? undefined : isNull(people.deletedAt),
+      ),
     )
     .limit(1);
 
@@ -292,11 +318,15 @@ export const getPersonWithRelations = async (
 };
 
 export const getPersonSchedule = async (
+  companyId: string,
   personId: string,
   includeDeleted = false,
-  executor: DbExecutor = db,
+  executor: DbExecutor = tdb(companyId),
 ) => {
-  const filters = [eq(personSchedules.personId, personId)];
+  const filters = [
+    eq(personSchedules.companyId, companyId),
+    eq(personSchedules.personId, personId),
+  ];
 
   if (!includeDeleted) {
     filters.push(isNull(personSchedules.deletedAt));
@@ -305,7 +335,7 @@ export const getPersonSchedule = async (
   const [schedule] = await executor
     .select()
     .from(personSchedules)
-    .where(filters.length === 1 ? filters[0] : and(...filters))
+    .where(and(...filters))
     .limit(1);
 
   return schedule ?? null;
@@ -321,20 +351,21 @@ const scheduleChanged = (
   (before?.salida ?? null) !== (after.salida ?? null);
 
 export const upsertPersonSchedule = async (
+  companyId: string,
   personId: string,
   input: PersonFormValues,
   actorUserId?: string | null,
-  executor: DbExecutor = db,
+  executor: DbExecutor = tdb(companyId),
   /** The schedule row (any state) when the caller already read it; `null` means none exists. */
   prefetched?: { schedule: typeof personSchedules.$inferSelect | null },
 ) => {
-  const audit = (input: Parameters<typeof recordAuditEvent>[0]) =>
-    recordAuditEvent(input, executor);
+  const audit = (input: AuditInput) =>
+    recordAuditEvent({ ...input, companyId }, executor);
   const values = toPersonScheduleValues(input);
   const hasTimes = personScheduleHasTimes(values);
   const existing = prefetched
     ? prefetched.schedule
-    : await getPersonSchedule(personId, true, executor);
+    : await getPersonSchedule(companyId, personId, true, executor);
 
   if (!hasTimes && !existing) {
     return null;
@@ -355,7 +386,13 @@ export const upsertPersonSchedule = async (
         salida: null,
         deletedAt,
       })
-      .where(eq(personSchedules.id, existing.id))
+      .where(
+        withTenant(
+          personSchedules,
+          companyId,
+          eq(personSchedules.id, existing.id),
+        ),
+      )
       .returning();
 
     await audit({
@@ -388,7 +425,13 @@ export const upsertPersonSchedule = async (
         salida: values.salida,
         deletedAt: null,
       })
-      .where(eq(personSchedules.id, existing.id))
+      .where(
+        withTenant(
+          personSchedules,
+          companyId,
+          eq(personSchedules.id, existing.id),
+        ),
+      )
       .returning();
 
     await audit({
@@ -426,6 +469,7 @@ export const upsertPersonSchedule = async (
   const [created] = await executor
     .insert(personSchedules)
     .values({
+      companyId,
       personId,
       entrada: values.entrada,
       salidaComer: values.salidaComer,
@@ -448,23 +492,20 @@ export const upsertPersonSchedule = async (
   return created;
 };
 
-const isUniqueViolation = (error: unknown): boolean =>
-  typeof error === "object" &&
-  error !== null &&
-  ((error as { code?: string }).code === "23505" ||
-    isUniqueViolation((error as { cause?: unknown }).cause));
-
-/** Active people (not deleted) that already use this CURP or RFC. */
+/** Active people of the company (not deleted) that already use this CURP, RFC or NSS. */
 export const findIdentityConflicts = async (
-  input: Pick<PersonFormValues, "curp" | "rfc">,
+  companyId: string,
+  input: Pick<PersonFormValues, "curp" | "rfc" | "nss">,
   excludeId?: string,
-  client: DbExecutor = db,
+  client: DbExecutor = tdb(companyId),
 ): Promise<IdentityField[]> => {
   const curp = identifierOrNull(input.curp);
   const rfc = identifierOrNull(input.rfc);
+  const nss = normalizeNss(input.nss) || null;
   const matchers = [
     curp ? eq(people.curp, curp) : undefined,
     rfc ? eq(people.rfc, rfc) : undefined,
+    nss ? eq(people.nss, nss) : undefined,
   ].filter((matcher) => matcher !== undefined);
 
   if (matchers.length === 0) {
@@ -472,10 +513,11 @@ export const findIdentityConflicts = async (
   }
 
   const rows = await client
-    .select({ curp: people.curp, rfc: people.rfc })
+    .select({ curp: people.curp, rfc: people.rfc, nss: people.nss })
     .from(people)
     .where(
       and(
+        eq(people.companyId, companyId),
         isNull(people.deletedAt),
         or(...matchers),
         excludeId ? ne(people.id, excludeId) : undefined,
@@ -487,17 +529,24 @@ export const findIdentityConflicts = async (
   for (const row of rows) {
     if (curp && row.curp === curp) fields.add("curp");
     if (rfc && row.rfc === rfc) fields.add("rfc");
+    if (nss && row.nss === nss) fields.add("nss");
   }
 
   return [...fields];
 };
 
 const assertNoIdentityConflicts = async (
-  input: Pick<PersonFormValues, "curp" | "rfc">,
+  companyId: string,
+  input: Pick<PersonFormValues, "curp" | "rfc" | "nss">,
   excludeId?: string,
-  client: DbExecutor = db,
+  client: DbExecutor = tdb(companyId),
 ) => {
-  const conflicts = await findIdentityConflicts(input, excludeId, client);
+  const conflicts = await findIdentityConflicts(
+    companyId,
+    input,
+    excludeId,
+    client,
+  );
 
   if (conflicts.length > 0) {
     throw new DuplicateIdentityError(conflicts);
@@ -506,30 +555,83 @@ const assertNoIdentityConflicts = async (
 
 // A race between the pre-check and the write surfaces as a unique violation
 // on the partial indexes; report it like the pre-check does.
+const IDENTITY_CONSTRAINTS: Record<string, IdentityField> = {
+  people_company_curp_active_unique: "curp",
+  people_company_rfc_active_unique: "rfc",
+  people_company_nss_active_unique: "nss",
+};
+
+const violatedConstraint = (error: unknown): string | undefined =>
+  typeof error === "object" && error !== null
+    ? ((error as { constraint?: string }).constraint ??
+      violatedConstraint((error as { cause?: unknown }).cause))
+    : undefined;
+
 const rethrowUniqueViolation = (error: unknown): never => {
   if (isUniqueViolation(error)) {
-    throw new DuplicateIdentityError(["curp", "rfc"]);
+    const field = IDENTITY_CONSTRAINTS[violatedConstraint(error) ?? ""];
+    throw new DuplicateIdentityError(field ? [field] : ["curp", "rfc"]);
   }
 
   throw error;
 };
 
+/**
+ * Area, puesto, sucursal and jefe must be live records of the same company.
+ * The composite foreign keys refuse the rest anyway; this turns it into a
+ * field error instead of a database error.
+ */
+const assertReferencesInCompany = async (
+  companyId: string,
+  values: ReturnType<typeof toPersonValues>,
+  client: DbExecutor,
+) => {
+  const checks = [
+    { field: "areaId", id: values.areaId, table: areas },
+    { field: "positionId", id: values.positionId, table: positions },
+    { field: "siteId", id: values.siteId, table: sites },
+    { field: "managerId", id: values.managerId, table: people },
+  ] as const;
+
+  for (const check of checks) {
+    if (!check.id) continue;
+
+    const [found] = await client
+      .select({ id: check.table.id })
+      .from(check.table)
+      .where(
+        and(
+          eq(check.table.companyId, companyId),
+          eq(check.table.id, check.id),
+          isNull(check.table.deletedAt),
+        ),
+      )
+      .limit(1);
+
+    if (!found) {
+      throw new CompanyReferenceError(check.field);
+    }
+  }
+};
+
 export const createPerson = async (
+  companyId: string,
   input: PersonFormValues,
   actorUserId?: string | null,
 ) => {
   // One transaction: the row, its schedule and the audit events commit together.
   return withTransaction(async (tx) => {
-    const audit = (input: Parameters<typeof recordAuditEvent>[0]) =>
-      recordAuditEvent(input, tx);
+    const audit = (input: AuditInput) =>
+      recordAuditEvent({ ...input, companyId }, tx);
 
     const values = toPersonValues(input);
 
-    await assertNoIdentityConflicts(input, undefined, tx);
+    await assertNoIdentityConflicts(companyId, input, undefined, tx);
+    await assertReferencesInCompany(companyId, values, tx);
 
     const [created] = await tx
       .insert(people)
-      .values(values)
+      .values({ ...values, companyId })
       .returning()
       .catch(rethrowUniqueViolation);
 
@@ -544,30 +646,31 @@ export const createPerson = async (
       },
     });
 
-    await upsertPersonSchedule(created.id, input, actorUserId, tx, {
+    await upsertPersonSchedule(companyId, created.id, input, actorUserId, tx, {
       schedule: null,
     });
 
     return created;
-  });
+  }, companyId);
 };
 
 export const updatePerson = async (
+  companyId: string,
   id: string,
   input: PersonFormValues,
   actorUserId?: string | null,
 ) => {
   // One transaction: the row, its schedule and the audit events commit together.
   return withTransaction(async (tx) => {
-    const audit = (input: Parameters<typeof recordAuditEvent>[0]) =>
-      recordAuditEvent(input, tx);
+    const audit = (input: AuditInput) =>
+      recordAuditEvent({ ...input, companyId }, tx);
 
     // One round trip for the person and their schedule (any state).
     const [current] = await tx
       .select({ person: people, schedule: personSchedules })
       .from(people)
       .leftJoin(personSchedules, eq(personSchedules.personId, people.id))
-      .where(eq(people.id, id))
+      .where(withTenant(people, companyId, eq(people.id, id)))
       .limit(1);
     const existing = current?.person ?? null;
 
@@ -578,12 +681,13 @@ export const updatePerson = async (
     const before = snapshotPerson(existing);
     const values = toPersonValues(input);
 
-    await assertNoIdentityConflicts(input, id, tx);
+    await assertNoIdentityConflicts(companyId, input, id, tx);
+    await assertReferencesInCompany(companyId, values, tx);
 
     const [updated] = await tx
       .update(people)
       .set(values)
-      .where(eq(people.id, id))
+      .where(withTenant(people, companyId, eq(people.id, id)))
       .returning()
       .catch(rethrowUniqueViolation);
 
@@ -624,24 +728,25 @@ export const updatePerson = async (
       payload: { before, after, changes },
     });
 
-    await upsertPersonSchedule(id, input, actorUserId, tx, {
+    await upsertPersonSchedule(companyId, id, input, actorUserId, tx, {
       schedule: current?.schedule?.id ? current.schedule : null,
     });
 
     return updated;
-  });
+  }, companyId);
 };
 
 export const softDeletePerson = async (
+  companyId: string,
   id: string,
   actorUserId?: string | null,
 ) => {
   // One transaction: the row, its schedule and the audit events commit together.
   return withTransaction(async (tx) => {
-    const audit = (input: Parameters<typeof recordAuditEvent>[0]) =>
-      recordAuditEvent(input, tx);
+    const audit = (input: AuditInput) =>
+      recordAuditEvent({ ...input, companyId }, tx);
 
-    const existing = await getPersonById(id, true, tx);
+    const existing = await getPersonById(companyId, id, true, tx);
 
     if (!existing || existing.deletedAt) {
       return null;
@@ -653,7 +758,7 @@ export const softDeletePerson = async (
     const [updated] = await tx
       .update(people)
       .set({ deletedAt })
-      .where(eq(people.id, id))
+      .where(withTenant(people, companyId, eq(people.id, id)))
       .returning();
 
     if (!updated) {
@@ -672,27 +777,33 @@ export const softDeletePerson = async (
       },
     });
 
-    const schedule = await getPersonSchedule(id, false, tx);
+    const schedule = await getPersonSchedule(companyId, id, false, tx);
 
     if (schedule) {
       await tx
         .update(personSchedules)
         .set({ deletedAt: deletedAt })
-        .where(eq(personSchedules.id, schedule.id));
+        .where(
+          withTenant(
+            personSchedules,
+            companyId,
+            eq(personSchedules.id, schedule.id),
+          ),
+        );
     }
 
     return updated;
-  });
+  }, companyId);
 };
 
-export const countPeopleByStatus = async () => {
-  const rows = await db
+export const countPeopleByStatus = async (companyId: string) => {
+  const rows = await tdb(companyId)
     .select({
       status: people.status,
       count: sql<number>`cast(count(*) as int)`,
     })
     .from(people)
-    .where(isNull(people.deletedAt))
+    .where(withTenant(people, companyId, isNull(people.deletedAt)))
     .groupBy(people.status);
 
   return rows.reduce<Record<PersonStatus, number>>(
@@ -704,7 +815,7 @@ export const countPeopleByStatus = async () => {
   );
 };
 
-export const countActivePeople = async () => {
-  const counts = await countPeopleByStatus();
+export const countActivePeople = async (companyId: string) => {
+  const counts = await countPeopleByStatus(companyId);
   return counts.activa;
 };

@@ -1,19 +1,30 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
   boolean,
+  foreignKey,
   index,
   pgTable,
   primaryKey,
   text,
   timestamp,
+  unique,
+  uniqueIndex,
   uuid,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
+
+import { companies } from "./companies";
+
+/** catalog_key(name): the importer's catalogKey() in SQL (migration 0017). */
+const catalogKeyOf = (column: AnyPgColumn) => sql`catalog_key(${column})`;
 
 export const areas = pgTable(
   "areas",
   {
     id: uuid("id").defaultRandom().primaryKey(),
+    companyId: uuid("company_id")
+      .notNull()
+      .references(() => companies.id, { onDelete: "restrict" }),
     name: text("name").notNull(),
     parentAreaId: uuid("parent_area_id").references(
       (): AnyPgColumn => areas.id,
@@ -32,6 +43,15 @@ export const areas = pgTable(
       .$onUpdate(() => new Date()),
   },
   (table) => [
+    unique("areas_company_id_id_unique").on(table.companyId, table.id),
+    uniqueIndex("areas_company_name_active_unique")
+      .on(table.companyId, catalogKeyOf(table.name))
+      .where(sql`${table.deletedAt} is null`),
+    foreignKey({
+      name: "areas_company_parent_area_fk",
+      columns: [table.companyId, table.parentAreaId],
+      foreignColumns: [table.companyId, table.id],
+    }),
     index("areas_parent_area_id_idx").on(table.parentAreaId),
     index("areas_deleted_at_idx").on(table.deletedAt),
   ],
@@ -41,6 +61,9 @@ export const positions = pgTable(
   "positions",
   {
     id: uuid("id").defaultRandom().primaryKey(),
+    companyId: uuid("company_id")
+      .notNull()
+      .references(() => companies.id, { onDelete: "restrict" }),
     name: text("name").notNull(),
     areaId: uuid("area_id").references(() => areas.id, {
       onDelete: "set null",
@@ -56,6 +79,15 @@ export const positions = pgTable(
       .$onUpdate(() => new Date()),
   },
   (table) => [
+    unique("positions_company_id_id_unique").on(table.companyId, table.id),
+    uniqueIndex("positions_company_name_active_unique")
+      .on(table.companyId, catalogKeyOf(table.name))
+      .where(sql`${table.deletedAt} is null`),
+    foreignKey({
+      name: "positions_company_area_fk",
+      columns: [table.companyId, table.areaId],
+      foreignColumns: [areas.companyId, areas.id],
+    }),
     index("positions_area_id_idx").on(table.areaId),
     index("positions_deleted_at_idx").on(table.deletedAt),
   ],
@@ -65,6 +97,9 @@ export const activities = pgTable(
   "activities",
   {
     id: uuid("id").defaultRandom().primaryKey(),
+    companyId: uuid("company_id")
+      .notNull()
+      .references(() => companies.id, { onDelete: "restrict" }),
     name: text("name").notNull(),
     active: boolean("active").notNull().default(true),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
@@ -76,12 +111,21 @@ export const activities = pgTable(
       .notNull()
       .$onUpdate(() => new Date()),
   },
-  (table) => [index("activities_deleted_at_idx").on(table.deletedAt)],
+  (table) => [
+    unique("activities_company_id_id_unique").on(table.companyId, table.id),
+    uniqueIndex("activities_company_name_active_unique")
+      .on(table.companyId, catalogKeyOf(table.name))
+      .where(sql`${table.deletedAt} is null`),
+    index("activities_deleted_at_idx").on(table.deletedAt),
+  ],
 );
 
 export const positionActivities = pgTable(
   "position_activities",
   {
+    companyId: uuid("company_id")
+      .notNull()
+      .references(() => companies.id, { onDelete: "restrict" }),
     positionId: uuid("position_id")
       .notNull()
       .references(() => positions.id, { onDelete: "cascade" }),
@@ -93,6 +137,17 @@ export const positionActivities = pgTable(
       .notNull(),
   },
   (table) => [
+    index("position_activities_company_id_idx").on(table.companyId),
+    foreignKey({
+      name: "position_activities_company_position_fk",
+      columns: [table.companyId, table.positionId],
+      foreignColumns: [positions.companyId, positions.id],
+    }),
+    foreignKey({
+      name: "position_activities_company_activity_fk",
+      columns: [table.companyId, table.activityId],
+      foreignColumns: [activities.companyId, activities.id],
+    }),
     primaryKey({ columns: [table.positionId, table.activityId] }),
     index("position_activities_activity_id_idx").on(table.activityId),
   ],
