@@ -8,6 +8,7 @@ import {
   HomeIcon,
   LaptopIcon,
   ScrollTextIcon,
+  PlugIcon,
   UserCogIcon,
   UsersIcon,
 } from "lucide-react";
@@ -56,6 +57,8 @@ type AppShellProps = {
   companies: CompanyOption[];
   /** members:read in the active company: shows Miembros. */
   canReadMembers?: boolean;
+  /** mcp_connections:create or :manage in the active company: shows Conexiones. */
+  canUseConnections?: boolean;
   /** Platform admins also get a link to the platform console. */
   isPlatformAdmin?: boolean;
   user: {
@@ -80,6 +83,12 @@ const membersNavItem = {
   icon: UserCogIcon,
 } as const;
 
+const connectionsNavItem = {
+  title: "Conexiones",
+  href: "/app/conexiones",
+  icon: PlugIcon,
+} as const;
+
 const platformNavItem = {
   title: "Plataforma",
   href: "/admin/empresas",
@@ -92,11 +101,13 @@ export const AppShell = ({
   company,
   companies,
   canReadMembers = false,
+  canUseConnections = false,
   isPlatformAdmin = false,
 }: AppShellProps) => {
   const items = [
     ...navItems,
     ...(canReadMembers ? [membersNavItem] : []),
+    ...(canUseConnections ? [connectionsNavItem] : []),
     ...(isPlatformAdmin ? [platformNavItem] : []),
   ];
   const initials = (user.name ?? "RRHH")

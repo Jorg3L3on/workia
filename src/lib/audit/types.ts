@@ -13,6 +13,7 @@ export const AUDIT_RESOURCE_TYPES = [
   "people_export",
   "company",
   "membership",
+  "mcp_connection",
 ] as const;
 
 export type AuditResourceType = (typeof AUDIT_RESOURCE_TYPES)[number];
@@ -35,6 +36,7 @@ export const AUDIT_ACTIONS = [
   "export",
   "undo",
   "switch",
+  "revoke",
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
@@ -57,6 +59,7 @@ export const auditActionLabels: Record<AuditAction, string> = {
   export: "Exportación",
   undo: "Deshacer importación",
   switch: "Cambio de empresa",
+  revoke: "Revocación",
 };
 
 export const auditResourceTypeLabels: Record<AuditResourceType, string> = {
@@ -74,6 +77,7 @@ export const auditResourceTypeLabels: Record<AuditResourceType, string> = {
   people_export: "Exportación de personas",
   company: "Empresa",
   membership: "Miembro",
+  mcp_connection: "Conexión de asistente (MCP)",
 };
 
 export type AuditPayload = {
@@ -86,6 +90,11 @@ export type AuditPayload = {
 export type AuditRequestMeta = {
   path?: string;
   method?: string;
+  /** MCP calls: the client and connection that acted. */
+  client?: string;
+  connection_id?: string;
+  tool?: string;
+  request_id?: string;
 };
 
 export type RecordAuditEventInput = {

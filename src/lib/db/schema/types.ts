@@ -16,7 +16,8 @@ export type PermissionResource =
   | "contract_templates"
   | "assets"
   | "companies"
-  | "members";
+  | "members"
+  | "mcp_connections";
 
 export type PermissionSlug = `${PermissionResource}:${PermissionAction}`;
 
@@ -365,6 +366,21 @@ export const PERMISSIONS: Array<{
       "Add members to the company, change their role, or revoke them",
   },
   {
+    slug: "mcp_connections:create",
+    name: "Create MCP Connections",
+    resource: "mcp_connections",
+    action: "create",
+    description:
+      "Connect an AI assistant to the company (OAuth or personal token)",
+  },
+  {
+    slug: "mcp_connections:manage",
+    name: "Manage MCP Connections",
+    resource: "mcp_connections",
+    action: "manage",
+    description: "View and revoke every AI assistant connection of the company",
+  },
+  {
     slug: "companies:read",
     name: "Read Companies",
     resource: "companies",
@@ -457,6 +473,8 @@ export const ROLES = [
       "assets:delete",
       "members:read",
       "members:manage",
+      "mcp_connections:create",
+      "mcp_connections:manage",
     ] satisfies PermissionSlug[],
   },
   {
@@ -483,6 +501,7 @@ export const ROLES = [
       "assets:read",
       "assets:create",
       "assets:update",
+      "mcp_connections:create",
     ] satisfies PermissionSlug[],
   },
   {

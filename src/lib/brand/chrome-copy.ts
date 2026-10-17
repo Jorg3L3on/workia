@@ -47,6 +47,7 @@ export const pageTitles = {
   empresa: "Elegir empresa",
   empresas: "Empresas",
   miembros: "Miembros",
+  conexiones: "Conexiones",
 } as const;
 
 export const companyCopy = {

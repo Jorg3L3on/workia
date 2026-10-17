@@ -37,6 +37,11 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `action:contracts/noRenewContractAction`            | ✅     | `src/test/idor/contracts.db.test.ts`                                                                   | `contracts:update`          |
 | `action:contracts/renewContractAction`              | ✅     | `src/test/idor/contracts.db.test.ts`                                                                   | `contracts:update`          |
 | `action:contracts/updateContractTemplateAction`     | ✅     | `src/test/idor/contracts.db.test.ts`                                                                   | `contract_templates:update` |
+| `action:mcp/approveConsentAction`                   | ✅     | `src/test/idor/mcp.db.test.ts`                                                                         | `mcp_connections:create`    |
+| `action:mcp/createPersonalTokenAction`              | ✅     | `src/test/idor/mcp.db.test.ts`                                                                         | `mcp_connections:create`    |
+| `action:mcp/denyConsentAction`                      | ✅     | `src/test/idor/mcp.db.test.ts`                                                                         | —                           |
+| `action:mcp/hideConnectionAction`                   | ✅     | `src/test/idor/mcp.db.test.ts`                                                                         | `mcp_connections:create`    |
+| `action:mcp/revokeConnectionAction`                 | ✅     | `src/test/idor/mcp.db.test.ts`                                                                         | `mcp_connections:create`    |
 | `action:people/assertPeopleListAccess`              | ⏭️     | Exento: guard de lectura sin datos (requirePeopleRead); la lista la cubre lib:people/listPeoplePage    | `people:read`               |
 | `action:people/createPersonAction`                  | ✅     | `src/test/idor/people.db.test.ts`                                                                      | `people:create`             |
 | `action:people/deletePersonAction`                  | ✅     | `src/test/idor/people.db.test.ts`                                                                      | `people:delete`             |
@@ -59,22 +64,31 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 
 ## Rutas
 
-| Superficie                                         | Estado | Prueba                            | Permiso         |
-| -------------------------------------------------- | ------ | --------------------------------- | --------------- |
-| `route:DELETE /api/import/personas/[jobId]/apply`  | ✅     | `src/test/idor/import.db.test.ts` | `people:import` |
-| `route:GET /api/import/personas/[jobId]`           | ✅     | `src/test/idor/import.db.test.ts` | `people:import` |
-| `route:GET /api/import/personas/[jobId]/errors`    | ✅     | `src/test/idor/import.db.test.ts` | `people:import` |
-| `route:GET /api/import/personas/[jobId]/rows`      | ✅     | `src/test/idor/import.db.test.ts` | `people:import` |
-| `route:GET /api/import/personas/[jobId]/undo`      | ✅     | `src/test/idor/import.db.test.ts` | `people:import` |
-| `route:GET /app/personas/exportar`                 | ✅     | `src/test/idor/import.db.test.ts` | `people:export` |
-| `route:GET /app/personas/plantilla`                | ✅     | `src/test/idor/import.db.test.ts` | `people:import` |
-| `route:POST /api/import/personas`                  | ✅     | `src/test/idor/import.db.test.ts` | `people:import` |
-| `route:POST /api/import/personas/[jobId]/apply`    | ✅     | `src/test/idor/import.db.test.ts` | `people:import` |
-| `route:POST /api/import/personas/[jobId]/finalize` | ✅     | `src/test/idor/import.db.test.ts` | `people:import` |
-| `route:POST /api/import/personas/[jobId]/rows`     | ✅     | `src/test/idor/import.db.test.ts` | `people:import` |
-| `route:POST /api/import/personas/[jobId]/undo`     | ✅     | `src/test/idor/import.db.test.ts` | `people:import` |
-| `route:POST /api/import/personas/[jobId]/validate` | ✅     | `src/test/idor/import.db.test.ts` | `people:import` |
-| `route:PUT /api/import/personas/[jobId]/validate`  | ✅     | `src/test/idor/import.db.test.ts` | `people:import` |
+| Superficie                                                      | Estado | Prueba                            | Permiso         |
+| --------------------------------------------------------------- | ------ | --------------------------------- | --------------- |
+| `route:DELETE /api/import/personas/[jobId]/apply`               | ✅     | `src/test/idor/import.db.test.ts` | `people:import` |
+| `route:DELETE /api/mcp`                                         | ✅     | `src/test/idor/mcp.db.test.ts`    | —               |
+| `route:GET /.well-known/oauth-authorization-server/[[...path]]` | ✅     | `src/test/idor/mcp.db.test.ts`    | —               |
+| `route:GET /.well-known/oauth-protected-resource/[[...path]]`   | ✅     | `src/test/idor/mcp.db.test.ts`    | —               |
+| `route:GET /api/import/personas/[jobId]`                        | ✅     | `src/test/idor/import.db.test.ts` | `people:import` |
+| `route:GET /api/import/personas/[jobId]/errors`                 | ✅     | `src/test/idor/import.db.test.ts` | `people:import` |
+| `route:GET /api/import/personas/[jobId]/rows`                   | ✅     | `src/test/idor/import.db.test.ts` | `people:import` |
+| `route:GET /api/import/personas/[jobId]/undo`                   | ✅     | `src/test/idor/import.db.test.ts` | `people:import` |
+| `route:GET /api/mcp`                                            | ✅     | `src/test/idor/mcp.db.test.ts`    | —               |
+| `route:GET /api/oauth/authorize`                                | ✅     | `src/test/idor/mcp.db.test.ts`    | —               |
+| `route:GET /app/personas/exportar`                              | ✅     | `src/test/idor/import.db.test.ts` | `people:export` |
+| `route:GET /app/personas/plantilla`                             | ✅     | `src/test/idor/import.db.test.ts` | `people:import` |
+| `route:POST /api/import/personas`                               | ✅     | `src/test/idor/import.db.test.ts` | `people:import` |
+| `route:POST /api/import/personas/[jobId]/apply`                 | ✅     | `src/test/idor/import.db.test.ts` | `people:import` |
+| `route:POST /api/import/personas/[jobId]/finalize`              | ✅     | `src/test/idor/import.db.test.ts` | `people:import` |
+| `route:POST /api/import/personas/[jobId]/rows`                  | ✅     | `src/test/idor/import.db.test.ts` | `people:import` |
+| `route:POST /api/import/personas/[jobId]/undo`                  | ✅     | `src/test/idor/import.db.test.ts` | `people:import` |
+| `route:POST /api/import/personas/[jobId]/validate`              | ✅     | `src/test/idor/import.db.test.ts` | `people:import` |
+| `route:POST /api/mcp`                                           | ✅     | `src/test/idor/mcp.db.test.ts`    | —               |
+| `route:POST /api/oauth/register`                                | ✅     | `src/test/idor/mcp.db.test.ts`    | —               |
+| `route:POST /api/oauth/revoke`                                  | ✅     | `src/test/idor/mcp.db.test.ts`    | —               |
+| `route:POST /api/oauth/token`                                   | ✅     | `src/test/idor/mcp.db.test.ts`    | —               |
+| `route:PUT /api/import/personas/[jobId]/validate`               | ✅     | `src/test/idor/import.db.test.ts` | `people:import` |
 
 ## Funciones de datos (lib)
 
@@ -144,6 +158,16 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `lib:import/validate/validateHorariosChunk`   | ✅     | `src/test/idor/import.db.test.ts`    | —       |
 | `lib:import/validate/validateJobStep`         | ✅     | `src/test/idor/import.db.test.ts`    | —       |
 | `lib:import/validate/validatePersonasChunk`   | ✅     | `src/test/idor/import.db.test.ts`    | —       |
+| `lib:mcp/connections/countRecentConnections`  | ✅     | `src/test/idor/mcp.db.test.ts`       | —       |
+| `lib:mcp/connections/countToolCallErrors`     | ✅     | `src/test/idor/mcp.db.test.ts`       | —       |
+| `lib:mcp/connections/createAuthCode`          | ✅     | `src/test/idor/mcp.db.test.ts`       | —       |
+| `lib:mcp/connections/createPersonalToken`     | ✅     | `src/test/idor/mcp.db.test.ts`       | —       |
+| `lib:mcp/connections/getConnection`           | ✅     | `src/test/idor/mcp.db.test.ts`       | —       |
+| `lib:mcp/connections/hideConnection`          | ✅     | `src/test/idor/mcp.db.test.ts`       | —       |
+| `lib:mcp/connections/listConnections`         | ✅     | `src/test/idor/mcp.db.test.ts`       | —       |
+| `lib:mcp/connections/listToolCalls`           | ✅     | `src/test/idor/mcp.db.test.ts`       | —       |
+| `lib:mcp/connections/purgeExpiredToolCalls`   | ✅     | `src/test/idor/mcp.db.test.ts`       | —       |
+| `lib:mcp/connections/revokeConnection`        | ✅     | `src/test/idor/mcp.db.test.ts`       | —       |
 | `lib:people/countActivePeople`                | ✅     | `src/test/idor/people.db.test.ts`    | —       |
 | `lib:people/countPeopleByStatus`              | ✅     | `src/test/idor/people.db.test.ts`    | —       |
 | `lib:people/createPerson`                     | ✅     | `src/test/idor/people.db.test.ts`    | —       |

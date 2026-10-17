@@ -115,7 +115,8 @@ describe("0018: row-level security per company", () => {
         AND c.relname <> 'company_memberships'
       ORDER BY 1`);
 
-    expect(tables.length).toBe(14);
+    // 14 business tables (0018) + 5 MCP tables (0009_mcp).
+    expect(tables.length).toBe(19);
     for (const table of tables) {
       expect(table, table.table).toMatchObject({
         rls: true,

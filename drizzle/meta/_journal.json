@@ -127,6 +127,13 @@
       "when": 1787788800000,
       "tag": "0018_company_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1787792400000,
+      "tag": "0009_mcp",
+      "breakpoints": true
     }
   ]
 }

@@ -137,6 +137,10 @@ export const resolveBreadcrumbs = (
     return [{ label: "Miembros" }];
   }
 
+  if (path === "/app/conexiones") {
+    return [{ label: "Conexiones" }];
+  }
+
   if (path === "/admin") {
     return [{ label: "Administración" }];
   }
