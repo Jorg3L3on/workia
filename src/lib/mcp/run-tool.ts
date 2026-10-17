@@ -11,7 +11,7 @@ import { isoToday } from "@/lib/format/date";
 import { logger } from "@/lib/logger";
 import { CrossTenantError } from "@/lib/tenant/scope";
 
-import { READ_CALLS_PER_MINUTE } from "./config";
+import { publicOrigin, READ_CALLS_PER_MINUTE } from "./config";
 import {
   memberPermissions,
   recordToolCall,
@@ -42,6 +42,8 @@ export type WorkiaToolContext = {
   requestId: string;
   /** "Today" in America/Mexico_City, ISO yyyy-mm-dd. */
   today: string;
+  /** Public origin of the app, for links back to Workia. */
+  origin: string;
 };
 
 export type ToolKind = "read" | "write";
@@ -109,6 +111,12 @@ export const authFromContext = (
     { workia?: McpAuthContext } | undefined;
 
   return extra?.workia ?? null;
+};
+
+const originFromContext = (ctx: Pick<ServerContext, "http"> | undefined) => {
+  const extra = ctx?.http?.authInfo?.extra as { origin?: string } | undefined;
+
+  return extra?.origin ?? publicOrigin();
 };
 
 /** Maps anything a handler throws to a stable error payload. */
@@ -304,6 +312,7 @@ export const runWorkiaTool = async (
       piiUnmasked,
       requestId,
       today: isoToday(now),
+      origin: originFromContext(sdkContext),
     });
     const structuredContent = tool.output.parse(output) as Record<
       string,

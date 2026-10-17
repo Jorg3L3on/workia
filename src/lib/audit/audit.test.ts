@@ -23,6 +23,7 @@ describe("audit append-only surface", () => {
       "countAuditEvents",
       "listAuditActors",
       "listAuditEvents",
+      "listAuditEventsKeyset",
       "recordAuditEvent",
       "snapshotActivity",
       "snapshotArea",

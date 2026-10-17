@@ -1,4 +1,13 @@
-import { and, asc, desc, eq, isNotNull, isNull, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  inArray,
+  isNotNull,
+  isNull,
+  sql,
+} from "drizzle-orm";
 
 import {
   buildChanges,
@@ -8,7 +17,13 @@ import {
 } from "@/lib/audit";
 import { tdb } from "@/lib/db";
 import { withTenant } from "@/lib/tenant/scope";
-import { areas, contractTemplates, contracts, people } from "@/lib/db/schema";
+import {
+  areas,
+  contractTemplates,
+  contracts,
+  people,
+  sites,
+} from "@/lib/db/schema";
 import type { ContractStatus } from "@/lib/db/schema/contracts";
 import { getPersonWithRelations } from "@/lib/people";
 import { formatHorarioToken, formatPersonName } from "@/lib/people/schema";
@@ -19,7 +34,12 @@ import type {
   ContractTemplateFormValues,
   RenewContractFormValues,
 } from "./schema";
-import { buildContractScheduleSnapshot, fillContractTemplate } from "./schema";
+import {
+  buildContractScheduleSnapshot,
+  CONTRACT_TEMPLATE_TOKENS,
+  fillContractTemplate,
+  type ContractTemplateToken,
+} from "./schema";
 
 const normalizeEndDate = (
   type: ContractFormValues["type"],
@@ -619,4 +639,208 @@ export const softDeleteContract = async (
   });
 
   return updated;
+};
+
+export type ListContractsKeysetOptions = {
+  personId?: string;
+  statuses?: ContractStatus[];
+  type?: ContractFormValues["type"];
+  endDateFrom?: string;
+  endDateTo?: string;
+  /** Keyset position: after (end date, or 9999-12-31 when open-ended; id). */
+  after?: { key: string; id: string } | null;
+  limit: number;
+};
+
+/** Sort key of a contract: its end date, or the far future for indeterminados. */
+export const contractEndSortKey = sql<string>`coalesce(${contracts.endDate}, '9999-12-31'::date)::text`;
+
+const personNameColumns = {
+  personId: people.id,
+  nombres: people.nombres,
+  apellidoPaterno: people.apellidoPaterno,
+  apellidoMaterno: people.apellidoMaterno,
+};
+
+/**
+ * Contracts with filters in a stable order (end date, id) for cursor paging,
+ * without the generated text. Read only; used by the MCP list_contracts.
+ */
+export const listContractsKeyset = async (
+  companyId: string,
+  options: ListContractsKeysetOptions,
+) => {
+  const filters = [
+    eq(contracts.companyId, companyId),
+    isNull(contracts.deletedAt),
+    options.personId ? eq(contracts.personId, options.personId) : undefined,
+    options.statuses?.length
+      ? inArray(contracts.status, options.statuses)
+      : undefined,
+    options.type ? eq(contracts.type, options.type) : undefined,
+    options.endDateFrom
+      ? sql`${contracts.endDate} >= ${options.endDateFrom}::date`
+      : undefined,
+    options.endDateTo
+      ? sql`${contracts.endDate} <= ${options.endDateTo}::date`
+      : undefined,
+    options.after
+      ? sql`(coalesce(${contracts.endDate}, '9999-12-31'::date), ${contracts.id}) > (${options.after.key}::date, ${options.after.id}::uuid)`
+      : undefined,
+  ];
+
+  return tdb(companyId)
+    .select({
+      id: contracts.id,
+      type: contracts.type,
+      status: contracts.status,
+      startDate: contracts.startDate,
+      endDate: contracts.endDate,
+      noticeWindow: contracts.noticeWindow,
+      templateName: contracts.templateName,
+      previousContractId: contracts.previousContractId,
+      sortKey: contractEndSortKey,
+      ...personNameColumns,
+    })
+    .from(contracts)
+    .innerJoin(people, eq(contracts.personId, people.id))
+    .where(and(...filters))
+    .orderBy(
+      sql`coalesce(${contracts.endDate}, '9999-12-31'::date)`,
+      asc(contracts.id),
+    )
+    .limit(options.limit + 1);
+};
+
+/**
+ * Determinado contracts in force ending between `today` and `today + withinDays`
+ * (whatever the notice window), with area and site. Read only.
+ */
+export const listExpiringContracts = async (
+  companyId: string,
+  options: {
+    today: string;
+    withinDays: number;
+    siteId?: string;
+    areaId?: string;
+    after?: { key: string; id: string } | null;
+    limit: number;
+  },
+) => {
+  const filters = [
+    eq(contracts.companyId, companyId),
+    eq(contracts.status, "vigente"),
+    eq(contracts.type, "determinado"),
+    isNull(contracts.deletedAt),
+    isNull(people.deletedAt),
+    sql`${contracts.endDate} >= ${options.today}::date`,
+    sql`${contracts.endDate} <= ${options.today}::date + ${options.withinDays}::int`,
+    options.siteId ? eq(people.siteId, options.siteId) : undefined,
+    options.areaId ? eq(people.areaId, options.areaId) : undefined,
+    options.after
+      ? sql`(${contracts.endDate}, ${contracts.id}) > (${options.after.key}::date, ${options.after.id}::uuid)`
+      : undefined,
+  ];
+
+  return tdb(companyId)
+    .select({
+      id: contracts.id,
+      endDate: contracts.endDate,
+      noticeWindow: contracts.noticeWindow,
+      status: contracts.status,
+      type: contracts.type,
+      areaName: areas.name,
+      siteName: sites.name,
+      ...personNameColumns,
+    })
+    .from(contracts)
+    .innerJoin(people, eq(contracts.personId, people.id))
+    .leftJoin(areas, eq(people.areaId, areas.id))
+    .leftJoin(sites, eq(people.siteId, sites.id))
+    .where(and(...filters))
+    .orderBy(asc(contracts.endDate), asc(contracts.id))
+    .limit(options.limit + 1);
+};
+
+/** Tokens a template uses, in order of first appearance. */
+export const templateTokensUsed = (body: string) => [
+  ...new Set(
+    [...body.matchAll(/\{\{(\w+)\}\}/g)]
+      .map((match) => match[1])
+      .filter((token): token is ContractTemplateToken =>
+        (CONTRACT_TEMPLATE_TOKENS as readonly string[]).includes(token),
+      ),
+  ),
+];
+
+/**
+ * Dry run of issuing a contract: the text the template would produce, the
+ * tokens that would come out empty and what would block it. Saves nothing.
+ */
+export const previewContract = async (
+  companyId: string,
+  input: {
+    personId: string;
+    templateId: string;
+    type: ContractFormValues["type"];
+    startDate: string;
+    endDate?: string;
+  },
+) => {
+  const template = await getContractTemplateById(companyId, input.templateId);
+
+  if (!template) {
+    return null;
+  }
+
+  const endDate = normalizeEndDate(input.type, input.endDate);
+  const { person, context } = await resolveTemplateFillContext(
+    companyId,
+    input.personId,
+    input.startDate,
+    endDate,
+  ).catch(() => ({ person: null, context: null }));
+
+  if (!person || !context) {
+    return null;
+  }
+
+  const values: Record<ContractTemplateToken, unknown> = {
+    nombres: context.nombres,
+    apellido_paterno: context.apellidoPaterno,
+    apellido_materno: context.apellidoMaterno,
+    puesto: context.puesto,
+    area: context.area,
+    sucursal: context.sucursal,
+    rfc: context.rfc,
+    horario: person.schedule ? context.horario : null,
+    fecha_inicio: context.fechaInicio,
+    fecha_fin: context.fechaFin,
+  };
+  const missingTokens = templateTokensUsed(template.body).filter((token) => {
+    const value = values[token];
+    return value === null || value === undefined || String(value).trim() === "";
+  });
+  const blocking: string[] = [];
+
+  if (await getVigenteContractForPerson(companyId, input.personId)) {
+    blocking.push("Esta persona ya tiene un contrato vigente.");
+  }
+
+  if (input.type === "determinado" && !endDate) {
+    blocking.push("Un contrato determinado necesita fecha de fin.");
+  }
+
+  if (person.status !== "activa") {
+    blocking.push("La persona está dada de baja.");
+  }
+
+  return {
+    person,
+    template,
+    generatedText: fillContractTemplate(template.body, context),
+    missingTokens,
+    blocking,
+    scheduleSnapshot: buildContractScheduleSnapshot(person.schedule),
+  };
 };

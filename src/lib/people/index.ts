@@ -819,3 +819,114 @@ export const countActivePeople = async (companyId: string) => {
   const counts = await countPeopleByStatus(companyId);
   return counts.activa;
 };
+
+/** Fields `list_people` can ask to be missing (D-14): presence only, never the value. */
+export const PERSON_MISSING_FIELDS = [
+  "horario",
+  "rfc",
+  "curp",
+  "nss",
+  "email",
+  "telefono",
+  "sucursal",
+  "puesto",
+] as const;
+
+export type PersonMissingField = (typeof PERSON_MISSING_FIELDS)[number];
+
+export type ListPeopleKeysetOptions = {
+  query?: string;
+  /** Search RFC and CURP too. Off without the pii scope (no PII oracle). */
+  searchIdentifiers?: boolean;
+  status?: PersonStatus;
+  visibility?: "expediente" | "deleted" | "todos";
+  areaId?: string;
+  positionId?: string;
+  siteId?: string;
+  missing?: PersonMissingField[];
+  /** Keyset position: after (apellido_paterno, id). */
+  after?: { key: string; id: string } | null;
+  limit: number;
+};
+
+const hasScheduleTimes = sql`exists (select 1 from ${personSchedules} ps where ps.person_id = ${people.id} and ps.company_id = ${people.companyId} and ps.deleted_at is null and coalesce(ps.entrada, ps.salida_comer, ps.regreso_comer, ps.salida) is not null)`;
+
+const missingFilter = (field: PersonMissingField): SQL => {
+  switch (field) {
+    case "horario":
+      return sql`not ${hasScheduleTimes}`;
+    case "rfc":
+      return sql`coalesce(${people.rfc}, '') = ''`;
+    case "curp":
+      return sql`coalesce(${people.curp}, '') = ''`;
+    case "nss":
+      return sql`coalesce(${people.nss}, '') = ''`;
+    case "email":
+      return sql`coalesce(${people.email}, '') = ''`;
+    case "telefono":
+      return sql`coalesce(${people.telefono}, '') = ''`;
+    case "sucursal":
+      return isNull(people.siteId);
+    case "puesto":
+      return isNull(people.positionId);
+  }
+};
+
+/**
+ * People in a stable order (apellido paterno, id) for cursor paging, with
+ * area, position and site names. Read only; used by the MCP list_people.
+ */
+export const listPeopleKeyset = async (
+  companyId: string,
+  options: ListPeopleKeysetOptions,
+) => {
+  const filters: (SQL | undefined)[] = [eq(people.companyId, companyId)];
+  const visibility = options.visibility ?? "expediente";
+
+  if (visibility === "expediente") filters.push(isNull(people.deletedAt));
+  if (visibility === "deleted") filters.push(isNotNull(people.deletedAt));
+  if (options.status) filters.push(eq(people.status, options.status));
+  if (options.areaId) filters.push(eq(people.areaId, options.areaId));
+  if (options.positionId)
+    filters.push(eq(people.positionId, options.positionId));
+  if (options.siteId) filters.push(eq(people.siteId, options.siteId));
+
+  for (const field of options.missing ?? []) {
+    filters.push(missingFilter(field));
+  }
+
+  const searchable = options.searchIdentifiers
+    ? personSearchText(people)
+    : sql`(${people.nombres} || ' ' || ${people.apellidoPaterno} || ' ' || coalesce(${people.apellidoMaterno}, '') || ' ' || coalesce(${people.email}, ''))`;
+
+  for (const term of options.query?.trim().split(/\s+/).filter(Boolean) ?? []) {
+    filters.push(ilike(searchable, `%${escapeLike(term)}%`));
+  }
+
+  if (options.after) {
+    filters.push(
+      sql`(${people.apellidoPaterno}, ${people.id}) > (${options.after.key}, ${options.after.id}::uuid)`,
+    );
+  }
+
+  return tdb(companyId)
+    .select({
+      id: people.id,
+      nombres: people.nombres,
+      apellidoPaterno: people.apellidoPaterno,
+      apellidoMaterno: people.apellidoMaterno,
+      status: people.status,
+      deletedAt: people.deletedAt,
+      fechaIngreso: people.fechaIngreso,
+      area: { id: areas.id, name: areas.name },
+      position: { id: positions.id, name: positions.name },
+      site: { id: sites.id, name: sites.name, kind: sites.kind },
+    })
+    .from(people)
+    .leftJoin(areas, eq(people.areaId, areas.id))
+    .leftJoin(positions, eq(people.positionId, positions.id))
+    .leftJoin(sites, eq(people.siteId, sites.id))
+    .where(and(...filters))
+    .orderBy(asc(people.apellidoPaterno), asc(people.id))
+    .limit(options.limit + 1);
+};

@@ -1,5 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/server";
 
+import { registerWorkiaPrompts, registerWorkiaResources } from "./resources";
 import { runWorkiaTool } from "./run-tool";
 import { WORKIA_TOOLS } from "./tools";
 
@@ -12,8 +13,11 @@ export const MCP_INSTRUCTIONS = [
   "Fechas en ISO (aaaa-mm-dd) y en *_mx (dd/mm/aaaa). Errores en structuredContent.error con un código estable.",
 ].join(" ");
 
-/** Registers every Workia tool on the SDK server, each behind runWorkiaTool. */
+/** Registers every Workia tool, resource and prompt on the SDK server. */
 export const registerWorkiaTools = (server: McpServer) => {
+  registerWorkiaResources(server);
+  registerWorkiaPrompts(server);
+
   for (const tool of WORKIA_TOOLS) {
     server.registerTool(
       tool.name,

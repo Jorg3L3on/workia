@@ -30,7 +30,7 @@ const mcpHandler = createMcpHandler(registerWorkiaTools, {
 
 /** Bearer → connection. AuthInfo.extra.workia rides to runWorkiaTool. */
 const verifyToken = async (
-  _request: Request,
+  request: Request,
   bearerToken?: string,
 ): Promise<AuthInfo | undefined> => {
   if (!bearerToken) {
@@ -48,7 +48,7 @@ const verifyToken = async (
     clientId: auth.clientId ?? `pat:${auth.connectionId}`,
     scopes: auth.scopes,
     expiresAt: Math.floor(auth.expiresAt.getTime() / 1000),
-    extra: { workia: auth },
+    extra: { workia: auth, origin: publicOrigin(request) },
   };
 };
 

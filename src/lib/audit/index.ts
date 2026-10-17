@@ -259,3 +259,52 @@ export const snapshotAssetMovement = (movement: Record<string, unknown>) => ({
   conditionNote: movement.conditionNote,
   notes: movement.notes,
 });
+
+export type ListAuditEventsKeysetOptions = Omit<
+  ListAuditEventsOptions,
+  "companyId" | "limit" | "offset"
+> & {
+  source?: NonNullable<RecordAuditEventInput["source"]>;
+  /** Keyset position: before (occurred_at as text, id). */
+  after?: { key: string; id: string } | null;
+  limit: number;
+};
+
+/**
+ * Audit events newest first in a stable order (occurred_at, id) for cursor
+ * paging, with the full payload (callers mask PII). Read only; used by the MCP
+ * list_audit_events.
+ */
+export const listAuditEventsKeyset = async (
+  companyId: string,
+  options: ListAuditEventsKeysetOptions,
+) => {
+  const filters = [
+    buildAuditFilters({ ...options, companyId }),
+    options.source ? eq(auditEvents.source, options.source) : undefined,
+    options.after
+      ? sql`(${auditEvents.occurredAt}, ${auditEvents.id}) < (${options.after.key}::timestamptz, ${options.after.id}::uuid)`
+      : undefined,
+  ];
+
+  return tdb(companyId)
+    .select({
+      id: auditEvents.id,
+      actorUserId: auditEvents.actorUserId,
+      actorName: users.name,
+      resourceType: auditEvents.resourceType,
+      resourceId: auditEvents.resourceId,
+      action: auditEvents.action,
+      result: auditEvents.result,
+      source: auditEvents.source,
+      payload: auditEvents.payload,
+      requestMeta: auditEvents.requestMeta,
+      occurredAt: auditEvents.occurredAt,
+      sortKey: sql<string>`${auditEvents.occurredAt}::text`,
+    })
+    .from(auditEvents)
+    .leftJoin(users, eq(auditEvents.actorUserId, users.id))
+    .where(and(...filters))
+    .orderBy(desc(auditEvents.occurredAt), desc(auditEvents.id))
+    .limit(options.limit + 1);
+};

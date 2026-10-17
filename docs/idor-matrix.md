@@ -5,7 +5,8 @@ la empresa B no puede leer ni cambiar datos de la empresa A (y, en las
 escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 
 - **Superficies:** `npm run check:idor` las descubre del código (acciones de
-  servidor, métodos de rutas y funciones de `src/lib` que reciben `companyId`)
+  servidor, métodos de rutas, funciones de `src/lib` que reciben `companyId` y
+  herramientas MCP del registro)
   y falla si alguna no tiene fila aquí, si una fila ✅ no tiene una prueba con
   ese título en `src/test/idor/*.db.test.ts`, si una escritura no tiene su
   prueba `rbac:<superficie>` o si una fila ya no existe en el código.
@@ -95,6 +96,7 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | Superficie                                    | Estado | Prueba                               | Permiso |
 | --------------------------------------------- | ------ | ------------------------------------ | ------- |
 | `lib:audit/listAuditActors`                   | ✅     | `src/test/idor/tenant.db.test.ts`    | —       |
+| `lib:audit/listAuditEventsKeyset`             | ✅     | `src/test/idor/mcp-tools.db.test.ts` | —       |
 | `lib:catalog/assignActivityToPosition`        | ✅     | `src/test/idor/catalog.db.test.ts`   | —       |
 | `lib:catalog/createActivity`                  | ✅     | `src/test/idor/catalog.db.test.ts`   | —       |
 | `lib:catalog/createArea`                      | ✅     | `src/test/idor/catalog.db.test.ts`   | —       |
@@ -128,8 +130,11 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `lib:contracts/listActiveContractTemplates`   | ✅     | `src/test/idor/contracts.db.test.ts` | —       |
 | `lib:contracts/listContractTemplates`         | ✅     | `src/test/idor/contracts.db.test.ts` | —       |
 | `lib:contracts/listContractsByPerson`         | ✅     | `src/test/idor/contracts.db.test.ts` | —       |
+| `lib:contracts/listContractsKeyset`           | ✅     | `src/test/idor/mcp-tools.db.test.ts` | —       |
+| `lib:contracts/listExpiringContracts`         | ✅     | `src/test/idor/mcp-tools.db.test.ts` | —       |
 | `lib:contracts/listRenewalTrayItems`          | ✅     | `src/test/idor/contracts.db.test.ts` | —       |
 | `lib:contracts/markContractNoRenew`           | ✅     | `src/test/idor/contracts.db.test.ts` | —       |
+| `lib:contracts/previewContract`               | ✅     | `src/test/idor/mcp-tools.db.test.ts` | —       |
 | `lib:contracts/renewContract`                 | ✅     | `src/test/idor/contracts.db.test.ts` | —       |
 | `lib:contracts/softDeleteContract`            | ✅     | `src/test/idor/contracts.db.test.ts` | —       |
 | `lib:contracts/softDeleteContractTemplate`    | ✅     | `src/test/idor/contracts.db.test.ts` | —       |
@@ -177,6 +182,7 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `lib:people/getPersonWithRelations`           | ✅     | `src/test/idor/people.db.test.ts`    | —       |
 | `lib:people/listActivePeopleForSelect`        | ✅     | `src/test/idor/people.db.test.ts`    | —       |
 | `lib:people/listPeople`                       | ✅     | `src/test/idor/people.db.test.ts`    | —       |
+| `lib:people/listPeopleKeyset`                 | ✅     | `src/test/idor/mcp-tools.db.test.ts` | —       |
 | `lib:people/listPeoplePage`                   | ✅     | `src/test/idor/people.db.test.ts`    | —       |
 | `lib:people/searchActivePeopleForSelect`      | ✅     | `src/test/idor/people.db.test.ts`    | —       |
 | `lib:people/softDeletePerson`                 | ✅     | `src/test/idor/people.db.test.ts`    | —       |
@@ -189,6 +195,7 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `lib:resguardo/getAssetWithHolder`            | ✅     | `src/test/idor/resguardo.db.test.ts` | —       |
 | `lib:resguardo/listAssetMovements`            | ✅     | `src/test/idor/resguardo.db.test.ts` | —       |
 | `lib:resguardo/listAssetsByPerson`            | ✅     | `src/test/idor/resguardo.db.test.ts` | —       |
+| `lib:resguardo/listAssetsKeyset`              | ✅     | `src/test/idor/mcp-tools.db.test.ts` | —       |
 | `lib:resguardo/listAssetsPage`                | ✅     | `src/test/idor/resguardo.db.test.ts` | —       |
 | `lib:resguardo/returnAsset`                   | ✅     | `src/test/idor/resguardo.db.test.ts` | —       |
 | `lib:resguardo/softDeleteAsset`               | ✅     | `src/test/idor/resguardo.db.test.ts` | —       |
@@ -202,3 +209,28 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `lib:tenant/members/changeMemberRole`         | ✅     | `src/test/idor/tenant.db.test.ts`    | —       |
 | `lib:tenant/members/listCompanyMembers`       | ✅     | `src/test/idor/tenant.db.test.ts`    | —       |
 | `lib:tenant/members/revokeMember`             | ✅     | `src/test/idor/tenant.db.test.ts`    | —       |
+
+## Herramientas MCP
+
+Una conexión de la empresa B llama cada herramienta con ids de la empresa A: las lecturas responden `NOT_FOUND` o una lista sin ids de A (addendum multiempresa §7). Las de escritura (Fase 2) necesitan además su prueba `rbac:mcp:<tool>`.
+
+| Superficie                    | Estado | Prueba                               | Permiso                   |
+| ----------------------------- | ------ | ------------------------------------ | ------------------------- |
+| `mcp:fetch`                   | ✅     | `src/test/idor/mcp-tools.db.test.ts` | `people:read`             |
+| `mcp:get_asset`               | ✅     | `src/test/idor/mcp-tools.db.test.ts` | `assets:read`             |
+| `mcp:get_contract`            | ✅     | `src/test/idor/mcp-tools.db.test.ts` | `contracts:read`          |
+| `mcp:get_person`              | ✅     | `src/test/idor/mcp-tools.db.test.ts` | `people:read`             |
+| `mcp:list_activities`         | ✅     | `src/test/idor/mcp-tools.db.test.ts` | `positions:read`          |
+| `mcp:list_areas`              | ✅     | `src/test/idor/mcp-tools.db.test.ts` | `areas:read`              |
+| `mcp:list_assets`             | ✅     | `src/test/idor/mcp-tools.db.test.ts` | `assets:read`             |
+| `mcp:list_audit_events`       | ✅     | `src/test/idor/mcp-tools.db.test.ts` | `audit:read`              |
+| `mcp:list_contract_templates` | ✅     | `src/test/idor/mcp-tools.db.test.ts` | `contract_templates:read` |
+| `mcp:list_contracts`          | ✅     | `src/test/idor/mcp-tools.db.test.ts` | `contracts:read`          |
+| `mcp:list_expiring_contracts` | ✅     | `src/test/idor/mcp-tools.db.test.ts` | `contracts:read`          |
+| `mcp:list_people`             | ✅     | `src/test/idor/mcp-tools.db.test.ts` | `people:read`             |
+| `mcp:list_positions`          | ✅     | `src/test/idor/mcp-tools.db.test.ts` | `positions:read`          |
+| `mcp:list_renewal_tray`       | ✅     | `src/test/idor/mcp-tools.db.test.ts` | `contracts:read`          |
+| `mcp:list_sites`              | ✅     | `src/test/idor/mcp-tools.db.test.ts` | `sites:read`              |
+| `mcp:preview_contract`        | ✅     | `src/test/idor/mcp-tools.db.test.ts` | `contracts:read`          |
+| `mcp:search`                  | ✅     | `src/test/idor/mcp-tools.db.test.ts` | `people:read`             |
+| `mcp:whoami`                  | ✅     | `src/test/idor/mcp.db.test.ts`       | `people:read`             |
