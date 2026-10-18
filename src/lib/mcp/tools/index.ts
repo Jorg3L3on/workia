@@ -31,6 +31,7 @@ import {
 import {
   issueContractTool,
   markContractNoRenewTool,
+  decideContractRenewalTool,
   renewContractTool,
 } from "./contracts-writes";
 import { getPersonTool, listPeopleTool } from "./people";
@@ -82,6 +83,7 @@ export const WORKIA_TOOLS: WorkiaTool[] = [
   issueContractTool,
   renewContractTool,
   markContractNoRenewTool,
+  decideContractRenewalTool,
   registerAssetTool,
   assignAssetTool,
   returnAssetTool,

@@ -1073,3 +1073,122 @@ describe("expediente México writes (WRK-I1-9)", () => {
     });
   });
 });
+
+describe("decide_contract_renewal (WRK-I1-13)", () => {
+  /** A person of company A with a fresh vigente contract. */
+  const freshContract = async () => {
+    const [person] = await ownerDb
+      .insert(people)
+      .values({
+        companyId: a.companyId,
+        nombres: "Decide",
+        apellidoPaterno: `Renovación ${++keySeq}`,
+        status: "activa",
+        fechaIngreso: "2021-02-01",
+      })
+      .returning();
+    const [contract] = await ownerDb
+      .insert(contracts)
+      .values({
+        companyId: a.companyId,
+        personId: person.id,
+        type: "determinado",
+        startDate: "2026-01-01",
+        endDate: "2026-12-31",
+        noticeWindow: "1",
+        templateId: a.template.id,
+        templateName: "Plantilla",
+        generatedText: "x",
+        status: "vigente",
+      })
+      .returning();
+    return { person, contract };
+  };
+
+  it("mcp:decide_contract_renewal", async () => {
+    await expectRefusedWithoutEffect(
+      tokens.b,
+      "decide_contract_renewal",
+      { contract_id: a.contract.id, decision: "no_renovar", motivo: "x" },
+      "NOT_FOUND",
+    );
+  });
+
+  it("rbac:mcp:decide_contract_renewal", async () => {
+    const { contract } = await freshContract();
+    const { done } = await confirm(tokens.aViewer, "decide_contract_renewal", {
+      contract_id: contract.id,
+      decision: "no_renovar",
+      motivo: "x",
+    });
+    expect(code(done)).toBe("FORBIDDEN_RBAC");
+  });
+
+  it("no_renovar needs a reason and stores it in the contract", async () => {
+    const { contract } = await freshContract();
+    const missing = await confirm(tokens.a, "decide_contract_renewal", {
+      contract_id: contract.id,
+      decision: "no_renovar",
+    });
+    expect(code(missing.done)).toBe("VALIDATION");
+
+    const { preview, done } = await confirm(
+      tokens.a,
+      "decide_contract_renewal",
+      {
+        contract_id: contract.id,
+        decision: "no_renovar",
+        motivo: "Cierre de sucursal",
+      },
+    );
+    expect(preview.structuredContent.preview.summary).toContain(
+      "Motivo: Cierre de sucursal",
+    );
+    expect(done.structuredContent).toMatchObject({
+      status: "done",
+      decision: "no_renovar",
+      contract: null,
+      constancia_antiguedad: { available: false },
+    });
+    const [row] = await ownerDb
+      .select()
+      .from(contracts)
+      .where(eq(contracts.id, contract.id));
+    expect(row).toMatchObject({
+      status: "no_renovado",
+      noRenewReason: "Cierre de sucursal",
+    });
+    await expectMcpAudit(done, "decide_contract_renewal");
+  });
+
+  it("renovar_indeterminado renews, keeps the hire date and offers the certificate", async () => {
+    const { person, contract } = await freshContract();
+    const { preview, done } = await confirm(
+      tokens.a,
+      "decide_contract_renewal",
+      {
+        contract_id: contract.id,
+        decision: "renovar_indeterminado",
+        template_id: a.template.id,
+      },
+    );
+
+    expect(preview.structuredContent.preview.summary).toContain(
+      "La fecha de ingreso no cambia.",
+    );
+    expect(done.structuredContent).toMatchObject({
+      status: "done",
+      previous: { id: contract.id, status: "renovado" },
+      contract: { type: "indeterminado", status: "vigente" },
+      constancia_antiguedad: { available: true },
+    });
+    expect(done.structuredContent.constancia_antiguedad.url).toContain(
+      `/app/personas/${person.id}/constancia`,
+    );
+    const [after] = await ownerDb
+      .select()
+      .from(people)
+      .where(eq(people.id, person.id));
+    expect(after.fechaIngreso).toBe("2021-02-01");
+  });
+});

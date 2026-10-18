@@ -132,6 +132,7 @@ America/Mexico_City. Las listas grandes paginan con `cursor` opaco y firmado
 | `issue_contract` | Emite un contrato con una plantilla: congela el texto y el horario de la persona al emitir, igual que la app. | `write:contracts` (Escribir contratos) | `contracts:create` |
 | `renew_contract` | Renueva un contrato vigente: el anterior queda «renovado» y se emite el nuevo ligado a él, en un solo paso (si algo falla no cambia nada). | `write:contracts` (Escribir contratos) | `contracts:update` |
 | `mark_contract_no_renew` | Registra la decisión de no renovar un contrato vigente; sale de la bandeja de renovación. | `write:contracts` (Escribir contratos) | `contracts:update` |
+| `decide_contract_renewal` | La decisión de la bandeja de renovación en un paso, igual que la app: renovar_indeterminado, renovar_determinado (con end_date) o no_renovar (motivo obligatorio). | `write:contracts` (Escribir contratos) | `contracts:update` |
 | `register_asset` | Da de alta un activo en resguardo (queda «En almacén»). | `write:assets` (Escribir resguardo) | `assets:create` |
 | `assign_asset` | Entrega un activo en resguardo a una persona, con fecha y la condición en que se entrega (obligatoria). | `write:assets` (Escribir resguardo) | `assets:update` |
 | `return_asset` | Registra la devolución de un activo asignado, con fecha y la condición en que regresa (obligatoria). | `write:assets` (Escribir resguardo) | `assets:update` |

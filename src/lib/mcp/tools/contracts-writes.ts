@@ -4,15 +4,20 @@ import {
   createContract,
   getContractById,
   getContractTemplateById,
+  decideContractRenewal,
   markContractNoRenew,
   previewContract,
   renewContract,
 } from "@/lib/contracts";
+import { listActivePositions } from "@/lib/catalog";
 import {
   compensationValues,
   contractFormSchema,
   contractNoticeWindowLabels,
   contractTypeLabels,
+  RENEWAL_DECISIONS,
+  renewalDecisionLabels,
+  renewalDecisionSchema,
   renewContractFormSchema,
 } from "@/lib/contracts/schema";
 import { getPersonById } from "@/lib/people";
@@ -29,6 +34,7 @@ import {
   compensacionInput,
   compensacionSummary,
   compensationFormValues,
+  type CompensacionInput,
 } from "./compensation";
 
 const NOTICE_WINDOWS = ["1", "2", "3", "6", "no_avisar"] as const;
@@ -184,7 +190,7 @@ export const renewContractTool = defineWriteTool({
   name: "renew_contract",
   title: "Renovar contrato",
   description:
-    "Renueva un contrato vigente: el anterior queda «renovado» y se emite el nuevo ligado a él, en un solo paso (si algo falla no cambia nada). Primero responde una vista previa; repite con confirmation_token para hacerlo.",
+    "Renueva un contrato vigente: el anterior queda «renovado» y se emite el nuevo ligado a él, en un solo paso (si algo falla no cambia nada). Para decidir desde la bandeja (con cambio de puesto o no renovar) prefiere decide_contract_renewal. Primero responde una vista previa; repite con confirmation_token para hacerlo.",
   scope: "write:contracts",
   permission: "contracts:update",
   input: z.object({
@@ -240,7 +246,7 @@ export const markContractNoRenewTool = defineWriteTool({
   name: "mark_contract_no_renew",
   title: "No renovar contrato",
   description:
-    "Registra la decisión de no renovar un contrato vigente; sale de la bandeja de renovación. El motivo queda en la auditoría. Primero responde una vista previa; repite con confirmation_token para hacerlo.",
+    "Registra la decisión de no renovar un contrato vigente; sale de la bandeja de renovación. El motivo queda en el contrato y en la auditoría. Prefiere decide_contract_renewal, que lo exige. Primero responde una vista previa; repite con confirmation_token para hacerlo.",
   scope: "write:contracts",
   permission: "contracts:update",
   input: z.object({
@@ -269,3 +275,133 @@ export const markContractNoRenewTool = defineWriteTool({
     return { contract: toRef(ctx, updated) };
   },
 });
+
+export const decideContractRenewalTool = defineWriteTool({
+  name: "decide_contract_renewal",
+  title: "Decidir renovación",
+  description:
+    "La decisión de la bandeja de renovación en un paso, igual que la app: renovar_indeterminado, renovar_determinado (con end_date) o no_renovar (motivo obligatorio). Al renovar puede cambiar el puesto (new_position_id) y la compensación (sin compensacion conserva la anterior). Nunca cambia la fecha de ingreso. Tras renovar a indeterminado avisa que la constancia de antigüedad está disponible. Primero responde una vista previa; repite con confirmation_token para hacerlo.",
+  scope: "write:contracts",
+  permission: "contracts:update",
+  input: z.object({
+    contract_id: uuid("Contrato vigente."),
+    decision: z.enum(RENEWAL_DECISIONS),
+    motivo: z
+      .string()
+      .trim()
+      .max(500)
+      .optional()
+      .describe("Obligatorio en no_renovar."),
+    template_id: uuid("Plantilla del nuevo contrato (al renovar).").optional(),
+    start_date: isoDate(
+      "Inicio del nuevo contrato; por defecto el fin del actual.",
+    ).optional(),
+    end_date: isoDate("Fin (obligatorio en renovar_determinado).").optional(),
+    notice_window: z.enum(NOTICE_WINDOWS).optional(),
+    new_position_id: uuid("Nuevo puesto (opcional).").optional(),
+    compensacion: compensacionInput.optional(),
+  }),
+  output: z.object({
+    decision: z.string(),
+    previous: z.object({ id: z.string(), status: z.string() }),
+    contract: contractRef.nullable(),
+    constancia_antiguedad: z.object({
+      available: z.boolean(),
+      url: z.string().nullable(),
+    }),
+  }),
+  annotations: writeAnnotations("Decidir renovación", { destructive: true }),
+  preview: async (args, ctx) => {
+    assertCanCapture(ctx, args.compensacion);
+    const values = parseDecision(args);
+    const contract = await loadVigente(ctx, args.contract_id);
+    const person = await getPersonById(ctx.companyId, contract.personId, true);
+    const name = person ? fullName(person) : "la persona";
+
+    if (values.decision === "no_renovar") {
+      return {
+        summary: `No renovar el contrato de ${name} (fin ${mx(contract.endDate) ?? "sin fecha"}) · Motivo: ${values.motivo}.`,
+      };
+    }
+
+    const template = await getContractTemplateById(
+      ctx.companyId,
+      values.templateId!,
+    );
+
+    if (!template) throw notFound("La plantilla");
+
+    const position = values.newPositionId
+      ? (await listActivePositions(ctx.companyId)).find(
+          (item) => item.id === values.newPositionId,
+        )
+      : null;
+
+    if (values.newPositionId && !position) throw notFound("El puesto");
+
+    const start = values.startDate || contract.endDate || contract.startDate;
+
+    return {
+      summary: `${renewalDecisionLabels[values.decision]} a ${name}: inicia ${mx(start)}${values.decision === "renovar_determinado" ? ` y termina ${mx(values.endDate!)}` : ""} con la plantilla «${template.name}».${position ? ` Cambia de puesto a ${position.name}.` : ""} ${args.compensacion ? compensacionSummary(args.compensacion) : contract.salarioDiario === null ? "Sin compensación capturada." : "Conserva la compensación del contrato anterior."} La fecha de ingreso no cambia.`,
+    };
+  },
+  handler: async (args, ctx) => {
+    assertCanCapture(ctx, args.compensacion);
+    const values = parseDecision(args);
+    await loadVigente(ctx, args.contract_id);
+    const result = await decideContractRenewal(
+      ctx.companyId,
+      values,
+      ctx.userId,
+    );
+
+    return {
+      decision: result.decision,
+      previous: {
+        id: result.previous.id,
+        status: result.decision === "no_renovar" ? "no_renovado" : "renovado",
+      },
+      contract: result.contract ? toRef(ctx, result.contract) : null,
+      constancia_antiguedad: {
+        available: result.constanciaAvailable,
+        url: result.constanciaAvailable
+          ? appUrl(ctx, `/app/personas/${result.previous.personId}/constancia`)
+          : null,
+      },
+    };
+  },
+});
+
+/** The connector's arguments through the app's decision schema. */
+const parseDecision = (args: {
+  contract_id: string;
+  decision: (typeof RENEWAL_DECISIONS)[number];
+  motivo?: string;
+  template_id?: string;
+  start_date?: string;
+  end_date?: string;
+  notice_window?: (typeof NOTICE_WINDOWS)[number];
+  new_position_id?: string;
+  compensacion?: CompensacionInput;
+}) => {
+  const parsed = renewalDecisionSchema.safeParse({
+    contractId: args.contract_id,
+    decision: args.decision,
+    motivo: args.motivo,
+    templateId: args.template_id,
+    startDate: args.start_date,
+    endDate: args.end_date,
+    noticeWindow: args.notice_window,
+    newPositionId: args.new_position_id,
+    ...compensationFormValues(args.compensacion),
+  });
+
+  if (!parsed.success) {
+    throw new McpToolError(
+      "VALIDATION",
+      parsed.error.issues[0]?.message ?? "Revisa la decisión.",
+    );
+  }
+
+  return parsed.data;
+};

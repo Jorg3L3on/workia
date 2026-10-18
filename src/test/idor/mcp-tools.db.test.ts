@@ -174,7 +174,7 @@ beforeAll(async () => {
 });
 
 describe("protocol surface", () => {
-  it("lists the 34 tools, the 4 resources and the 3 prompts", async () => {
+  it("lists the 35 tools, the 4 resources and the 3 prompts", async () => {
     const tools = (await rpc(tokens.aRead, "tools/list")).result.tools;
     const resources = (await rpc(tokens.aRead, "resources/list")).result
       .resources;
@@ -182,8 +182,8 @@ describe("protocol surface", () => {
       .result.resourceTemplates;
     const prompts = (await rpc(tokens.aRead, "prompts/list")).result.prompts;
 
-    // 18 reads (phase 1) + 13 writes (phase 2) + phase 3 (2 reads, 1 write).
-    expect(tools).toHaveLength(34);
+    // 18 reads (phase 1) + 13 writes (phase 2) + phase 3 (2 reads, 2 writes).
+    expect(tools).toHaveLength(35);
     expect(resources.map((r: { uri: string }) => r.uri).sort()).toEqual([
       "workia://catalogo",
       "workia://glosario",

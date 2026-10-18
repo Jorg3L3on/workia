@@ -49,7 +49,10 @@ const PHASE_2_WRITE_TOOLS = [
 
 /** Phase 3 tools, on the app features of «Ciclo laboral México». */
 const PHASE_3_READ_TOOLS = ["list_regions", "get_seniority_certificate"];
-const PHASE_3_WRITE_TOOLS = ["update_person_schedule_blocks"];
+const PHASE_3_WRITE_TOOLS = [
+  "update_person_schedule_blocks",
+  "decide_contract_renewal",
+];
 
 const jsonSchemaOf = (schema: z.ZodType) =>
   JSON.stringify(z.toJSONSchema(schema, { target: "draft-2020-12" }));

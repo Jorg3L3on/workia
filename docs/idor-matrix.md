@@ -35,6 +35,7 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `action:contracts/createContractAction`             | ✅     | `src/test/idor/contracts.db.test.ts`                                                                   | `contracts:create`          |
 | `action:contracts/createContractTemplateAction`     | ✅     | `src/test/idor/contracts.db.test.ts`                                                                   | `contract_templates:create` |
 | `action:contracts/deactivateContractTemplateAction` | ✅     | `src/test/idor/contracts.db.test.ts`                                                                   | `contract_templates:delete` |
+| `action:contracts/decideContractRenewalAction`      | ✅     | `src/test/idor/renewal-decision.db.test.ts`                                                            | `contracts:update`          |
 | `action:contracts/deleteContractTemplateAction`     | ✅     | `src/test/idor/contracts.db.test.ts`                                                                   | `contract_templates:delete` |
 | `action:contracts/noRenewContractAction`            | ✅     | `src/test/idor/contracts.db.test.ts`                                                                   | `contracts:update`          |
 | `action:contracts/renewContractAction`              | ✅     | `src/test/idor/contracts.db.test.ts`                                                                   | `contracts:update`          |
@@ -131,6 +132,7 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `lib:contracts/createContract`                | ✅     | `src/test/idor/contracts.db.test.ts`          | —       |
 | `lib:contracts/createContractTemplate`        | ✅     | `src/test/idor/contracts.db.test.ts`          | —       |
 | `lib:contracts/deactivateContractTemplate`    | ✅     | `src/test/idor/contracts.db.test.ts`          | —       |
+| `lib:contracts/decideContractRenewal`         | ✅     | `src/test/idor/renewal-decision.db.test.ts`   | —       |
 | `lib:contracts/getContractById`               | ✅     | `src/test/idor/contracts.db.test.ts`          | —       |
 | `lib:contracts/getContractTemplateById`       | ✅     | `src/test/idor/contracts.db.test.ts`          | —       |
 | `lib:contracts/getSeniorityCertificate`       | ✅     | `src/test/idor/official-templates.db.test.ts` | —       |
@@ -242,6 +244,7 @@ Una conexión de la empresa B llama cada herramienta con ids de la empresa A: la
 | `mcp:assign_asset`                  | ✅     | `src/test/idor/mcp-write-tools.db.test.ts` | `assets:update`           |
 | `mcp:create_catalog_item`           | ✅     | `src/test/idor/mcp-write-tools.db.test.ts` | `positions:create`        |
 | `mcp:create_person`                 | ✅     | `src/test/idor/mcp-write-tools.db.test.ts` | `people:create`           |
+| `mcp:decide_contract_renewal`       | ✅     | `src/test/idor/mcp-write-tools.db.test.ts` | `contracts:update`        |
 | `mcp:fetch`                         | ✅     | `src/test/idor/mcp-tools.db.test.ts`       | `people:read`             |
 | `mcp:get_asset`                     | ✅     | `src/test/idor/mcp-tools.db.test.ts`       | `assets:read`             |
 | `mcp:get_contract`                  | ✅     | `src/test/idor/mcp-tools.db.test.ts`       | `contracts:read`          |
