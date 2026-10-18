@@ -56,6 +56,14 @@ describe("resolveBreadcrumbs", () => {
       { label: "Catálogo", href: "/app/catalogo" },
       { label: "Actividades" },
     ]);
+    expect(resolveBreadcrumbs("/app/catalogo/regiones")).toEqual([
+      { label: "Catálogo", href: "/app/catalogo" },
+      { label: "Regiones" },
+    ]);
+    expect(resolveBreadcrumbs("/app/altas/abc")).toEqual([
+      { label: "Altas", href: "/app/altas" },
+      { label: "Alta" },
+    ]);
     expect(resolveBreadcrumbs("/app/catalogo/sucursales")).toEqual([
       { label: "Catálogo", href: "/app/catalogo" },
       { label: "Sucursales" },

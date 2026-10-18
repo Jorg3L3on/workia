@@ -140,6 +140,13 @@ export const resolveBreadcrumbs = (
     ];
   }
 
+  if (path === CATALOG_PATHS.regiones) {
+    return [
+      { label: "Catálogo", href: CATALOG_PATHS.index },
+      { label: "Regiones" },
+    ];
+  }
+
   if (path === "/app/auditoria") {
     return [{ label: "Auditoría" }];
   }
