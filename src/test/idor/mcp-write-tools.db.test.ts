@@ -917,3 +917,57 @@ describe("domain query used by the write tools", () => {
     ).toBeGreaterThan(0);
   });
 });
+
+describe("expediente México writes (WRK-I1-9)", () => {
+  it("needs pii to write México data, and stores it with the app's schema", async () => {
+    const without = await confirm(tokens.aNoPii, "create_person", {
+      nombres: "Con",
+      apellido_paterno: "Domicilio",
+      domicilio_calle: "Av. Siempre Viva",
+    });
+    expect(code(without.done)).toBe("FORBIDDEN_SCOPE");
+
+    const badZip = await confirm(tokens.a, "create_person", {
+      nombres: "Con",
+      apellido_paterno: "Domicilio",
+      domicilio_codigo_postal: "123",
+    });
+    expect(code(badZip.done)).toBe("VALIDATION");
+
+    const { done } = await confirm(tokens.a, "create_person", {
+      nombres: "Con",
+      apellido_paterno: "Domicilio",
+      domicilio_calle: "Av. Siempre Viva",
+      domicilio_codigo_postal: "29010",
+      domicilio_estado: "Chiapas",
+      estado_civil: "soltero",
+      beneficiarios: [
+        { nombre: "Madre", parentesco: "Madre", porcentaje: 100 },
+      ],
+    });
+    expect(done.structuredContent.status).toBe("done");
+    const [row] = await ownerDb
+      .select()
+      .from(people)
+      .where(eq(people.id, done.structuredContent.person.id));
+    expect(row).toMatchObject({
+      domicilioCalle: "Av. Siempre Viva",
+      domicilioCodigoPostal: "29010",
+      estadoCivil: "soltero",
+    });
+
+    const edit = await confirm(tokens.a, "update_person", {
+      person_id: row.id,
+      changes: { domicilio_colonia: "Centro", beneficiarios: null },
+    });
+    expect(edit.done.structuredContent.status).toBe("done");
+    const [after] = await ownerDb
+      .select()
+      .from(people)
+      .where(eq(people.id, row.id));
+    expect(after).toMatchObject({
+      domicilioCalle: "Av. Siempre Viva",
+      domicilioColonia: "Centro",
+    });
+  });
+});

@@ -90,6 +90,130 @@ export const SCHEDULE_FIELD_LABELS = {
   horarioSalida: "Salida",
 } as const;
 
+/** Las 32 entidades federativas, para domicilio y lugar de nacimiento. */
+export const MX_STATES = [
+  "Aguascalientes",
+  "Baja California",
+  "Baja California Sur",
+  "Campeche",
+  "Chiapas",
+  "Chihuahua",
+  "Ciudad de México",
+  "Coahuila",
+  "Colima",
+  "Durango",
+  "Estado de México",
+  "Guanajuato",
+  "Guerrero",
+  "Hidalgo",
+  "Jalisco",
+  "Michoacán",
+  "Morelos",
+  "Nayarit",
+  "Nuevo León",
+  "Oaxaca",
+  "Puebla",
+  "Querétaro",
+  "Quintana Roo",
+  "San Luis Potosí",
+  "Sinaloa",
+  "Sonora",
+  "Tabasco",
+  "Tamaulipas",
+  "Tlaxcala",
+  "Veracruz",
+  "Yucatán",
+  "Zacatecas",
+] as const;
+
+export const MARITAL_STATUSES = [
+  "soltero",
+  "casado",
+  "union_libre",
+  "divorciado",
+  "viudo",
+] as const;
+
+export const maritalStatusLabels: Record<
+  (typeof MARITAL_STATUSES)[number],
+  string
+> = {
+  soltero: "Soltero(a)",
+  casado: "Casado(a)",
+  union_libre: "Unión libre",
+  divorciado: "Divorciado(a)",
+  viudo: "Viudo(a)",
+};
+
+export const SEXES = ["H", "M"] as const;
+
+export const sexLabels: Record<(typeof SEXES)[number], string> = {
+  H: "Hombre",
+  M: "Mujer",
+};
+
+/** Clave de elector del INE: 18 caracteres alfanuméricos. */
+export const isValidIneClave = (value: string) => /^[A-Z0-9]{18}$/.test(value);
+
+export const beneficiarySchema = z.object({
+  nombre: z
+    .string()
+    .trim()
+    .min(1, "El nombre del beneficiario es obligatorio")
+    .max(160),
+  parentesco: z.string().trim().min(1, "El parentesco es obligatorio").max(60),
+  porcentaje: z.coerce
+    .number()
+    .gt(0, "El porcentaje debe ser mayor a 0")
+    .max(100, "El porcentaje no puede pasar de 100"),
+});
+
+export type BeneficiaryValues = z.infer<typeof beneficiarySchema>;
+
+/** Optional text that, when absent (undefined), leaves the stored value as is. */
+const keepText = (max = 120) =>
+  z.string().trim().max(max).optional().or(z.literal(""));
+
+export const personMexicoFields = {
+  domicilioCalle: keepText(160),
+  domicilioNumeroExterior: keepText(20),
+  domicilioNumeroInterior: keepText(20),
+  domicilioColonia: keepText(120),
+  domicilioMunicipio: keepText(120),
+  domicilioEstado: z.enum(MX_STATES).optional().or(z.literal("")),
+  domicilioCodigoPostal: z
+    .string()
+    .trim()
+    .regex(/^(\d{5})?$/, "El código postal tiene 5 dígitos")
+    .optional(),
+  estadoCivil: z.enum(MARITAL_STATUSES).optional().or(z.literal("")),
+  sexo: z.enum(SEXES).optional().or(z.literal("")),
+  lugarNacimiento: z.enum(MX_STATES).optional().or(z.literal("")),
+  nacionalidad: keepText(60),
+  ineClaveElector: z
+    .string()
+    .trim()
+    .transform((value) => value.toUpperCase().replace(/\s+/g, ""))
+    .refine(
+      (value) => value === "" || isValidIneClave(value),
+      "La clave de elector tiene 18 letras y números",
+    )
+    .optional(),
+  /** Absent: keep the current beneficiaries. A list (even empty) replaces them. */
+  beneficiarios: z
+    .array(beneficiarySchema)
+    .max(10, "Máximo 10 beneficiarios")
+    .optional()
+    .refine(
+      (list) =>
+        !list ||
+        list.length === 0 ||
+        Math.abs(list.reduce((sum, item) => sum + item.porcentaje, 0) - 100) <
+          0.01,
+      "Los porcentajes de los beneficiarios deben sumar 100",
+    ),
+};
+
 export const personFormSchema = z.object({
   nombres: z
     .string()
@@ -124,6 +248,7 @@ export const personFormSchema = z.object({
   horarioRegresoComer: optionalTime,
   horarioSalida: optionalTime,
   status: z.enum(PERSON_STATUSES),
+  ...personMexicoFields,
 });
 
 export type PersonFormValues = z.infer<typeof personFormSchema>;
@@ -203,3 +328,35 @@ export const formatPersonName = (person: {
 };
 
 export const formatDateLabel = formatDateMx;
+
+/** «Calle 5 int. 2, Col. Centro, Tuxtla Gutiérrez, Chiapas, C.P. 29000», or null if nothing. */
+export const formatMexicanAddress = (address: {
+  domicilioCalle?: string | null;
+  domicilioNumeroExterior?: string | null;
+  domicilioNumeroInterior?: string | null;
+  domicilioColonia?: string | null;
+  domicilioMunicipio?: string | null;
+  domicilioEstado?: string | null;
+  domicilioCodigoPostal?: string | null;
+}) => {
+  const street = [
+    address.domicilioCalle,
+    address.domicilioNumeroExterior,
+    address.domicilioNumeroInterior
+      ? `int. ${address.domicilioNumeroInterior}`
+      : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const parts = [
+    street || null,
+    address.domicilioColonia ? `Col. ${address.domicilioColonia}` : null,
+    address.domicilioMunicipio,
+    address.domicilioEstado,
+    address.domicilioCodigoPostal
+      ? `C.P. ${address.domicilioCodigoPostal}`
+      : null,
+  ].filter(Boolean);
+
+  return parts.length > 0 ? parts.join(", ") : null;
+};

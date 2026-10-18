@@ -3,6 +3,8 @@ import {
   date,
   foreignKey,
   index,
+  integer,
+  numeric,
   pgEnum,
   pgTable,
   text,
@@ -35,6 +37,18 @@ export const personSearchText = (table: {
 
 export const personStatusEnum = pgEnum("person_status", ["activa", "baja"]);
 
+/** Estado civil del expediente México (WRK-I5-1). */
+export const maritalStatusEnum = pgEnum("marital_status", [
+  "soltero",
+  "casado",
+  "union_libre",
+  "divorciado",
+  "viudo",
+]);
+
+/** Sexo como lo registra la CURP. */
+export const sexEnum = pgEnum("person_sex", ["H", "M"]);
+
 export const people = pgTable(
   "people",
   {
@@ -65,6 +79,19 @@ export const people = pgTable(
     curp: text("curp"),
     nss: text("nss"),
     status: personStatusEnum("status").notNull().default("activa"),
+    // Expediente México (WRK-I5-1): domicilio, datos civiles e INE.
+    domicilioCalle: text("domicilio_calle"),
+    domicilioNumeroExterior: text("domicilio_numero_exterior"),
+    domicilioNumeroInterior: text("domicilio_numero_interior"),
+    domicilioColonia: text("domicilio_colonia"),
+    domicilioMunicipio: text("domicilio_municipio"),
+    domicilioEstado: text("domicilio_estado"),
+    domicilioCodigoPostal: text("domicilio_codigo_postal"),
+    estadoCivil: maritalStatusEnum("estado_civil"),
+    sexo: sexEnum("sexo"),
+    lugarNacimiento: text("lugar_nacimiento"),
+    nacionalidad: text("nacionalidad"),
+    ineClaveElector: text("ine_clave_elector"),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
@@ -123,6 +150,36 @@ export const people = pgTable(
     index("people_company_status_family_idx")
       .on(table.companyId, table.status, table.apellidoPaterno)
       .where(sql`${table.deletedAt} is null`),
+  ],
+);
+
+/** Beneficiaries of a person (WRK-I5-1); the percentages add up to 100. */
+export const personBeneficiaries = pgTable(
+  "person_beneficiaries",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    companyId: uuid("company_id")
+      .notNull()
+      .references(() => companies.id, { onDelete: "restrict" }),
+    personId: uuid("person_id").notNull(),
+    nombre: text("nombre").notNull(),
+    parentesco: text("parentesco").notNull(),
+    porcentaje: numeric("porcentaje", { precision: 5, scale: 2 }).notNull(),
+    orden: integer("orden").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    foreignKey({
+      name: "person_beneficiaries_company_person_fk",
+      columns: [table.companyId, table.personId],
+      foreignColumns: [people.companyId, people.id],
+    }).onDelete("cascade"),
+    index("person_beneficiaries_company_person_idx").on(
+      table.companyId,
+      table.personId,
+    ),
   ],
 );
 
@@ -202,3 +259,5 @@ export type NewPerson = typeof people.$inferInsert;
 export type PersonStatus = (typeof personStatusEnum.enumValues)[number];
 export type PersonSchedule = typeof personSchedules.$inferSelect;
 export type NewPersonSchedule = typeof personSchedules.$inferInsert;
+
+export type PersonBeneficiary = typeof personBeneficiaries.$inferSelect;

@@ -20,6 +20,8 @@ import {
   contracts,
   mcpConnections,
   mcpToolCalls,
+  people,
+  personBeneficiaries,
   personSchedules,
 } from "@/lib/db/schema";
 import { isoToday } from "@/lib/format/date";
@@ -133,6 +135,24 @@ beforeAll(async () => {
       generatedText: `Contrato de Persona A con RFC ${a.person.rfc} y CURP ${a.person.curp}.`,
     })
     .where(eq(contracts.id, a.contract.id));
+  // Expediente México (WRK-I1-9): address, INE and a beneficiary.
+  await ownerDb
+    .update(people)
+    .set({
+      domicilioCalle: "Calle Secreta 77",
+      domicilioCodigoPostal: "29000",
+      domicilioEstado: "Chiapas",
+      estadoCivil: "casado",
+      ineClaveElector: "SECRETOINE00000001",
+    })
+    .where(eq(people.id, a.person.id));
+  await ownerDb.insert(personBeneficiaries).values({
+    companyId: a.companyId,
+    personId: a.person.id,
+    nombre: "Beneficiaria Secreta",
+    parentesco: "Madre",
+    porcentaje: "100.00",
+  });
   // An audit event whose payload carries PII.
   await ownerDb.insert(auditEvents).values({
     companyId: a.companyId,
@@ -803,7 +823,14 @@ describe("PII sweep and output contracts", () => {
       const body = JSON.stringify(result);
 
       expect(result.isError, tool.name).toBeFalsy();
-      for (const secret of [RFC_A(), CURP_A(), a.person.nss!]) {
+      for (const secret of [
+        RFC_A(),
+        CURP_A(),
+        a.person.nss!,
+        "Calle Secreta 77",
+        "SECRETOINE00000001",
+        "Beneficiaria Secreta",
+      ]) {
         expect(body, `${tool.name} leaked PII`).not.toContain(secret);
       }
       // Each structuredContent satisfies the advertised output schema.
@@ -812,5 +839,51 @@ describe("PII sweep and output contracts", () => {
         tool.name,
       ).toBe(true);
     }
+  });
+});
+
+describe("expediente México in the connector (WRK-I1-9)", () => {
+  it("shows only what is captured without pii, and the data with pii", async () => {
+    const masked = await call(tokens.aRead, "get_person", {
+      person_id: a.person.id,
+    });
+    expect(masked.structuredContent.datos_mexico).toEqual({
+      pii_masked: true,
+      capturado: {
+        domicilio: true,
+        estado_civil: true,
+        sexo: false,
+        lugar_nacimiento: false,
+        nacionalidad: false,
+        ine: true,
+        beneficiarios: 1,
+      },
+    });
+
+    const clear = await call(tokens.aAll, "get_person", {
+      person_id: a.person.id,
+    });
+    expect(clear.structuredContent.datos_mexico).toMatchObject({
+      pii_masked: false,
+      domicilio: {
+        calle: "Calle Secreta 77",
+        codigo_postal: "29000",
+        estado: "Chiapas",
+      },
+      estado_civil: "casado",
+      ine_clave_elector: "SECRETOINE00000001",
+      beneficiarios: [
+        {
+          nombre: "Beneficiaria Secreta",
+          parentesco: "Madre",
+          porcentaje: 100,
+        },
+      ],
+    });
+
+    const fetched = await call(tokens.aAll, "fetch", {
+      id: `person:${a.person.id}`,
+    });
+    expect(fetched.structuredContent.text).toContain("Calle Secreta 77");
   });
 });

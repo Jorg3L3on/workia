@@ -16,6 +16,7 @@ import {
 
 import {
   buildChanges,
+  MEXICO_AUDIT_FIELDS,
   recordAuditEvent,
   snapshotPerson,
   snapshotPersonSchedule,
@@ -26,6 +27,7 @@ import { personSearchText } from "@/lib/db/schema/people";
 import {
   areas,
   people,
+  personBeneficiaries,
   personSchedules,
   positions,
   sites,
@@ -63,6 +65,147 @@ export type PersonWithRelations = Awaited<
 const normalizeOptional = (value?: string | null) =>
   value?.trim() ? value.trim() : null;
 
+/** Expediente México fields that were sent; absent ones are left as stored. */
+const toMexicoValues = (input: PersonFormValues) => {
+  const values: Partial<typeof people.$inferInsert> = {};
+  const text = (value: string | undefined) =>
+    value === undefined ? undefined : normalizeOptional(value);
+  const set = <K extends keyof typeof people.$inferInsert>(
+    key: K,
+    value: (typeof people.$inferInsert)[K] | undefined,
+  ) => {
+    if (value !== undefined) values[key] = value;
+  };
+
+  set("domicilioCalle", text(input.domicilioCalle));
+  set("domicilioNumeroExterior", text(input.domicilioNumeroExterior));
+  set("domicilioNumeroInterior", text(input.domicilioNumeroInterior));
+  set("domicilioColonia", text(input.domicilioColonia));
+  set("domicilioMunicipio", text(input.domicilioMunicipio));
+  set("domicilioEstado", text(input.domicilioEstado));
+  set("domicilioCodigoPostal", text(input.domicilioCodigoPostal));
+  set(
+    "estadoCivil",
+    input.estadoCivil === undefined
+      ? undefined
+      : ((input.estadoCivil ||
+          null) as (typeof people.$inferInsert)["estadoCivil"]),
+  );
+  set(
+    "sexo",
+    input.sexo === undefined
+      ? undefined
+      : ((input.sexo || null) as (typeof people.$inferInsert)["sexo"]),
+  );
+  set("lugarNacimiento", text(input.lugarNacimiento));
+  set("nacionalidad", text(input.nacionalidad));
+  set("ineClaveElector", text(input.ineClaveElector));
+
+  return values;
+};
+
+/** Replaces the beneficiaries of a person when the input sent a list. */
+const replaceBeneficiaries = async (
+  companyId: string,
+  personId: string,
+  input: PersonFormValues,
+  tx: DbExecutor,
+  audit: (input: AuditInput) => Promise<unknown>,
+  actorUserId?: string | null,
+) => {
+  if (!input.beneficiarios) {
+    return;
+  }
+
+  const before = await tx
+    .select()
+    .from(personBeneficiaries)
+    .where(
+      withTenant(
+        personBeneficiaries,
+        companyId,
+        eq(personBeneficiaries.personId, personId),
+      ),
+    )
+    .orderBy(asc(personBeneficiaries.orden));
+  const describe = (
+    list: { nombre: string; parentesco: string; porcentaje: string | number }[],
+  ) =>
+    list.map(
+      (item) =>
+        `${item.nombre} (${item.parentesco}, ${Number(item.porcentaje)} %)`,
+    );
+  const next = input.beneficiarios.map((item) => ({
+    nombre: item.nombre,
+    parentesco: item.parentesco,
+    porcentaje: item.porcentaje,
+  }));
+
+  if (JSON.stringify(describe(before)) === JSON.stringify(describe(next))) {
+    return;
+  }
+
+  await tx
+    .delete(personBeneficiaries)
+    .where(
+      withTenant(
+        personBeneficiaries,
+        companyId,
+        eq(personBeneficiaries.personId, personId),
+      ),
+    );
+
+  if (next.length > 0) {
+    await tx.insert(personBeneficiaries).values(
+      next.map((item, index) => ({
+        companyId,
+        personId,
+        nombre: item.nombre,
+        parentesco: item.parentesco,
+        porcentaje: item.porcentaje.toFixed(2),
+        orden: index,
+      })),
+    );
+  }
+
+  await audit({
+    actorUserId,
+    resourceType: "person",
+    resourceId: personId,
+    action: "update",
+    payload: {
+      summary: "Beneficiarios actualizados",
+      before: { beneficiarios: describe(before) },
+      after: { beneficiarios: describe(next) },
+    },
+  });
+};
+
+/** The beneficiaries of a person in the company, in their order. */
+export const listPersonBeneficiaries = async (
+  companyId: string,
+  personId: string,
+) =>
+  tdb(companyId)
+    .select({
+      id: personBeneficiaries.id,
+      nombre: personBeneficiaries.nombre,
+      parentesco: personBeneficiaries.parentesco,
+      porcentaje: personBeneficiaries.porcentaje,
+    })
+    .from(personBeneficiaries)
+    .where(
+      withTenant(
+        personBeneficiaries,
+        companyId,
+        eq(personBeneficiaries.personId, personId),
+      ),
+    )
+    .orderBy(asc(personBeneficiaries.orden))
+    .then((rows) =>
+      rows.map((row) => ({ ...row, porcentaje: Number(row.porcentaje) })),
+    );
+
 const toPersonValues = (input: PersonFormValues) => ({
   nombres: input.nombres.trim(),
   apellidoPaterno: input.apellidoPaterno.trim(),
@@ -79,6 +222,7 @@ const toPersonValues = (input: PersonFormValues) => ({
   curp: identifierOrNull(input.curp),
   nss: normalizeOptional(normalizeNss(input.nss)),
   status: input.status,
+  ...toMexicoValues(input),
 });
 
 export const listPeople = async (
@@ -649,6 +793,14 @@ export const createPerson = async (
     await upsertPersonSchedule(companyId, created.id, input, actorUserId, tx, {
       schedule: null,
     });
+    await replaceBeneficiaries(
+      companyId,
+      created.id,
+      input,
+      tx,
+      audit,
+      actorUserId,
+    );
 
     return created;
   }, companyId);
@@ -712,6 +864,7 @@ export const updatePerson = async (
       "curp",
       "nss",
       "status",
+      ...MEXICO_AUDIT_FIELDS,
     ]);
 
     let action: "update" | "baja" | "reactivate" = "update";
@@ -731,6 +884,7 @@ export const updatePerson = async (
     await upsertPersonSchedule(companyId, id, input, actorUserId, tx, {
       schedule: current?.schedule?.id ? current.schedule : null,
     });
+    await replaceBeneficiaries(companyId, id, input, tx, audit, actorUserId);
 
     return updated;
   }, companyId);

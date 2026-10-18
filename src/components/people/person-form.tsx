@@ -17,6 +17,10 @@ import type {
   Position,
   Site,
 } from "@/lib/db/schema";
+import {
+  BeneficiariesEditor,
+  type BeneficiaryRow,
+} from "@/components/people/beneficiaries-editor";
 import { ManagerPicker } from "@/components/people/manager-picker";
 import {
   createPersonAction,
@@ -25,9 +29,14 @@ import {
   type PersonActionState,
 } from "@/lib/people/actions";
 import {
+  MARITAL_STATUSES,
+  MX_STATES,
   PERSON_STATUSES,
   SCHEDULE_FIELD_LABELS,
+  SEXES,
+  maritalStatusLabels,
   personStatusLabels,
+  sexLabels,
   type PersonFormValues,
 } from "@/lib/people/schema";
 import { siteKindLabels } from "@/lib/sites/schema";
@@ -42,7 +51,13 @@ type PersonFormProps = {
   sites: Site[];
   /** Current manager, shown in the picker; other candidates load as the user types. */
   initialManager?: ManagerOption | null;
+  beneficiaries?: BeneficiaryRow[];
 };
+
+const stateOptions = (empty: string) => [
+  { value: "", label: empty },
+  ...MX_STATES.map((state) => ({ value: state, label: state })),
+];
 
 const initialState: PersonActionState = {};
 
@@ -64,6 +79,7 @@ export const PersonForm = ({
   positions,
   sites,
   initialManager = null,
+  beneficiaries = [],
 }: PersonFormProps) => {
   const action =
     mode === "create"
@@ -92,7 +108,29 @@ export const PersonForm = ({
     horarioRegresoComer: schedule?.regresoComer ?? "",
     horarioSalida: schedule?.salida ?? "",
     status: person?.status ?? "activa",
+    domicilioCalle: person?.domicilioCalle ?? "",
+    domicilioNumeroExterior: person?.domicilioNumeroExterior ?? "",
+    domicilioNumeroInterior: person?.domicilioNumeroInterior ?? "",
+    domicilioColonia: person?.domicilioColonia ?? "",
+    domicilioMunicipio: person?.domicilioMunicipio ?? "",
+    domicilioEstado: (person?.domicilioEstado ??
+      "") as PersonFormValues["domicilioEstado"],
+    domicilioCodigoPostal: person?.domicilioCodigoPostal ?? "",
+    estadoCivil: person?.estadoCivil ?? "",
+    sexo: person?.sexo ?? "",
+    lugarNacimiento: (person?.lugarNacimiento ??
+      "") as PersonFormValues["lugarNacimiento"],
+    nacionalidad: person?.nacionalidad ?? (person ? "" : "Mexicana"),
+    ineClaveElector: person?.ineClaveElector ?? "",
   };
+  const fieldError = (field: string) =>
+    (state.fieldErrors as Record<string, string | undefined> | undefined)?.[
+      field
+    ];
+  const errorText = (field: string) =>
+    fieldError(field) ? (
+      <p className="text-destructive text-xs">{fieldError(field)}</p>
+    ) : null;
 
   const activeAreas = areas.filter((area) => !area.deletedAt && area.active);
   const activePositions = positions.filter(
@@ -378,6 +416,144 @@ export const PersonForm = ({
               type="email"
             />
           </div>
+        </div>
+      </section>
+
+      <section className="space-y-4" data-testid="datos-mexico">
+        <h3 className="text-sm font-semibold">Datos México</h3>
+        <p className="text-muted-foreground text-xs">
+          Domicilio, datos civiles e INE para el expediente oficial.
+        </p>
+        <div className="grid gap-4 sm:grid-cols-6">
+          <div className="space-y-2 sm:col-span-4">
+            <Label htmlFor="domicilioCalle">Calle</Label>
+            <Input
+              defaultValue={defaultValues.domicilioCalle}
+              id="domicilioCalle"
+              name="domicilioCalle"
+            />
+          </div>
+          <div className="space-y-2 sm:col-span-1">
+            <Label htmlFor="domicilioNumeroExterior">Núm. ext.</Label>
+            <Input
+              defaultValue={defaultValues.domicilioNumeroExterior}
+              id="domicilioNumeroExterior"
+              name="domicilioNumeroExterior"
+            />
+          </div>
+          <div className="space-y-2 sm:col-span-1">
+            <Label htmlFor="domicilioNumeroInterior">Núm. int.</Label>
+            <Input
+              defaultValue={defaultValues.domicilioNumeroInterior}
+              id="domicilioNumeroInterior"
+              name="domicilioNumeroInterior"
+            />
+          </div>
+          <div className="space-y-2 sm:col-span-3">
+            <Label htmlFor="domicilioColonia">Colonia</Label>
+            <Input
+              defaultValue={defaultValues.domicilioColonia}
+              id="domicilioColonia"
+              name="domicilioColonia"
+            />
+          </div>
+          <div className="space-y-2 sm:col-span-3">
+            <Label htmlFor="domicilioMunicipio">Municipio o alcaldía</Label>
+            <Input
+              defaultValue={defaultValues.domicilioMunicipio}
+              id="domicilioMunicipio"
+              name="domicilioMunicipio"
+            />
+          </div>
+          <div className="space-y-2 sm:col-span-4">
+            <Label htmlFor="domicilioEstado">Estado</Label>
+            <FormSelect
+              defaultValue={defaultValues.domicilioEstado}
+              id="domicilioEstado"
+              name="domicilioEstado"
+              options={stateOptions("Sin estado")}
+              variant="field"
+            />
+          </div>
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="domicilioCodigoPostal">Código postal</Label>
+            <Input
+              aria-invalid={Boolean(fieldError("domicilioCodigoPostal"))}
+              defaultValue={defaultValues.domicilioCodigoPostal}
+              id="domicilioCodigoPostal"
+              inputMode="numeric"
+              maxLength={5}
+              name="domicilioCodigoPostal"
+              placeholder="29000"
+            />
+            {errorText("domicilioCodigoPostal")}
+          </div>
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="estadoCivil">Estado civil</Label>
+            <FormSelect
+              defaultValue={defaultValues.estadoCivil}
+              id="estadoCivil"
+              name="estadoCivil"
+              options={[
+                { value: "", label: "Sin capturar" },
+                ...MARITAL_STATUSES.map((value) => ({
+                  value,
+                  label: maritalStatusLabels[value],
+                })),
+              ]}
+              variant="field"
+            />
+          </div>
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="sexo">Sexo (como en la CURP)</Label>
+            <FormSelect
+              defaultValue={defaultValues.sexo}
+              id="sexo"
+              name="sexo"
+              options={[
+                { value: "", label: "Sin capturar" },
+                ...SEXES.map((value) => ({ value, label: sexLabels[value] })),
+              ]}
+              variant="field"
+            />
+          </div>
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="nacionalidad">Nacionalidad</Label>
+            <Input
+              defaultValue={defaultValues.nacionalidad}
+              id="nacionalidad"
+              name="nacionalidad"
+            />
+          </div>
+          <div className="space-y-2 sm:col-span-3">
+            <Label htmlFor="lugarNacimiento">Lugar de nacimiento</Label>
+            <FormSelect
+              defaultValue={defaultValues.lugarNacimiento}
+              id="lugarNacimiento"
+              name="lugarNacimiento"
+              options={stateOptions("Sin capturar")}
+              variant="field"
+            />
+          </div>
+          <div className="space-y-2 sm:col-span-3">
+            <Label htmlFor="ineClaveElector">Clave de elector (INE)</Label>
+            <Input
+              aria-invalid={Boolean(fieldError("ineClaveElector"))}
+              defaultValue={defaultValues.ineClaveElector}
+              id="ineClaveElector"
+              maxLength={18}
+              name="ineClaveElector"
+              placeholder="18 letras y números"
+            />
+            {errorText("ineClaveElector")}
+          </div>
+        </div>
+        <div className="space-y-2">
+          <h4 className="text-sm font-medium">Beneficiarios</h4>
+          <BeneficiariesEditor
+            initial={beneficiaries}
+            error={fieldError("beneficiarios")}
+          />
         </div>
       </section>
 

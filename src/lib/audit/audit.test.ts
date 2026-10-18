@@ -19,6 +19,7 @@ describe("audit append-only surface", () => {
     const exportedKeys = Object.keys(auditModule).sort();
 
     expect(exportedKeys).toEqual([
+      "MEXICO_AUDIT_FIELDS",
       "buildChanges",
       "countAuditEvents",
       "listAuditActors",

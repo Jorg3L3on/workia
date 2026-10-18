@@ -14,8 +14,16 @@ import {
   listContractsKeyset,
 } from "@/lib/contracts";
 import { contractStatusLabels } from "@/lib/contracts/schema";
-import { getPersonWithRelations, listPeopleKeyset } from "@/lib/people";
-import { personStatusLabels } from "@/lib/people/schema";
+import {
+  getPersonWithRelations,
+  listPeopleKeyset,
+  listPersonBeneficiaries,
+} from "@/lib/people";
+import {
+  formatMexicanAddress,
+  maritalStatusLabels,
+  personStatusLabels,
+} from "@/lib/people/schema";
 import { getAssetWithHolder, listAssetsKeyset } from "@/lib/resguardo";
 import { assetStatusLabels } from "@/lib/resguardo/schema";
 import { getSiteById, listSites } from "@/lib/sites";
@@ -239,6 +247,10 @@ const fetchEntity = async (
       const person = await getPersonWithRelations(ctx.companyId, id, true);
       if (!person) return null;
       const pii = personPii(person, ctx.piiUnmasked);
+      const beneficiaries = ctx.piiUnmasked
+        ? await listPersonBeneficiaries(ctx.companyId, person.id)
+        : [];
+      const address = formatMexicanAddress(person);
       return {
         title: fullName(person),
         text: lines(
@@ -256,6 +268,19 @@ const fetchEntity = async (
           pii.fecha_nacimiento && `Nacimiento: ${mx(pii.fecha_nacimiento)}`,
           person.schedule &&
             `Horario: ${person.schedule.entrada ?? "—"}–${person.schedule.salida ?? "—"}`,
+          ctx.piiUnmasked && address && `Domicilio: ${address}`,
+          ctx.piiUnmasked &&
+            person.estadoCivil &&
+            `Estado civil: ${maritalStatusLabels[person.estadoCivil]}`,
+          ctx.piiUnmasked &&
+            person.ineClaveElector &&
+            `INE: ${person.ineClaveElector}`,
+          ctx.piiUnmasked &&
+            beneficiaries.length > 0 &&
+            `Beneficiarios: ${beneficiaries.map((b) => `${b.nombre} (${b.parentesco}, ${b.porcentaje} %)`).join("; ")}`,
+          !ctx.piiUnmasked &&
+            address &&
+            "Domicilio: capturado (requiere el scope pii)",
         ),
         url: appUrl(ctx, `/app/personas/${person.id}`),
         metadata: {

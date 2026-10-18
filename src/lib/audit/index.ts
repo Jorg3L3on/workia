@@ -145,6 +145,22 @@ export const buildChanges = <T extends Record<string, unknown>>(
   return changes;
 };
 
+/** Expediente México fields kept in person audit snapshots (WRK-I5-1). */
+export const MEXICO_AUDIT_FIELDS = [
+  "domicilioCalle",
+  "domicilioNumeroExterior",
+  "domicilioNumeroInterior",
+  "domicilioColonia",
+  "domicilioMunicipio",
+  "domicilioEstado",
+  "domicilioCodigoPostal",
+  "estadoCivil",
+  "sexo",
+  "lugarNacimiento",
+  "nacionalidad",
+  "ineClaveElector",
+] as const;
+
 export const snapshotPerson = (person: Record<string, unknown>) => ({
   nombres: person.nombres,
   apellidoPaterno: person.apellidoPaterno,
@@ -162,6 +178,9 @@ export const snapshotPerson = (person: Record<string, unknown>) => ({
   nss: person.nss,
   status: person.status,
   deletedAt: person.deletedAt,
+  ...(Object.fromEntries(
+    MEXICO_AUDIT_FIELDS.map((field) => [field, person[field] ?? null]),
+  ) as Record<(typeof MEXICO_AUDIT_FIELDS)[number], unknown>),
 });
 
 export const snapshotPersonSchedule = (

@@ -22,6 +22,7 @@ import {
   type WorkiaToolContext,
 } from "../run-tool";
 import { appUrl, fullName, isoDate, mx, uuid } from "./common";
+import { MEXICO_FIELD_MAP, mexicoWriteFields } from "./mexico";
 
 type PersonWithRelations = NonNullable<MaybePerson>;
 
@@ -54,16 +55,32 @@ const toRef = (
   url: appUrl(ctx, `/app/personas/${person.id}`),
 });
 
-/** RFC, CURP and NSS are only written by a connection that may see them (pii). */
+/**
+ * RFC, CURP, NSS and the expediente México (domicilio, datos civiles, INE,
+ * beneficiarios) are only written by a connection that may see them (pii).
+ */
 const assertIdentifiersAllowed = (
   ctx: WorkiaToolContext,
-  values: { rfc?: string; curp?: string; nss?: string },
+  values: Record<string, unknown>,
 ) => {
-  if ((values.rfc || values.curp || values.nss) && !ctx.piiUnmasked) {
+  const protectedFields = [
+    "rfc",
+    "curp",
+    "nss",
+    ...Object.keys(MEXICO_FIELD_MAP),
+  ];
+  const sent = protectedFields.filter(
+    (field) =>
+      values[field] !== undefined &&
+      values[field] !== null &&
+      values[field] !== "",
+  );
+
+  if (sent.length > 0 && !ctx.piiUnmasked) {
     throw new McpToolError(
       "FORBIDDEN_SCOPE",
-      "Para capturar RFC, CURP o NSS la conexión necesita el scope pii.",
-      { details: { required_scope: "pii" } },
+      "Para capturar RFC, CURP, NSS o datos México la conexión necesita el scope pii.",
+      { details: { required_scope: "pii", fields: sent } },
     );
   }
 };
@@ -89,6 +106,20 @@ const formFromPerson = (person: PersonWithRelations): PersonFormValues => ({
   horarioRegresoComer: person.schedule?.regresoComer ?? "",
   horarioSalida: person.schedule?.salida ?? "",
   status: person.status,
+  domicilioCalle: person.domicilioCalle ?? "",
+  domicilioNumeroExterior: person.domicilioNumeroExterior ?? "",
+  domicilioNumeroInterior: person.domicilioNumeroInterior ?? "",
+  domicilioColonia: person.domicilioColonia ?? "",
+  domicilioMunicipio: person.domicilioMunicipio ?? "",
+  domicilioEstado: (person.domicilioEstado ??
+    "") as PersonFormValues["domicilioEstado"],
+  domicilioCodigoPostal: person.domicilioCodigoPostal ?? "",
+  estadoCivil: person.estadoCivil ?? "",
+  sexo: person.sexo ?? "",
+  lugarNacimiento: (person.lugarNacimiento ??
+    "") as PersonFormValues["lugarNacimiento"],
+  nacionalidad: person.nacionalidad ?? "",
+  ineClaveElector: person.ineClaveElector ?? "",
 });
 
 const loadPerson = async (ctx: WorkiaToolContext, personId: string) => {
@@ -173,9 +204,45 @@ const personFields = {
   rfc: z.string().trim().max(13).optional().describe("Sólo con el scope pii."),
   curp: z.string().trim().max(18).optional().describe("Sólo con el scope pii."),
   nss: z.string().trim().max(11).optional().describe("Sólo con el scope pii."),
-};
+  ...Object.fromEntries(
+    Object.entries(mexicoWriteFields).map(([key, schema]) => [
+      key,
+      schema
+        .optional()
+        .describe(
+          `${schema.description ?? "Datos México"} Sólo con el scope pii.`,
+        ),
+    ]),
+  ),
+} as Record<string, z.ZodType>;
 
-const createInput = z.object(personFields);
+const createInput = z.object(personFields) as unknown as z.ZodObject<{
+  nombres: z.ZodString;
+  apellido_paterno: z.ZodString;
+  apellido_materno: z.ZodOptional<z.ZodString>;
+  email: z.ZodOptional<z.ZodString>;
+  telefono: z.ZodOptional<z.ZodString>;
+  fecha_nacimiento: z.ZodOptional<z.ZodString>;
+  fecha_ingreso: z.ZodOptional<z.ZodString>;
+  area_id: z.ZodOptional<z.ZodString>;
+  position_id: z.ZodOptional<z.ZodString>;
+  manager_id: z.ZodOptional<z.ZodString>;
+  site_id: z.ZodOptional<z.ZodString>;
+  rfc: z.ZodOptional<z.ZodString>;
+  curp: z.ZodOptional<z.ZodString>;
+  nss: z.ZodOptional<z.ZodString>;
+}>;
+
+/** The expediente México fields an MCP call sent, as PersonFormValues. */
+const mexicoFormValues = (args: Record<string, unknown>) =>
+  Object.fromEntries(
+    Object.entries(MEXICO_FIELD_MAP)
+      .filter(([field]) => args[field] !== undefined)
+      .map(([field, key]) => [
+        key,
+        args[field] ?? (key === "beneficiarios" ? [] : ""),
+      ]),
+  ) as Partial<PersonFormValues>;
 
 const toFormValues = (args: z.infer<typeof createInput>): PersonFormValues => ({
   nombres: args.nombres,
@@ -197,6 +264,7 @@ const toFormValues = (args: z.infer<typeof createInput>): PersonFormValues => ({
   horarioRegresoComer: "",
   horarioSalida: "",
   status: "activa",
+  ...mexicoFormValues(args as Record<string, unknown>),
 });
 
 export const createPersonTool = defineWriteTool({
@@ -249,6 +317,12 @@ const changesSchema = z
     rfc: z.string().trim().max(13).nullable(),
     curp: z.string().trim().max(18).nullable(),
     nss: z.string().trim().max(11).nullable(),
+    ...Object.fromEntries(
+      Object.entries(mexicoWriteFields).map(([key, schema]) => [
+        key,
+        schema.nullable(),
+      ]),
+    ),
   })
   .partial()
   .strict()
@@ -274,6 +348,7 @@ const FIELD_MAP: Record<string, keyof PersonFormValues> = {
   rfc: "rfc",
   curp: "curp",
   nss: "nss",
+  ...MEXICO_FIELD_MAP,
 };
 
 const changedFields = (changes: Record<string, unknown>) =>
@@ -281,12 +356,14 @@ const changedFields = (changes: Record<string, unknown>) =>
 
 const applyChanges = (
   person: PersonWithRelations,
-  changes: Record<string, string | null>,
+  changes: Record<string, unknown>,
 ) => {
   const form = formFromPerson(person);
 
   for (const [field, value] of Object.entries(changes)) {
-    (form as Record<string, unknown>)[FIELD_MAP[field]] = value ?? "";
+    const key = FIELD_MAP[field];
+    (form as Record<string, unknown>)[key] =
+      value ?? (key === "beneficiarios" ? [] : "");
   }
 
   return form;
@@ -309,14 +386,15 @@ export const updatePersonTool = defineWriteTool({
   }),
   annotations: writeAnnotations("Editar persona"),
   preview: async ({ person_id, changes }, ctx) => {
-    assertIdentifiersAllowed(ctx, {
-      rfc: changes.rfc ?? undefined,
-      curp: changes.curp ?? undefined,
-      nss: changes.nss ?? undefined,
-    });
+    assertIdentifiersAllowed(ctx, changes as Record<string, unknown>);
     const person = await loadPerson(ctx, person_id);
     parseForm(applyChanges(person, changes), changedFields(changes));
-    const hidden = new Set(["rfc", "curp", "nss"]);
+    const hidden = new Set([
+      "rfc",
+      "curp",
+      "nss",
+      ...Object.keys(MEXICO_FIELD_MAP),
+    ]);
 
     return {
       summary: `Editar a ${fullName(person)}: ${Object.keys(changes).join(", ")}.`,
@@ -329,11 +407,7 @@ export const updatePersonTool = defineWriteTool({
     };
   },
   handler: async ({ person_id, changes }, ctx) => {
-    assertIdentifiersAllowed(ctx, {
-      rfc: changes.rfc ?? undefined,
-      curp: changes.curp ?? undefined,
-      nss: changes.nss ?? undefined,
-    });
+    assertIdentifiersAllowed(ctx, changes as Record<string, unknown>);
     const person = await loadPerson(ctx, person_id);
     const form = parseForm(
       applyChanges(person, changes),

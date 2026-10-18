@@ -5,6 +5,7 @@ import { listContractsByPerson } from "@/lib/contracts";
 import {
   getPersonWithRelations,
   listPeopleKeyset,
+  listPersonBeneficiaries,
   PERSON_MISSING_FIELDS,
 } from "@/lib/people";
 import { listAssetsByPerson } from "@/lib/resguardo";
@@ -30,6 +31,7 @@ import {
   requirePermission,
   uuid,
 } from "./common";
+import { datosMexico, datosMexicoSchema } from "./mexico";
 
 const siteRefSchema = z
   .object({ id: z.string(), name: z.string(), kind: z.string() })
@@ -138,7 +140,7 @@ const INCLUDES = ["horario", "contratos", "activos", "actividades"] as const;
 export const getPersonTool = defineTool({
   name: "get_person",
   title: "Ver expediente",
-  description: `Expediente de una persona: datos, área, puesto, sucursal, jefe y, según include, horario, contratos, activos en resguardo y actividades del puesto. RFC, CURP, NSS, teléfono, correo y fecha de nacimiento salen enmascarados sin el scope pii (pii_masked). ${FREE_TEXT_NOTE}`,
+  description: `Expediente de una persona: datos, área, puesto, sucursal, jefe, datos México (domicilio, estado civil, INE y beneficiarios; sólo con el scope pii, si no dice qué está capturado) y, según include, horario, contratos, activos en resguardo y actividades del puesto. RFC, CURP, NSS, teléfono, correo y fecha de nacimiento salen enmascarados sin el scope pii (pii_masked). ${FREE_TEXT_NOTE}`,
   kind: "read",
   scope: "read",
   permission: "people:read",
@@ -175,6 +177,7 @@ export const getPersonTool = defineTool({
         .nullable(),
       url: z.string(),
     }),
+    datos_mexico: datosMexicoSchema,
     horario: z
       .object({
         entrada: z.string().nullable(),
@@ -225,7 +228,7 @@ export const getPersonTool = defineTool({
       throw notFound("La persona");
     }
 
-    const [contracts, assets, activities] = await Promise.all([
+    const [contracts, assets, activities, beneficiaries] = await Promise.all([
       wants.has("contratos")
         ? listContractsByPerson(ctx.companyId, person.id)
         : null,
@@ -237,6 +240,7 @@ export const getPersonTool = defineTool({
         : wants.has("actividades")
           ? []
           : null,
+      listPersonBeneficiaries(ctx.companyId, person.id),
     ]);
     const ingreso = dateFields(person.fechaIngreso);
 
@@ -260,6 +264,7 @@ export const getPersonTool = defineTool({
           : null,
         url: appUrl(ctx, `/app/personas/${person.id}`),
       },
+      datos_mexico: datosMexico(person, beneficiaries, ctx.piiUnmasked),
       ...(wants.has("horario")
         ? {
             horario: person.schedule

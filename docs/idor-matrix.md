@@ -192,6 +192,7 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `lib:people/listPeople`                       | ✅     | `src/test/idor/people.db.test.ts`          | —       |
 | `lib:people/listPeopleKeyset`                 | ✅     | `src/test/idor/mcp-tools.db.test.ts`       | —       |
 | `lib:people/listPeoplePage`                   | ✅     | `src/test/idor/people.db.test.ts`          | —       |
+| `lib:people/listPersonBeneficiaries`          | ✅     | `src/test/idor/people.db.test.ts`          | —       |
 | `lib:people/searchActivePeopleForSelect`      | ✅     | `src/test/idor/people.db.test.ts`          | —       |
 | `lib:people/softDeletePerson`                 | ✅     | `src/test/idor/people.db.test.ts`          | —       |
 | `lib:people/updatePerson`                     | ✅     | `src/test/idor/people.db.test.ts`          | —       |
