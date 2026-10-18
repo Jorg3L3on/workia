@@ -62,7 +62,29 @@ const formDataToValues = (formData: FormData): PersonFormValues => ({
     formData.get("status") ?? "activa",
   ) as PersonFormValues["status"],
   ...mexicoValuesFromForm(formData),
+  ...scheduleBlocksFromForm(formData),
 });
+
+/**
+ * The schedule-by-blocks editor posts its value as JSON (WRK-I5-3). Absent
+ * when the form did not render it: then the simple fields are the source.
+ */
+const scheduleBlocksFromForm = (
+  formData: FormData,
+): Pick<PersonFormValues, "horarioBloques"> => {
+  const raw = formData.get("horarioBloques");
+
+  if (raw === null) {
+    return {};
+  }
+
+  try {
+    return { horarioBloques: JSON.parse(String(raw)) };
+  } catch {
+    // Fails validation with the schema's message.
+    return { horarioBloques: { bloques: "inválido" } as never };
+  }
+};
 
 const MEXICO_TEXT_FIELDS = [
   "domicilioCalle",

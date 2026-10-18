@@ -11,6 +11,11 @@ import {
   normalizeTimeValue,
   type PersonScheduleValues,
 } from "@/lib/people/schema";
+import {
+  readStoredBlocks,
+  type ScheduleBlock,
+  type WeekDay,
+} from "@/lib/people/schedule-blocks";
 
 export const CONTRACT_TEMPLATE_TOKENS = [
   "nombres",
@@ -284,16 +289,44 @@ export type ContractScheduleSnapshot = {
   scheduleSalidaComer: string | null;
   scheduleRegresoComer: string | null;
   scheduleSalida: string | null;
+  scheduleBlocks: ScheduleBlock[] | null;
+  scheduleRestDay: WeekDay | null;
 };
 
+/** The person's schedule frozen at emission: the four fields and, when it has them, its blocks (WRK-I5-3). */
 export const buildContractScheduleSnapshot = (
   schedule?: PersonScheduleValues | null,
-): ContractScheduleSnapshot => ({
-  scheduleEntrada: normalizeTimeValue(schedule?.entrada),
-  scheduleSalidaComer: normalizeTimeValue(schedule?.salidaComer),
-  scheduleRegresoComer: normalizeTimeValue(schedule?.regresoComer),
-  scheduleSalida: normalizeTimeValue(schedule?.salida),
-});
+): ContractScheduleSnapshot => {
+  const blocks = readStoredBlocks(schedule?.blocks, schedule?.restDay);
+  const hasBlocks = Boolean(blocks && blocks.bloques.length > 0);
+
+  return {
+    scheduleEntrada: normalizeTimeValue(schedule?.entrada),
+    scheduleSalidaComer: normalizeTimeValue(schedule?.salidaComer),
+    scheduleRegresoComer: normalizeTimeValue(schedule?.regresoComer),
+    scheduleSalida: normalizeTimeValue(schedule?.salida),
+    scheduleBlocks: hasBlocks ? blocks!.bloques : null,
+    scheduleRestDay: hasBlocks ? blocks!.diaDescanso : null,
+  };
+};
+
+/** A contract's frozen schedule as text: its blocks, or the four simple fields. */
+export const contractScheduleText = (contract: {
+  scheduleEntrada: string | null;
+  scheduleSalidaComer: string | null;
+  scheduleRegresoComer: string | null;
+  scheduleSalida: string | null;
+  scheduleBlocks: unknown;
+  scheduleRestDay: string | null;
+}) =>
+  formatHorarioToken({
+    entrada: contract.scheduleEntrada,
+    salidaComer: contract.scheduleSalidaComer,
+    regresoComer: contract.scheduleRegresoComer,
+    salida: contract.scheduleSalida,
+    blocks: contract.scheduleBlocks,
+    restDay: contract.scheduleRestDay as WeekDay | null,
+  });
 
 export const fillContractTemplate = (
   body: string,

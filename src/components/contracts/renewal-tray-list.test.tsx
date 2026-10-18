@@ -28,6 +28,8 @@ const buildContract = (id: string, personId: string): Contract => ({
   scheduleSalidaComer: null,
   scheduleRegresoComer: null,
   scheduleSalida: null,
+  scheduleBlocks: null,
+  scheduleRestDay: null,
   status: "vigente",
   salarioDiario: null,
   salarioMensual: null,

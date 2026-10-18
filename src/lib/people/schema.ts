@@ -1,5 +1,15 @@
 import { z } from "zod";
 
+import {
+  blocksFromLegacy,
+  formatScheduleBlocks,
+  legacyFromBlocks,
+  readStoredBlocks,
+  scheduleBlocksSchema,
+  type ScheduleBlocks,
+  type WeekDay,
+} from "./schedule-blocks";
+
 import { formatDateMx } from "@/lib/format/date";
 
 import {
@@ -247,6 +257,8 @@ export const personFormSchema = z.object({
   horarioSalidaComer: optionalTime,
   horarioRegresoComer: optionalTime,
   horarioSalida: optionalTime,
+  /** Schedule by blocks (WRK-I5-3); undefined keeps the simple fields above as the source. */
+  horarioBloques: scheduleBlocksSchema.optional(),
   status: z.enum(PERSON_STATUSES),
   ...personMexicoFields,
 });
@@ -258,6 +270,9 @@ export type PersonScheduleValues = {
   salidaComer?: string | null;
   regresoComer?: string | null;
   salida?: string | null;
+  /** Blocks as stored (jsonb); undefined when the write did not send blocks. */
+  blocks?: unknown;
+  restDay?: WeekDay | null;
 };
 
 export const normalizeTimeValue = (value?: string | null) => {
@@ -277,18 +292,37 @@ export const toPersonScheduleValues = (
     | "horarioSalidaComer"
     | "horarioRegresoComer"
     | "horarioSalida"
+    | "horarioBloques"
   >,
-): PersonScheduleValues => ({
-  entrada: normalizeTimeValue(input.horarioEntrada),
-  salidaComer: normalizeTimeValue(input.horarioSalidaComer),
-  regresoComer: normalizeTimeValue(input.horarioRegresoComer),
-  salida: normalizeTimeValue(input.horarioSalida),
-});
+): PersonScheduleValues =>
+  input.horarioBloques
+    ? {
+        ...legacyFromBlocks(input.horarioBloques),
+        blocks:
+          input.horarioBloques.bloques.length > 0
+            ? input.horarioBloques.bloques
+            : null,
+        restDay: input.horarioBloques.diaDescanso,
+      }
+    : {
+        entrada: normalizeTimeValue(input.horarioEntrada),
+        salidaComer: normalizeTimeValue(input.horarioSalidaComer),
+        regresoComer: normalizeTimeValue(input.horarioRegresoComer),
+        salida: normalizeTimeValue(input.horarioSalida),
+      };
+
+/** The blocks of a stored schedule: its own, or the simple one read as Monday–Friday. */
+export const scheduleBlocksOf = (
+  schedule?: PersonScheduleValues | null,
+): ScheduleBlocks | null =>
+  readStoredBlocks(schedule?.blocks, schedule?.restDay) ??
+  blocksFromLegacy(schedule);
 
 export const personScheduleHasTimes = (
   schedule?: PersonScheduleValues | null,
 ) =>
   Boolean(
+    (Array.isArray(schedule?.blocks) && schedule.blocks.length > 0) ||
     normalizeTimeValue(schedule?.entrada) ||
     normalizeTimeValue(schedule?.salidaComer) ||
     normalizeTimeValue(schedule?.regresoComer) ||
@@ -301,6 +335,12 @@ export const formatTimeLabel = (value?: string | null) =>
 export const formatHorarioToken = (schedule?: PersonScheduleValues | null) => {
   if (!personScheduleHasTimes(schedule)) {
     return "—";
+  }
+
+  const blocks = readStoredBlocks(schedule?.blocks, schedule?.restDay);
+
+  if (blocks && blocks.bloques.length > 0) {
+    return formatScheduleBlocks(blocks);
   }
 
   const parts = [

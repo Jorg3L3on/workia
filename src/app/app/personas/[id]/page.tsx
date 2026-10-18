@@ -33,12 +33,10 @@ import {
   formatDateLabel,
   formatHorarioToken,
   formatPersonName,
-  formatTimeLabel,
   maritalStatusLabels,
   personDeletedLabel,
   personIsDeleted,
   personStatusLabels,
-  SCHEDULE_FIELD_LABELS,
   sexLabels,
 } from "@/lib/people/schema";
 import { userHasPermission } from "@/lib/rbac";
@@ -346,36 +344,10 @@ const PersonaDetailPage = async ({
                 <dt className="text-muted-foreground">Puesto</dt>
                 <dd className="font-medium">{person.position?.name ?? "—"}</dd>
               </div>
-              <div>
-                <dt className="text-muted-foreground">
-                  {SCHEDULE_FIELD_LABELS.horarioEntrada}
-                </dt>
+              <div className="sm:col-span-2" data-testid="person-schedule">
+                <dt className="text-muted-foreground">Horario</dt>
                 <dd className="font-medium">
-                  {formatTimeLabel(person.schedule?.entrada)}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">
-                  {SCHEDULE_FIELD_LABELS.horarioSalidaComer}
-                </dt>
-                <dd className="font-medium">
-                  {formatTimeLabel(person.schedule?.salidaComer)}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">
-                  {SCHEDULE_FIELD_LABELS.horarioRegresoComer}
-                </dt>
-                <dd className="font-medium">
-                  {formatTimeLabel(person.schedule?.regresoComer)}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">
-                  {SCHEDULE_FIELD_LABELS.horarioSalida}
-                </dt>
-                <dd className="font-medium">
-                  {formatTimeLabel(person.schedule?.salida)}
+                  {formatHorarioToken(person.schedule)}
                 </dd>
               </div>
               {person.position ? (

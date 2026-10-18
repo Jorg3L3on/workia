@@ -1,4 +1,8 @@
 import { createHash } from "node:crypto";
+import {
+  formatScheduleBlocks,
+  readStoredBlocks,
+} from "@/lib/people/schedule-blocks";
 
 import { and, count, desc, eq, gte, lte, sql } from "drizzle-orm";
 
@@ -195,6 +199,12 @@ export const snapshotPersonSchedule = (
     salidaComer: schedule.salidaComer,
     regresoComer: schedule.regresoComer,
     salida: schedule.salida,
+    // Readable text, so a change of blocks compares as one value (WRK-I5-3).
+    bloques: Array.isArray(schedule.blocks)
+      ? formatScheduleBlocks(
+          readStoredBlocks(schedule.blocks, schedule.restDay as string | null),
+        )
+      : null,
     deletedAt: schedule.deletedAt,
   };
 };

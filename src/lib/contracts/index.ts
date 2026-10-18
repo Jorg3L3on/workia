@@ -353,6 +353,8 @@ export type RenewalTrayItem = {
   areaName: string | null;
   endDate: string;
   noticeWindow: typeof contracts.$inferSelect.noticeWindow;
+  /** Only when asked for (compensation:read): prefills the renewal (WRK-I5-2). */
+  compensation?: CompensationValues;
 };
 
 // Notice window in months, as SQL; null for "no_avisar".
@@ -382,10 +384,16 @@ export const listRenewalTrayItems = async (
   companyId: string,
   referenceDate?: string,
   limit?: number,
+  options: { compensation?: boolean } = {},
 ): Promise<RenewalTrayItem[]> => {
   const query = tdb(companyId)
     .select({
       contractId: contracts.id,
+      salarioDiario: contracts.salarioDiario,
+      salarioMensual: contracts.salarioMensual,
+      formaPago: contracts.formaPago,
+      periodicidadPago: contracts.periodicidadPago,
+      diaPago: contracts.diaPago,
       endDate: contracts.endDate,
       noticeWindow: contracts.noticeWindow,
       personId: people.id,
@@ -417,6 +425,17 @@ export const listRenewalTrayItems = async (
     areaName: row.areaName ?? null,
     endDate: row.endDate!,
     noticeWindow: row.noticeWindow,
+    ...(options.compensation
+      ? {
+          compensation: {
+            salarioDiario: row.salarioDiario,
+            salarioMensual: row.salarioMensual,
+            formaPago: row.formaPago,
+            periodicidadPago: row.periodicidadPago,
+            diaPago: row.diaPago,
+          },
+        }
+      : {}),
   }));
 };
 

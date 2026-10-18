@@ -39,7 +39,9 @@ const RenewalTray = async ({
   companyId: string;
 }) => {
   const [renewalItems, templates] = await Promise.all([
-    listRenewalTrayItems(companyId),
+    listRenewalTrayItems(companyId, undefined, undefined, {
+      compensation: canSeeCompensation,
+    }),
     listActiveContractTemplates(companyId),
   ]);
 

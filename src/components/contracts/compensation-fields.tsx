@@ -16,13 +16,28 @@ import {
 const money = (value: number) =>
   value.toLocaleString("es-MX", { style: "currency", currency: "MXN" });
 
-/** Salary and payment terms of a contract (WRK-I5-2); frozen when it is issued. */
+export type CompensationDefaults = {
+  salarioDiario: string | null;
+  formaPago: string | null;
+  periodicidadPago: string | null;
+  diaPago: string | null;
+};
+
+/**
+ * Salary and payment terms of a contract (WRK-I5-2); frozen when it is issued.
+ * A renewal starts from the previous contract's, so leaving them as they are
+ * keeps them.
+ */
 export const CompensationFields = ({
   idPrefix = "",
+  initial,
 }: {
   idPrefix?: string;
+  initial?: CompensationDefaults | null;
 }) => {
-  const [daily, setDaily] = useState("");
+  const [daily, setDaily] = useState(
+    initial?.salarioDiario ? String(Number(initial.salarioDiario)) : "",
+  );
   const amount = Number(daily);
 
   return (
@@ -59,13 +74,14 @@ export const CompensationFields = ({
           <Input
             id={`${idPrefix}diaPago`}
             name="diaPago"
+            defaultValue={initial?.diaPago ?? ""}
             placeholder="Viernes, 15 y último…"
           />
         </div>
         <div className="space-y-2">
           <Label htmlFor={`${idPrefix}formaPago`}>Forma de pago</Label>
           <FormSelect
-            defaultValue=""
+            defaultValue={initial?.formaPago ?? ""}
             id={`${idPrefix}formaPago`}
             name="formaPago"
             options={[
@@ -81,7 +97,7 @@ export const CompensationFields = ({
         <div className="space-y-2">
           <Label htmlFor={`${idPrefix}periodicidadPago`}>Periodicidad</Label>
           <FormSelect
-            defaultValue=""
+            defaultValue={initial?.periodicidadPago ?? ""}
             id={`${idPrefix}periodicidadPago`}
             name="periodicidadPago"
             options={[

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import type { CompensationDefaults } from "@/components/contracts/compensation-fields";
 
 import { NoRenewButton } from "@/components/contracts/no-renew-button";
 import { RenewContractForm } from "@/components/contracts/renew-contract-form";
@@ -20,6 +21,7 @@ export type RenewalTrayItem = {
   personId: string;
   endDate: string;
   noticeWindow: Contract["noticeWindow"];
+  compensation?: CompensationDefaults;
 };
 
 export type RenewalTrayListProps = {
@@ -36,6 +38,7 @@ type RenewalRow = {
   endDate: string;
   noticeWindow: Contract["noticeWindow"];
   noticeLabel: string;
+  compensation?: CompensationDefaults;
 };
 
 export const RenewalTrayList = ({
@@ -68,6 +71,7 @@ export const RenewalTrayList = ({
         endDate: item.endDate,
         noticeWindow: item.noticeWindow,
         noticeLabel: contractNoticeWindowLabels[item.noticeWindow],
+        compensation: item.compensation,
       })),
     [items],
   );
@@ -137,7 +141,7 @@ export const RenewalTrayList = ({
         },
       },
     ],
-    [canRenew, canUpdate, expandedContractId, canSeeCompensation],
+    [canRenew, canUpdate, expandedContractId],
   );
 
   return (
@@ -177,6 +181,7 @@ export const RenewalTrayList = ({
                         personName={row.personName}
                         templates={templates}
                         canSeeCompensation={canSeeCompensation}
+                        compensation={row.compensation}
                       />
                     </div>
                   </TableCell>

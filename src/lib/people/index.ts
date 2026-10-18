@@ -13,6 +13,7 @@ import {
   sql,
   type SQL,
 } from "drizzle-orm";
+import { formatScheduleBlocks, readStoredBlocks } from "./schedule-blocks";
 
 import {
   buildChanges,
@@ -485,6 +486,12 @@ export const getPersonSchedule = async (
   return schedule ?? null;
 };
 
+// jsonb reorders keys: compare blocks by their meaning (the text), not their JSON.
+const blocksKey = (blocks: unknown) =>
+  Array.isArray(blocks) && blocks.length > 0
+    ? formatScheduleBlocks(readStoredBlocks(blocks, null))
+    : null;
+
 const scheduleChanged = (
   before: PersonScheduleValues | null,
   after: PersonScheduleValues,
@@ -492,7 +499,23 @@ const scheduleChanged = (
   (before?.entrada ?? null) !== (after.entrada ?? null) ||
   (before?.salidaComer ?? null) !== (after.salidaComer ?? null) ||
   (before?.regresoComer ?? null) !== (after.regresoComer ?? null) ||
-  (before?.salida ?? null) !== (after.salida ?? null);
+  (before?.salida ?? null) !== (after.salida ?? null) ||
+  // A simple-schedule write (no blocks sent) only counts its four fields.
+  (after.blocks !== undefined &&
+    (blocksKey(before?.blocks) !== blocksKey(after.blocks) ||
+      (before?.restDay ?? null) !== (after.restDay ?? null)));
+
+/** Columns to store: blocks as sent, or none when a simple schedule changed. */
+const scheduleColumns = (values: PersonScheduleValues) => ({
+  entrada: values.entrada ?? null,
+  salidaComer: values.salidaComer ?? null,
+  regresoComer: values.regresoComer ?? null,
+  salida: values.salida ?? null,
+  blocks: (blocksKey(values.blocks)
+    ? values.blocks
+    : null) as (typeof personSchedules.$inferInsert)["blocks"],
+  restDay: values.restDay ?? null,
+});
 
 export const upsertPersonSchedule = async (
   companyId: string,
@@ -528,6 +551,8 @@ export const upsertPersonSchedule = async (
         salidaComer: null,
         regresoComer: null,
         salida: null,
+        blocks: null,
+        restDay: null,
         deletedAt,
       })
       .where(
@@ -562,13 +587,7 @@ export const upsertPersonSchedule = async (
     const wasDeleted = Boolean(existing.deletedAt);
     const [updated] = await executor
       .update(personSchedules)
-      .set({
-        entrada: values.entrada,
-        salidaComer: values.salidaComer,
-        regresoComer: values.regresoComer,
-        salida: values.salida,
-        deletedAt: null,
-      })
+      .set({ ...scheduleColumns(values), deletedAt: null })
       .where(
         withTenant(
           personSchedules,
@@ -593,6 +612,7 @@ export const upsertPersonSchedule = async (
             salidaComer: null,
             regresoComer: null,
             salida: null,
+            bloques: null,
             deletedAt: null,
           },
           snapshotPersonSchedule(updated) ?? {
@@ -600,9 +620,17 @@ export const upsertPersonSchedule = async (
             salidaComer: null,
             regresoComer: null,
             salida: null,
+            bloques: null,
             deletedAt: null,
           },
-          ["entrada", "salidaComer", "regresoComer", "salida", "deletedAt"],
+          [
+            "entrada",
+            "salidaComer",
+            "regresoComer",
+            "salida",
+            "bloques",
+            "deletedAt",
+          ],
         ),
       },
     });
@@ -615,10 +643,7 @@ export const upsertPersonSchedule = async (
     .values({
       companyId,
       personId,
-      entrada: values.entrada,
-      salidaComer: values.salidaComer,
-      regresoComer: values.regresoComer,
-      salida: values.salida,
+      ...scheduleColumns(values),
     })
     .returning();
 

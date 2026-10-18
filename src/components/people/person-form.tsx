@@ -22,6 +22,7 @@ import {
   type BeneficiaryRow,
 } from "@/components/people/beneficiaries-editor";
 import { ManagerPicker } from "@/components/people/manager-picker";
+import { ScheduleBlocksEditor } from "@/components/people/schedule-blocks-editor";
 import {
   createPersonAction,
   type ManagerOption,
@@ -32,10 +33,10 @@ import {
   MARITAL_STATUSES,
   MX_STATES,
   PERSON_STATUSES,
-  SCHEDULE_FIELD_LABELS,
   SEXES,
   maritalStatusLabels,
   personStatusLabels,
+  scheduleBlocksOf,
   sexLabels,
   type PersonFormValues,
 } from "@/lib/people/schema";
@@ -295,76 +296,10 @@ export const PersonForm = ({
         <p className="text-muted-foreground text-xs">
           Horario de esta persona — no del puesto ni de la sucursal.
         </p>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="horarioEntrada">
-              {SCHEDULE_FIELD_LABELS.horarioEntrada}
-            </Label>
-            <Input
-              aria-invalid={Boolean(state.fieldErrors?.horarioEntrada)}
-              defaultValue={defaultValues.horarioEntrada}
-              id="horarioEntrada"
-              name="horarioEntrada"
-              type="time"
-            />
-            {state.fieldErrors?.horarioEntrada ? (
-              <p className="text-destructive text-xs">
-                {state.fieldErrors.horarioEntrada}
-              </p>
-            ) : null}
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="horarioSalidaComer">
-              {SCHEDULE_FIELD_LABELS.horarioSalidaComer}
-            </Label>
-            <Input
-              aria-invalid={Boolean(state.fieldErrors?.horarioSalidaComer)}
-              defaultValue={defaultValues.horarioSalidaComer}
-              id="horarioSalidaComer"
-              name="horarioSalidaComer"
-              type="time"
-            />
-            {state.fieldErrors?.horarioSalidaComer ? (
-              <p className="text-destructive text-xs">
-                {state.fieldErrors.horarioSalidaComer}
-              </p>
-            ) : null}
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="horarioRegresoComer">
-              {SCHEDULE_FIELD_LABELS.horarioRegresoComer}
-            </Label>
-            <Input
-              aria-invalid={Boolean(state.fieldErrors?.horarioRegresoComer)}
-              defaultValue={defaultValues.horarioRegresoComer}
-              id="horarioRegresoComer"
-              name="horarioRegresoComer"
-              type="time"
-            />
-            {state.fieldErrors?.horarioRegresoComer ? (
-              <p className="text-destructive text-xs">
-                {state.fieldErrors.horarioRegresoComer}
-              </p>
-            ) : null}
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="horarioSalida">
-              {SCHEDULE_FIELD_LABELS.horarioSalida}
-            </Label>
-            <Input
-              aria-invalid={Boolean(state.fieldErrors?.horarioSalida)}
-              defaultValue={defaultValues.horarioSalida}
-              id="horarioSalida"
-              name="horarioSalida"
-              type="time"
-            />
-            {state.fieldErrors?.horarioSalida ? (
-              <p className="text-destructive text-xs">
-                {state.fieldErrors.horarioSalida}
-              </p>
-            ) : null}
-          </div>
-        </div>
+        <ScheduleBlocksEditor
+          error={fieldError("horarioBloques")}
+          initial={scheduleBlocksOf(schedule)}
+        />
       </section>
 
       <section className="space-y-4">

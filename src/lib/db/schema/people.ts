@@ -4,6 +4,7 @@ import {
   foreignKey,
   index,
   integer,
+  jsonb,
   numeric,
   pgEnum,
   pgTable,
@@ -14,6 +15,8 @@ import {
   uuid,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
+
+import type { ScheduleBlock } from "@/lib/people/schedule-blocks";
 
 import { areas, positions } from "./catalog";
 import { sites } from "./sites";
@@ -36,6 +39,17 @@ export const personSearchText = (table: {
   sql`(${table.nombres} || ' ' || ${table.apellidoPaterno} || ' ' || coalesce(${table.apellidoMaterno}, '') || ' ' || coalesce(${table.rfc}, '') || ' ' || coalesce(${table.curp}, '') || ' ' || coalesce(${table.email}, ''))`;
 
 export const personStatusEnum = pgEnum("person_status", ["activa", "baja"]);
+
+/** Day of the week of the schedule by blocks (WRK-I5-3). */
+export const weekDayEnum = pgEnum("week_day", [
+  "lun",
+  "mar",
+  "mie",
+  "jue",
+  "vie",
+  "sab",
+  "dom",
+]);
 
 /** Estado civil del expediente México (WRK-I5-1). */
 export const maritalStatusEnum = pgEnum("marital_status", [
@@ -198,6 +212,9 @@ export const personSchedules = pgTable(
     salidaComer: text("salida_comer"),
     regresoComer: text("regreso_comer"),
     salida: text("salida"),
+    /** Schedule by blocks (WRK-I5-3); null for a simple schedule. */
+    blocks: jsonb("blocks").$type<ScheduleBlock[]>(),
+    restDay: weekDayEnum("rest_day"),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()

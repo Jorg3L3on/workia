@@ -4,6 +4,7 @@ import {
   date,
   foreignKey,
   index,
+  jsonb,
   numeric,
   pgEnum,
   pgTable,
@@ -14,7 +15,9 @@ import {
 } from "drizzle-orm/pg-core";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 
-import { people } from "./people";
+import type { ScheduleBlock } from "@/lib/people/schedule-blocks";
+
+import { people, weekDayEnum } from "./people";
 
 import { companies } from "./companies";
 
@@ -105,6 +108,8 @@ export const contracts = pgTable(
     scheduleSalidaComer: text("schedule_salida_comer"),
     scheduleRegresoComer: text("schedule_regreso_comer"),
     scheduleSalida: text("schedule_salida"),
+    scheduleBlocks: jsonb("schedule_blocks").$type<ScheduleBlock[]>(),
+    scheduleRestDay: weekDayEnum("schedule_rest_day"),
     status: contractStatusEnum("status").notNull().default("vigente"),
     // Compensation (WRK-I5-2), frozen when the contract is issued or renewed.
     salarioDiario: numeric("salario_diario", { precision: 12, scale: 2 }),
