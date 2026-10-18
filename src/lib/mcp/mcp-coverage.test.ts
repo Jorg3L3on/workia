@@ -47,18 +47,23 @@ const PHASE_2_WRITE_TOOLS = [
   "return_asset",
 ];
 
+/** Phase 3 writes, one per app feature of «Ciclo laboral México». */
+const PHASE_3_WRITE_TOOLS = ["update_person_schedule_blocks"];
+
 const jsonSchemaOf = (schema: z.ZodType) =>
   JSON.stringify(z.toJSONSchema(schema, { target: "draft-2020-12" }));
 
 describe("MCP tool registry coverage", () => {
-  it("exposes the 18 reads of phase 1 and the 13 writes of phase 2", () => {
+  it("exposes the reads of phase 1 and the writes of phases 2 and 3", () => {
     const names = (kind: string) =>
       WORKIA_TOOLS.filter((tool) => tool.kind === kind)
         .map((tool) => tool.name)
         .sort();
 
     expect(names("read")).toEqual([...PHASE_1_READ_TOOLS].sort());
-    expect(names("write")).toEqual([...PHASE_2_WRITE_TOOLS].sort());
+    expect(names("write")).toEqual(
+      [...PHASE_2_WRITE_TOOLS, ...PHASE_3_WRITE_TOOLS].sort(),
+    );
   });
 
   it("gives every write a preview, write annotations, a write scope and an idempotency key", () => {

@@ -28,6 +28,7 @@ import {
 import { McpToolError, notFound } from "../errors";
 import { maskText } from "../mask";
 import { compensacion, compensacionSchema } from "./compensation";
+import { contractHorarioBloques, horarioBloquesSchema } from "./schedule";
 import { defineTool, readAnnotations } from "../run-tool";
 import {
   appUrl,
@@ -289,6 +290,7 @@ export const getContractTool = defineTool({
       template_name: z.string().nullable(),
       previous_contract_id: z.string().nullable(),
       schedule: scheduleSchema,
+      horario_bloques: horarioBloquesSchema,
       compensacion: compensacionSchema,
       generated_text: z.string().optional(),
       pii_masked: z.boolean(),
@@ -345,6 +347,7 @@ export const getContractTool = defineTool({
           regreso_comer: contract.scheduleRegresoComer,
           salida: contract.scheduleSalida,
         },
+        horario_bloques: contractHorarioBloques(contract),
         compensacion: compensacion(contract, ctx),
         ...(include_text
           ? {

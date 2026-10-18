@@ -23,6 +23,13 @@ import {
 } from "../run-tool";
 import { appUrl, fullName, isoDate, mx, uuid } from "./common";
 import { MEXICO_FIELD_MAP, mexicoWriteFields } from "./mexico";
+import {
+  bloquesInput,
+  diaDescansoInput,
+  horarioBloques,
+  horarioBloquesSchema,
+  toScheduleBlocks,
+} from "./schedule";
 
 type PersonWithRelations = NonNullable<MaybePerson>;
 
@@ -531,7 +538,7 @@ export const updatePersonScheduleTool = defineWriteTool({
   name: "update_person_schedule",
   title: "Cambiar horario",
   description:
-    "Captura o cambia el horario de una persona (HH:mm). Los campos que no envíes quedan vacíos. No cambia contratos ya emitidos: conservan el horario con que se firmaron. Primero responde una vista previa; repite con confirmation_token para hacerlo.",
+    "Obsoleta: usa update_person_schedule_blocks (horario por bloques, día de descanso). Captura un horario simple de lunes a viernes (HH:mm) y reemplaza los bloques. Los campos que no envíes quedan vacíos. No cambia contratos ya emitidos: conservan el horario con que se firmaron. Primero responde una vista previa; repite con confirmation_token para hacerlo.",
   scope: "write:people",
   permission: "people:update",
   input: z.object({
@@ -596,6 +603,57 @@ export const updatePersonScheduleTool = defineWriteTool({
         regreso_comer: args.regreso_comer ?? null,
         salida: args.salida ?? null,
       },
+      note: "Aplica a contratos nuevos; los emitidos conservan su horario.",
+    };
+  },
+});
+
+export const updatePersonScheduleBlocksTool = defineWriteTool({
+  name: "update_person_schedule_blocks",
+  title: "Cambiar horario por bloques",
+  description:
+    "Captura el horario por bloques de una persona: cada bloque con días (lun…dom), entrada, salida y comida opcional, más el día de descanso. Reemplaza el horario completo (lista vacía lo borra). La vista previa muestra el texto, p. ej. «L–V 08:00–17:00 (comida 13:00–14:00) · Sáb 08:00–13:00 · Descanso dom». No cambia contratos ya emitidos. Primero responde una vista previa; repite con confirmation_token para hacerlo.",
+  scope: "write:people",
+  permission: "people:update",
+  input: z.object({
+    person_id: uuid("Persona."),
+    bloques: bloquesInput,
+    dia_descanso: diaDescansoInput,
+  }),
+  output: z.object({
+    person: personRef,
+    horario_bloques: horarioBloquesSchema,
+    note: z.string(),
+  }),
+  annotations: writeAnnotations("Cambiar horario por bloques"),
+  preview: async (args, ctx) => {
+    const person = await loadPerson(ctx, args.person_id);
+    const next = toScheduleBlocks(args.bloques, args.dia_descanso);
+    const current = horarioBloques(person.schedule);
+
+    return {
+      summary: `Horario de ${fullName(person)}: ${current?.texto ?? "—"} → ${horarioBloques({ blocks: next.bloques, restDay: next.diaDescanso })?.texto ?? "sin horario"}.`,
+      warnings: [
+        "Aplica a contratos nuevos; los emitidos conservan su horario.",
+      ],
+    };
+  },
+  handler: async (args, ctx) => {
+    const person = await loadPerson(ctx, args.person_id);
+    const next = toScheduleBlocks(args.bloques, args.dia_descanso);
+    const form = parseForm(
+      { ...formFromPerson(person), horarioBloques: next },
+      ["horarioBloques"],
+    );
+
+    await upsertPersonSchedule(ctx.companyId, person.id, form, ctx.userId);
+
+    return {
+      person: toRef(ctx, person),
+      horario_bloques:
+        next.bloques.length > 0
+          ? horarioBloques({ blocks: next.bloques, restDay: next.diaDescanso })
+          : null,
       note: "Aplica a contratos nuevos; los emitidos conservan su horario.",
     };
   },

@@ -1011,6 +1011,96 @@ exports[`/api/mcp transport > keeps the tools/list contract (snapshot) 1`] = `
             },
           ],
         },
+        "horario_bloques": {
+          "anyOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "bloques": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "comida": {
+                        "anyOf": [
+                          {
+                            "additionalProperties": false,
+                            "properties": {
+                              "fin": {
+                                "type": "string",
+                              },
+                              "inicio": {
+                                "type": "string",
+                              },
+                            },
+                            "required": [
+                              "inicio",
+                              "fin",
+                            ],
+                            "type": "object",
+                          },
+                          {
+                            "type": "null",
+                          },
+                        ],
+                      },
+                      "dias": {
+                        "items": {
+                          "type": "string",
+                        },
+                        "type": "array",
+                      },
+                      "entrada": {
+                        "type": "string",
+                      },
+                      "salida": {
+                        "type": "string",
+                      },
+                    },
+                    "required": [
+                      "dias",
+                      "entrada",
+                      "salida",
+                      "comida",
+                    ],
+                    "type": "object",
+                  },
+                  "type": "array",
+                },
+                "dia_descanso": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                    },
+                    {
+                      "type": "null",
+                    },
+                  ],
+                },
+                "origen": {
+                  "description": "simple: horario anterior leído como un bloque L–V.",
+                  "enum": [
+                    "bloques",
+                    "simple",
+                  ],
+                  "type": "string",
+                },
+                "texto": {
+                  "type": "string",
+                },
+              },
+              "required": [
+                "bloques",
+                "dia_descanso",
+                "texto",
+                "origen",
+              ],
+              "type": "object",
+            },
+            {
+              "type": "null",
+            },
+          ],
+        },
         "person": {
           "additionalProperties": false,
           "properties": {
@@ -2274,6 +2364,96 @@ exports[`/api/mcp transport > keeps the tools/list contract (snapshot) 1`] = `
             "generated_text": {
               "type": "string",
             },
+            "horario_bloques": {
+              "anyOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "bloques": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "comida": {
+                            "anyOf": [
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "fin": {
+                                    "type": "string",
+                                  },
+                                  "inicio": {
+                                    "type": "string",
+                                  },
+                                },
+                                "required": [
+                                  "inicio",
+                                  "fin",
+                                ],
+                                "type": "object",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "dias": {
+                            "items": {
+                              "type": "string",
+                            },
+                            "type": "array",
+                          },
+                          "entrada": {
+                            "type": "string",
+                          },
+                          "salida": {
+                            "type": "string",
+                          },
+                        },
+                        "required": [
+                          "dias",
+                          "entrada",
+                          "salida",
+                          "comida",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                    "dia_descanso": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "origen": {
+                      "description": "simple: horario anterior leído como un bloque L–V.",
+                      "enum": [
+                        "bloques",
+                        "simple",
+                      ],
+                      "type": "string",
+                    },
+                    "texto": {
+                      "type": "string",
+                    },
+                  },
+                  "required": [
+                    "bloques",
+                    "dia_descanso",
+                    "texto",
+                    "origen",
+                  ],
+                  "type": "object",
+                },
+                {
+                  "type": "null",
+                },
+              ],
+            },
             "id": {
               "type": "string",
             },
@@ -2411,6 +2591,7 @@ exports[`/api/mcp transport > keeps the tools/list contract (snapshot) 1`] = `
             "template_name",
             "previous_contract_id",
             "schedule",
+            "horario_bloques",
             "compensacion",
             "pii_masked",
             "url",
@@ -4293,7 +4474,7 @@ exports[`/api/mcp transport > keeps the tools/list contract (snapshot) 1`] = `
       "readOnlyHint": false,
       "title": "Cambiar horario",
     },
-    "description": "Captura o cambia el horario de una persona (HH:mm). Los campos que no envíes quedan vacíos. No cambia contratos ya emitidos: conservan el horario con que se firmaron. Primero responde una vista previa; repite con confirmation_token para hacerlo.",
+    "description": "Obsoleta: usa update_person_schedule_blocks (horario por bloques, día de descanso). Captura un horario simple de lunes a viernes (HH:mm) y reemplaza los bloques. Los campos que no envíes quedan vacíos. No cambia contratos ya emitidos: conservan el horario con que se firmaron. Primero responde una vista previa; repite con confirmation_token para hacerlo.",
     "inputSchema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "properties": {
@@ -4484,6 +4665,312 @@ exports[`/api/mcp transport > keeps the tools/list contract (snapshot) 1`] = `
       "type": "object",
     },
     "title": "Cambiar horario",
+  },
+  {
+    "_meta": {
+      "securitySchemes": [
+        {
+          "scopes": [
+            "write:people",
+          ],
+          "type": "oauth2",
+        },
+      ],
+    },
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": false,
+      "title": "Cambiar horario por bloques",
+    },
+    "description": "Captura el horario por bloques de una persona: cada bloque con días (lun…dom), entrada, salida y comida opcional, más el día de descanso. Reemplaza el horario completo (lista vacía lo borra). La vista previa muestra el texto, p. ej. «L–V 08:00–17:00 (comida 13:00–14:00) · Sáb 08:00–13:00 · Descanso dom». No cambia contratos ya emitidos. Primero responde una vista previa; repite con confirmation_token para hacerlo.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "bloques": {
+          "description": "Bloques de días con su horario. Un día no puede estar en dos bloques ni ser el de descanso. Lista vacía borra el horario.",
+          "items": {
+            "properties": {
+              "comida": {
+                "description": "Comida dentro del horario; omítela si no hay.",
+                "properties": {
+                  "fin": {
+                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                    "type": "string",
+                  },
+                  "inicio": {
+                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "inicio",
+                  "fin",
+                ],
+                "type": "object",
+              },
+              "dias": {
+                "items": {
+                  "enum": [
+                    "lun",
+                    "mar",
+                    "mie",
+                    "jue",
+                    "vie",
+                    "sab",
+                    "dom",
+                  ],
+                  "type": "string",
+                },
+                "minItems": 1,
+                "type": "array",
+              },
+              "entrada": {
+                "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                "type": "string",
+              },
+              "salida": {
+                "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                "type": "string",
+              },
+            },
+            "required": [
+              "dias",
+              "entrada",
+              "salida",
+            ],
+            "type": "object",
+          },
+          "maxItems": 7,
+          "type": "array",
+        },
+        "confirmation_token": {
+          "description": "Token de la vista previa. Sin él la herramienta sólo muestra qué haría; con él, lo hace. Vence en 10 minutos.",
+          "maxLength": 300,
+          "type": "string",
+        },
+        "dia_descanso": {
+          "anyOf": [
+            {
+              "enum": [
+                "lun",
+                "mar",
+                "mie",
+                "jue",
+                "vie",
+                "sab",
+                "dom",
+              ],
+              "type": "string",
+            },
+            {
+              "type": "null",
+            },
+          ],
+          "description": "Día de descanso (lun…dom).",
+        },
+        "idempotency_key": {
+          "description": "Llave única de esta operación (8–80 caracteres). Repetirla con los mismos datos devuelve el mismo resultado sin duplicar.",
+          "maxLength": 80,
+          "minLength": 8,
+          "type": "string",
+        },
+        "person_id": {
+          "description": "Persona.",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+          "type": "string",
+        },
+      },
+      "required": [
+        "person_id",
+        "bloques",
+        "idempotency_key",
+      ],
+      "type": "object",
+    },
+    "name": "update_person_schedule_blocks",
+    "outputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "audit_event_ids": {
+          "items": {
+            "type": "string",
+          },
+          "type": "array",
+        },
+        "code": {
+          "const": "CONFIRMATION_REQUIRED",
+          "type": "string",
+        },
+        "confirmation_token": {
+          "type": "string",
+        },
+        "expires_at": {
+          "type": "string",
+        },
+        "expires_at_mx": {
+          "type": "string",
+        },
+        "horario_bloques": {
+          "anyOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "bloques": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "comida": {
+                        "anyOf": [
+                          {
+                            "additionalProperties": false,
+                            "properties": {
+                              "fin": {
+                                "type": "string",
+                              },
+                              "inicio": {
+                                "type": "string",
+                              },
+                            },
+                            "required": [
+                              "inicio",
+                              "fin",
+                            ],
+                            "type": "object",
+                          },
+                          {
+                            "type": "null",
+                          },
+                        ],
+                      },
+                      "dias": {
+                        "items": {
+                          "type": "string",
+                        },
+                        "type": "array",
+                      },
+                      "entrada": {
+                        "type": "string",
+                      },
+                      "salida": {
+                        "type": "string",
+                      },
+                    },
+                    "required": [
+                      "dias",
+                      "entrada",
+                      "salida",
+                      "comida",
+                    ],
+                    "type": "object",
+                  },
+                  "type": "array",
+                },
+                "dia_descanso": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                    },
+                    {
+                      "type": "null",
+                    },
+                  ],
+                },
+                "origen": {
+                  "description": "simple: horario anterior leído como un bloque L–V.",
+                  "enum": [
+                    "bloques",
+                    "simple",
+                  ],
+                  "type": "string",
+                },
+                "texto": {
+                  "type": "string",
+                },
+              },
+              "required": [
+                "bloques",
+                "dia_descanso",
+                "texto",
+                "origen",
+              ],
+              "type": "object",
+            },
+            {
+              "type": "null",
+            },
+          ],
+        },
+        "note": {
+          "type": "string",
+        },
+        "person": {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "string",
+            },
+            "nombre_completo": {
+              "type": "string",
+            },
+            "status": {
+              "type": "string",
+            },
+            "url": {
+              "type": "string",
+            },
+          },
+          "required": [
+            "id",
+            "nombre_completo",
+            "status",
+            "url",
+          ],
+          "type": "object",
+        },
+        "preview": {
+          "additionalProperties": false,
+          "properties": {
+            "details": {
+              "additionalProperties": {},
+              "propertyNames": {
+                "type": "string",
+              },
+              "type": "object",
+            },
+            "summary": {
+              "type": "string",
+            },
+            "warnings": {
+              "items": {
+                "type": "string",
+              },
+              "type": "array",
+            },
+          },
+          "required": [
+            "summary",
+          ],
+          "type": "object",
+        },
+        "status": {
+          "description": "preview: nada se escribió todavía; done: el cambio quedó hecho.",
+          "enum": [
+            "preview",
+            "done",
+          ],
+          "type": "string",
+        },
+      },
+      "required": [
+        "status",
+      ],
+      "type": "object",
+    },
+    "title": "Cambiar horario por bloques",
   },
   {
     "_meta": {

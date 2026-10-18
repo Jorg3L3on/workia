@@ -36,6 +36,7 @@ import {
   createPersonTool,
   setPersonStatusTool,
   updatePersonScheduleTool,
+  updatePersonScheduleBlocksTool,
   updatePersonTool,
 } from "./people-writes";
 import { fetchTool, searchTool } from "./search";
@@ -70,6 +71,7 @@ export const WORKIA_TOOLS: WorkiaTool[] = [
   updatePersonTool,
   setPersonStatusTool,
   updatePersonScheduleTool,
+  updatePersonScheduleBlocksTool,
   createCatalogItemTool,
   linkPositionActivityTool,
   unlinkPositionActivityTool,

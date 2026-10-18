@@ -31,6 +31,7 @@ import {
   requirePermission,
   uuid,
 } from "./common";
+import { horarioBloques, horarioBloquesSchema } from "./schedule";
 import { datosMexico, datosMexicoSchema } from "./mexico";
 
 const siteRefSchema = z
@@ -187,6 +188,7 @@ export const getPersonTool = defineTool({
       })
       .nullable()
       .optional(),
+    horario_bloques: horarioBloquesSchema.optional(),
     contratos: z
       .array(
         z.object({
@@ -275,6 +277,7 @@ export const getPersonTool = defineTool({
                   salida: person.schedule.salida,
                 }
               : null,
+            horario_bloques: horarioBloques(person.schedule),
           }
         : {}),
       ...(contracts

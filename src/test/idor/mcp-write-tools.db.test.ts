@@ -858,6 +858,108 @@ describe("people", () => {
     });
     expect(code(done)).toBe("FORBIDDEN_RBAC");
   });
+
+  const BLOCKS = {
+    bloques: [
+      {
+        dias: ["lun", "mar", "mie", "jue", "vie"],
+        entrada: "08:00",
+        salida: "17:00",
+        comida: { inicio: "13:00", fin: "14:00" },
+      },
+      { dias: ["sab"], entrada: "08:00", salida: "13:00" },
+    ],
+    dia_descanso: "dom",
+  };
+  const BLOCKS_TEXT =
+    "L–V 08:00–17:00 (comida 13:00–14:00) · Sáb 08:00–13:00 · Descanso dom";
+
+  it("update_person_schedule_blocks previews the text, stores the blocks and get_person returns them", async () => {
+    const { preview, done } = await confirm(
+      tokens.a,
+      "update_person_schedule_blocks",
+      { person_id: a.teammate.id, ...BLOCKS },
+    );
+
+    expect(preview.structuredContent.preview.summary).toContain(BLOCKS_TEXT);
+    expect(done.structuredContent).toMatchObject({
+      status: "done",
+      horario_bloques: { texto: BLOCKS_TEXT, origen: "bloques" },
+    });
+    const [schedule] = await ownerDb
+      .select()
+      .from(personSchedules)
+      .where(eq(personSchedules.personId, a.teammate.id));
+    expect(schedule).toMatchObject({ entrada: "08:00", restDay: "dom" });
+    await expectMcpAudit(done, "update_person_schedule_blocks");
+
+    const person = await call(tokens.a, "get_person", {
+      person_id: a.teammate.id,
+    });
+    expect(person.structuredContent.horario_bloques).toMatchObject({
+      texto: BLOCKS_TEXT,
+      dia_descanso: "dom",
+      origen: "bloques",
+    });
+  });
+
+  it("update_person_schedule_blocks refuses a day in two blocks (VALIDATION)", async () => {
+    const { done } = await confirm(tokens.a, "update_person_schedule_blocks", {
+      person_id: a.teammate.id,
+      bloques: [
+        BLOCKS.bloques[0],
+        { dias: ["vie"], entrada: "08:00", salida: "12:00" },
+      ],
+    });
+    expect(code(done)).toBe("VALIDATION");
+    expect(done.structuredContent.error.message).toBe(
+      "El viernes está en dos bloques.",
+    );
+  });
+
+  it("a renewal freezes the blocks and get_contract returns them", async () => {
+    const [vigente] = await ownerDb
+      .select()
+      .from(contracts)
+      .where(
+        and(
+          eq(contracts.personId, a.teammate.id),
+          eq(contracts.status, "vigente"),
+        ),
+      );
+    const { done } = await confirm(tokens.a, "renew_contract", {
+      contract_id: vigente.id,
+      type: "indeterminado",
+      start_date: "2027-03-01",
+      notice_window: "no_avisar",
+      template_id: a.template.id,
+    });
+    const result = await call(tokens.a, "get_contract", {
+      contract_id: done.structuredContent.contract.id,
+    });
+    expect(result.structuredContent.contract.horario_bloques).toMatchObject({
+      texto: BLOCKS_TEXT,
+      origen: "bloques",
+    });
+  });
+
+  it("mcp:update_person_schedule_blocks", async () => {
+    await expectRefusedWithoutEffect(
+      tokens.b,
+      "update_person_schedule_blocks",
+      { person_id: a.person.id, ...BLOCKS },
+      "NOT_FOUND",
+    );
+  });
+
+  it("rbac:mcp:update_person_schedule_blocks", async () => {
+    const { done } = await confirm(
+      tokens.aViewer,
+      "update_person_schedule_blocks",
+      { person_id: a.person.id, ...BLOCKS },
+    );
+    expect(code(done)).toBe("FORBIDDEN_RBAC");
+  });
 });
 
 describe("ChatGPT never writes", () => {

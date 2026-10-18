@@ -122,7 +122,8 @@ America/Mexico_City. Las listas grandes paginan con `cursor` opaco y firmado
 | `create_person` | Da de alta un expediente con las mismas reglas que la app (D-04). | `write:people` (Escribir personas) | `people:create` |
 | `update_person` | Edita sólo los campos enviados en changes (null borra el dato); el resto del expediente y el horario no cambian. | `write:people` (Escribir personas) | `people:update` |
 | `set_person_status` | Da de baja laboral o reactiva a una persona (estatus activa \| baja). | `write:people` (Escribir personas) | `people:update` |
-| `update_person_schedule` | Captura o cambia el horario de una persona (HH:mm). | `write:people` (Escribir personas) | `people:update` |
+| `update_person_schedule` | Obsoleta: usa update_person_schedule_blocks (horario por bloques, día de descanso). | `write:people` (Escribir personas) | `people:update` |
+| `update_person_schedule_blocks` | Captura el horario por bloques de una persona: cada bloque con días (lun…dom), entrada, salida y comida opcional, más el día de descanso. | `write:people` (Escribir personas) | `people:update` |
 | `create_catalog_item` | Crea un área, un puesto, una actividad o una ubicación (sucursal o corporativo). | `write:catalog` (Escribir catálogo) | `positions:create` |
 | `link_position_activity` | Agrega una actividad a un puesto. | `write:catalog` (Escribir catálogo) | `positions:update` |
 | `unlink_position_activity` | Quita una actividad de un puesto y advierte cuántas personas activas tienen ese puesto. | `write:catalog` (Escribir catálogo) | `positions:update` |
