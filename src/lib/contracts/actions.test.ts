@@ -42,6 +42,10 @@ vi.mock("@/lib/contracts/index", () => ({
   markContractNoRenew: markContractNoRenewMock,
 }));
 
+vi.mock("@/lib/rbac", () => ({
+  userHasPermission: vi.fn(async () => false),
+}));
+
 vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),
 }));

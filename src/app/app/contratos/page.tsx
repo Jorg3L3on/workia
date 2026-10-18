@@ -31,9 +31,11 @@ type ContratosPageProps = {
 
 const RenewalTray = async ({
   canUpdate,
+  canSeeCompensation,
   companyId,
 }: {
   canUpdate: boolean;
+  canSeeCompensation: boolean;
   companyId: string;
 }) => {
   const [renewalItems, templates] = await Promise.all([
@@ -43,6 +45,7 @@ const RenewalTray = async ({
 
   return (
     <RenewalTrayList
+      canSeeCompensation={canSeeCompensation}
       canUpdate={canUpdate}
       items={renewalItems}
       templates={templates}
@@ -54,10 +57,13 @@ const ContratosPage = async ({ searchParams }: ContratosPageProps) => {
   const session = await requireContractsRead();
   const { renewed, "no-renew": noRenew, error } = await searchParams;
 
-  const [canUpdate, canManageTemplates] = await Promise.all([
-    userHasPermission(session.user.id, "contracts:update"),
-    userHasPermission(session.user.id, "contract_templates:read"),
-  ]);
+  const [canUpdate, canManageTemplates, canSeeCompensation] = await Promise.all(
+    [
+      userHasPermission(session.user.id, "contracts:update"),
+      userHasPermission(session.user.id, "contract_templates:read"),
+      userHasPermission(session.user.id, "compensation:read"),
+    ],
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -110,7 +116,11 @@ const ContratosPage = async ({ searchParams }: ContratosPageProps) => {
         </div>
 
         <Suspense fallback={<SectionSkeleton />}>
-          <RenewalTray canUpdate={canUpdate} companyId={session.companyId} />
+          <RenewalTray
+            canSeeCompensation={canSeeCompensation}
+            canUpdate={canUpdate}
+            companyId={session.companyId}
+          />
         </Suspense>
       </div>
     </div>

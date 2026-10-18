@@ -26,6 +26,7 @@ export type RenewalTrayListProps = {
   items: RenewalTrayItem[];
   canUpdate: boolean;
   templates: ContractTemplate[];
+  canSeeCompensation?: boolean;
 };
 
 type RenewalRow = {
@@ -41,6 +42,7 @@ export const RenewalTrayList = ({
   items,
   canUpdate,
   templates,
+  canSeeCompensation = false,
 }: RenewalTrayListProps) => {
   const [expandedContractId, setExpandedContractId] = useState<string | null>(
     null,
@@ -135,7 +137,7 @@ export const RenewalTrayList = ({
         },
       },
     ],
-    [canRenew, canUpdate, expandedContractId],
+    [canRenew, canUpdate, expandedContractId, canSeeCompensation],
   );
 
   return (
@@ -174,6 +176,7 @@ export const RenewalTrayList = ({
                         endDate={row.endDate}
                         personName={row.personName}
                         templates={templates}
+                        canSeeCompensation={canSeeCompensation}
                       />
                     </div>
                   </TableCell>

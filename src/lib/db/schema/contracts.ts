@@ -4,6 +4,7 @@ import {
   date,
   foreignKey,
   index,
+  numeric,
   pgEnum,
   pgTable,
   text,
@@ -35,6 +36,19 @@ export const contractStatusEnum = pgEnum("contract_status", [
   "renovado",
   "no_renovado",
   "vencido",
+]);
+
+/** Compensation frozen in the contract (WRK-I5-2). */
+export const paymentMethodEnum = pgEnum("payment_method", [
+  "transferencia",
+  "efectivo",
+  "cheque",
+]);
+
+export const payFrequencyEnum = pgEnum("pay_frequency", [
+  "semanal",
+  "quincenal",
+  "mensual",
 ]);
 
 export const contractTemplates = pgTable(
@@ -92,6 +106,12 @@ export const contracts = pgTable(
     scheduleRegresoComer: text("schedule_regreso_comer"),
     scheduleSalida: text("schedule_salida"),
     status: contractStatusEnum("status").notNull().default("vigente"),
+    // Compensation (WRK-I5-2), frozen when the contract is issued or renewed.
+    salarioDiario: numeric("salario_diario", { precision: 12, scale: 2 }),
+    salarioMensual: numeric("salario_mensual", { precision: 12, scale: 2 }),
+    formaPago: paymentMethodEnum("forma_pago"),
+    periodicidadPago: payFrequencyEnum("periodicidad_pago"),
+    diaPago: text("dia_pago"),
     previousContractId: uuid("previous_contract_id").references(
       (): AnyPgColumn => contracts.id,
       { onDelete: "set null" },

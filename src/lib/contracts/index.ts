@@ -36,6 +36,8 @@ import type {
 } from "./schema";
 import {
   buildContractScheduleSnapshot,
+  compensationValues,
+  type CompensationValues,
   CONTRACT_TEMPLATE_TOKENS,
   fillContractTemplate,
   type ContractTemplateToken,
@@ -472,6 +474,7 @@ const emitContractRecord = async (
     templateId: string;
     previousContractId?: string | null;
     status?: ContractStatus;
+    compensation?: CompensationValues;
   },
   actorUserId: string,
   prepared?: Awaited<ReturnType<typeof prepareContractRecord>>,
@@ -495,6 +498,7 @@ const emitContractRecord = async (
       ...scheduleSnapshot,
       status: input.status ?? "vigente",
       previousContractId: input.previousContractId ?? null,
+      ...(input.compensation ?? {}),
     })
     .returning();
 
@@ -540,6 +544,7 @@ export const createContract = async (
       endDate,
       noticeWindow: input.noticeWindow,
       templateId: input.templateId,
+      compensation: compensationValues(input),
     },
     actorUserId,
   );
@@ -577,6 +582,18 @@ export const renewContract = async (
     noticeWindow: input.noticeWindow,
     templateId: input.templateId,
     previousContractId: existing.id,
+    // Not sent (the form hid it from someone without compensation:read):
+    // the renewal keeps the previous contract's compensation.
+    compensation:
+      input.salarioDiario === undefined
+        ? {
+            salarioDiario: existing.salarioDiario,
+            salarioMensual: existing.salarioMensual,
+            formaPago: existing.formaPago,
+            periodicidadPago: existing.periodicidadPago,
+            diaPago: existing.diaPago,
+          }
+        : compensationValues(input),
   };
   // Reads happen before the transaction; only the writes go inside it.
   const prepared = await prepareContractRecord(companyId, next);

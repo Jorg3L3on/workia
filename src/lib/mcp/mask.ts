@@ -112,6 +112,15 @@ const PII_KEYS = new Set([
   "email",
   "fechaNacimiento",
   "fecha_nacimiento",
+  // Compensation and expediente México in audit payloads.
+  "salarioDiario",
+  "salarioMensual",
+  "domicilioCalle",
+  "domicilioNumeroExterior",
+  "domicilioNumeroInterior",
+  "domicilioColonia",
+  "ineClaveElector",
+  "beneficiarios",
 ]);
 
 /** Masks a JSON value deeply: PII keys by field, strings by pattern. */
@@ -155,8 +164,9 @@ export const maskDeep = (value: unknown): unknown => {
 };
 
 const maskField = (key: string, value: unknown) => {
+  // Lists, numbers and objects under a PII key (beneficiaries, salaries) go away entirely.
   if (typeof value !== "string" || value === "") {
-    return value ?? null;
+    return value === "" ? "" : null;
   }
 
   switch (key) {

@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  compensationValues,
+  contractFormSchema,
   fillContractTemplate,
   isContractInRenewalWindow,
+  monthlySalary,
   noticeWindowToMonths,
 } from "@/lib/contracts/schema";
 
@@ -148,5 +151,64 @@ describe("demo seed safety", () => {
     expect(DEMO_RRHH_FALLBACK.email).toContain(".local");
     expect(DEMO_RRHH_FALLBACK.name).toMatch(/Demo/);
     expect(DEMO_RRHH_FALLBACK.nombres).toBe("Elena");
+  });
+});
+
+describe("contract compensation", () => {
+  const base = {
+    personId: "00000000-0000-4000-8000-000000000001",
+    templateId: "00000000-0000-4000-8000-000000000002",
+    type: "indeterminado",
+    startDate: "2026-09-01",
+    endDate: "",
+    noticeWindow: "no_avisar",
+  };
+
+  it("needs payment method and frequency with a salary", () => {
+    const parsed = contractFormSchema.safeParse({
+      ...base,
+      salarioDiario: "500",
+    });
+    expect(parsed.success).toBe(false);
+    expect(parsed.error?.issues.map((issue) => issue.path[0])).toEqual([
+      "formaPago",
+      "periodicidadPago",
+    ]);
+  });
+
+  it("accepts a contract without compensation", () => {
+    expect(contractFormSchema.safeParse(base).success).toBe(true);
+    expect(
+      contractFormSchema.safeParse({ ...base, salarioDiario: "" }).success,
+    ).toBe(true);
+  });
+
+  it("rejects a salary that is not positive", () => {
+    const parsed = contractFormSchema.safeParse({
+      ...base,
+      salarioDiario: "0",
+      formaPago: "efectivo",
+      periodicidadPago: "semanal",
+    });
+    expect(parsed.success).toBe(false);
+  });
+
+  it("derives the monthly salary with 30.4 days", () => {
+    expect(monthlySalary(278.8)).toBe(8475.52);
+    expect(
+      compensationValues({
+        salarioDiario: 500,
+        formaPago: "transferencia",
+        periodicidadPago: "quincenal",
+        diaPago: "  ",
+      }),
+    ).toEqual({
+      salarioDiario: "500.00",
+      salarioMensual: "15200.00",
+      formaPago: "transferencia",
+      periodicidadPago: "quincenal",
+      diaPago: null,
+    });
+    expect(compensationValues({ salarioDiario: "" }).salarioDiario).toBeNull();
   });
 });

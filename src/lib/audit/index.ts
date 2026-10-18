@@ -260,6 +260,10 @@ export const snapshotContract = (contract: Record<string, unknown>) => ({
   scheduleRegresoComer: contract.scheduleRegresoComer,
   scheduleSalida: contract.scheduleSalida,
   status: contract.status,
+  salarioDiario: contract.salarioDiario ?? null,
+  salarioMensual: contract.salarioMensual ?? null,
+  formaPago: contract.formaPago ?? null,
+  periodicidadPago: contract.periodicidadPago ?? null,
   previousContractId: contract.previousContractId,
   deletedAt: contract.deletedAt,
 });

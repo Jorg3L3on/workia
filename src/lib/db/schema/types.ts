@@ -17,7 +17,8 @@ export type PermissionResource =
   | "assets"
   | "companies"
   | "members"
-  | "mcp_connections";
+  | "mcp_connections"
+  | "compensation";
 
 export type PermissionSlug = `${PermissionResource}:${PermissionAction}`;
 
@@ -381,6 +382,13 @@ export const PERMISSIONS: Array<{
     description: "View and revoke every AI assistant connection of the company",
   },
   {
+    slug: "compensation:read",
+    name: "Read Compensation",
+    resource: "compensation",
+    action: "read",
+    description: "See and capture salaries and payment terms of contracts",
+  },
+  {
     slug: "companies:read",
     name: "Read Companies",
     resource: "companies",
@@ -475,6 +483,7 @@ export const ROLES = [
       "members:manage",
       "mcp_connections:create",
       "mcp_connections:manage",
+      "compensation:read",
     ] satisfies PermissionSlug[],
   },
   {

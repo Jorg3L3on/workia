@@ -98,3 +98,20 @@ describe("PII masking (spec §9)", () => {
     expect(json).toContain("Ana");
   });
 });
+
+it("drops non-text PII in payloads (beneficiaries, salaries)", () => {
+  const masked = JSON.stringify(
+    maskDeep({
+      after: {
+        salarioDiario: "450.00",
+        beneficiarios: ["Ana (Hija, 100 %)"],
+        ineClaveElector: "ABCDEF12345678H100",
+      },
+      changes: { salarioMensual: { from: 1, to: 2 } },
+    }),
+  );
+
+  expect(masked).not.toContain("450");
+  expect(masked).not.toContain("Ana (Hija");
+  expect(masked).not.toContain("ABCDEF12345678H100");
+});

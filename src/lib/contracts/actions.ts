@@ -24,6 +24,7 @@ import {
   contractTemplateFormSchema,
   renewContractFormSchema,
 } from "@/lib/contracts/schema";
+import { userHasPermission } from "@/lib/rbac";
 import { AuthorizationError } from "@/lib/rbac/errors";
 import {
   STALE_COMPANY_MESSAGE,
@@ -46,7 +47,26 @@ export type ContractActionState = {
   success?: boolean;
 };
 
-const parseContractForm = (formData: FormData) =>
+/**
+ * Compensation fields of the emit/renew forms (absent when the form did not
+ * show them). Without compensation:read they are ignored even if posted.
+ */
+const compensationFromForm = (formData: FormData, allowed: boolean) => {
+  if (!allowed) {
+    return {};
+  }
+
+  const salario = formData.get("salarioDiario");
+
+  return {
+    salarioDiario: salario === null ? undefined : String(salario).trim(),
+    formaPago: String(formData.get("formaPago") ?? ""),
+    periodicidadPago: String(formData.get("periodicidadPago") ?? ""),
+    diaPago: String(formData.get("diaPago") ?? ""),
+  };
+};
+
+const parseContractForm = (formData: FormData, compensation: boolean) =>
   contractFormSchema.safeParse({
     personId: String(formData.get("personId") ?? ""),
     type: String(formData.get("type") ?? ""),
@@ -54,9 +74,10 @@ const parseContractForm = (formData: FormData) =>
     endDate: String(formData.get("endDate") ?? ""),
     noticeWindow: String(formData.get("noticeWindow") ?? ""),
     templateId: String(formData.get("templateId") ?? ""),
+    ...compensationFromForm(formData, compensation),
   });
 
-const parseRenewForm = (formData: FormData) =>
+const parseRenewForm = (formData: FormData, compensation: boolean) =>
   renewContractFormSchema.safeParse({
     contractId: String(formData.get("contractId") ?? ""),
     type: String(formData.get("type") ?? ""),
@@ -64,6 +85,7 @@ const parseRenewForm = (formData: FormData) =>
     endDate: String(formData.get("endDate") ?? ""),
     noticeWindow: String(formData.get("noticeWindow") ?? ""),
     templateId: String(formData.get("templateId") ?? ""),
+    ...compensationFromForm(formData, compensation),
   });
 
 const parseTemplateForm = (formData: FormData) =>
@@ -102,7 +124,10 @@ export const createContractAction = async (
     redirect("/login");
   }
 
-  const parsed = parseContractForm(formData);
+  const parsed = parseContractForm(
+    formData,
+    await userHasPermission(session.user.id, "compensation:read"),
+  );
 
   if (!parsed.success) {
     return {
@@ -148,7 +173,10 @@ export const renewContractAction = async (
     redirect("/login");
   }
 
-  const parsed = parseRenewForm(formData);
+  const parsed = parseRenewForm(
+    formData,
+    await userHasPermission(session.user.id, "compensation:read"),
+  );
 
   if (!parsed.success) {
     return {

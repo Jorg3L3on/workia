@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { formatMoney } from "@/components/contracts/compensation-fields";
 import { ContractForm } from "@/components/contracts/contract-form";
 import { Badge } from "@/components/ui/badge";
 import type { Contract, ContractTemplate } from "@/lib/db/schema";
@@ -8,6 +9,8 @@ import {
   contractStatusLabels,
   contractTypeLabels,
   formatContractDate,
+  payFrequencyLabels,
+  paymentMethodLabels,
 } from "@/lib/contracts/schema";
 import { formatTimeLabel, SCHEDULE_FIELD_LABELS } from "@/lib/people/schema";
 
@@ -27,6 +30,8 @@ type PersonContractsSectionProps = {
   canCreate: boolean;
   templates: ContractTemplate[];
   showEmitForm?: boolean;
+  /** compensation:read: shows salaries; without it only whether one was captured. */
+  canSeeCompensation?: boolean;
 };
 
 export const PersonContractsSection = ({
@@ -36,6 +41,7 @@ export const PersonContractsSection = ({
   canCreate,
   templates,
   showEmitForm = false,
+  canSeeCompensation = false,
 }: PersonContractsSectionProps) => {
   const vigente = contracts.find((contract) => contract.status === "vigente");
 
@@ -104,6 +110,33 @@ export const PersonContractsSection = ({
                   {formatTimeLabel(vigente.scheduleSalida)}
                 </dd>
               </div>
+              <div
+                className="sm:col-span-2"
+                data-testid="contract-compensation"
+              >
+                <dt className="text-muted-foreground">Compensación</dt>
+                <dd className="font-medium">
+                  {!vigente.salarioDiario
+                    ? "Sin capturar"
+                    : canSeeCompensation
+                      ? [
+                          `${formatMoney(Number(vigente.salarioDiario))} diarios`,
+                          vigente.salarioMensual
+                            ? `${formatMoney(Number(vigente.salarioMensual))} mensuales`
+                            : null,
+                          vigente.formaPago
+                            ? paymentMethodLabels[vigente.formaPago]
+                            : null,
+                          vigente.periodicidadPago
+                            ? payFrequencyLabels[vigente.periodicidadPago]
+                            : null,
+                          vigente.diaPago ? `paga ${vigente.diaPago}` : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")
+                      : "Capturada (requiere el permiso de compensación)"}
+                </dd>
+              </div>
             </dl>
             <details className="mt-3">
               <summary className="cursor-pointer text-sm font-medium">
@@ -128,6 +161,7 @@ export const PersonContractsSection = ({
           <div className="rounded-lg border p-4">
             <h3 className="mb-3 text-sm font-semibold">Emitir contrato</h3>
             <ContractForm
+              canSeeCompensation={canSeeCompensation}
               personContext={personContext}
               personId={personId}
               templates={templates}

@@ -48,6 +48,109 @@ export const contractStatusLabels: Record<ContractStatus, string> = {
   vencido: "Vencido",
 };
 
+export const PAYMENT_METHODS = ["transferencia", "efectivo", "cheque"] as const;
+export const PAY_FREQUENCIES = ["semanal", "quincenal", "mensual"] as const;
+
+export const paymentMethodLabels: Record<
+  (typeof PAYMENT_METHODS)[number],
+  string
+> = {
+  transferencia: "Transferencia",
+  efectivo: "Efectivo",
+  cheque: "Cheque",
+};
+
+export const payFrequencyLabels: Record<
+  (typeof PAY_FREQUENCIES)[number],
+  string
+> = {
+  semanal: "Semanal",
+  quincenal: "Quincenal",
+  mensual: "Mensual",
+};
+
+/** Days per month used to derive the monthly salary from the daily one (D-19). */
+export const MONTHLY_SALARY_FACTOR = 30.4;
+
+export const monthlySalary = (daily: number) =>
+  Math.round(daily * MONTHLY_SALARY_FACTOR * 100) / 100;
+
+/** Compensation of a contract (WRK-I5-2). All optional; with a salary, method and frequency too. */
+export const compensationFields = {
+  salarioDiario: z
+    .union([
+      z.literal(""),
+      z.coerce
+        .number()
+        .positive("El salario diario debe ser mayor a 0")
+        .max(100000),
+    ])
+    .optional(),
+  formaPago: z.enum(PAYMENT_METHODS).optional().or(z.literal("")),
+  periodicidadPago: z.enum(PAY_FREQUENCIES).optional().or(z.literal("")),
+  diaPago: z.string().trim().max(60).optional().or(z.literal("")),
+};
+
+const refineCompensation = (
+  data: {
+    salarioDiario?: number | "";
+    formaPago?: string;
+    periodicidadPago?: string;
+  },
+  ctx: z.RefinementCtx,
+) => {
+  if (typeof data.salarioDiario === "number") {
+    if (!data.formaPago) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Indica la forma de pago.",
+        path: ["formaPago"],
+      });
+    }
+
+    if (!data.periodicidadPago) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Indica la periodicidad de pago.",
+        path: ["periodicidadPago"],
+      });
+    }
+  }
+};
+
+export type CompensationValues = {
+  salarioDiario: string | null;
+  salarioMensual: string | null;
+  formaPago: (typeof PAYMENT_METHODS)[number] | null;
+  periodicidadPago: (typeof PAY_FREQUENCIES)[number] | null;
+  diaPago: string | null;
+};
+
+/** The compensation columns to store, or none when no salary was given. */
+export const compensationValues = (input: {
+  salarioDiario?: number | "";
+  formaPago?: string;
+  periodicidadPago?: string;
+  diaPago?: string;
+}): CompensationValues =>
+  typeof input.salarioDiario === "number"
+    ? {
+        salarioDiario: input.salarioDiario.toFixed(2),
+        salarioMensual: monthlySalary(input.salarioDiario).toFixed(2),
+        formaPago: (input.formaPago || null) as
+          (typeof PAYMENT_METHODS)[number] | null,
+        periodicidadPago: (input.periodicidadPago || null) as
+          (typeof PAY_FREQUENCIES)[number] | null,
+        diaPago: input.diaPago?.trim() || null,
+      }
+    : {
+        salarioDiario: null,
+        salarioMensual: null,
+        formaPago: null,
+        periodicidadPago: null,
+        diaPago: null,
+      };
+
 export const contractFormSchema = z
   .object({
     personId: z.string().uuid("Selecciona una persona."),
@@ -56,8 +159,11 @@ export const contractFormSchema = z
     endDate: z.string().optional(),
     noticeWindow: z.enum(["1", "2", "3", "6", "no_avisar"]),
     templateId: z.string().uuid("Selecciona una plantilla."),
+    ...compensationFields,
   })
   .superRefine((data, ctx) => {
+    refineCompensation(data, ctx);
+
     if (data.type === "determinado" && !data.endDate?.trim()) {
       ctx.addIssue({
         code: "custom",
@@ -89,8 +195,11 @@ export const renewContractFormSchema = z
     endDate: z.string().optional(),
     noticeWindow: z.enum(["1", "2", "3", "6", "no_avisar"]),
     templateId: z.string().uuid("Selecciona una plantilla."),
+    ...compensationFields,
   })
   .superRefine((data, ctx) => {
+    refineCompensation(data, ctx);
+
     if (data.type === "determinado" && !data.endDate?.trim()) {
       ctx.addIssue({
         code: "custom",

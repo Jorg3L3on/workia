@@ -121,6 +121,7 @@ const PersonaDetailPage = async ({
     canReadContracts,
     canCreateContracts,
     canReadAssets,
+    canSeeCompensation,
     personContracts,
     contractTemplates,
     personAssets,
@@ -134,6 +135,7 @@ const PersonaDetailPage = async ({
     userHasPermission(session.user.id, "contracts:read"),
     userHasPermission(session.user.id, "contracts:create"),
     userHasPermission(session.user.id, "assets:read"),
+    userHasPermission(session.user.id, "compensation:read"),
     listContractsByPerson(session.companyId, id),
     listActiveContractTemplates(session.companyId),
     userHasPermission(session.user.id, "assets:read").then((allowed) =>
@@ -283,6 +285,7 @@ const PersonaDetailPage = async ({
           canReadContracts ? (
             <PersonContractsSection
               canCreate={canCreateContracts}
+              canSeeCompensation={canSeeCompensation}
               contracts={personContracts}
               personContext={{
                 nombres: person.nombres,
