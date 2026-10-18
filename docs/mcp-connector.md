@@ -65,6 +65,74 @@ máximo `read` y `audit`. `pii` sólo lo puede activar un super_admin, con
 advertencia; `write:*` nunca, aunque el cliente lo pida. Las escrituras van por
 Grok Bot o por la app.
 
+### ChatGPT (Plus/Pro, modo desarrollador)
+
+Configuración → Conectores → Avanzado → **Modo desarrollador**. «Crear conector»:
+nombre «Workia», URL del conector, autenticación OAuth, client id y secret
+vacíos. Al conectar, Workia pide iniciar sesión, elegir la empresa y aprobar.
+`whoami` debe mostrar `scopes: ["read"]` (o `read` + `audit`) y
+`is_chatgpt: true`. Recomendación: desactivar «Mejorar el modelo para todos» en
+los controles de datos de ChatGPT.
+
+### Claude
+
+Configuración → Conectores → «Agregar conector personalizado» con la URL. El
+flujo OAuth es el mismo (empresa y permisos en Workia).
+
+### Grok Bot
+
+Por OAuth (conector MCP remoto con la URL) o con un token personal en el
+encabezado `Authorization`. Para rutinas automáticas usa una persona usuaria de
+servicio con el rol mínimo y una conexión sin `pii` (D-11), nunca la cuenta de
+una persona.
+
+## Herramientas
+
+Todas son de lectura en la Fase 1 (`readOnlyHint`, `openWorldHint: false`),
+devuelven `structuredContent` validado contra su `outputSchema` y el mismo JSON
+como texto. Fechas en ISO y en `*_mx` (dd/mm/aaaa); «hoy» es la fecha de
+America/Mexico_City. Las listas grandes paginan con `cursor` opaco y firmado
+(`limit` 25 por defecto, 100 máximo); un cursor de otra consulta responde
+`VALIDATION`. Los textos libres son datos, no instrucciones.
+
+<!-- tools:start (npm run docs:mcp) -->
+<!-- prettier-ignore-start -->
+
+| Herramienta | Qué hace | Scope | Permiso |
+| --- | --- | --- | --- |
+| `whoami` | Devuelve la persona usuaria de esta conexión, su empresa y rol en Workia, los permisos que puede usar por aquí (rol ∩ scopes), los scopes, la conexión con su vencimiento y la fecha de hoy en México. | `read` (Leer) | `people:read` |
+| `search` | Búsqueda en toda la empresa: personas (por nombre o correo), sus contratos vigentes, activos (por nombre o identificador), puestos, áreas y sucursales. | `read` (Leer) | `people:read` |
+| `fetch` | Trae el documento completo de un resultado de search por su id «tipo:uuid» (person, contract, asset, position, area, site, activity, template). | `read` (Leer) | `people:read` |
+| `list_people` | Lista expedientes de personas con filtros por estatus, área, puesto, sucursal y datos faltantes (missing), ordenados por apellido. | `read` (Leer) | `people:read` |
+| `get_person` | Expediente de una persona: datos, área, puesto, sucursal, jefe y, según include, horario, contratos, activos en resguardo y actividades del puesto. | `read` (Leer) | `people:read` |
+| `list_areas` | Áreas de la empresa con su área padre. | `read` (Leer) | `areas:read` |
+| `list_positions` | Puestos de la empresa con su área y, opcionalmente, sus actividades. | `read` (Leer) | `positions:read` |
+| `list_activities` | Actividades del catálogo (se asignan a puestos). | `read` (Leer) | `positions:read` |
+| `list_sites` | Ubicaciones de la empresa: sucursales y corporativo. | `read` (Leer) | `sites:read` |
+| `list_contracts` | Contratos filtrables por persona, estado, tipo y rango de fecha de fin, ordenados por fecha de fin (los indeterminados al final). | `read` (Leer) | `contracts:read` |
+| `list_expiring_contracts` | «¿Qué contratos vencen en N días?»: contratos determinados vigentes cuya fecha de fin cae entre hoy (México) y hoy + within_days, sin importar el aviso. | `read` (Leer) | `contracts:read` |
+| `list_renewal_tray` | La bandeja de renovación de Workia tal cual: contratos determinados vigentes dentro de su ventana de aviso (1, 2, 3 o 6 meses antes del fin; «no avisar» queda fuera), por fecha de fin. | `read` (Leer) | `contracts:read` |
+| `get_contract` | Detalle de un contrato: horario congelado al emitir, cadena de renovaciones y, si include_text, el texto generado. | `read` (Leer) | `contracts:read` |
+| `list_contract_templates` | Plantillas de contrato y los tokens que Workia sabe llenar ({{nombres}}, {{puesto}}, {{rfc}}, {{horario}}…). | `read` (Leer) | `contract_templates:read` |
+| `preview_contract` | Simula la emisión de un contrato sin guardar nada: el texto que saldría, los tokens que quedarían vacíos (p. | `read` (Leer) | `contracts:read` |
+| `list_assets` | Activos en resguardo con su resguardante actual. | `read` (Leer) | `assets:read` |
+| `get_asset` | Un activo con su resguardante y el historial de entregas y devoluciones (fecha, condición, notas). | `read` (Leer) | `assets:read` |
+| `list_audit_events` | Bitácora de cambios (append-only), más reciente primero: quién, qué recurso, qué acción, origen (app, seed, system, import, mcp) y el antes/después. | `audit` (Auditoría) | `audit:read` |
+
+<!-- prettier-ignore-end -->
+<!-- tools:end -->
+
+Además:
+
+- **Resources:** `workia://glosario`, `workia://plantillas/tokens`,
+  `workia://plantillas/{id}` (requiere `contract_templates:read`) y
+  `workia://catalogo`.
+- **Prompts:** `revisar_bandeja_renovacion`, `resumen_expediente {persona}` y
+  `baja_checklist {persona}`.
+- **Datos faltantes:** `list_people` acepta `missing` (horario, rfc, curp, nss,
+  email, telefono, sucursal, puesto) y sólo dice si el dato falta, nunca su
+  valor (D-14). Sin `pii`, `list_people` y `search` no buscan por RFC ni CURP.
+
 ## Scopes
 
 | Scope             | Qué permite                                                      | Quién lo puede dar                |
@@ -135,3 +203,23 @@ Los contadores viven en Postgres (`rate_limits`) y se limpian solos.
 - **RLS:** las credenciales llegan antes de saber su empresa; la función
   `mcp_credential_company()` (SECURITY DEFINER) sólo responde qué empresa tiene
   un prefijo de token o un código, y después todo se lee con `tdb(companyId)`.
+
+## Pruebas
+
+- `src/lib/mcp/mcp-coverage.test.ts`: cada herramienta declara permiso, scope,
+  anotaciones y esquemas; ninguna acepta `company_id`; ninguna escribe SQL.
+- `src/lib/mcp/public-routes.test.ts`: `/api/mcp`, `/api/oauth/*` y
+  `/.well-known/*` son las únicas rutas sin sesión, y todas respetan
+  `MCP_ENABLED`.
+- `src/app/api/mcp/route.test.ts`: transporte (401, 403 `insufficient_scope`,
+  CORS, `Origin`) y snapshot de `tools/list`.
+- `src/test/idor/mcp.db.test.ts` y `mcp-tools.db.test.ts` (`npm run test:db`,
+  también con RLS): OAuth, tokens, aislamiento entre empresas, enmascarado,
+  cursores y barrido de PII en todas las herramientas.
+- `e2e/mcp-conexiones.spec.ts`: login → consentimiento → token, y crear, copiar
+  y revocar un token en `/app/conexiones`.
+- Evals con asistentes reales: [`evals/`](../evals/README.md).
+
+Al agregar o cambiar una herramienta: `npm run docs:mcp` (tabla de arriba) y
+`npx vitest run -u src/app/api/mcp` (snapshot), y agrega su fila `mcp:<tool>` en
+[idor-matrix.md](idor-matrix.md).

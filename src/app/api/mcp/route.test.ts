@@ -189,6 +189,21 @@ describe("/api/mcp transport", () => {
     expect(whoami.outputSchema.properties).toHaveProperty("company");
   });
 
+  it("keeps the tools/list contract (snapshot)", async () => {
+    connections.verifyBearerToken.mockResolvedValue(authContext(["read"]));
+    const list = await readRpc(
+      await POST(
+        rpc(
+          { jsonrpc: "2.0", id: 2, method: "tools/list" },
+          { authorization: "Bearer workia_pat_x" },
+        ),
+      ),
+    );
+
+    // A change to any tool's name, description, annotations or schemas shows up here.
+    expect(list.result.tools).toMatchSnapshot();
+  });
+
   it("exposes GET and DELETE behind the same auth", async () => {
     expect((await GET(new Request(`${ORIGIN}/api/mcp`))).status).toBe(401);
     expect(

@@ -497,8 +497,14 @@ describe("contracts", () => {
       (i: { contract_id: string }) => i.contract_id === a.contract.id,
     );
     expect(own.structuredContent.as_of).toBe(today);
+    // Days from "today" in Mexico to the fixture's end date (the fixture uses UTC).
+    const daysLeft = Math.round(
+      (Date.parse(`${a.contract.endDate}T00:00:00Z`) -
+        Date.parse(`${today}T00:00:00Z`)) /
+        86_400_000,
+    );
     expect(item).toMatchObject({
-      days_left: 10,
+      days_left: daysLeft,
       in_renewal_tray: true,
       sucursal: a.site.name,
     });
@@ -745,5 +751,61 @@ describe("new read-only domain queries stay inside the company", () => {
         limit: 100,
       }),
     );
+  });
+});
+
+describe("PII sweep and output contracts", () => {
+  /** Arguments that make every read tool touch the test person. */
+  const sweepArgs = () => ({
+    whoami: {},
+    search: { query: "Persona A" },
+    fetch: { id: `person:${a.person.id}` },
+    list_people: { limit: 100, visibility: "todos" },
+    get_person: {
+      person_id: a.person.id,
+      include: ["horario", "contratos", "activos", "actividades"],
+    },
+    list_areas: {},
+    list_positions: {},
+    list_activities: {},
+    list_sites: {},
+    list_contracts: { person_id: a.person.id },
+    list_expiring_contracts: { within_days: 365 },
+    list_renewal_tray: {},
+    get_contract: { contract_id: a.contract.id, include_text: true },
+    list_contract_templates: { include_body: true },
+    preview_contract: {
+      person_id: a.person.id,
+      template_id: a.template.id,
+      type: "indeterminado",
+      start_date: "2026-12-01",
+    },
+    list_assets: { holder_id: a.person.id },
+    get_asset: { asset_id: a.asset.id },
+    list_audit_events: { limit: 100 },
+  });
+
+  it("never returns a full RFC, CURP or NSS without the pii scope, in any read tool", async () => {
+    const { WORKIA_TOOLS } = await import("@/lib/mcp/tools");
+    const args = sweepArgs() as Record<string, Record<string, unknown>>;
+
+    expect(Object.keys(args).sort()).toEqual(
+      WORKIA_TOOLS.map((tool) => tool.name).sort(),
+    );
+
+    for (const tool of WORKIA_TOOLS) {
+      const result = await call(tokens.aAudit, tool.name, args[tool.name]);
+      const body = JSON.stringify(result);
+
+      expect(result.isError, tool.name).toBeFalsy();
+      for (const secret of [RFC_A(), CURP_A(), a.person.nss!]) {
+        expect(body, `${tool.name} leaked PII`).not.toContain(secret);
+      }
+      // Each structuredContent satisfies the advertised output schema.
+      expect(
+        tool.output.safeParse(result.structuredContent).success,
+        tool.name,
+      ).toBe(true);
+    }
   });
 });

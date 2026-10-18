@@ -7,7 +7,6 @@ import { logger } from "@/lib/logger";
 
 import { NEW_CONNECTIONS_PER_HOUR, publicOrigin } from "../config";
 import { countRecentConnections, createAuthCode } from "../connections";
-import { hitRateLimit } from "../rate-limit";
 import { currentRequest } from "../request-origin";
 import {
   CONSENT_PARAMS,
@@ -65,17 +64,16 @@ export const approveConsentAction = async (
     return { error: "No puedes conectar asistentes en esa empresa." };
   }
 
+  // 10 new connections per person per hour (spec §7), counted on the rows.
   const since = new Date(Date.now() - 60 * 60 * 1000);
-  const [recent, limit] = await Promise.all([
-    countRecentConnections(company.membership.companyId, userId, since),
-    hitRateLimit(
-      `mcp:consent:${userId}`,
-      NEW_CONNECTIONS_PER_HOUR,
-      60 * 60 * 1000,
-    ),
-  ]);
 
-  if (recent >= NEW_CONNECTIONS_PER_HOUR || limit.limited) {
+  if (
+    (await countRecentConnections(
+      company.membership.companyId,
+      userId,
+      since,
+    )) >= NEW_CONNECTIONS_PER_HOUR
+  ) {
     return {
       error:
         "Creaste demasiadas conexiones en la última hora. Intenta más tarde.",
