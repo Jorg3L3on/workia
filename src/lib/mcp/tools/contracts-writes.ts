@@ -23,6 +23,12 @@ import {
   type WorkiaToolContext,
 } from "../run-tool";
 import { appUrl, fullName, isoDate, mx, uuid } from "./common";
+import {
+  assertCanCapture,
+  compensacionInput,
+  compensacionSummary,
+  compensationFormValues,
+} from "./compensation";
 
 const NOTICE_WINDOWS = ["1", "2", "3", "6", "no_avisar"] as const;
 const TYPES = ["determinado", "indeterminado"] as const;
@@ -65,6 +71,7 @@ const termsInput = {
     .enum(NOTICE_WINDOWS)
     .describe("Meses de aviso antes del fin para la bandeja, o no_avisar."),
   template_id: uuid("Plantilla."),
+  compensacion: compensacionInput.optional(),
 };
 
 const assertTerms = (args: {
@@ -110,6 +117,7 @@ export const issueContractTool = defineWriteTool({
   annotations: writeAnnotations("Emitir contrato"),
   preview: async (args, ctx) => {
     assertTerms(args);
+    assertCanCapture(ctx, args.compensacion);
     const preview = await previewContract(ctx.companyId, {
       personId: args.person_id,
       templateId: args.template_id,
@@ -123,7 +131,7 @@ export const issueContractTool = defineWriteTool({
       throw new McpToolError("CONFLICT", preview.blocking.join(" "));
 
     return {
-      summary: `Contrato para ${fullName(preview.person)}: ${termsSummary(args, preview.template.name)}`,
+      summary: `Contrato para ${fullName(preview.person)}: ${termsSummary(args, preview.template.name)}${args.compensacion ? ` ${compensacionSummary(args.compensacion)}` : ""}`,
       details: { missing_tokens: preview.missingTokens },
       warnings:
         preview.missingTokens.length > 0
@@ -135,6 +143,7 @@ export const issueContractTool = defineWriteTool({
   },
   handler: async (args, ctx) => {
     assertTerms(args);
+    assertCanCapture(ctx, args.compensacion);
     const created = await createContract(
       ctx.companyId,
       contractFormSchema.parse({
@@ -144,6 +153,7 @@ export const issueContractTool = defineWriteTool({
         endDate: args.end_date,
         noticeWindow: args.notice_window,
         templateId: args.template_id,
+        ...compensationFormValues(args.compensacion),
       }),
       ctx.userId,
     );
@@ -184,6 +194,7 @@ export const renewContractTool = defineWriteTool({
   annotations: writeAnnotations("Renovar contrato", { destructive: true }),
   preview: async (args, ctx) => {
     assertTerms(args);
+    assertCanCapture(ctx, args.compensacion);
     const contract = await loadVigente(ctx, args.contract_id);
     const [person, template] = await Promise.all([
       getPersonById(ctx.companyId, contract.personId, true),
@@ -193,11 +204,12 @@ export const renewContractTool = defineWriteTool({
     if (!template) throw notFound("La plantilla");
 
     return {
-      summary: `Renovar el contrato de ${person ? fullName(person) : "la persona"} (fin ${mx(contract.endDate) ?? "sin fecha"}): el actual queda renovado y el nuevo es ${termsSummary(args, template.name)}`,
+      summary: `Renovar el contrato de ${person ? fullName(person) : "la persona"} (fin ${mx(contract.endDate) ?? "sin fecha"}): el actual queda renovado y el nuevo es ${termsSummary(args, template.name)} ${args.compensacion ? compensacionSummary(args.compensacion) : contract.salarioDiario === null ? "Sin compensación capturada." : "Conserva la compensación del contrato anterior."}`,
     };
   },
   handler: async (args, ctx) => {
     assertTerms(args);
+    assertCanCapture(ctx, args.compensacion);
     const previous = await loadVigente(ctx, args.contract_id);
     const created = await renewContract(
       ctx.companyId,
@@ -208,6 +220,7 @@ export const renewContractTool = defineWriteTool({
         endDate: args.end_date,
         noticeWindow: args.notice_window,
         templateId: args.template_id,
+        ...compensationFormValues(args.compensacion),
       }),
       ctx.userId,
     );

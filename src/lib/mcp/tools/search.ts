@@ -36,6 +36,7 @@ import {
   type WorkiaToolContext,
 } from "../run-tool";
 import { appUrl, FREE_TEXT_NOTE, fullName, mx } from "./common";
+import { compensacionLine } from "./compensation";
 
 /**
  * search/fetch with OpenAI's signature (ChatGPT connectors): search(query) →
@@ -305,6 +306,7 @@ const fetchEntity = async (
         text: lines(
           `Tipo: ${contract.type} · Inicio ${mx(contract.startDate)}${contract.endDate ? ` · Fin ${mx(contract.endDate)}` : ""} · Estado ${contractStatusLabels[contract.status]}`,
           contract.templateName && `Plantilla: ${contract.templateName}`,
+          compensacionLine(contract, ctx),
           body &&
             `\n${ctx.piiUnmasked ? body : maskText(body, [person?.rfc, person?.curp, person?.nss])}`,
         ),

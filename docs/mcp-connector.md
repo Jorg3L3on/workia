@@ -113,7 +113,7 @@ America/Mexico_City. Las listas grandes paginan con `cursor` opaco y firmado
 | `list_contracts` | Contratos filtrables por persona, estado, tipo y rango de fecha de fin, ordenados por fecha de fin (los indeterminados al final). | `read` (Leer) | `contracts:read` |
 | `list_expiring_contracts` | «¿Qué contratos vencen en N días?»: contratos determinados vigentes cuya fecha de fin cae entre hoy (México) y hoy + within_days, sin importar el aviso. | `read` (Leer) | `contracts:read` |
 | `list_renewal_tray` | La bandeja de renovación de Workia tal cual: contratos determinados vigentes dentro de su ventana de aviso (1, 2, 3 o 6 meses antes del fin; «no avisar» queda fuera), por fecha de fin. | `read` (Leer) | `contracts:read` |
-| `get_contract` | Detalle de un contrato: horario congelado al emitir, cadena de renovaciones y, si include_text, el texto generado. | `read` (Leer) | `contracts:read` |
+| `get_contract` | Detalle de un contrato: horario y compensación congelados al emitir (los montos sólo con el scope pii y compensation:read), cadena de renovaciones y, si include_text, el texto generado. | `read` (Leer) | `contracts:read` |
 | `list_contract_templates` | Plantillas de contrato y los tokens que Workia sabe llenar ({{nombres}}, {{puesto}}, {{rfc}}, {{horario}}…). | `read` (Leer) | `contract_templates:read` |
 | `preview_contract` | Simula la emisión de un contrato sin guardar nada: el texto que saldría, los tokens que quedarían vacíos (p. | `read` (Leer) | `contracts:read` |
 | `list_assets` | Activos en resguardo con su resguardante actual. | `read` (Leer) | `assets:read` |

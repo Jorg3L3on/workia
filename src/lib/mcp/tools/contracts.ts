@@ -27,6 +27,7 @@ import {
 } from "../cursor";
 import { McpToolError, notFound } from "../errors";
 import { maskText } from "../mask";
+import { compensacion, compensacionSchema } from "./compensation";
 import { defineTool, readAnnotations } from "../run-tool";
 import {
   appUrl,
@@ -264,7 +265,7 @@ export const listRenewalTrayTool = defineTool({
 export const getContractTool = defineTool({
   name: "get_contract",
   title: "Ver contrato",
-  description: `Detalle de un contrato: horario congelado al emitir, cadena de renovaciones y, si include_text, el texto generado. El texto lleva RFC: sale enmascarado sin el scope pii. ${FREE_TEXT_NOTE}`,
+  description: `Detalle de un contrato: horario y compensación congelados al emitir (los montos sólo con el scope pii y compensation:read), cadena de renovaciones y, si include_text, el texto generado. El texto lleva RFC: sale enmascarado sin el scope pii. ${FREE_TEXT_NOTE}`,
   kind: "read",
   scope: "read",
   permission: "contracts:read",
@@ -288,6 +289,7 @@ export const getContractTool = defineTool({
       template_name: z.string().nullable(),
       previous_contract_id: z.string().nullable(),
       schedule: scheduleSchema,
+      compensacion: compensacionSchema,
       generated_text: z.string().optional(),
       pii_masked: z.boolean(),
       url: z.string(),
@@ -343,6 +345,7 @@ export const getContractTool = defineTool({
           regreso_comer: contract.scheduleRegresoComer,
           salida: contract.scheduleSalida,
         },
+        compensacion: compensacion(contract, ctx),
         ...(include_text
           ? {
               generated_text: ctx.piiUnmasked
