@@ -16,6 +16,7 @@ export const AUDIT_RESOURCE_TYPES = [
   "membership",
   "mcp_connection",
   "mcp_settings",
+  "onboarding",
 ] as const;
 
 export type AuditResourceType = (typeof AUDIT_RESOURCE_TYPES)[number];
@@ -39,6 +40,8 @@ export const AUDIT_ACTIONS = [
   "undo",
   "switch",
   "revoke",
+  "approve",
+  "reject",
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
@@ -62,6 +65,8 @@ export const auditActionLabels: Record<AuditAction, string> = {
   undo: "Deshacer importación",
   switch: "Cambio de empresa",
   revoke: "Revocación",
+  approve: "Aprobación",
+  reject: "Rechazo",
 };
 
 export const auditResourceTypeLabels: Record<AuditResourceType, string> = {
@@ -82,6 +87,7 @@ export const auditResourceTypeLabels: Record<AuditResourceType, string> = {
   membership: "Miembro",
   mcp_connection: "Conexión de asistente (MCP)",
   mcp_settings: "Escrituras del conector (MCP)",
+  onboarding: "Alta (RH → Nóminas)",
 };
 
 export const AUDIT_SOURCES = [

@@ -7,6 +7,7 @@ import {
   FolderTreeIcon,
   HomeIcon,
   LaptopIcon,
+  UserPlusIcon,
   ScrollTextIcon,
   PlugIcon,
   UserCogIcon,
@@ -73,6 +74,7 @@ const navItems = [
   { title: "Personas", href: "/app/personas", icon: UsersIcon },
   { title: "Contratos", href: "/app/contratos", icon: FileTextIcon },
   { title: "Resguardo", href: "/app/resguardo", icon: LaptopIcon },
+  { title: "Altas", href: "/app/altas", icon: UserPlusIcon },
   { title: "Catálogo", href: CATALOG_PATHS.index, icon: FolderTreeIcon },
   { title: "Auditoría", href: "/app/auditoria", icon: ScrollTextIcon },
 ] as const;

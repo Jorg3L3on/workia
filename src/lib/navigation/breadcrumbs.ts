@@ -83,6 +83,17 @@ export const resolveBreadcrumbs = (
     ];
   }
 
+  if (path === "/app/altas") {
+    return [{ label: "Altas" }];
+  }
+
+  if (path.startsWith("/app/altas/")) {
+    return [
+      { label: "Altas", href: "/app/altas" },
+      { label: labels.current ?? "Alta" },
+    ];
+  }
+
   if (path === "/app/resguardo") {
     return [{ label: "Resguardo" }];
   }

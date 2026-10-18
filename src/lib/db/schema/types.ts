@@ -1,5 +1,12 @@
 export type PermissionAction =
-  "read" | "create" | "update" | "delete" | "manage" | "import" | "export";
+  | "read"
+  | "create"
+  | "update"
+  | "delete"
+  | "manage"
+  | "import"
+  | "export"
+  | "approve";
 
 export type PermissionResource =
   | "users"
@@ -18,7 +25,8 @@ export type PermissionResource =
   | "companies"
   | "members"
   | "mcp_connections"
-  | "compensation";
+  | "compensation"
+  | "payroll";
 
 export type PermissionSlug = `${PermissionResource}:${PermissionAction}`;
 
@@ -389,6 +397,14 @@ export const PERMISSIONS: Array<{
     description: "See and capture salaries and payment terms of contracts",
   },
   {
+    slug: "payroll:approve",
+    name: "Approve Payroll Onboarding",
+    resource: "payroll",
+    action: "approve",
+    description:
+      "Give Payroll's approval to a hiring (alta) after HR approved it",
+  },
+  {
     slug: "companies:read",
     name: "Read Companies",
     resource: "companies",
@@ -484,6 +500,7 @@ export const ROLES = [
       "mcp_connections:create",
       "mcp_connections:manage",
       "compensation:read",
+      "payroll:approve",
     ] satisfies PermissionSlug[],
   },
   {

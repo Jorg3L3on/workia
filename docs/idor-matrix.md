@@ -46,6 +46,10 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `action:mcp/hideConnectionAction`                   | ✅     | `src/test/idor/mcp.db.test.ts`                                                                         | `mcp_connections:create`    |
 | `action:mcp/revokeConnectionAction`                 | ✅     | `src/test/idor/mcp.db.test.ts`                                                                         | `mcp_connections:create`    |
 | `action:mcp/setWritesEnabledAction`                 | ✅     | `src/test/idor/mcp-writes.db.test.ts`                                                                  | `mcp_connections:manage`    |
+| `action:onboarding/approveOnboardingAction`         | ✅     | `src/test/idor/onboarding.db.test.ts`                                                                  | `people:update`             |
+| `action:onboarding/rejectOnboardingAction`          | ✅     | `src/test/idor/onboarding.db.test.ts`                                                                  | `payroll:approve`           |
+| `action:onboarding/startOnboardingAction`           | ✅     | `src/test/idor/onboarding.db.test.ts`                                                                  | `people:update`             |
+| `action:onboarding/updateOnboardingAction`          | ✅     | `src/test/idor/onboarding.db.test.ts`                                                                  | `people:update`             |
 | `action:people/assertPeopleListAccess`              | ⏭️     | Exento: guard de lectura sin datos (requirePeopleRead); la lista la cubre lib:people/listPeoplePage    | `people:read`               |
 | `action:people/createPersonAction`                  | ✅     | `src/test/idor/people.db.test.ts`                                                                      | `people:create`             |
 | `action:people/deletePersonAction`                  | ✅     | `src/test/idor/people.db.test.ts`                                                                      | `people:delete`             |
@@ -189,6 +193,13 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `lib:mcp/idempotency/reserveIdempotencyKey`   | ✅     | `src/test/idor/mcp-writes.db.test.ts`         | —       |
 | `lib:mcp/settings/getMcpSettings`             | ✅     | `src/test/idor/mcp-writes.db.test.ts`         | —       |
 | `lib:mcp/settings/setMcpWritesEnabled`        | ✅     | `src/test/idor/mcp-writes.db.test.ts`         | —       |
+| `lib:onboarding/approveOnboardingStep`        | ✅     | `src/test/idor/onboarding.db.test.ts`         | —       |
+| `lib:onboarding/getOnboardingById`            | ✅     | `src/test/idor/onboarding.db.test.ts`         | —       |
+| `lib:onboarding/getOnboardingByPerson`        | ✅     | `src/test/idor/onboarding.db.test.ts`         | —       |
+| `lib:onboarding/listOnboardings`              | ✅     | `src/test/idor/onboarding.db.test.ts`         | —       |
+| `lib:onboarding/rejectOnboarding`             | ✅     | `src/test/idor/onboarding.db.test.ts`         | —       |
+| `lib:onboarding/startOnboarding`              | ✅     | `src/test/idor/onboarding.db.test.ts`         | —       |
+| `lib:onboarding/updateOnboarding`             | ✅     | `src/test/idor/onboarding.db.test.ts`         | —       |
 | `lib:people/countActivePeople`                | ✅     | `src/test/idor/people.db.test.ts`             | —       |
 | `lib:people/countActivePeopleInPosition`      | ✅     | `src/test/idor/mcp-write-tools.db.test.ts`    | —       |
 | `lib:people/countPeopleByStatus`              | ✅     | `src/test/idor/people.db.test.ts`             | —       |
@@ -241,6 +252,7 @@ Una conexión de la empresa B llama cada herramienta con ids de la empresa A: la
 
 | Superficie                          | Estado | Prueba                                     | Permiso                   |
 | ----------------------------------- | ------ | ------------------------------------------ | ------------------------- |
+| `mcp:approve_onboarding_step`       | ✅     | `src/test/idor/mcp-write-tools.db.test.ts` | `people:update`           |
 | `mcp:assign_asset`                  | ✅     | `src/test/idor/mcp-write-tools.db.test.ts` | `assets:update`           |
 | `mcp:create_catalog_item`           | ✅     | `src/test/idor/mcp-write-tools.db.test.ts` | `positions:create`        |
 | `mcp:create_person`                 | ✅     | `src/test/idor/mcp-write-tools.db.test.ts` | `people:create`           |
@@ -248,6 +260,7 @@ Una conexión de la empresa B llama cada herramienta con ids de la empresa A: la
 | `mcp:fetch`                         | ✅     | `src/test/idor/mcp-tools.db.test.ts`       | `people:read`             |
 | `mcp:get_asset`                     | ✅     | `src/test/idor/mcp-tools.db.test.ts`       | `assets:read`             |
 | `mcp:get_contract`                  | ✅     | `src/test/idor/mcp-tools.db.test.ts`       | `contracts:read`          |
+| `mcp:get_onboarding`                | ✅     | `src/test/idor/mcp-write-tools.db.test.ts` | `people:read`             |
 | `mcp:get_person`                    | ✅     | `src/test/idor/mcp-tools.db.test.ts`       | `people:read`             |
 | `mcp:get_seniority_certificate`     | ✅     | `src/test/idor/mcp-tools.db.test.ts`       | `contracts:read`          |
 | `mcp:issue_contract`                | ✅     | `src/test/idor/mcp-write-tools.db.test.ts` | `contracts:create`        |
@@ -271,6 +284,7 @@ Una conexión de la empresa B llama cada herramienta con ids de la empresa A: la
 | `mcp:return_asset`                  | ✅     | `src/test/idor/mcp-write-tools.db.test.ts` | `assets:update`           |
 | `mcp:search`                        | ✅     | `src/test/idor/mcp-tools.db.test.ts`       | `people:read`             |
 | `mcp:set_person_status`             | ✅     | `src/test/idor/mcp-write-tools.db.test.ts` | `people:update`           |
+| `mcp:start_onboarding`              | ✅     | `src/test/idor/mcp-write-tools.db.test.ts` | `people:update`           |
 | `mcp:unlink_position_activity`      | ✅     | `src/test/idor/mcp-write-tools.db.test.ts` | `positions:update`        |
 | `mcp:update_person`                 | ✅     | `src/test/idor/mcp-write-tools.db.test.ts` | `people:update`           |
 | `mcp:update_person_schedule`        | ✅     | `src/test/idor/mcp-write-tools.db.test.ts` | `people:update`           |

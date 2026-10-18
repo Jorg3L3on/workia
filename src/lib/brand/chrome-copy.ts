@@ -32,6 +32,7 @@ export const pageTitles = {
   nuevaPlantilla: "Nueva plantilla",
   plantilla: "Plantilla",
   resguardo: "Resguardo",
+  altas: "Altas",
   nuevoActivo: "Nuevo activo",
   activo: "Activo",
   catalogo: "Catálogo",
