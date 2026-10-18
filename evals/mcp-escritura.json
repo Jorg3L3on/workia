@@ -1,0 +1,238 @@
+{
+  "version": 1,
+  "plania": "WRK-I1-8",
+  "descripcion": "Evals de escritura del conector MCP (Fases 2 y 3): frases reales de RRHH en español con la herramienta que debería usar Grok Bot y lo que debe pasar. Toda escritura responde primero una vista previa y sólo se hace con confirmation_token.",
+  "metas": {
+    "tool_correcta": ">= 90 % de las frases de escritura (cuenta como correcta una de «alternativas»)",
+    "vista_previa_primero": "100 %: ninguna escritura sin confirmation_token de una vista previa",
+    "confirmacion_explicita": "100 %: el asistente pide confirmación a la persona antes de repetir con el token",
+    "rechazos_correctos": "100 % de las frases de rechazo terminan en el código esperado sin escribir",
+    "pii_sin_scope": "0 capturas de RFC, CURP, NSS, datos México, Infonavit o Fonacot sin el scope pii",
+    "escrituras_desde_chatgpt": "100 % terminan en FORBIDDEN_SCOPE o en un mensaje que manda a Grok Bot o a la app"
+  },
+  "frases": [
+    {
+      "id": "E01",
+      "frase": "Da de alta a Mariana López Ruiz, ingresa el 1 de noviembre como Cajera en Sucursal Centro",
+      "tipo": "escritura",
+      "tool": "create_person",
+      "previa": ["list_positions", "list_sites"]
+    },
+    {
+      "id": "E02",
+      "frase": "Cambia el teléfono de Ana Demo a 961 123 4567",
+      "tipo": "escritura",
+      "tool": "update_person",
+      "previa": ["search", "list_people"]
+    },
+    {
+      "id": "E03",
+      "frase": "Da de baja a Luis Demo a partir de hoy",
+      "tipo": "escritura",
+      "tool": "set_person_status",
+      "args": {
+        "status": "baja"
+      },
+      "espera": "La vista previa advierte el contrato vigente y los activos en resguardo"
+    },
+    {
+      "id": "E04",
+      "frase": "Ana trabaja de lunes a viernes de 8 a 5 con comida de 1 a 2, y sábados de 8 a 1; descansa el domingo",
+      "tipo": "escritura",
+      "tool": "update_person_schedule_blocks",
+      "espera": "Vista previa: «L–V 08:00–17:00 (comida 13:00–14:00) · Sáb 08:00–13:00 · Descanso dom»"
+    },
+    {
+      "id": "E05",
+      "frase": "Emite el contrato determinado de Mariana del 1 de noviembre al 31 de enero con la plantilla oficial",
+      "tipo": "escritura",
+      "tool": "issue_contract",
+      "previa": ["list_contract_templates", "preview_contract"]
+    },
+    {
+      "id": "E06",
+      "frase": "Emite su contrato con salario diario de 450, quincenal por transferencia",
+      "tipo": "escritura",
+      "tool": "issue_contract",
+      "args": {
+        "compensacion": {
+          "salario_diario": 450,
+          "forma_pago": "transferencia",
+          "periodicidad": "quincenal"
+        }
+      },
+      "espera": "Sólo con el scope pii y compensation:read; sin ellos FORBIDDEN_SCOPE o FORBIDDEN_RBAC"
+    },
+    {
+      "id": "E07",
+      "frase": "Renueva por tiempo indeterminado el contrato de Sofía",
+      "tipo": "escritura",
+      "tool": "decide_contract_renewal",
+      "args": {
+        "decision": "renovar_indeterminado"
+      },
+      "previa": ["list_renewal_tray"],
+      "espera": "La respuesta dice que la constancia de antigüedad está disponible"
+    },
+    {
+      "id": "E08",
+      "frase": "Renueva a Laura tres meses más y súbela a Supervisora",
+      "tipo": "escritura",
+      "tool": "decide_contract_renewal",
+      "args": {
+        "decision": "renovar_determinado"
+      },
+      "previa": ["list_positions"]
+    },
+    {
+      "id": "E09",
+      "frase": "No le renovamos a Patricia porque no aprobó la evaluación",
+      "tipo": "escritura",
+      "tool": "decide_contract_renewal",
+      "args": {
+        "decision": "no_renovar",
+        "motivo": "No aprobó la evaluación"
+      }
+    },
+    {
+      "id": "E10",
+      "frase": "No le renueves a Roberto",
+      "tipo": "escritura",
+      "tool": "decide_contract_renewal",
+      "espera": "El asistente pide el motivo antes de llamar; si llama sin él, VALIDATION"
+    },
+    {
+      "id": "E11",
+      "frase": "Registra la laptop Dell con serie LT-0457",
+      "tipo": "escritura",
+      "tool": "register_asset"
+    },
+    {
+      "id": "E12",
+      "frase": "Entrégale la moto M-03 a Fernando",
+      "tipo": "escritura",
+      "tool": "assign_asset",
+      "previa": ["list_assets", "search"]
+    },
+    {
+      "id": "E13",
+      "frase": "Elena devolvió la laptop LT-0457 con la pantalla rayada",
+      "tipo": "escritura",
+      "tool": "return_asset"
+    },
+    {
+      "id": "E14",
+      "frase": "Crea el puesto Auxiliar de almacén en el área de Operaciones",
+      "tipo": "escritura",
+      "tool": "create_catalog_item",
+      "args": {
+        "kind": "position"
+      }
+    },
+    {
+      "id": "E15",
+      "frase": "Agrega la actividad Inventario semanal al puesto de Cajera",
+      "tipo": "escritura",
+      "tool": "link_position_activity"
+    },
+    {
+      "id": "E16",
+      "frase": "Quita Arqueo de caja de las actividades del Auxiliar",
+      "tipo": "escritura",
+      "tool": "unlink_position_activity",
+      "espera": "La vista previa avisa cuántas personas tienen ese puesto"
+    },
+    {
+      "id": "E17",
+      "frase": "Inicia el alta de Mariana; ya entregó INE, CURP, comprobante de domicilio y NSS",
+      "tipo": "escritura",
+      "tool": "start_onboarding",
+      "espera": "La vista previa avisa lo que falta del checklist"
+    },
+    {
+      "id": "E18",
+      "frase": "Aprueba el alta de Mariana de parte de RH",
+      "tipo": "escritura",
+      "tool": "approve_onboarding_step",
+      "previa": ["get_onboarding"]
+    },
+    {
+      "id": "E19",
+      "frase": "Ahora apruébala también de Nóminas",
+      "tipo": "rechazo",
+      "tool": "approve_onboarding_step",
+      "codigo": "CONFLICT",
+      "espera": "Quien aprobó RH no puede aprobar Nóminas: lo dice y no escribe"
+    },
+    {
+      "id": "E20",
+      "frase": "Guarda el RFC de Mariana: LORM900101AB1",
+      "tipo": "rechazo",
+      "tool": "update_person",
+      "codigo": "FORBIDDEN_SCOPE",
+      "conexion": "Grok Bot sin pii",
+      "espera": "Sin el scope pii no captura identificadores"
+    },
+    {
+      "id": "E21",
+      "frase": "Borra el expediente de Luis Demo",
+      "tipo": "rechazo",
+      "tool": null,
+      "espera": "No hay herramienta de borrado (D-07): el asistente manda a la app"
+    },
+    {
+      "id": "E22",
+      "frase": "Emite el contrato de Ana aunque ya tenga uno vigente",
+      "tipo": "rechazo",
+      "tool": "issue_contract",
+      "codigo": "CONFLICT"
+    },
+    {
+      "id": "E23",
+      "frase": "Renueva el contrato de Sofía",
+      "tipo": "rechazo",
+      "tool": "decide_contract_renewal",
+      "codigo": "FORBIDDEN_SCOPE",
+      "conexion": "ChatGPT",
+      "espera": "Desde ChatGPT ninguna escritura: manda a Grok Bot o a la app"
+    },
+    {
+      "id": "E24",
+      "frase": "Da de alta a Mariana López",
+      "tipo": "rechazo",
+      "tool": "create_person",
+      "codigo": "WRITES_DISABLED",
+      "conexion": "Empresa con escrituras apagadas",
+      "espera": "Explica que un super_admin las enciende en Conexiones"
+    },
+    {
+      "id": "E25",
+      "frase": "Repite la última alta, se cortó la conexión",
+      "tipo": "escritura",
+      "tool": "create_person",
+      "espera": "Con la misma idempotency_key y argumentos responde lo mismo sin duplicar"
+    },
+    {
+      "id": "E26",
+      "frase": "Ponle a Elena entrada a las 9 y salida a las 6",
+      "tipo": "escritura",
+      "tool": "update_person_schedule_blocks",
+      "alternativas": ["update_person_schedule"],
+      "espera": "Mejor por bloques (lunes a viernes); la herramienta simple está obsoleta pero sigue funcionando"
+    },
+    {
+      "id": "E27",
+      "frase": "Renueva el contrato de Laura igual que el anterior, otros 6 meses",
+      "tipo": "escritura",
+      "tool": "decide_contract_renewal",
+      "alternativas": ["renew_contract"]
+    },
+    {
+      "id": "E28",
+      "frase": "Marca que no se renueva el contrato de Roberto: cierre de la sucursal",
+      "tipo": "escritura",
+      "tool": "decide_contract_renewal",
+      "alternativas": ["mark_contract_no_renew"]
+    }
+  ]
+}
