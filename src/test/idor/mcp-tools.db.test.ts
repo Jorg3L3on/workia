@@ -150,7 +150,7 @@ beforeAll(async () => {
 });
 
 describe("protocol surface", () => {
-  it("lists the 18 read tools, the 4 resources and the 3 prompts", async () => {
+  it("lists the 31 tools, the 4 resources and the 3 prompts", async () => {
     const tools = (await rpc(tokens.aRead, "tools/list")).result.tools;
     const resources = (await rpc(tokens.aRead, "resources/list")).result
       .resources;
@@ -158,7 +158,8 @@ describe("protocol surface", () => {
       .result.resourceTemplates;
     const prompts = (await rpc(tokens.aRead, "prompts/list")).result.prompts;
 
-    expect(tools).toHaveLength(18);
+    // 18 reads (phase 1) + 13 writes (phase 2).
+    expect(tools).toHaveLength(31);
     expect(resources.map((r: { uri: string }) => r.uri).sort()).toEqual([
       "workia://catalogo",
       "workia://glosario",
@@ -790,10 +791,14 @@ describe("PII sweep and output contracts", () => {
     const args = sweepArgs() as Record<string, Record<string, unknown>>;
 
     expect(Object.keys(args).sort()).toEqual(
-      WORKIA_TOOLS.map((tool) => tool.name).sort(),
+      WORKIA_TOOLS.filter((tool) => tool.kind === "read")
+        .map((tool) => tool.name)
+        .sort(),
     );
 
-    for (const tool of WORKIA_TOOLS) {
+    for (const tool of WORKIA_TOOLS.filter(
+      (candidate) => candidate.kind === "read",
+    )) {
       const result = await call(tokens.aAudit, tool.name, args[tool.name]);
       const body = JSON.stringify(result);
 

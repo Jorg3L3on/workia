@@ -119,6 +119,15 @@ const ConexionesPage = async ({ searchParams }: ConexionesPageProps) => {
         </p>
       ) : null}
 
+      {canManage ? (
+        <section className="workia-pass-card p-5">
+          <WritesSwitch
+            enabled={settings.writesEnabled}
+            canToggle={session.membership.roleSlug === "super_admin"}
+          />
+        </section>
+      ) : null}
+
       {canCreate ? (
         <section
           className="workia-pass-card space-y-4 p-5"

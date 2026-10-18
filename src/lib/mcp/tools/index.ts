@@ -1,6 +1,11 @@
 import type { WorkiaTool } from "../run-tool";
 
 import { getAssetTool, listAssetsTool } from "./assets";
+import {
+  assignAssetTool,
+  registerAssetTool,
+  returnAssetTool,
+} from "./assets-writes";
 import { listAuditEventsTool } from "./audit";
 import {
   listActivitiesTool,
@@ -9,6 +14,11 @@ import {
   listSitesTool,
 } from "./catalog";
 import {
+  createCatalogItemTool,
+  linkPositionActivityTool,
+  unlinkPositionActivityTool,
+} from "./catalog-writes";
+import {
   getContractTool,
   listContractsTool,
   listContractTemplatesTool,
@@ -16,14 +26,25 @@ import {
   listRenewalTrayTool,
   previewContractTool,
 } from "./contracts";
+import {
+  issueContractTool,
+  markContractNoRenewTool,
+  renewContractTool,
+} from "./contracts-writes";
 import { getPersonTool, listPeopleTool } from "./people";
+import {
+  createPersonTool,
+  setPersonStatusTool,
+  updatePersonScheduleTool,
+  updatePersonTool,
+} from "./people-writes";
 import { fetchTool, searchTool } from "./search";
 import { whoamiTool } from "./whoami";
 
 /**
- * Every tool of the connector, in tools/list order. Phase 1: the 18 read
- * tools. A tool must declare its permission, scope, annotations and output
- * schema (mcp-coverage test).
+ * Every tool of the connector, in tools/list order: the 18 reads of phase 1
+ * and the 13 writes of phase 2. A tool must declare its permission, scope,
+ * annotations and output schema; a write also its preview (mcp-coverage).
  */
 export const WORKIA_TOOLS: WorkiaTool[] = [
   whoamiTool,
@@ -44,4 +65,18 @@ export const WORKIA_TOOLS: WorkiaTool[] = [
   listAssetsTool,
   getAssetTool,
   listAuditEventsTool,
+  // Phase 2: writes (preview + confirmation + idempotency).
+  createPersonTool,
+  updatePersonTool,
+  setPersonStatusTool,
+  updatePersonScheduleTool,
+  createCatalogItemTool,
+  linkPositionActivityTool,
+  unlinkPositionActivityTool,
+  issueContractTool,
+  renewContractTool,
+  markContractNoRenewTool,
+  registerAssetTool,
+  assignAssetTool,
+  returnAssetTool,
 ];

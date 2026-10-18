@@ -930,3 +930,24 @@ export const listPeopleKeyset = async (
     .orderBy(asc(people.apellidoPaterno), asc(people.id))
     .limit(options.limit + 1);
 };
+
+/** Active people (not Borrados) holding a position, for impact warnings. */
+export const countActivePeopleInPosition = async (
+  companyId: string,
+  positionId: string,
+) => {
+  const [row] = await tdb(companyId)
+    .select({ total: count() })
+    .from(people)
+    .where(
+      withTenant(
+        people,
+        companyId,
+        eq(people.positionId, positionId),
+        eq(people.status, "activa"),
+        isNull(people.deletedAt),
+      ),
+    );
+
+  return row?.total ?? 0;
+};

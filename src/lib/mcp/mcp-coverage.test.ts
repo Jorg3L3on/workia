@@ -31,15 +31,60 @@ const PHASE_1_READ_TOOLS = [
   "list_audit_events",
 ];
 
+const PHASE_2_WRITE_TOOLS = [
+  "create_person",
+  "update_person",
+  "set_person_status",
+  "update_person_schedule",
+  "create_catalog_item",
+  "link_position_activity",
+  "unlink_position_activity",
+  "issue_contract",
+  "renew_contract",
+  "mark_contract_no_renew",
+  "register_asset",
+  "assign_asset",
+  "return_asset",
+];
+
 const jsonSchemaOf = (schema: z.ZodType) =>
   JSON.stringify(z.toJSONSchema(schema, { target: "draft-2020-12" }));
 
 describe("MCP tool registry coverage", () => {
-  it("exposes exactly the 18 read tools of phase 1, none of them a write", () => {
-    expect(WORKIA_TOOLS.map((tool) => tool.name).sort()).toEqual(
-      [...PHASE_1_READ_TOOLS].sort(),
+  it("exposes the 18 reads of phase 1 and the 13 writes of phase 2", () => {
+    const names = (kind: string) =>
+      WORKIA_TOOLS.filter((tool) => tool.kind === kind)
+        .map((tool) => tool.name)
+        .sort();
+
+    expect(names("read")).toEqual([...PHASE_1_READ_TOOLS].sort());
+    expect(names("write")).toEqual([...PHASE_2_WRITE_TOOLS].sort());
+  });
+
+  it("gives every write a preview, write annotations, a write scope and an idempotency key", () => {
+    for (const tool of WORKIA_TOOLS.filter(
+      (candidate) => candidate.kind === "write",
+    )) {
+      expect(typeof tool.preview, tool.name).toBe("function");
+      expect(tool.annotations, tool.name).toMatchObject({
+        readOnlyHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      });
+      expect(tool.scope, tool.name).toMatch(/^write:/);
+      expect(Object.keys(tool.input.shape), tool.name).toContain(
+        "idempotency_key",
+      );
+      expect(Object.keys(tool.input.shape), tool.name).toContain(
+        "confirmation_token",
+      );
+    }
+  });
+
+  it("never exposes a delete (D-07)", () => {
+    expect(WORKIA_TOOLS.map((tool) => tool.name).join(" ")).not.toMatch(
+      /delete|borrar|remove|eliminar/,
     );
-    expect(WORKIA_TOOLS.every((tool) => tool.kind === "read")).toBe(true);
   });
 
   it.each(WORKIA_TOOLS.map((tool) => [tool.name, tool]))(
@@ -50,7 +95,7 @@ describe("MCP tool registry coverage", () => {
       );
       expect(MCP_SCOPES).toContain(tool.scope);
       expect(tool.annotations).toMatchObject({
-        readOnlyHint: true,
+        readOnlyHint: tool.kind === "read",
         openWorldHint: false,
       });
       expect(tool.description.length).toBeGreaterThan(30);

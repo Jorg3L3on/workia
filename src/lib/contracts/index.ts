@@ -624,6 +624,8 @@ export const markContractNoRenew = async (
   companyId: string,
   contractId: string,
   actorUserId: string,
+  /** Why not; kept in the audit summary until P5 gives it a column. */
+  motivo?: string,
 ) => {
   const existing = await getContractById(companyId, contractId);
 
@@ -644,7 +646,9 @@ export const markContractNoRenew = async (
     resourceId: contractId,
     action: "no_renew",
     payload: {
-      summary: "Decisión: no renovar contrato",
+      summary: motivo?.trim()
+        ? `Decisión: no renovar contrato · Motivo: ${motivo.trim()}`
+        : "Decisión: no renovar contrato",
       before: snapshotContract(existing),
       after: snapshotContract(updated),
     },

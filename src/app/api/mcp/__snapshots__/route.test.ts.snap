@@ -3053,5 +3053,2417 @@ exports[`/api/mcp transport > keeps the tools/list contract (snapshot) 1`] = `
     },
     "title": "Bitácora de auditoría",
   },
+  {
+    "_meta": {
+      "securitySchemes": [
+        {
+          "scopes": [
+            "write:people",
+          ],
+          "type": "oauth2",
+        },
+      ],
+    },
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": false,
+      "title": "Alta de persona",
+    },
+    "description": "Da de alta un expediente con las mismas reglas que la app (D-04). RFC, CURP y NSS sólo con el scope pii. CONFLICT si un RFC, CURP o NSS ya es de otra persona activa. Primero responde una vista previa; repite con confirmation_token para hacerlo.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "apellido_materno": {
+          "maxLength": 120,
+          "type": "string",
+        },
+        "apellido_paterno": {
+          "maxLength": 120,
+          "minLength": 1,
+          "type": "string",
+        },
+        "area_id": {
+          "description": "Área.",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+          "type": "string",
+        },
+        "confirmation_token": {
+          "description": "Token de la vista previa. Sin él la herramienta sólo muestra qué haría; con él, lo hace. Vence en 10 minutos.",
+          "maxLength": 300,
+          "type": "string",
+        },
+        "curp": {
+          "description": "Sólo con el scope pii.",
+          "maxLength": 18,
+          "type": "string",
+        },
+        "email": {
+          "format": "email",
+          "maxLength": 254,
+          "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$",
+          "type": "string",
+        },
+        "fecha_ingreso": {
+          "description": "Fecha de ingreso (aaaa-mm-dd).",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "type": "string",
+        },
+        "fecha_nacimiento": {
+          "description": "Fecha de nacimiento (aaaa-mm-dd).",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "type": "string",
+        },
+        "idempotency_key": {
+          "description": "Llave única de esta operación (8–80 caracteres). Repetirla con los mismos datos devuelve el mismo resultado sin duplicar.",
+          "maxLength": 80,
+          "minLength": 8,
+          "type": "string",
+        },
+        "manager_id": {
+          "description": "Jefe directo.",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+          "type": "string",
+        },
+        "nombres": {
+          "maxLength": 120,
+          "minLength": 1,
+          "type": "string",
+        },
+        "nss": {
+          "description": "Sólo con el scope pii.",
+          "maxLength": 11,
+          "type": "string",
+        },
+        "position_id": {
+          "description": "Puesto.",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+          "type": "string",
+        },
+        "rfc": {
+          "description": "Sólo con el scope pii.",
+          "maxLength": 13,
+          "type": "string",
+        },
+        "site_id": {
+          "description": "Sucursal o corporativo.",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+          "type": "string",
+        },
+        "telefono": {
+          "maxLength": 40,
+          "type": "string",
+        },
+      },
+      "required": [
+        "nombres",
+        "apellido_paterno",
+        "idempotency_key",
+      ],
+      "type": "object",
+    },
+    "name": "create_person",
+    "outputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "audit_event_ids": {
+          "items": {
+            "type": "string",
+          },
+          "type": "array",
+        },
+        "code": {
+          "const": "CONFIRMATION_REQUIRED",
+          "type": "string",
+        },
+        "confirmation_token": {
+          "type": "string",
+        },
+        "expires_at": {
+          "type": "string",
+        },
+        "expires_at_mx": {
+          "type": "string",
+        },
+        "person": {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "string",
+            },
+            "nombre_completo": {
+              "type": "string",
+            },
+            "status": {
+              "type": "string",
+            },
+            "url": {
+              "type": "string",
+            },
+          },
+          "required": [
+            "id",
+            "nombre_completo",
+            "status",
+            "url",
+          ],
+          "type": "object",
+        },
+        "preview": {
+          "additionalProperties": false,
+          "properties": {
+            "details": {
+              "additionalProperties": {},
+              "propertyNames": {
+                "type": "string",
+              },
+              "type": "object",
+            },
+            "summary": {
+              "type": "string",
+            },
+            "warnings": {
+              "items": {
+                "type": "string",
+              },
+              "type": "array",
+            },
+          },
+          "required": [
+            "summary",
+          ],
+          "type": "object",
+        },
+        "status": {
+          "description": "preview: nada se escribió todavía; done: el cambio quedó hecho.",
+          "enum": [
+            "preview",
+            "done",
+          ],
+          "type": "string",
+        },
+      },
+      "required": [
+        "status",
+      ],
+      "type": "object",
+    },
+    "title": "Alta de persona",
+  },
+  {
+    "_meta": {
+      "securitySchemes": [
+        {
+          "scopes": [
+            "write:people",
+          ],
+          "type": "oauth2",
+        },
+      ],
+    },
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": false,
+      "title": "Editar persona",
+    },
+    "description": "Edita sólo los campos enviados en changes (null borra el dato); el resto del expediente y el horario no cambian. No cambia el estatus (usa set_person_status). RFC, CURP y NSS sólo con el scope pii. Primero responde una vista previa con el antes y después; repite con confirmation_token para hacerlo.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "changes": {
+          "additionalProperties": false,
+          "description": "Sólo los campos que cambian; null borra el dato. El estatus se cambia con set_person_status.",
+          "properties": {
+            "apellido_materno": {
+              "anyOf": [
+                {
+                  "maxLength": 120,
+                  "type": "string",
+                },
+                {
+                  "type": "null",
+                },
+              ],
+            },
+            "apellido_paterno": {
+              "maxLength": 120,
+              "minLength": 1,
+              "type": "string",
+            },
+            "area_id": {
+              "anyOf": [
+                {
+                  "description": "Área.",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                  "type": "string",
+                },
+                {
+                  "type": "null",
+                },
+              ],
+            },
+            "curp": {
+              "anyOf": [
+                {
+                  "maxLength": 18,
+                  "type": "string",
+                },
+                {
+                  "type": "null",
+                },
+              ],
+            },
+            "email": {
+              "anyOf": [
+                {
+                  "format": "email",
+                  "maxLength": 254,
+                  "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$",
+                  "type": "string",
+                },
+                {
+                  "type": "null",
+                },
+              ],
+            },
+            "fecha_ingreso": {
+              "anyOf": [
+                {
+                  "description": "Fecha de ingreso (aaaa-mm-dd).",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                  "type": "string",
+                },
+                {
+                  "type": "null",
+                },
+              ],
+            },
+            "manager_id": {
+              "anyOf": [
+                {
+                  "description": "Jefe directo.",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                  "type": "string",
+                },
+                {
+                  "type": "null",
+                },
+              ],
+            },
+            "nombres": {
+              "maxLength": 120,
+              "minLength": 1,
+              "type": "string",
+            },
+            "nss": {
+              "anyOf": [
+                {
+                  "maxLength": 11,
+                  "type": "string",
+                },
+                {
+                  "type": "null",
+                },
+              ],
+            },
+            "position_id": {
+              "anyOf": [
+                {
+                  "description": "Puesto.",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                  "type": "string",
+                },
+                {
+                  "type": "null",
+                },
+              ],
+            },
+            "rfc": {
+              "anyOf": [
+                {
+                  "maxLength": 13,
+                  "type": "string",
+                },
+                {
+                  "type": "null",
+                },
+              ],
+            },
+            "site_id": {
+              "anyOf": [
+                {
+                  "description": "Sucursal o corporativo.",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                  "type": "string",
+                },
+                {
+                  "type": "null",
+                },
+              ],
+            },
+            "telefono": {
+              "anyOf": [
+                {
+                  "maxLength": 40,
+                  "type": "string",
+                },
+                {
+                  "type": "null",
+                },
+              ],
+            },
+          },
+          "type": "object",
+        },
+        "confirmation_token": {
+          "description": "Token de la vista previa. Sin él la herramienta sólo muestra qué haría; con él, lo hace. Vence en 10 minutos.",
+          "maxLength": 300,
+          "type": "string",
+        },
+        "idempotency_key": {
+          "description": "Llave única de esta operación (8–80 caracteres). Repetirla con los mismos datos devuelve el mismo resultado sin duplicar.",
+          "maxLength": 80,
+          "minLength": 8,
+          "type": "string",
+        },
+        "person_id": {
+          "description": "Persona.",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+          "type": "string",
+        },
+      },
+      "required": [
+        "person_id",
+        "changes",
+        "idempotency_key",
+      ],
+      "type": "object",
+    },
+    "name": "update_person",
+    "outputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "audit_event_ids": {
+          "items": {
+            "type": "string",
+          },
+          "type": "array",
+        },
+        "changes": {
+          "additionalProperties": {
+            "additionalProperties": false,
+            "properties": {
+              "from": {},
+              "to": {},
+            },
+            "required": [
+              "from",
+              "to",
+            ],
+            "type": "object",
+          },
+          "propertyNames": {
+            "type": "string",
+          },
+          "type": "object",
+        },
+        "code": {
+          "const": "CONFIRMATION_REQUIRED",
+          "type": "string",
+        },
+        "confirmation_token": {
+          "type": "string",
+        },
+        "expires_at": {
+          "type": "string",
+        },
+        "expires_at_mx": {
+          "type": "string",
+        },
+        "person": {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "string",
+            },
+            "nombre_completo": {
+              "type": "string",
+            },
+            "status": {
+              "type": "string",
+            },
+            "url": {
+              "type": "string",
+            },
+          },
+          "required": [
+            "id",
+            "nombre_completo",
+            "status",
+            "url",
+          ],
+          "type": "object",
+        },
+        "preview": {
+          "additionalProperties": false,
+          "properties": {
+            "details": {
+              "additionalProperties": {},
+              "propertyNames": {
+                "type": "string",
+              },
+              "type": "object",
+            },
+            "summary": {
+              "type": "string",
+            },
+            "warnings": {
+              "items": {
+                "type": "string",
+              },
+              "type": "array",
+            },
+          },
+          "required": [
+            "summary",
+          ],
+          "type": "object",
+        },
+        "status": {
+          "description": "preview: nada se escribió todavía; done: el cambio quedó hecho.",
+          "enum": [
+            "preview",
+            "done",
+          ],
+          "type": "string",
+        },
+      },
+      "required": [
+        "status",
+      ],
+      "type": "object",
+    },
+    "title": "Editar persona",
+  },
+  {
+    "_meta": {
+      "securitySchemes": [
+        {
+          "scopes": [
+            "write:people",
+          ],
+          "type": "oauth2",
+        },
+      ],
+    },
+    "annotations": {
+      "destructiveHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": false,
+      "title": "Baja o reactivación",
+    },
+    "description": "Da de baja laboral o reactiva a una persona (estatus activa | baja). No es borrar: el expediente sigue ahí. La vista previa avisa si tiene contrato vigente o activos en resguardo. Primero responde una vista previa; repite con confirmation_token para hacerlo.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "confirmation_token": {
+          "description": "Token de la vista previa. Sin él la herramienta sólo muestra qué haría; con él, lo hace. Vence en 10 minutos.",
+          "maxLength": 300,
+          "type": "string",
+        },
+        "idempotency_key": {
+          "description": "Llave única de esta operación (8–80 caracteres). Repetirla con los mismos datos devuelve el mismo resultado sin duplicar.",
+          "maxLength": 80,
+          "minLength": 8,
+          "type": "string",
+        },
+        "motivo": {
+          "maxLength": 300,
+          "type": "string",
+        },
+        "person_id": {
+          "description": "Persona.",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+          "type": "string",
+        },
+        "status": {
+          "enum": [
+            "activa",
+            "baja",
+          ],
+          "type": "string",
+        },
+      },
+      "required": [
+        "person_id",
+        "status",
+        "idempotency_key",
+      ],
+      "type": "object",
+    },
+    "name": "set_person_status",
+    "outputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "audit_event_ids": {
+          "items": {
+            "type": "string",
+          },
+          "type": "array",
+        },
+        "code": {
+          "const": "CONFIRMATION_REQUIRED",
+          "type": "string",
+        },
+        "confirmation_token": {
+          "type": "string",
+        },
+        "expires_at": {
+          "type": "string",
+        },
+        "expires_at_mx": {
+          "type": "string",
+        },
+        "person": {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "string",
+            },
+            "nombre_completo": {
+              "type": "string",
+            },
+            "status": {
+              "type": "string",
+            },
+            "url": {
+              "type": "string",
+            },
+          },
+          "required": [
+            "id",
+            "nombre_completo",
+            "status",
+            "url",
+          ],
+          "type": "object",
+        },
+        "preview": {
+          "additionalProperties": false,
+          "properties": {
+            "details": {
+              "additionalProperties": {},
+              "propertyNames": {
+                "type": "string",
+              },
+              "type": "object",
+            },
+            "summary": {
+              "type": "string",
+            },
+            "warnings": {
+              "items": {
+                "type": "string",
+              },
+              "type": "array",
+            },
+          },
+          "required": [
+            "summary",
+          ],
+          "type": "object",
+        },
+        "status": {
+          "description": "preview: nada se escribió todavía; done: el cambio quedó hecho.",
+          "enum": [
+            "preview",
+            "done",
+          ],
+          "type": "string",
+        },
+        "warnings": {
+          "items": {
+            "type": "string",
+          },
+          "type": "array",
+        },
+      },
+      "required": [
+        "status",
+      ],
+      "type": "object",
+    },
+    "title": "Baja o reactivación",
+  },
+  {
+    "_meta": {
+      "securitySchemes": [
+        {
+          "scopes": [
+            "write:people",
+          ],
+          "type": "oauth2",
+        },
+      ],
+    },
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": false,
+      "title": "Cambiar horario",
+    },
+    "description": "Captura o cambia el horario de una persona (HH:mm). Los campos que no envíes quedan vacíos. No cambia contratos ya emitidos: conservan el horario con que se firmaron. Primero responde una vista previa; repite con confirmation_token para hacerlo.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "confirmation_token": {
+          "description": "Token de la vista previa. Sin él la herramienta sólo muestra qué haría; con él, lo hace. Vence en 10 minutos.",
+          "maxLength": 300,
+          "type": "string",
+        },
+        "entrada": {
+          "description": "Entrada.",
+          "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+          "type": "string",
+        },
+        "idempotency_key": {
+          "description": "Llave única de esta operación (8–80 caracteres). Repetirla con los mismos datos devuelve el mismo resultado sin duplicar.",
+          "maxLength": 80,
+          "minLength": 8,
+          "type": "string",
+        },
+        "person_id": {
+          "description": "Persona.",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+          "type": "string",
+        },
+        "regreso_comer": {
+          "description": "Regreso de comer.",
+          "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+          "type": "string",
+        },
+        "salida": {
+          "description": "Salida.",
+          "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+          "type": "string",
+        },
+        "salida_comer": {
+          "description": "Salida a comer.",
+          "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+          "type": "string",
+        },
+      },
+      "required": [
+        "person_id",
+        "idempotency_key",
+      ],
+      "type": "object",
+    },
+    "name": "update_person_schedule",
+    "outputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "audit_event_ids": {
+          "items": {
+            "type": "string",
+          },
+          "type": "array",
+        },
+        "code": {
+          "const": "CONFIRMATION_REQUIRED",
+          "type": "string",
+        },
+        "confirmation_token": {
+          "type": "string",
+        },
+        "expires_at": {
+          "type": "string",
+        },
+        "expires_at_mx": {
+          "type": "string",
+        },
+        "horario": {
+          "additionalProperties": false,
+          "properties": {
+            "entrada": {
+              "anyOf": [
+                {
+                  "type": "string",
+                },
+                {
+                  "type": "null",
+                },
+              ],
+            },
+            "regreso_comer": {
+              "anyOf": [
+                {
+                  "type": "string",
+                },
+                {
+                  "type": "null",
+                },
+              ],
+            },
+            "salida": {
+              "anyOf": [
+                {
+                  "type": "string",
+                },
+                {
+                  "type": "null",
+                },
+              ],
+            },
+            "salida_comer": {
+              "anyOf": [
+                {
+                  "type": "string",
+                },
+                {
+                  "type": "null",
+                },
+              ],
+            },
+          },
+          "required": [
+            "entrada",
+            "salida_comer",
+            "regreso_comer",
+            "salida",
+          ],
+          "type": "object",
+        },
+        "note": {
+          "type": "string",
+        },
+        "person": {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "string",
+            },
+            "nombre_completo": {
+              "type": "string",
+            },
+            "status": {
+              "type": "string",
+            },
+            "url": {
+              "type": "string",
+            },
+          },
+          "required": [
+            "id",
+            "nombre_completo",
+            "status",
+            "url",
+          ],
+          "type": "object",
+        },
+        "preview": {
+          "additionalProperties": false,
+          "properties": {
+            "details": {
+              "additionalProperties": {},
+              "propertyNames": {
+                "type": "string",
+              },
+              "type": "object",
+            },
+            "summary": {
+              "type": "string",
+            },
+            "warnings": {
+              "items": {
+                "type": "string",
+              },
+              "type": "array",
+            },
+          },
+          "required": [
+            "summary",
+          ],
+          "type": "object",
+        },
+        "status": {
+          "description": "preview: nada se escribió todavía; done: el cambio quedó hecho.",
+          "enum": [
+            "preview",
+            "done",
+          ],
+          "type": "string",
+        },
+      },
+      "required": [
+        "status",
+      ],
+      "type": "object",
+    },
+    "title": "Cambiar horario",
+  },
+  {
+    "_meta": {
+      "securitySchemes": [
+        {
+          "scopes": [
+            "write:catalog",
+          ],
+          "type": "oauth2",
+        },
+      ],
+    },
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": false,
+      "title": "Crear en el catálogo",
+    },
+    "description": "Crea un área, un puesto, una actividad o una ubicación (sucursal o corporativo). CONFLICT si ya existe uno con el mismo nombre (sin importar mayúsculas, acentos ni espacios). site_kind es obligatorio para kind=site. Primero responde una vista previa; repite con confirmation_token para hacerlo.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "area_id": {
+          "description": "Área del puesto (kind=position).",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+          "type": "string",
+        },
+        "confirmation_token": {
+          "description": "Token de la vista previa. Sin él la herramienta sólo muestra qué haría; con él, lo hace. Vence en 10 minutos.",
+          "maxLength": 300,
+          "type": "string",
+        },
+        "idempotency_key": {
+          "description": "Llave única de esta operación (8–80 caracteres). Repetirla con los mismos datos devuelve el mismo resultado sin duplicar.",
+          "maxLength": 80,
+          "minLength": 8,
+          "type": "string",
+        },
+        "kind": {
+          "enum": [
+            "area",
+            "position",
+            "activity",
+            "site",
+          ],
+          "type": "string",
+        },
+        "name": {
+          "maxLength": 120,
+          "minLength": 1,
+          "type": "string",
+        },
+        "parent_area_id": {
+          "description": "Área padre (kind=area).",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+          "type": "string",
+        },
+        "site_kind": {
+          "description": "Obligatorio para kind=site.",
+          "enum": [
+            "corporativo",
+            "sucursal",
+          ],
+          "type": "string",
+        },
+      },
+      "required": [
+        "kind",
+        "name",
+        "idempotency_key",
+      ],
+      "type": "object",
+    },
+    "name": "create_catalog_item",
+    "outputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "audit_event_ids": {
+          "items": {
+            "type": "string",
+          },
+          "type": "array",
+        },
+        "code": {
+          "const": "CONFIRMATION_REQUIRED",
+          "type": "string",
+        },
+        "confirmation_token": {
+          "type": "string",
+        },
+        "expires_at": {
+          "type": "string",
+        },
+        "expires_at_mx": {
+          "type": "string",
+        },
+        "item": {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "string",
+            },
+            "kind": {
+              "type": "string",
+            },
+            "name": {
+              "type": "string",
+            },
+          },
+          "required": [
+            "kind",
+            "id",
+            "name",
+          ],
+          "type": "object",
+        },
+        "preview": {
+          "additionalProperties": false,
+          "properties": {
+            "details": {
+              "additionalProperties": {},
+              "propertyNames": {
+                "type": "string",
+              },
+              "type": "object",
+            },
+            "summary": {
+              "type": "string",
+            },
+            "warnings": {
+              "items": {
+                "type": "string",
+              },
+              "type": "array",
+            },
+          },
+          "required": [
+            "summary",
+          ],
+          "type": "object",
+        },
+        "status": {
+          "description": "preview: nada se escribió todavía; done: el cambio quedó hecho.",
+          "enum": [
+            "preview",
+            "done",
+          ],
+          "type": "string",
+        },
+      },
+      "required": [
+        "status",
+      ],
+      "type": "object",
+    },
+    "title": "Crear en el catálogo",
+  },
+  {
+    "_meta": {
+      "securitySchemes": [
+        {
+          "scopes": [
+            "write:catalog",
+          ],
+          "type": "oauth2",
+        },
+      ],
+    },
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": false,
+      "title": "Asignar actividad a puesto",
+    },
+    "description": "Agrega una actividad a un puesto. Si ya la tenía no cambia nada. Primero responde una vista previa; repite con confirmation_token para hacerlo.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "activity_id": {
+          "description": "Actividad.",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+          "type": "string",
+        },
+        "confirmation_token": {
+          "description": "Token de la vista previa. Sin él la herramienta sólo muestra qué haría; con él, lo hace. Vence en 10 minutos.",
+          "maxLength": 300,
+          "type": "string",
+        },
+        "idempotency_key": {
+          "description": "Llave única de esta operación (8–80 caracteres). Repetirla con los mismos datos devuelve el mismo resultado sin duplicar.",
+          "maxLength": 80,
+          "minLength": 8,
+          "type": "string",
+        },
+        "position_id": {
+          "description": "Puesto.",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+          "type": "string",
+        },
+      },
+      "required": [
+        "position_id",
+        "activity_id",
+        "idempotency_key",
+      ],
+      "type": "object",
+    },
+    "name": "link_position_activity",
+    "outputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "audit_event_ids": {
+          "items": {
+            "type": "string",
+          },
+          "type": "array",
+        },
+        "changed": {
+          "type": "boolean",
+        },
+        "code": {
+          "const": "CONFIRMATION_REQUIRED",
+          "type": "string",
+        },
+        "confirmation_token": {
+          "type": "string",
+        },
+        "expires_at": {
+          "type": "string",
+        },
+        "expires_at_mx": {
+          "type": "string",
+        },
+        "position": {
+          "additionalProperties": false,
+          "properties": {
+            "activities": {
+              "items": {
+                "type": "string",
+              },
+              "type": "array",
+            },
+            "id": {
+              "type": "string",
+            },
+            "name": {
+              "type": "string",
+            },
+          },
+          "required": [
+            "id",
+            "name",
+            "activities",
+          ],
+          "type": "object",
+        },
+        "preview": {
+          "additionalProperties": false,
+          "properties": {
+            "details": {
+              "additionalProperties": {},
+              "propertyNames": {
+                "type": "string",
+              },
+              "type": "object",
+            },
+            "summary": {
+              "type": "string",
+            },
+            "warnings": {
+              "items": {
+                "type": "string",
+              },
+              "type": "array",
+            },
+          },
+          "required": [
+            "summary",
+          ],
+          "type": "object",
+        },
+        "status": {
+          "description": "preview: nada se escribió todavía; done: el cambio quedó hecho.",
+          "enum": [
+            "preview",
+            "done",
+          ],
+          "type": "string",
+        },
+      },
+      "required": [
+        "status",
+      ],
+      "type": "object",
+    },
+    "title": "Asignar actividad a puesto",
+  },
+  {
+    "_meta": {
+      "securitySchemes": [
+        {
+          "scopes": [
+            "write:catalog",
+          ],
+          "type": "oauth2",
+        },
+      ],
+    },
+    "annotations": {
+      "destructiveHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": false,
+      "title": "Quitar actividad de puesto",
+    },
+    "description": "Quita una actividad de un puesto y advierte cuántas personas activas tienen ese puesto. No borra la actividad del catálogo. Primero responde una vista previa; repite con confirmation_token para hacerlo.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "activity_id": {
+          "description": "Actividad.",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+          "type": "string",
+        },
+        "confirmation_token": {
+          "description": "Token de la vista previa. Sin él la herramienta sólo muestra qué haría; con él, lo hace. Vence en 10 minutos.",
+          "maxLength": 300,
+          "type": "string",
+        },
+        "idempotency_key": {
+          "description": "Llave única de esta operación (8–80 caracteres). Repetirla con los mismos datos devuelve el mismo resultado sin duplicar.",
+          "maxLength": 80,
+          "minLength": 8,
+          "type": "string",
+        },
+        "position_id": {
+          "description": "Puesto.",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+          "type": "string",
+        },
+      },
+      "required": [
+        "position_id",
+        "activity_id",
+        "idempotency_key",
+      ],
+      "type": "object",
+    },
+    "name": "unlink_position_activity",
+    "outputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "audit_event_ids": {
+          "items": {
+            "type": "string",
+          },
+          "type": "array",
+        },
+        "changed": {
+          "type": "boolean",
+        },
+        "code": {
+          "const": "CONFIRMATION_REQUIRED",
+          "type": "string",
+        },
+        "confirmation_token": {
+          "type": "string",
+        },
+        "expires_at": {
+          "type": "string",
+        },
+        "expires_at_mx": {
+          "type": "string",
+        },
+        "position": {
+          "additionalProperties": false,
+          "properties": {
+            "activities": {
+              "items": {
+                "type": "string",
+              },
+              "type": "array",
+            },
+            "id": {
+              "type": "string",
+            },
+            "name": {
+              "type": "string",
+            },
+          },
+          "required": [
+            "id",
+            "name",
+            "activities",
+          ],
+          "type": "object",
+        },
+        "preview": {
+          "additionalProperties": false,
+          "properties": {
+            "details": {
+              "additionalProperties": {},
+              "propertyNames": {
+                "type": "string",
+              },
+              "type": "object",
+            },
+            "summary": {
+              "type": "string",
+            },
+            "warnings": {
+              "items": {
+                "type": "string",
+              },
+              "type": "array",
+            },
+          },
+          "required": [
+            "summary",
+          ],
+          "type": "object",
+        },
+        "status": {
+          "description": "preview: nada se escribió todavía; done: el cambio quedó hecho.",
+          "enum": [
+            "preview",
+            "done",
+          ],
+          "type": "string",
+        },
+      },
+      "required": [
+        "status",
+      ],
+      "type": "object",
+    },
+    "title": "Quitar actividad de puesto",
+  },
+  {
+    "_meta": {
+      "securitySchemes": [
+        {
+          "scopes": [
+            "write:contracts",
+          ],
+          "type": "oauth2",
+        },
+      ],
+    },
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": false,
+      "title": "Emitir contrato",
+    },
+    "description": "Emite un contrato con una plantilla: congela el texto y el horario de la persona al emitir, igual que la app. CONFLICT si ya tiene un contrato vigente. La vista previa dice qué datos quedarían vacíos en el texto. Primero responde una vista previa; repite con confirmation_token para hacerlo.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "confirmation_token": {
+          "description": "Token de la vista previa. Sin él la herramienta sólo muestra qué haría; con él, lo hace. Vence en 10 minutos.",
+          "maxLength": 300,
+          "type": "string",
+        },
+        "end_date": {
+          "description": "Fin (aaaa-mm-dd); obligatorio si es determinado.",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "type": "string",
+        },
+        "idempotency_key": {
+          "description": "Llave única de esta operación (8–80 caracteres). Repetirla con los mismos datos devuelve el mismo resultado sin duplicar.",
+          "maxLength": 80,
+          "minLength": 8,
+          "type": "string",
+        },
+        "notice_window": {
+          "description": "Meses de aviso antes del fin para la bandeja, o no_avisar.",
+          "enum": [
+            "1",
+            "2",
+            "3",
+            "6",
+            "no_avisar",
+          ],
+          "type": "string",
+        },
+        "person_id": {
+          "description": "Persona.",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+          "type": "string",
+        },
+        "start_date": {
+          "description": "Inicio (aaaa-mm-dd).",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "type": "string",
+        },
+        "template_id": {
+          "description": "Plantilla.",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+          "type": "string",
+        },
+        "type": {
+          "enum": [
+            "determinado",
+            "indeterminado",
+          ],
+          "type": "string",
+        },
+      },
+      "required": [
+        "person_id",
+        "type",
+        "start_date",
+        "notice_window",
+        "template_id",
+        "idempotency_key",
+      ],
+      "type": "object",
+    },
+    "name": "issue_contract",
+    "outputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "audit_event_ids": {
+          "items": {
+            "type": "string",
+          },
+          "type": "array",
+        },
+        "code": {
+          "const": "CONFIRMATION_REQUIRED",
+          "type": "string",
+        },
+        "confirmation_token": {
+          "type": "string",
+        },
+        "contract": {
+          "additionalProperties": false,
+          "properties": {
+            "end_date": {
+              "anyOf": [
+                {
+                  "type": "string",
+                },
+                {
+                  "type": "null",
+                },
+              ],
+            },
+            "id": {
+              "type": "string",
+            },
+            "start_date": {
+              "type": "string",
+            },
+            "status": {
+              "type": "string",
+            },
+            "type": {
+              "type": "string",
+            },
+            "url": {
+              "type": "string",
+            },
+          },
+          "required": [
+            "id",
+            "type",
+            "status",
+            "start_date",
+            "end_date",
+            "url",
+          ],
+          "type": "object",
+        },
+        "expires_at": {
+          "type": "string",
+        },
+        "expires_at_mx": {
+          "type": "string",
+        },
+        "preview": {
+          "additionalProperties": false,
+          "properties": {
+            "details": {
+              "additionalProperties": {},
+              "propertyNames": {
+                "type": "string",
+              },
+              "type": "object",
+            },
+            "summary": {
+              "type": "string",
+            },
+            "warnings": {
+              "items": {
+                "type": "string",
+              },
+              "type": "array",
+            },
+          },
+          "required": [
+            "summary",
+          ],
+          "type": "object",
+        },
+        "status": {
+          "description": "preview: nada se escribió todavía; done: el cambio quedó hecho.",
+          "enum": [
+            "preview",
+            "done",
+          ],
+          "type": "string",
+        },
+      },
+      "required": [
+        "status",
+      ],
+      "type": "object",
+    },
+    "title": "Emitir contrato",
+  },
+  {
+    "_meta": {
+      "securitySchemes": [
+        {
+          "scopes": [
+            "write:contracts",
+          ],
+          "type": "oauth2",
+        },
+      ],
+    },
+    "annotations": {
+      "destructiveHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": false,
+      "title": "Renovar contrato",
+    },
+    "description": "Renueva un contrato vigente: el anterior queda «renovado» y se emite el nuevo ligado a él, en un solo paso (si algo falla no cambia nada). Primero responde una vista previa; repite con confirmation_token para hacerlo.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "confirmation_token": {
+          "description": "Token de la vista previa. Sin él la herramienta sólo muestra qué haría; con él, lo hace. Vence en 10 minutos.",
+          "maxLength": 300,
+          "type": "string",
+        },
+        "contract_id": {
+          "description": "Contrato vigente a renovar.",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+          "type": "string",
+        },
+        "end_date": {
+          "description": "Fin (aaaa-mm-dd); obligatorio si es determinado.",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "type": "string",
+        },
+        "idempotency_key": {
+          "description": "Llave única de esta operación (8–80 caracteres). Repetirla con los mismos datos devuelve el mismo resultado sin duplicar.",
+          "maxLength": 80,
+          "minLength": 8,
+          "type": "string",
+        },
+        "notice_window": {
+          "description": "Meses de aviso antes del fin para la bandeja, o no_avisar.",
+          "enum": [
+            "1",
+            "2",
+            "3",
+            "6",
+            "no_avisar",
+          ],
+          "type": "string",
+        },
+        "start_date": {
+          "description": "Inicio (aaaa-mm-dd).",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "type": "string",
+        },
+        "template_id": {
+          "description": "Plantilla.",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+          "type": "string",
+        },
+        "type": {
+          "enum": [
+            "determinado",
+            "indeterminado",
+          ],
+          "type": "string",
+        },
+      },
+      "required": [
+        "contract_id",
+        "type",
+        "start_date",
+        "notice_window",
+        "template_id",
+        "idempotency_key",
+      ],
+      "type": "object",
+    },
+    "name": "renew_contract",
+    "outputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "audit_event_ids": {
+          "items": {
+            "type": "string",
+          },
+          "type": "array",
+        },
+        "code": {
+          "const": "CONFIRMATION_REQUIRED",
+          "type": "string",
+        },
+        "confirmation_token": {
+          "type": "string",
+        },
+        "contract": {
+          "additionalProperties": false,
+          "properties": {
+            "end_date": {
+              "anyOf": [
+                {
+                  "type": "string",
+                },
+                {
+                  "type": "null",
+                },
+              ],
+            },
+            "id": {
+              "type": "string",
+            },
+            "start_date": {
+              "type": "string",
+            },
+            "status": {
+              "type": "string",
+            },
+            "type": {
+              "type": "string",
+            },
+            "url": {
+              "type": "string",
+            },
+          },
+          "required": [
+            "id",
+            "type",
+            "status",
+            "start_date",
+            "end_date",
+            "url",
+          ],
+          "type": "object",
+        },
+        "expires_at": {
+          "type": "string",
+        },
+        "expires_at_mx": {
+          "type": "string",
+        },
+        "preview": {
+          "additionalProperties": false,
+          "properties": {
+            "details": {
+              "additionalProperties": {},
+              "propertyNames": {
+                "type": "string",
+              },
+              "type": "object",
+            },
+            "summary": {
+              "type": "string",
+            },
+            "warnings": {
+              "items": {
+                "type": "string",
+              },
+              "type": "array",
+            },
+          },
+          "required": [
+            "summary",
+          ],
+          "type": "object",
+        },
+        "previous": {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "string",
+            },
+            "status": {
+              "type": "string",
+            },
+          },
+          "required": [
+            "id",
+            "status",
+          ],
+          "type": "object",
+        },
+        "status": {
+          "description": "preview: nada se escribió todavía; done: el cambio quedó hecho.",
+          "enum": [
+            "preview",
+            "done",
+          ],
+          "type": "string",
+        },
+      },
+      "required": [
+        "status",
+      ],
+      "type": "object",
+    },
+    "title": "Renovar contrato",
+  },
+  {
+    "_meta": {
+      "securitySchemes": [
+        {
+          "scopes": [
+            "write:contracts",
+          ],
+          "type": "oauth2",
+        },
+      ],
+    },
+    "annotations": {
+      "destructiveHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": false,
+      "title": "No renovar contrato",
+    },
+    "description": "Registra la decisión de no renovar un contrato vigente; sale de la bandeja de renovación. El motivo queda en la auditoría. Primero responde una vista previa; repite con confirmation_token para hacerlo.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "confirmation_token": {
+          "description": "Token de la vista previa. Sin él la herramienta sólo muestra qué haría; con él, lo hace. Vence en 10 minutos.",
+          "maxLength": 300,
+          "type": "string",
+        },
+        "contract_id": {
+          "description": "Contrato vigente.",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+          "type": "string",
+        },
+        "idempotency_key": {
+          "description": "Llave única de esta operación (8–80 caracteres). Repetirla con los mismos datos devuelve el mismo resultado sin duplicar.",
+          "maxLength": 80,
+          "minLength": 8,
+          "type": "string",
+        },
+        "motivo": {
+          "maxLength": 300,
+          "type": "string",
+        },
+      },
+      "required": [
+        "contract_id",
+        "idempotency_key",
+      ],
+      "type": "object",
+    },
+    "name": "mark_contract_no_renew",
+    "outputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "audit_event_ids": {
+          "items": {
+            "type": "string",
+          },
+          "type": "array",
+        },
+        "code": {
+          "const": "CONFIRMATION_REQUIRED",
+          "type": "string",
+        },
+        "confirmation_token": {
+          "type": "string",
+        },
+        "contract": {
+          "additionalProperties": false,
+          "properties": {
+            "end_date": {
+              "anyOf": [
+                {
+                  "type": "string",
+                },
+                {
+                  "type": "null",
+                },
+              ],
+            },
+            "id": {
+              "type": "string",
+            },
+            "start_date": {
+              "type": "string",
+            },
+            "status": {
+              "type": "string",
+            },
+            "type": {
+              "type": "string",
+            },
+            "url": {
+              "type": "string",
+            },
+          },
+          "required": [
+            "id",
+            "type",
+            "status",
+            "start_date",
+            "end_date",
+            "url",
+          ],
+          "type": "object",
+        },
+        "expires_at": {
+          "type": "string",
+        },
+        "expires_at_mx": {
+          "type": "string",
+        },
+        "preview": {
+          "additionalProperties": false,
+          "properties": {
+            "details": {
+              "additionalProperties": {},
+              "propertyNames": {
+                "type": "string",
+              },
+              "type": "object",
+            },
+            "summary": {
+              "type": "string",
+            },
+            "warnings": {
+              "items": {
+                "type": "string",
+              },
+              "type": "array",
+            },
+          },
+          "required": [
+            "summary",
+          ],
+          "type": "object",
+        },
+        "status": {
+          "description": "preview: nada se escribió todavía; done: el cambio quedó hecho.",
+          "enum": [
+            "preview",
+            "done",
+          ],
+          "type": "string",
+        },
+      },
+      "required": [
+        "status",
+      ],
+      "type": "object",
+    },
+    "title": "No renovar contrato",
+  },
+  {
+    "_meta": {
+      "securitySchemes": [
+        {
+          "scopes": [
+            "write:assets",
+          ],
+          "type": "oauth2",
+        },
+      ],
+    },
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": false,
+      "title": "Registrar activo",
+    },
+    "description": "Da de alta un activo en resguardo (queda «En almacén»). category es texto libre; usa moto, laptop, telefono, consumible u otro. CONFLICT si ya hay un activo con ese identificador. Primero responde una vista previa; repite la llamada con confirmation_token para hacerlo.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "category": {
+          "maxLength": 60,
+          "minLength": 1,
+          "type": "string",
+        },
+        "confirmation_token": {
+          "description": "Token de la vista previa. Sin él la herramienta sólo muestra qué haría; con él, lo hace. Vence en 10 minutos.",
+          "maxLength": 300,
+          "type": "string",
+        },
+        "idempotency_key": {
+          "description": "Llave única de esta operación (8–80 caracteres). Repetirla con los mismos datos devuelve el mismo resultado sin duplicar.",
+          "maxLength": 80,
+          "minLength": 8,
+          "type": "string",
+        },
+        "identifier": {
+          "description": "Serie, placa o número de inventario.",
+          "maxLength": 80,
+          "minLength": 1,
+          "type": "string",
+        },
+        "name": {
+          "maxLength": 120,
+          "minLength": 1,
+          "type": "string",
+        },
+        "tracks_history": {
+          "default": true,
+          "type": "boolean",
+        },
+      },
+      "required": [
+        "name",
+        "identifier",
+        "category",
+        "idempotency_key",
+      ],
+      "type": "object",
+    },
+    "name": "register_asset",
+    "outputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "asset": {
+          "additionalProperties": false,
+          "properties": {
+            "holder": {
+              "anyOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                    },
+                    "nombre_completo": {
+                      "type": "string",
+                    },
+                  },
+                  "required": [
+                    "id",
+                    "nombre_completo",
+                  ],
+                  "type": "object",
+                },
+                {
+                  "type": "null",
+                },
+              ],
+            },
+            "id": {
+              "type": "string",
+            },
+            "identifier": {
+              "type": "string",
+            },
+            "name": {
+              "type": "string",
+            },
+            "status": {
+              "type": "string",
+            },
+            "url": {
+              "type": "string",
+            },
+          },
+          "required": [
+            "id",
+            "name",
+            "identifier",
+            "status",
+            "url",
+          ],
+          "type": "object",
+        },
+        "audit_event_ids": {
+          "items": {
+            "type": "string",
+          },
+          "type": "array",
+        },
+        "code": {
+          "const": "CONFIRMATION_REQUIRED",
+          "type": "string",
+        },
+        "confirmation_token": {
+          "type": "string",
+        },
+        "expires_at": {
+          "type": "string",
+        },
+        "expires_at_mx": {
+          "type": "string",
+        },
+        "preview": {
+          "additionalProperties": false,
+          "properties": {
+            "details": {
+              "additionalProperties": {},
+              "propertyNames": {
+                "type": "string",
+              },
+              "type": "object",
+            },
+            "summary": {
+              "type": "string",
+            },
+            "warnings": {
+              "items": {
+                "type": "string",
+              },
+              "type": "array",
+            },
+          },
+          "required": [
+            "summary",
+          ],
+          "type": "object",
+        },
+        "status": {
+          "description": "preview: nada se escribió todavía; done: el cambio quedó hecho.",
+          "enum": [
+            "preview",
+            "done",
+          ],
+          "type": "string",
+        },
+      },
+      "required": [
+        "status",
+      ],
+      "type": "object",
+    },
+    "title": "Registrar activo",
+  },
+  {
+    "_meta": {
+      "securitySchemes": [
+        {
+          "scopes": [
+            "write:assets",
+          ],
+          "type": "oauth2",
+        },
+      ],
+    },
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": false,
+      "title": "Entregar activo",
+    },
+    "description": "Entrega un activo en resguardo a una persona, con fecha y la condición en que se entrega (obligatoria). CONFLICT si ya está asignado o dado de baja. Primero responde una vista previa; repite con confirmation_token para hacerlo.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "asset_id": {
+          "description": "Activo.",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+          "type": "string",
+        },
+        "condition_note": {
+          "description": "Condición al entregar.",
+          "maxLength": 500,
+          "minLength": 1,
+          "type": "string",
+        },
+        "confirmation_token": {
+          "description": "Token de la vista previa. Sin él la herramienta sólo muestra qué haría; con él, lo hace. Vence en 10 minutos.",
+          "maxLength": 300,
+          "type": "string",
+        },
+        "idempotency_key": {
+          "description": "Llave única de esta operación (8–80 caracteres). Repetirla con los mismos datos devuelve el mismo resultado sin duplicar.",
+          "maxLength": 80,
+          "minLength": 8,
+          "type": "string",
+        },
+        "movement_date": {
+          "description": "Fecha de entrega (aaaa-mm-dd).",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "type": "string",
+        },
+        "notes": {
+          "maxLength": 500,
+          "type": "string",
+        },
+        "person_id": {
+          "description": "Persona que lo recibe.",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+          "type": "string",
+        },
+      },
+      "required": [
+        "asset_id",
+        "person_id",
+        "movement_date",
+        "condition_note",
+        "idempotency_key",
+      ],
+      "type": "object",
+    },
+    "name": "assign_asset",
+    "outputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "asset": {
+          "additionalProperties": false,
+          "properties": {
+            "holder": {
+              "anyOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                    },
+                    "nombre_completo": {
+                      "type": "string",
+                    },
+                  },
+                  "required": [
+                    "id",
+                    "nombre_completo",
+                  ],
+                  "type": "object",
+                },
+                {
+                  "type": "null",
+                },
+              ],
+            },
+            "id": {
+              "type": "string",
+            },
+            "identifier": {
+              "type": "string",
+            },
+            "name": {
+              "type": "string",
+            },
+            "status": {
+              "type": "string",
+            },
+            "url": {
+              "type": "string",
+            },
+          },
+          "required": [
+            "id",
+            "name",
+            "identifier",
+            "status",
+            "url",
+          ],
+          "type": "object",
+        },
+        "audit_event_ids": {
+          "items": {
+            "type": "string",
+          },
+          "type": "array",
+        },
+        "code": {
+          "const": "CONFIRMATION_REQUIRED",
+          "type": "string",
+        },
+        "confirmation_token": {
+          "type": "string",
+        },
+        "expires_at": {
+          "type": "string",
+        },
+        "expires_at_mx": {
+          "type": "string",
+        },
+        "movement_id": {
+          "type": "string",
+        },
+        "preview": {
+          "additionalProperties": false,
+          "properties": {
+            "details": {
+              "additionalProperties": {},
+              "propertyNames": {
+                "type": "string",
+              },
+              "type": "object",
+            },
+            "summary": {
+              "type": "string",
+            },
+            "warnings": {
+              "items": {
+                "type": "string",
+              },
+              "type": "array",
+            },
+          },
+          "required": [
+            "summary",
+          ],
+          "type": "object",
+        },
+        "status": {
+          "description": "preview: nada se escribió todavía; done: el cambio quedó hecho.",
+          "enum": [
+            "preview",
+            "done",
+          ],
+          "type": "string",
+        },
+      },
+      "required": [
+        "status",
+      ],
+      "type": "object",
+    },
+    "title": "Entregar activo",
+  },
+  {
+    "_meta": {
+      "securitySchemes": [
+        {
+          "scopes": [
+            "write:assets",
+          ],
+          "type": "oauth2",
+        },
+      ],
+    },
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": false,
+      "title": "Devolver activo",
+    },
+    "description": "Registra la devolución de un activo asignado, con fecha y la condición en que regresa (obligatoria). Queda «En almacén». CONFLICT si no está asignado. Primero responde una vista previa; repite con confirmation_token para hacerlo.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "asset_id": {
+          "description": "Activo.",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+          "type": "string",
+        },
+        "condition_note": {
+          "description": "Condición al devolver.",
+          "maxLength": 500,
+          "minLength": 1,
+          "type": "string",
+        },
+        "confirmation_token": {
+          "description": "Token de la vista previa. Sin él la herramienta sólo muestra qué haría; con él, lo hace. Vence en 10 minutos.",
+          "maxLength": 300,
+          "type": "string",
+        },
+        "idempotency_key": {
+          "description": "Llave única de esta operación (8–80 caracteres). Repetirla con los mismos datos devuelve el mismo resultado sin duplicar.",
+          "maxLength": 80,
+          "minLength": 8,
+          "type": "string",
+        },
+        "movement_date": {
+          "description": "Fecha de devolución (aaaa-mm-dd).",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "type": "string",
+        },
+        "notes": {
+          "maxLength": 500,
+          "type": "string",
+        },
+      },
+      "required": [
+        "asset_id",
+        "movement_date",
+        "condition_note",
+        "idempotency_key",
+      ],
+      "type": "object",
+    },
+    "name": "return_asset",
+    "outputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "asset": {
+          "additionalProperties": false,
+          "properties": {
+            "holder": {
+              "anyOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                    },
+                    "nombre_completo": {
+                      "type": "string",
+                    },
+                  },
+                  "required": [
+                    "id",
+                    "nombre_completo",
+                  ],
+                  "type": "object",
+                },
+                {
+                  "type": "null",
+                },
+              ],
+            },
+            "id": {
+              "type": "string",
+            },
+            "identifier": {
+              "type": "string",
+            },
+            "name": {
+              "type": "string",
+            },
+            "status": {
+              "type": "string",
+            },
+            "url": {
+              "type": "string",
+            },
+          },
+          "required": [
+            "id",
+            "name",
+            "identifier",
+            "status",
+            "url",
+          ],
+          "type": "object",
+        },
+        "audit_event_ids": {
+          "items": {
+            "type": "string",
+          },
+          "type": "array",
+        },
+        "code": {
+          "const": "CONFIRMATION_REQUIRED",
+          "type": "string",
+        },
+        "confirmation_token": {
+          "type": "string",
+        },
+        "expires_at": {
+          "type": "string",
+        },
+        "expires_at_mx": {
+          "type": "string",
+        },
+        "movement_id": {
+          "type": "string",
+        },
+        "preview": {
+          "additionalProperties": false,
+          "properties": {
+            "details": {
+              "additionalProperties": {},
+              "propertyNames": {
+                "type": "string",
+              },
+              "type": "object",
+            },
+            "summary": {
+              "type": "string",
+            },
+            "warnings": {
+              "items": {
+                "type": "string",
+              },
+              "type": "array",
+            },
+          },
+          "required": [
+            "summary",
+          ],
+          "type": "object",
+        },
+        "status": {
+          "description": "preview: nada se escribió todavía; done: el cambio quedó hecho.",
+          "enum": [
+            "preview",
+            "done",
+          ],
+          "type": "string",
+        },
+      },
+      "required": [
+        "status",
+      ],
+      "type": "object",
+    },
+    "title": "Devolver activo",
+  },
 ]
 `;

@@ -12,8 +12,8 @@ Workia sin saltarse sus reglas. Plania: WRK-I1 (spec «Workia MCP — Spec v1.0�
 - **Permiso efectivo = scopes de la conexión ∩ rol de la persona en esa empresa
   (∩ techo de ChatGPT).** El rol se vuelve a leer en cada llamada: un cambio en
   `/admin/rbac` o en `/app/miembros` aplica en la siguiente.
-- **Nada se borra por MCP** (D-07). En la Fase 1 sólo hay herramientas de
-  lectura.
+- **Nada se borra por MCP** (D-07): no hay herramientas de borrado; las bajas
+  laborales son un cambio de estatus.
 
 ## Conectar un asistente
 
@@ -88,7 +88,8 @@ una persona.
 
 ## Herramientas
 
-Todas son de lectura en la Fase 1 (`readOnlyHint`, `openWorldHint: false`),
+18 de lectura (Fase 1, `readOnlyHint`) y 13 de escritura (Fase 2, con vista
+previa y confirmación; ver «Escrituras»). Todas tienen `openWorldHint: false`,
 devuelven `structuredContent` validado contra su `outputSchema` y el mismo JSON
 como texto. Fechas en ISO y en `*_mx` (dd/mm/aaaa); «hoy» es la fecha de
 America/Mexico_City. Las listas grandes paginan con `cursor` opaco y firmado
@@ -118,6 +119,19 @@ America/Mexico_City. Las listas grandes paginan con `cursor` opaco y firmado
 | `list_assets` | Activos en resguardo con su resguardante actual. | `read` (Leer) | `assets:read` |
 | `get_asset` | Un activo con su resguardante y el historial de entregas y devoluciones (fecha, condición, notas). | `read` (Leer) | `assets:read` |
 | `list_audit_events` | Bitácora de cambios (append-only), más reciente primero: quién, qué recurso, qué acción, origen (app, seed, system, import, mcp) y el antes/después. | `audit` (Auditoría) | `audit:read` |
+| `create_person` | Da de alta un expediente con las mismas reglas que la app (D-04). | `write:people` (Escribir personas) | `people:create` |
+| `update_person` | Edita sólo los campos enviados en changes (null borra el dato); el resto del expediente y el horario no cambian. | `write:people` (Escribir personas) | `people:update` |
+| `set_person_status` | Da de baja laboral o reactiva a una persona (estatus activa \| baja). | `write:people` (Escribir personas) | `people:update` |
+| `update_person_schedule` | Captura o cambia el horario de una persona (HH:mm). | `write:people` (Escribir personas) | `people:update` |
+| `create_catalog_item` | Crea un área, un puesto, una actividad o una ubicación (sucursal o corporativo). | `write:catalog` (Escribir catálogo) | `positions:create` |
+| `link_position_activity` | Agrega una actividad a un puesto. | `write:catalog` (Escribir catálogo) | `positions:update` |
+| `unlink_position_activity` | Quita una actividad de un puesto y advierte cuántas personas activas tienen ese puesto. | `write:catalog` (Escribir catálogo) | `positions:update` |
+| `issue_contract` | Emite un contrato con una plantilla: congela el texto y el horario de la persona al emitir, igual que la app. | `write:contracts` (Escribir contratos) | `contracts:create` |
+| `renew_contract` | Renueva un contrato vigente: el anterior queda «renovado» y se emite el nuevo ligado a él, en un solo paso (si algo falla no cambia nada). | `write:contracts` (Escribir contratos) | `contracts:update` |
+| `mark_contract_no_renew` | Registra la decisión de no renovar un contrato vigente; sale de la bandeja de renovación. | `write:contracts` (Escribir contratos) | `contracts:update` |
+| `register_asset` | Da de alta un activo en resguardo (queda «En almacén»). | `write:assets` (Escribir resguardo) | `assets:create` |
+| `assign_asset` | Entrega un activo en resguardo a una persona, con fecha y la condición en que se entrega (obligatoria). | `write:assets` (Escribir resguardo) | `assets:update` |
+| `return_asset` | Registra la devolución de un activo asignado, con fecha y la condición en que regresa (obligatoria). | `write:assets` (Escribir resguardo) | `assets:update` |
 
 <!-- prettier-ignore-end -->
 <!-- tools:end -->

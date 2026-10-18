@@ -77,7 +77,7 @@ export const collectSurfaces = () => {
     (f) => f.endsWith(".ts") && !f.endsWith(".test.ts"),
   )) {
     for (const match of readFileSync(file, "utf8").matchAll(
-      /defineTool\(\{\s*name: "(\w+)"/g,
+      /define(?:Write)?Tool\(\{\s*name: "(\w+)"/g,
     )) {
       surfaces.add(`mcp:${match[1]}`);
     }
