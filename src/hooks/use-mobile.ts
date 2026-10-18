@@ -2,32 +2,24 @@ import * as React from "react";
 
 const MOBILE_BREAKPOINT = 768;
 
-const getIsMobile = () => {
-  if (typeof window === "undefined") {
-    return false;
-  }
+const MOBILE_QUERY = `(max-width: ${MOBILE_BREAKPOINT - 1}px)`;
 
-  return window.innerWidth < MOBILE_BREAKPOINT;
+const subscribe = (onChange: () => void) => {
+  const mediaQuery = window.matchMedia(MOBILE_QUERY);
+
+  mediaQuery.addEventListener("change", onChange);
+
+  return () => {
+    mediaQuery.removeEventListener("change", onChange);
+  };
 };
 
-export const useIsMobile = () => {
-  const [isMobile, setIsMobile] = React.useState(getIsMobile);
+const getSnapshot = () => window.matchMedia(MOBILE_QUERY).matches;
 
-  React.useEffect(() => {
-    const mediaQuery = window.matchMedia(
-      `(max-width: ${MOBILE_BREAKPOINT - 1}px)`,
-    );
+// The server cannot know the viewport, so it renders the desktop layout.
+// Hydration uses this same value and then switches to the real one, which
+// keeps the first client render identical to the server HTML.
+const getServerSnapshot = () => false;
 
-    const handleChange = () => {
-      setIsMobile(mediaQuery.matches);
-    };
-
-    mediaQuery.addEventListener("change", handleChange);
-
-    return () => {
-      mediaQuery.removeEventListener("change", handleChange);
-    };
-  }, []);
-
-  return isMobile;
-};
+export const useIsMobile = () =>
+  React.useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
