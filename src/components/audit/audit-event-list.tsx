@@ -23,6 +23,22 @@ export type AuditEventRow = {
   result: string;
   payload: AuditPayload | null;
   occurredAt: Date | string;
+  source?: string;
+  requestMeta?: unknown;
+};
+
+/** «MCP · Grok Bot» for changes made by an assistant through the connector. */
+const mcpBadgeLabel = (row: AuditEventRow) => {
+  if (row.source !== "mcp") {
+    return null;
+  }
+
+  const client =
+    row.requestMeta && typeof row.requestMeta === "object"
+      ? (row.requestMeta as { client?: unknown }).client
+      : undefined;
+
+  return typeof client === "string" && client ? `MCP · ${client}` : "MCP";
 };
 
 const formatOccurredAt = (value: Date | string) => formatDateTimeMx(value);
@@ -111,7 +127,14 @@ export const AuditEventList = ({
         accessor: (row) => row.actorLabel,
         cell: (row) => (
           <div>
-            <div className="font-medium">{row.actorLabel}</div>
+            <div className="flex flex-wrap items-center gap-1.5 font-medium">
+              {row.actorLabel}
+              {mcpBadgeLabel(row) ? (
+                <ListStatusBadge tone="neutral">
+                  {mcpBadgeLabel(row)}
+                </ListStatusBadge>
+              ) : null}
+            </div>
             {row.actorEmail ? (
               <div className="text-muted-foreground text-xs">
                 {row.actorEmail}
@@ -157,6 +180,7 @@ export const AuditEventList = ({
         [
           row.occurredLabel,
           row.actorLabel,
+          mcpBadgeLabel(row) ?? "",
           row.resourceLabel,
           row.actionLabel,
           row.detail,

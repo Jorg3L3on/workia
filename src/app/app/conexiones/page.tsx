@@ -5,6 +5,7 @@ import { forbidden } from "next/navigation";
 import { ListPageHeader } from "@/components/list/list-page-header";
 import { ConnectionRowActions } from "@/components/mcp/connection-row-actions";
 import { CreateTokenForm } from "@/components/mcp/create-token-form";
+import { WritesSwitch } from "@/components/mcp/writes-switch";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -29,6 +30,7 @@ import {
 } from "@/lib/mcp/connections";
 import { currentRequest } from "@/lib/mcp/request-origin";
 import { grantableScopes, isMcpScope, scopeLabels } from "@/lib/mcp/scopes";
+import { getMcpSettings } from "@/lib/mcp/settings";
 import { requireCompanyPage } from "@/lib/tenant/context";
 import { cn } from "@/lib/utils";
 
@@ -83,7 +85,7 @@ const ConexionesPage = async ({ searchParams }: ConexionesPageProps) => {
   const showAll = canManage && vista === "todas";
   const scopeFilter = showAll ? {} : { userId: session.userId };
   const now = new Date();
-  const [connections, calls, errors24h, origin] = await Promise.all([
+  const [connections, calls, errors24h, origin, settings] = await Promise.all([
     listConnections(session.companyId, scopeFilter),
     listToolCalls(session.companyId, { ...scopeFilter, limit: 50 }),
     countToolCallErrors(
@@ -92,6 +94,7 @@ const ConexionesPage = async ({ searchParams }: ConexionesPageProps) => {
       scopeFilter,
     ),
     currentOrigin(),
+    getMcpSettings(session.companyId),
   ]);
   const mcpUrl = `${origin}${MCP_RESOURCE_PATH}`;
 

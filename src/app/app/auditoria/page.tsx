@@ -18,8 +18,10 @@ import { requireAuditRead } from "@/lib/audit/auth";
 import {
   AUDIT_ACTIONS,
   AUDIT_RESOURCE_TYPES,
+  AUDIT_SOURCES,
   auditActionLabels,
   auditResourceTypeLabels,
+  auditSourceLabels,
   type AuditAction,
   type AuditResourceType,
 } from "@/lib/audit/types";
@@ -37,6 +39,7 @@ type AuditoriaPageProps = {
     resourceId?: string;
     actorUserId?: string;
     action?: AuditAction;
+    source?: string;
     from?: string;
     to?: string;
     page?: string;
@@ -55,6 +58,9 @@ const AuditoriaPage = async ({ searchParams }: AuditoriaPageProps) => {
     resourceId: filters.resourceId,
     actorUserId: filters.actorUserId,
     action: filters.action,
+    source: (AUDIT_SOURCES as readonly string[]).includes(filters.source ?? "")
+      ? (filters.source as (typeof AUDIT_SOURCES)[number])
+      : undefined,
     from: filters.from ? new Date(`${filters.from}T00:00:00`) : undefined,
     to: filters.to ? new Date(`${filters.to}T23:59:59`) : undefined,
   };
@@ -145,6 +151,24 @@ const AuditoriaPage = async ({ searchParams }: AuditoriaPageProps) => {
         </div>
 
         <div className="space-y-2">
+          <label className="text-sm font-medium" htmlFor="source">
+            Origen
+          </label>
+          <FormSelect
+            defaultValue={filters.source ?? ""}
+            id="source"
+            name="source"
+            options={[
+              { value: "", label: "Todos" },
+              ...AUDIT_SOURCES.map((source) => ({
+                value: source,
+                label: auditSourceLabels[source],
+              })),
+            ]}
+          />
+        </div>
+
+        <div className="space-y-2">
           <label className="text-sm font-medium" htmlFor="from">
             Desde
           </label>
@@ -175,6 +199,7 @@ const AuditoriaPage = async ({ searchParams }: AuditoriaPageProps) => {
           resourceId: filters.resourceId,
           actorUserId: filters.actorUserId,
           action: filters.action,
+          source: filters.source,
           from: filters.from,
           to: filters.to,
         }}

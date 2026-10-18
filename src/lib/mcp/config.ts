@@ -20,6 +20,7 @@ export type PatExpiryDays = (typeof PAT_EXPIRY_DAYS)[number];
 
 /** Rate limits (spec §7). */
 export const READ_CALLS_PER_MINUTE = 120;
+export const WRITE_CALLS_PER_MINUTE = 20;
 export const NEW_CONNECTIONS_PER_HOUR = 10;
 export const TOKEN_ATTEMPTS_PER_MINUTE = 30;
 

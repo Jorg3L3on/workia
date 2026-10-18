@@ -19,6 +19,7 @@ import {
   revokeConnection,
 } from "./connections";
 import { scopesForPreset, TOKEN_PRESETS } from "./presets";
+import { setMcpWritesEnabled } from "./settings";
 import { isMcpScope } from "./scopes";
 
 export type CreateTokenState = {
@@ -200,3 +201,40 @@ export const hideConnectionAction = async (
     revalidateConnections();
     return { ok: true };
   });
+
+/**
+ * Turns MCP writes on or off for the active company (super_admin only, spec
+ * §7). Effective on the next tool call.
+ */
+export const setWritesEnabledAction = async (
+  _state: ConnectionActionState,
+  formData: FormData,
+): Promise<ConnectionActionState> => {
+  try {
+    const session = await requireCompanyContext("mcp_connections:manage");
+
+    if (session.membership.roleSlug !== "super_admin") {
+      return {
+        error: "Sólo un super_admin puede encender o apagar las escrituras.",
+      };
+    }
+
+    const companyId = writableCompanyIdFromForm(session, formData);
+    await setMcpWritesEnabled(
+      companyId,
+      formData.get("enabled") === "true",
+      session.userId,
+    );
+    revalidateConnections();
+    return { ok: true };
+  } catch (error) {
+    if (error instanceof AuthorizationError) {
+      return {
+        error:
+          error.name === "CrossTenantError" ? STALE_COMPANY_MESSAGE : DENIED,
+      };
+    }
+
+    throw error;
+  }
+};

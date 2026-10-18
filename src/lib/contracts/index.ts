@@ -15,7 +15,7 @@ import {
   snapshotContract,
   snapshotContractTemplate,
 } from "@/lib/audit";
-import { tdb } from "@/lib/db";
+import { tdb, withTransaction, type DbExecutor } from "@/lib/db";
 import { withTenant } from "@/lib/tenant/scope";
 import {
   areas,
@@ -431,19 +431,15 @@ export const countRenewalTrayItems = async (
   return row?.count ?? 0;
 };
 
-const emitContractRecord = async (
+/** Everything an emission reads first: the template, the person and the filled text. */
+const prepareContractRecord = async (
   companyId: string,
   input: {
     personId: string;
-    type: ContractFormValues["type"];
     startDate: string;
     endDate: string | null;
-    noticeWindow: ContractFormValues["noticeWindow"];
     templateId: string;
-    previousContractId?: string | null;
-    status?: ContractStatus;
   },
-  actorUserId: string,
 ) => {
   const template = await getContractTemplateById(companyId, input.templateId);
 
@@ -458,10 +454,33 @@ const emitContractRecord = async (
     input.endDate,
   );
 
-  const generatedText = fillContractTemplate(template.body, context);
-  const scheduleSnapshot = buildContractScheduleSnapshot(person.schedule);
+  return {
+    template,
+    generatedText: fillContractTemplate(template.body, context),
+    scheduleSnapshot: buildContractScheduleSnapshot(person.schedule),
+  };
+};
 
-  const [created] = await tdb(companyId)
+const emitContractRecord = async (
+  companyId: string,
+  input: {
+    personId: string;
+    type: ContractFormValues["type"];
+    startDate: string;
+    endDate: string | null;
+    noticeWindow: ContractFormValues["noticeWindow"];
+    templateId: string;
+    previousContractId?: string | null;
+    status?: ContractStatus;
+  },
+  actorUserId: string,
+  prepared?: Awaited<ReturnType<typeof prepareContractRecord>>,
+  executor: DbExecutor = tdb(companyId),
+) => {
+  const { template, generatedText, scheduleSnapshot } =
+    prepared ?? (await prepareContractRecord(companyId, input));
+
+  const [created] = await executor
     .insert(contracts)
     .values({
       companyId,
@@ -479,19 +498,22 @@ const emitContractRecord = async (
     })
     .returning();
 
-  await recordAuditEvent({
-    companyId,
-    actorUserId,
-    resourceType: "contract",
-    resourceId: created.id,
-    action: input.previousContractId ? "renew" : "create",
-    payload: {
-      summary: input.previousContractId
-        ? "Contrato renovado"
-        : "Contrato emitido",
-      after: snapshotContract(created),
+  await recordAuditEvent(
+    {
+      companyId,
+      actorUserId,
+      resourceType: "contract",
+      resourceId: created.id,
+      action: input.previousContractId ? "renew" : "create",
+      payload: {
+        summary: input.previousContractId
+          ? "Contrato renovado"
+          : "Contrato emitido",
+        after: snapshotContract(created),
+      },
     },
-  });
+    executor,
+  );
 
   return created;
 };
@@ -523,6 +545,18 @@ export const createContract = async (
   );
 };
 
+/** Thrown inside the renewal transaction when the contract stopped being vigente. */
+export class ContractNotVigenteError extends Error {
+  constructor() {
+    super("Contrato no encontrado o ya no está vigente.");
+    this.name = "ContractNotVigenteError";
+  }
+}
+
+/**
+ * Marks the contract «renovado» and emits the new one in one transaction
+ * (WRK-I1-5): if the emission fails, the previous contract stays vigente.
+ */
 export const renewContract = async (
   companyId: string,
   input: RenewContractFormValues,
@@ -531,43 +565,59 @@ export const renewContract = async (
   const existing = await getContractById(companyId, input.contractId);
 
   if (!existing || existing.status !== "vigente") {
-    throw new Error("Contrato no encontrado o ya no está vigente.");
+    throw new ContractNotVigenteError();
   }
 
   const endDate = normalizeEndDate(input.type, input.endDate);
+  const next = {
+    personId: existing.personId,
+    type: input.type,
+    startDate: input.startDate,
+    endDate,
+    noticeWindow: input.noticeWindow,
+    templateId: input.templateId,
+    previousContractId: existing.id,
+  };
+  // Reads happen before the transaction; only the writes go inside it.
+  const prepared = await prepareContractRecord(companyId, next);
 
-  const [updatedPrevious] = await tdb(companyId)
-    .update(contracts)
-    .set({ status: "renovado" })
-    .where(withTenant(contracts, companyId, eq(contracts.id, existing.id)))
-    .returning();
+  return withTransaction(async (tx) => {
+    const [updatedPrevious] = await tx
+      .update(contracts)
+      .set({ status: "renovado" })
+      .where(
+        withTenant(
+          contracts,
+          companyId,
+          eq(contracts.id, existing.id),
+          // Two renewals racing: only one finds it still vigente.
+          eq(contracts.status, "vigente"),
+        ),
+      )
+      .returning();
 
-  await recordAuditEvent({
-    companyId,
-    actorUserId,
-    resourceType: "contract",
-    resourceId: existing.id,
-    action: "renew",
-    payload: {
-      summary: "Contrato anterior marcado como renovado",
-      before: snapshotContract(existing),
-      after: snapshotContract(updatedPrevious),
-    },
-  });
+    if (!updatedPrevious) {
+      throw new ContractNotVigenteError();
+    }
 
-  return emitContractRecord(
-    companyId,
-    {
-      personId: existing.personId,
-      type: input.type,
-      startDate: input.startDate,
-      endDate,
-      noticeWindow: input.noticeWindow,
-      templateId: input.templateId,
-      previousContractId: existing.id,
-    },
-    actorUserId,
-  );
+    await recordAuditEvent(
+      {
+        companyId,
+        actorUserId,
+        resourceType: "contract",
+        resourceId: existing.id,
+        action: "renew",
+        payload: {
+          summary: "Contrato anterior marcado como renovado",
+          before: snapshotContract(existing),
+          after: snapshotContract(updatedPrevious),
+        },
+      },
+      tx,
+    );
+
+    return emitContractRecord(companyId, next, actorUserId, prepared, tx);
+  }, companyId);
 };
 
 export const markContractNoRenew = async (

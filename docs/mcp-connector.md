@@ -133,6 +133,35 @@ Además:
   email, telefono, sucursal, puesto) y sólo dice si el dato falta, nunca su
   valor (D-14). Sin `pii`, `list_people` y `search` no buscan por RFC ni CURP.
 
+## Escrituras (Fase 2)
+
+Las escrituras van por Grok Bot, Cursor o el Inspector, nunca por ChatGPT, y
+**empiezan apagadas en cada empresa** (D-17). Un super_admin las enciende o
+apaga en `/app/conexiones` → «Escrituras por asistente»; apagadas, toda
+escritura responde `WRITES_DISABLED` en la siguiente llamada.
+
+Cada herramienta de escritura funciona en dos pasos (D-06):
+
+1. **Vista previa.** La llamada sin `confirmation_token` valida, revisa las
+   reglas y responde `status: "preview"`, `code: "CONFIRMATION_REQUIRED"`, un
+   `preview.summary` en español y un `confirmation_token`. No escribe nada.
+2. **Confirmación.** La misma llamada, con los mismos argumentos y el token,
+   hace el cambio con la función de dominio de la app y responde
+   `status: "done"` y `audit_event_ids`. El token vale 10 minutos y está ligado
+   a la persona, la conexión, la herramienta y los argumentos exactos; con otros
+   o vencido responde `CONFIRMATION_INVALID`.
+
+- `idempotency_key` (8–80 caracteres) es obligatoria: repetir la misma llave
+  con los mismos datos devuelve la misma respuesta durante 24 horas sin
+  duplicar; con otros datos, `IDEMPOTENCY_MISMATCH`.
+- Cada cambio queda en `/app/auditoria` con origen «Asistente (MCP)» y la
+  etiqueta «MCP · cliente», con la conexión, la herramienta y la llave en
+  `request_meta`. Los intentos rechazados (scope, rol, interruptor) quedan
+  sólo en la actividad de `/app/conexiones`.
+- 20 escrituras por minuto por conexión.
+- La confirmación por elicitation/MRTR del protocolo 2026-07-28 queda como
+  opción futura: el camino soportado es el token de dos pasos.
+
 ## Scopes
 
 | Scope             | Qué permite                                                      | Quién lo puede dar                |

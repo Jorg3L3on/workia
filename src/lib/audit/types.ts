@@ -14,6 +14,7 @@ export const AUDIT_RESOURCE_TYPES = [
   "company",
   "membership",
   "mcp_connection",
+  "mcp_settings",
 ] as const;
 
 export type AuditResourceType = (typeof AUDIT_RESOURCE_TYPES)[number];
@@ -78,7 +79,25 @@ export const auditResourceTypeLabels: Record<AuditResourceType, string> = {
   company: "Empresa",
   membership: "Miembro",
   mcp_connection: "Conexión de asistente (MCP)",
+  mcp_settings: "Escrituras del conector (MCP)",
 };
+
+export const AUDIT_SOURCES = [
+  "app",
+  "import",
+  "mcp",
+  "seed",
+  "system",
+] as const;
+
+export const auditSourceLabels: Record<(typeof AUDIT_SOURCES)[number], string> =
+  {
+    app: "App",
+    import: "Importación",
+    mcp: "Asistente (MCP)",
+    seed: "Datos iniciales",
+    system: "Sistema",
+  };
 
 export type AuditPayload = {
   before?: Record<string, unknown> | null;
@@ -95,6 +114,7 @@ export type AuditRequestMeta = {
   connection_id?: string;
   tool?: string;
   request_id?: string;
+  idempotency_key?: string;
 };
 
 export type RecordAuditEventInput = {
@@ -117,6 +137,8 @@ export type ListAuditEventsOptions = {
   resourceId?: string;
   actorUserId?: string;
   action?: AuditAction;
+  /** Where the change came from (app, seed, system, import, mcp). */
+  source?: NonNullable<RecordAuditEventInput["source"]>;
   from?: Date;
   to?: Date;
   limit?: number;

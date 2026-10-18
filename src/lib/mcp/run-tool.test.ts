@@ -11,9 +11,18 @@ const rateLimit = vi.hoisted(() => ({ hitRateLimit: vi.fn() }));
 
 vi.mock("./connections", () => connections);
 vi.mock("./rate-limit", () => rateLimit);
+vi.mock("./settings", () => ({
+  getMcpSettings: vi.fn(async () => ({ writesEnabled: false })),
+}));
 
 import type { McpAuthContext } from "./connections";
-import { defineTool, readAnnotations, runWorkiaTool } from "./run-tool";
+import {
+  defineTool,
+  defineWriteTool,
+  readAnnotations,
+  runWorkiaTool,
+  writeAnnotations,
+} from "./run-tool";
 
 const auth = (overrides: Partial<McpAuthContext> = {}): McpAuthContext => ({
   connectionId: "conn-1",
@@ -261,5 +270,52 @@ describe("runWorkiaTool", () => {
     expect(await runWorkiaTool(tool(), { n: 1 }, ctx(chatgpt))).toMatchObject({
       structuredContent: { pii: true },
     });
+  });
+});
+
+describe("write tools", () => {
+  const writeTool = defineWriteTool({
+    name: "demo_write",
+    title: "Demo",
+    description: "Demo de escritura",
+    scope: "write:assets",
+    permission: "assets:update",
+    input: z.object({ n: z.number() }),
+    output: z.object({ ok: z.boolean() }),
+    annotations: writeAnnotations("Demo"),
+    preview: async () => ({ summary: "demo" }),
+    handler: async () => ({ ok: true }),
+  });
+
+  it("use the 20 per minute write bucket and stop at WRITES_DISABLED when off", async () => {
+    connections.memberPermissions.mockResolvedValue(member(["assets:update"]));
+
+    const result = await runWorkiaTool(
+      writeTool,
+      { n: 1, idempotency_key: "llave-1234" },
+      ctx(auth({ scopes: ["read", "write:assets"] })),
+    );
+
+    expect(rateLimit.hitRateLimit).toHaveBeenCalledWith(
+      "mcp:write:conn-1",
+      20,
+      60_000,
+      expect.any(Date),
+    );
+    expect(result).toMatchObject({
+      structuredContent: { error: { code: "WRITES_DISABLED" } },
+    });
+    expect(lastCall()).toMatchObject({
+      result: "denied",
+      errorCode: "WRITES_DISABLED",
+    });
+  });
+
+  it("require an idempotency_key in the input schema", () => {
+    expect(writeTool.input.safeParse({ n: 1 }).success).toBe(false);
+    expect(
+      writeTool.input.safeParse({ n: 1, idempotency_key: "llave-1234" })
+        .success,
+    ).toBe(true);
   });
 });

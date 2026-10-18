@@ -57,7 +57,9 @@ describe("MCP tool registry coverage", () => {
       expect(tool.output).toBeInstanceOf(z.ZodObject);
       expect(tool.input).toBeInstanceOf(z.ZodObject);
       // Never a delete, an import or an admin permission (D-07).
-      expect(tool.permission).toMatch(/:read$/);
+      expect(tool.permission).toMatch(
+        tool.kind === "read" ? /:read$/ : /:(create|update)$/,
+      );
     },
   );
 

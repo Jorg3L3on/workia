@@ -6,12 +6,22 @@ import type {
 } from "@modelcontextprotocol/server";
 import { z } from "zod";
 
+import { runWithAuditContext } from "@/lib/audit/context";
 import type { PermissionSlug } from "@/lib/db/schema/types";
-import { isoToday } from "@/lib/format/date";
+import { formatDateTimeMx, isoToday } from "@/lib/format/date";
 import { logger } from "@/lib/logger";
 import { CrossTenantError } from "@/lib/tenant/scope";
 
-import { publicOrigin, READ_CALLS_PER_MINUTE } from "./config";
+import {
+  argsHash,
+  issueConfirmationToken,
+  verifyConfirmationToken,
+} from "./confirm";
+import {
+  publicOrigin,
+  READ_CALLS_PER_MINUTE,
+  WRITE_CALLS_PER_MINUTE,
+} from "./config";
 import {
   memberPermissions,
   recordToolCall,
@@ -24,7 +34,14 @@ import {
   type McpErrorPayload,
   type ToolErrorResult,
 } from "./errors";
+import {
+  completeIdempotencyKey,
+  findIdempotentReply,
+  releaseIdempotencyKey,
+  reserveIdempotencyKey,
+} from "./idempotency";
 import { hitRateLimit } from "./rate-limit";
+import { getMcpSettings } from "./settings";
 import { applyClientCeiling, type McpScope } from "./scopes";
 
 /** Everything a tool handler may use. The company always comes from here, never from input. */
@@ -51,6 +68,15 @@ export type ToolKind = "read" | "write";
 // Zod objects convert to JSON Schema 2020-12 for tools/list (SDK).
 type AnyObject = z.ZodObject<z.ZodRawShape>;
 
+/** What a write tool shows before it writes: a Spanish summary, dates in dd/mm/aaaa. */
+export const writePreviewSchema = z.object({
+  summary: z.string(),
+  details: z.record(z.string(), z.unknown()).optional(),
+  warnings: z.array(z.string()).optional(),
+});
+
+export type WritePreview = z.infer<typeof writePreviewSchema>;
+
 export type WorkiaTool<
   I extends AnyObject = AnyObject,
   O extends AnyObject = AnyObject,
@@ -68,12 +94,79 @@ export type WorkiaTool<
   output: O;
   annotations?: ToolAnnotations;
   handler: (args: z.infer<I>, ctx: WorkiaToolContext) => Promise<z.infer<O>>;
+  /**
+   * Write tools only: validates, checks the business rules and describes the
+   * change without writing (spec §7, D-06). The handler runs only after a
+   * second call carries the confirmation token this preview earned.
+   */
+  preview?: (args: z.infer<I>, ctx: WorkiaToolContext) => Promise<WritePreview>;
 };
 
 /** Keeps the input and output types of a tool definition tied together. */
 export const defineTool = <I extends AnyObject, O extends AnyObject>(
   tool: WorkiaTool<I, O>,
 ) => tool as unknown as WorkiaTool;
+
+/** Every write tool takes these two control fields (spec §8). */
+const writeControls = {
+  idempotency_key: z
+    .string()
+    .min(8)
+    .max(80)
+    .describe(
+      "Llave única de esta operación (8–80 caracteres). Repetirla con los mismos datos devuelve el mismo resultado sin duplicar.",
+    ),
+  confirmation_token: z
+    .string()
+    .max(300)
+    .optional()
+    .describe(
+      "Token de la vista previa. Sin él la herramienta sólo muestra qué haría; con él, lo hace. Vence en 10 minutos.",
+    ),
+};
+
+const writeEnvelope = {
+  status: z
+    .enum(["preview", "done"])
+    .describe(
+      "preview: nada se escribió todavía; done: el cambio quedó hecho.",
+    ),
+  code: z.literal("CONFIRMATION_REQUIRED").optional(),
+  preview: writePreviewSchema.optional(),
+  confirmation_token: z.string().optional(),
+  expires_at: z.string().optional(),
+  expires_at_mx: z.string().optional(),
+  audit_event_ids: z.array(z.string()).optional(),
+};
+
+/**
+ * A write tool: `preview` describes the change, `handler` makes it through the
+ * existing domain function. The input gains idempotency_key and
+ * confirmation_token; the output gains the preview/done envelope.
+ */
+export const defineWriteTool = <I extends AnyObject, O extends AnyObject>(
+  tool: Omit<WorkiaTool<I, O>, "kind" | "preview"> & {
+    preview: NonNullable<WorkiaTool<I, O>["preview"]>;
+  },
+) =>
+  ({
+    ...tool,
+    kind: "write",
+    input: tool.input.extend(writeControls),
+    output: tool.output.partial().extend(writeEnvelope),
+  }) as unknown as WorkiaTool;
+
+export const writeAnnotations = (
+  title: string,
+  options: { destructive?: boolean } = {},
+): ToolAnnotations => ({
+  title,
+  readOnlyHint: false,
+  destructiveHint: options.destructive ?? false,
+  // Idempotent by idempotency_key.
+  idempotentHint: true,
+  openWorldHint: false,
+});
 
 export const readAnnotations = (title: string): ToolAnnotations => ({
   title,
@@ -119,8 +212,16 @@ const originFromContext = (ctx: Pick<ServerContext, "http"> | undefined) => {
   return extra?.origin ?? publicOrigin();
 };
 
-/** Maps anything a handler throws to a stable error payload. */
-export const toErrorPayload = (error: unknown): McpErrorPayload => {
+/**
+ * Maps anything a handler throws to a stable error payload. Domain functions
+ * refuse business rule violations with a plain Error and a Spanish message
+ * ("Esta persona ya tiene un contrato vigente."): in a write that is CONFLICT.
+ * Database errors (they carry a code) stay INTERNAL and never show details.
+ */
+export const toErrorPayload = (
+  error: unknown,
+  options: { write?: boolean } = {},
+): McpErrorPayload => {
   if (error instanceof McpToolError) {
     return error.toPayload();
   }
@@ -146,6 +247,16 @@ export const toErrorPayload = (error: unknown): McpErrorPayload => {
     };
   }
 
+  if (
+    options.write &&
+    error instanceof Error &&
+    (error as { code?: unknown }).code === undefined &&
+    error.message.length > 0 &&
+    error.message.length < 300
+  ) {
+    return { code: "CONFLICT", message: error.message };
+  }
+
   return { code: "INTERNAL", message: "Error interno de Workia." };
 };
 
@@ -154,6 +265,7 @@ const resultFor = (payload: McpErrorPayload) =>
   payload.code === "FORBIDDEN_RBAC" ||
   payload.code === "RATE_LIMITED" ||
   payload.code === "COMPANY_ACCESS_REVOKED" ||
+  payload.code === "WRITES_DISABLED" ||
   payload.code === "UNAUTHENTICATED"
     ? "denied"
     : "error";
@@ -286,7 +398,7 @@ export const runWorkiaTool = async (
 
     const limit = await hitRateLimit(
       `mcp:${tool.kind}:${auth.connectionId}`,
-      READ_CALLS_PER_MINUTE,
+      tool.kind === "write" ? WRITE_CALLS_PER_MINUTE : READ_CALLS_PER_MINUTE,
       RATE_WINDOW_MS,
       now,
     );
@@ -302,7 +414,7 @@ export const runWorkiaTool = async (
     piiUnmasked = scopes.has("pii") && member.permissions.has("people:update");
 
     const input = tool.input.parse(args ?? {});
-    const output = await tool.handler(input, {
+    const toolContext: WorkiaToolContext = {
       auth,
       companyId: auth.companyId,
       userId: auth.userId,
@@ -313,7 +425,11 @@ export const runWorkiaTool = async (
       requestId,
       today: isoToday(now),
       origin: originFromContext(sdkContext),
-    });
+    };
+    const output =
+      tool.kind === "write"
+        ? await runWrite(tool, input, toolContext, now)
+        : await tool.handler(input, toolContext);
     const structuredContent = tool.output.parse(output) as Record<
       string,
       unknown
@@ -326,7 +442,7 @@ export const runWorkiaTool = async (
       structuredContent,
     };
   } catch (error) {
-    const payload = toErrorPayload(error);
+    const payload = toErrorPayload(error, { write: tool.kind === "write" });
 
     if (payload.code === "INTERNAL") {
       logger.error(
@@ -341,5 +457,124 @@ export const runWorkiaTool = async (
     }
 
     return fail(payload);
+  }
+};
+
+/**
+ * The write path (spec §7): writes switched off → WRITES_DISABLED; no
+ * confirmation token → a preview and a token, nothing written; a token for
+ * other arguments or expired → CONFIRMATION_INVALID; the idempotency key
+ * replays a finished write or refuses other arguments; the write runs in an
+ * audit context so every event says source "mcp" and which connection acted.
+ */
+const runWrite = async (
+  tool: WorkiaTool,
+  input: Record<string, unknown>,
+  ctx: WorkiaToolContext,
+  now: Date,
+): Promise<Record<string, unknown>> => {
+  if (!tool.preview) {
+    throw new McpToolError(
+      "INTERNAL",
+      "Herramienta de escritura sin vista previa.",
+    );
+  }
+
+  if (!(await getMcpSettings(ctx.companyId)).writesEnabled) {
+    throw new McpToolError(
+      "WRITES_DISABLED",
+      "Las escrituras por asistente están apagadas en esta empresa. Hazlo en la app de Workia o pide que las enciendan en Conexiones.",
+    );
+  }
+
+  const {
+    idempotency_key: idempotencyKey,
+    confirmation_token: confirmationToken,
+    ...args
+  } = input as { idempotency_key: string; confirmation_token?: string };
+  const hash = argsHash(input);
+  const key = {
+    connectionId: ctx.auth.connectionId,
+    key: idempotencyKey,
+    tool: tool.name,
+    argsHash: hash,
+  };
+  const binding = {
+    userId: ctx.userId,
+    connectionId: ctx.auth.connectionId,
+    tool: tool.name,
+    argsHash: hash,
+  };
+  const mismatch = () =>
+    new McpToolError(
+      "IDEMPOTENCY_MISMATCH",
+      "Esa idempotency_key ya se usó con otros datos. Usa una llave nueva para otra operación.",
+    );
+
+  if (!confirmationToken) {
+    const prior = await findIdempotentReply(ctx.companyId, key, now);
+
+    if (prior && "mismatch" in prior) throw mismatch();
+    if (prior) return prior.response;
+
+    const preview = await tool.preview(args, ctx);
+    const confirmation = issueConfirmationToken(binding, now.getTime());
+
+    return {
+      status: "preview",
+      code: "CONFIRMATION_REQUIRED",
+      preview,
+      confirmation_token: confirmation.token,
+      expires_at: confirmation.expiresAt.toISOString(),
+      expires_at_mx: formatDateTimeMx(confirmation.expiresAt),
+    };
+  }
+
+  if (!verifyConfirmationToken(confirmationToken, binding, now.getTime())) {
+    throw new McpToolError(
+      "CONFIRMATION_INVALID",
+      "El token de confirmación venció o es de otros datos. Pide la vista previa otra vez.",
+    );
+  }
+
+  const reservation = await reserveIdempotencyKey(ctx.companyId, key, now);
+
+  if (reservation.state === "mismatch") throw mismatch();
+  if (reservation.state === "replay") return reservation.response;
+  if (reservation.state === "pending") {
+    throw new McpToolError(
+      "CONFLICT",
+      "Esta operación ya se está ejecutando con esa idempotency_key.",
+    );
+  }
+
+  try {
+    const { result, eventIds } = await runWithAuditContext(
+      {
+        source: "mcp",
+        requestMeta: {
+          path: "/api/mcp",
+          method: "tools/call",
+          client: ctx.auth.clientName,
+          connection_id: ctx.auth.connectionId,
+          tool: tool.name,
+          request_id: ctx.requestId,
+          idempotency_key: idempotencyKey,
+        },
+      },
+      () => tool.handler(args, ctx),
+    );
+    const response = tool.output.parse({
+      ...result,
+      status: "done",
+      audit_event_ids: eventIds,
+    }) as Record<string, unknown>;
+
+    await completeIdempotencyKey(ctx.companyId, reservation.id, response);
+
+    return response;
+  } catch (error) {
+    await releaseIdempotencyKey(ctx.companyId, reservation.id);
+    throw error;
   }
 };

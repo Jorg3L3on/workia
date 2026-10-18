@@ -2882,6 +2882,7 @@ exports[`/api/mcp transport > keeps the tools/list contract (snapshot) 1`] = `
             "company",
             "membership",
             "mcp_connection",
+            "mcp_settings",
           ],
           "type": "string",
         },

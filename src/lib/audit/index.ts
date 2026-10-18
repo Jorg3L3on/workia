@@ -5,14 +5,20 @@ import { and, count, desc, eq, gte, lte, sql } from "drizzle-orm";
 import { tdb, type DbExecutor } from "@/lib/db";
 import { auditEvents, users } from "@/lib/db/schema";
 
+import { currentAuditContext, noteAuditEvent } from "./context";
 import type { AuditPayload } from "./types";
 import type { ListAuditEventsOptions, RecordAuditEventInput } from "./types";
 
-/** Append-only: audit events are inserted, never updated or deleted via the app. */
+/**
+ * Append-only: audit events are inserted, never updated or deleted via the app.
+ * Inside an MCP tool (runWithAuditContext) the source and request meta come
+ * from the context unless the caller passes them.
+ */
 export const recordAuditEvent = async (
   input: RecordAuditEventInput,
   executor: DbExecutor = tdb(input.companyId),
 ) => {
+  const context = currentAuditContext();
   const [created] = await executor
     .insert(auditEvents)
     .values({
@@ -22,11 +28,15 @@ export const recordAuditEvent = async (
       resourceId: input.resourceId,
       action: input.action,
       result: input.result ?? "success",
-      source: input.source ?? "app",
+      source: input.source ?? context?.source ?? "app",
       payload: input.payload ?? null,
-      requestMeta: input.requestMeta ?? null,
+      requestMeta: input.requestMeta ?? context?.requestMeta ?? null,
     })
     .returning();
+
+  if (created) {
+    noteAuditEvent(created.id);
+  }
 
   return created;
 };
@@ -48,6 +58,10 @@ const buildAuditFilters = (options: ListAuditEventsOptions) => {
 
   if (options.action) {
     filters.push(eq(auditEvents.action, options.action));
+  }
+
+  if (options.source) {
+    filters.push(eq(auditEvents.source, options.source));
   }
 
   if (options.from) {
@@ -281,7 +295,6 @@ export const listAuditEventsKeyset = async (
 ) => {
   const filters = [
     buildAuditFilters({ ...options, companyId }),
-    options.source ? eq(auditEvents.source, options.source) : undefined,
     options.after
       ? sql`(${auditEvents.occurredAt}, ${auditEvents.id}) < (${options.after.key}::timestamptz, ${options.after.id}::uuid)`
       : undefined,
