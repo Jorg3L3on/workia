@@ -15,6 +15,7 @@ import { getContractTemplateById } from "@/lib/contracts";
 import { CONTRACT_TEMPLATE_TOKENS } from "@/lib/contracts/schema";
 import type { PermissionSlug } from "@/lib/db/schema/types";
 import { listSites } from "@/lib/sites";
+import { listRegions } from "@/lib/regions";
 
 import { notFound } from "./errors";
 import {
@@ -190,14 +191,17 @@ export const registerWorkiaResources = (server: McpServer) => {
           scope: "read",
           permission: "positions:read",
           render: async (toolCtx) => {
-            const [areas, positions, activities, sites] = await Promise.all([
-              listAreas(toolCtx.companyId),
-              listPositions(toolCtx.companyId),
-              listActivities(toolCtx.companyId),
-              toolCtx.permissions.has("sites:read")
-                ? listSites(toolCtx.companyId)
-                : [],
-            ]);
+            const canSeeSites = toolCtx.permissions.has("sites:read");
+            const [areas, positions, activities, sites, regions] =
+              await Promise.all([
+                listAreas(toolCtx.companyId),
+                listPositions(toolCtx.companyId),
+                listActivities(toolCtx.companyId),
+                canSeeSites ? listSites(toolCtx.companyId) : [],
+                canSeeSites
+                  ? listRegions(toolCtx.companyId, { activeOnly: true })
+                  : [],
+              ]);
             const byPosition = await listActivitiesByPositionIds(
               toolCtx.companyId,
               positions.map((position) => position.id),
@@ -226,6 +230,11 @@ export const registerWorkiaResources = (server: McpServer) => {
                 id: site.id,
                 name: site.name,
                 kind: site.kind,
+                region_id: site.regionId,
+              })),
+              regiones: regions.map((region) => ({
+                id: region.id,
+                name: region.name,
               })),
             });
           },

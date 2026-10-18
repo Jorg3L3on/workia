@@ -138,6 +138,9 @@ export const listExpiringContractsTool = defineTool({
   input: z.object({
     within_days: z.number().int().min(1).max(365).default(30),
     site_id: uuid("Sólo personas de esta sucursal.").optional(),
+    region_id: uuid(
+      "Sólo personas de sucursales de esta región (list_regions).",
+    ).optional(),
     area_id: uuid("Sólo personas de esta área.").optional(),
     cursor: cursorSchema,
     limit: limitSchema,
@@ -171,6 +174,7 @@ export const listExpiringContractsTool = defineTool({
       today: ctx.today,
       withinDays: filters.within_days,
       siteId: filters.site_id,
+      regionId: filters.region_id,
       areaId: filters.area_id,
       after: decodeCursor(cursor, hash),
       limit,
@@ -219,6 +223,9 @@ export const listRenewalTrayTool = defineTool({
     reference_date: isoDate(
       "Fecha de referencia (por defecto hoy en México).",
     ).optional(),
+    region_id: uuid(
+      "Sólo personas de sucursales de esta región (list_regions).",
+    ).optional(),
     limit: z.number().int().min(1).max(500).default(200),
   }),
   output: z.object({
@@ -240,9 +247,11 @@ export const listRenewalTrayTool = defineTool({
     truncated: z.boolean(),
   }),
   annotations: readAnnotations("Bandeja de renovación"),
-  handler: async ({ reference_date, limit }, ctx) => {
+  handler: async ({ reference_date, region_id, limit }, ctx) => {
     const asOf = reference_date ?? ctx.today;
-    const items = await listRenewalTrayItems(ctx.companyId, asOf);
+    const items = await listRenewalTrayItems(ctx.companyId, asOf, undefined, {
+      regionId: region_id,
+    });
 
     return {
       as_of: asOf,

@@ -28,6 +28,8 @@ import { isoToday } from "@/lib/format/date";
 import type { McpScope } from "@/lib/mcp/scopes";
 import { generateToken } from "@/lib/mcp/tokens";
 import { listPeopleKeyset } from "@/lib/people";
+import { createRegion } from "@/lib/regions";
+import { setSiteRegion } from "@/lib/sites";
 import { listAssetsKeyset } from "@/lib/resguardo";
 
 import { idsIn, ownerDb, seedTenant, tenantIds, type Tenant } from "./fixtures";
@@ -170,7 +172,7 @@ beforeAll(async () => {
 });
 
 describe("protocol surface", () => {
-  it("lists the 32 tools, the 4 resources and the 3 prompts", async () => {
+  it("lists the 33 tools, the 4 resources and the 3 prompts", async () => {
     const tools = (await rpc(tokens.aRead, "tools/list")).result.tools;
     const resources = (await rpc(tokens.aRead, "resources/list")).result
       .resources;
@@ -178,8 +180,8 @@ describe("protocol surface", () => {
       .result.resourceTemplates;
     const prompts = (await rpc(tokens.aRead, "prompts/list")).result.prompts;
 
-    // 18 reads (phase 1) + 13 writes (phase 2) + 1 write (phase 3).
-    expect(tools).toHaveLength(32);
+    // 18 reads (phase 1) + 13 writes (phase 2) + phase 3 (1 read, 1 write).
+    expect(tools).toHaveLength(33);
     expect(resources.map((r: { uri: string }) => r.uri).sort()).toEqual([
       "workia://catalogo",
       "workia://glosario",
@@ -473,6 +475,64 @@ describe("catalog", () => {
     const own = await call(tokens.aRead, "list_sites");
     expect(own.isError).toBeFalsy();
     expect(own.structuredContent.items.length).toBeGreaterThan(0);
+  });
+
+  it("mcp:list_regions", async () => {
+    const region = await createRegion(
+      a.companyId,
+      { name: "Región MCP A", active: true },
+      a.admin.id,
+    );
+    await setSiteRegion(a.companyId, a.site.id, region.id, a.admin.id);
+
+    const other = await call(tokens.bAll, "list_regions");
+    expect(JSON.stringify(other)).not.toContain(region.id);
+
+    const own = await call(tokens.aRead, "list_regions");
+    expect(own.structuredContent.items).toContainEqual({
+      id: region.id,
+      name: "Región MCP A",
+      active: true,
+      sucursales: [{ id: a.site.id, name: a.site.name }],
+    });
+
+    // region_id filters: sites, people (by their site) and the renewal tray.
+    const sitesInRegion = await call(tokens.aRead, "list_sites", {
+      region_id: region.id,
+    });
+    expect(
+      sitesInRegion.structuredContent.items.map(
+        (site: { id: string }) => site.id,
+      ),
+    ).toEqual([a.site.id]);
+
+    await ownerDb
+      .update(people)
+      .set({ siteId: a.site.id })
+      .where(eq(people.id, a.person.id));
+    const peopleInRegion = await call(tokens.aRead, "list_people", {
+      region_id: region.id,
+    });
+    expect(
+      peopleInRegion.structuredContent.items.map(
+        (person: { id: string }) => person.id,
+      ),
+    ).toEqual([a.person.id]);
+
+    // Company B asking with A's region gets nothing.
+    const crossPeople = await call(tokens.bAll, "list_people", {
+      region_id: region.id,
+    });
+    expect(crossPeople.structuredContent.items).toEqual([]);
+    const crossTray = await call(tokens.bAll, "list_renewal_tray", {
+      region_id: region.id,
+    });
+    expect(crossTray.structuredContent.count).toBe(0);
+    const crossExpiring = await call(tokens.bAll, "list_expiring_contracts", {
+      region_id: region.id,
+      within_days: 365,
+    });
+    expect(crossExpiring.structuredContent.items).toEqual([]);
   });
 
   it("lists positions with their activities", async () => {
@@ -790,6 +850,7 @@ describe("PII sweep and output contracts", () => {
     list_positions: {},
     list_activities: {},
     list_sites: {},
+    list_regions: {},
     list_contracts: { person_id: a.person.id },
     list_expiring_contracts: { within_days: 365 },
     list_renewal_tray: {},

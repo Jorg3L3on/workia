@@ -7,6 +7,7 @@ import {
   listPositions,
 } from "@/lib/catalog";
 import { listSites } from "@/lib/sites";
+import { listRegions } from "@/lib/regions";
 
 import { defineTool, readAnnotations } from "../run-tool";
 import { FREE_TEXT_NOTE, uuid } from "./common";
@@ -169,25 +170,81 @@ export const listSitesTool = defineTool({
   permission: "sites:read",
   input: z.object({
     kind: z.enum(["corporativo", "sucursal"]).optional(),
+    region_id: uuid(
+      "Sólo sucursales de esta región (list_regions).",
+    ).optional(),
     limit: catalogLimit,
   }),
   output: z.object({
     items: z.array(
-      z.object({ id: z.string(), name: z.string(), kind: z.string() }),
+      z.object({
+        id: z.string(),
+        name: z.string(),
+        kind: z.string(),
+        region_id: z.string().nullable(),
+      }),
     ),
     truncated,
   }),
   annotations: readAnnotations("Listar sucursales"),
   handler: async (args, ctx) => {
     const rows = (await listSites(ctx.companyId)).filter(
-      (site) => !args.kind || site.kind === args.kind,
+      (site) =>
+        (!args.kind || site.kind === args.kind) &&
+        (!args.region_id || site.regionId === args.region_id),
     );
 
     return {
-      items: rows
-        .slice(0, args.limit)
-        .map((site) => ({ id: site.id, name: site.name, kind: site.kind })),
+      items: rows.slice(0, args.limit).map((site) => ({
+        id: site.id,
+        name: site.name,
+        kind: site.kind,
+        region_id: site.regionId,
+      })),
       truncated: rows.length > args.limit,
+    };
+  },
+});
+
+export const listRegionsTool = defineTool({
+  name: "list_regions",
+  title: "Listar regiones",
+  description: `Regiones de la empresa con sus sucursales. Usa su id como region_id en list_people, list_sites, list_renewal_tray y list_expiring_contracts. ${FREE_TEXT_NOTE}`,
+  kind: "read",
+  scope: "read",
+  permission: "sites:read",
+  input: z.object({
+    include_inactive: z.boolean().default(false),
+    limit: catalogLimit,
+  }),
+  output: z.object({
+    items: z.array(
+      z.object({
+        id: z.string(),
+        name: z.string(),
+        active: z.boolean(),
+        sucursales: z.array(z.object({ id: z.string(), name: z.string() })),
+      }),
+    ),
+    truncated,
+  }),
+  annotations: readAnnotations("Listar regiones"),
+  handler: async (args, ctx) => {
+    const [regionRows, siteRows] = await Promise.all([
+      listRegions(ctx.companyId, { activeOnly: !args.include_inactive }),
+      listSites(ctx.companyId),
+    ]);
+
+    return {
+      items: regionRows.slice(0, args.limit).map((region) => ({
+        id: region.id,
+        name: region.name,
+        active: region.active,
+        sucursales: siteRows
+          .filter((site) => site.regionId === region.id)
+          .map((site) => ({ id: site.id, name: site.name })),
+      })),
+      truncated: regionRows.length > args.limit,
     };
   },
 });

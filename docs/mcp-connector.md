@@ -104,12 +104,13 @@ America/Mexico_City. Las listas grandes paginan con `cursor` opaco y firmado
 | `whoami` | Devuelve la persona usuaria de esta conexión, su empresa y rol en Workia, los permisos que puede usar por aquí (rol ∩ scopes), los scopes, la conexión con su vencimiento y la fecha de hoy en México. | `read` (Leer) | `people:read` |
 | `search` | Búsqueda en toda la empresa: personas (por nombre o correo), sus contratos vigentes, activos (por nombre o identificador), puestos, áreas y sucursales. | `read` (Leer) | `people:read` |
 | `fetch` | Trae el documento completo de un resultado de search por su id «tipo:uuid» (person, contract, asset, position, area, site, activity, template). | `read` (Leer) | `people:read` |
-| `list_people` | Lista expedientes de personas con filtros por estatus, área, puesto, sucursal y datos faltantes (missing), ordenados por apellido. | `read` (Leer) | `people:read` |
+| `list_people` | Lista expedientes de personas con filtros por estatus, área, puesto, sucursal, región y datos faltantes (missing), ordenados por apellido. | `read` (Leer) | `people:read` |
 | `get_person` | Expediente de una persona: datos, área, puesto, sucursal, jefe, datos México (domicilio, estado civil, INE y beneficiarios; sólo con el scope pii, si no dice qué está capturado) y, según include, horario, contratos, activos en resguardo y actividades del puesto. | `read` (Leer) | `people:read` |
 | `list_areas` | Áreas de la empresa con su área padre. | `read` (Leer) | `areas:read` |
 | `list_positions` | Puestos de la empresa con su área y, opcionalmente, sus actividades. | `read` (Leer) | `positions:read` |
 | `list_activities` | Actividades del catálogo (se asignan a puestos). | `read` (Leer) | `positions:read` |
 | `list_sites` | Ubicaciones de la empresa: sucursales y corporativo. | `read` (Leer) | `sites:read` |
+| `list_regions` | Regiones de la empresa con sus sucursales. | `read` (Leer) | `sites:read` |
 | `list_contracts` | Contratos filtrables por persona, estado, tipo y rango de fecha de fin, ordenados por fecha de fin (los indeterminados al final). | `read` (Leer) | `contracts:read` |
 | `list_expiring_contracts` | «¿Qué contratos vencen en N días?»: contratos determinados vigentes cuya fecha de fin cae entre hoy (México) y hoy + within_days, sin importar el aviso. | `read` (Leer) | `contracts:read` |
 | `list_renewal_tray` | La bandeja de renovación de Workia tal cual: contratos determinados vigentes dentro de su ventana de aviso (1, 2, 3 o 6 meses antes del fin; «no avisar» queda fuera), por fecha de fin. | `read` (Leer) | `contracts:read` |

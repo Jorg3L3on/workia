@@ -12,6 +12,7 @@ import {
   listAreasTool,
   listPositionsTool,
   listSitesTool,
+  listRegionsTool,
 } from "./catalog";
 import {
   createCatalogItemTool,
@@ -57,6 +58,7 @@ export const WORKIA_TOOLS: WorkiaTool[] = [
   listPositionsTool,
   listActivitiesTool,
   listSitesTool,
+  listRegionsTool,
   listContractsTool,
   listExpiringContractsTool,
   listRenewalTrayTool,

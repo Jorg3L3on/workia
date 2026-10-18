@@ -70,6 +70,9 @@ const listPeopleInput = z.object({
   area_id: uuid("Filtra por área.").optional(),
   position_id: uuid("Filtra por puesto.").optional(),
   site_id: uuid("Filtra por sucursal o corporativo.").optional(),
+  region_id: uuid(
+    "Filtra por región: personas de sus sucursales (list_regions).",
+  ).optional(),
   missing: z
     .array(z.enum(PERSON_MISSING_FIELDS))
     .max(PERSON_MISSING_FIELDS.length)
@@ -84,7 +87,7 @@ const listPeopleInput = z.object({
 export const listPeopleTool = defineTool({
   name: "list_people",
   title: "Listar personas",
-  description: `Lista expedientes de personas con filtros por estatus, área, puesto, sucursal y datos faltantes (missing), ordenados por apellido. Por defecto oculta los Borrados. «¿Quién de Sucursal Centro no tiene horario?» = site_id + missing:["horario"]. ${FREE_TEXT_NOTE}`,
+  description: `Lista expedientes de personas con filtros por estatus, área, puesto, sucursal, región y datos faltantes (missing), ordenados por apellido. Por defecto oculta los Borrados. «¿Quién de Sucursal Centro no tiene horario?» = site_id + missing:["horario"]. ${FREE_TEXT_NOTE}`,
   kind: "read",
   scope: "read",
   permission: "people:read",
@@ -107,6 +110,7 @@ export const listPeopleTool = defineTool({
       areaId: filters.area_id,
       positionId: filters.position_id,
       siteId: filters.site_id,
+      regionId: filters.region_id,
       missing: filters.missing,
       after: decodeCursor(cursor, hash),
       limit,
