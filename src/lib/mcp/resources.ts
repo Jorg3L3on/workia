@@ -12,7 +12,10 @@ import {
   listPositions,
 } from "@/lib/catalog";
 import { getContractTemplateById } from "@/lib/contracts";
-import { CONTRACT_TEMPLATE_TOKENS } from "@/lib/contracts/schema";
+import {
+  CONTRACT_TEMPLATE_TOKENS,
+  contractTemplateTokenLabels,
+} from "@/lib/contracts/schema";
 import type { PermissionSlug } from "@/lib/db/schema/types";
 import { listSites } from "@/lib/sites";
 import { listRegions } from "@/lib/regions";
@@ -132,7 +135,10 @@ export const registerWorkiaResources = (server: McpServer) => {
           scope: "read",
           permission: "contract_templates:read",
           render: async () =>
-            JSON.stringify({ tokens: CONTRACT_TEMPLATE_TOKENS }),
+            JSON.stringify({
+              tokens: CONTRACT_TEMPLATE_TOKENS,
+              labels: contractTemplateTokenLabels,
+            }),
         },
         "application/json",
         ctx,

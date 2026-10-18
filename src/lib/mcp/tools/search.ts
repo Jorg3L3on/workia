@@ -29,7 +29,7 @@ import { assetStatusLabels } from "@/lib/resguardo/schema";
 import { getSiteById, listSites } from "@/lib/sites";
 
 import { McpToolError, notFound } from "../errors";
-import { maskText, personPii } from "../mask";
+import { personPii } from "../mask";
 import {
   defineTool,
   readAnnotations,
@@ -37,6 +37,7 @@ import {
 } from "../run-tool";
 import { appUrl, FREE_TEXT_NOTE, fullName, mx } from "./common";
 import { compensacionLine } from "./compensation";
+import { maskContractText } from "./contract-text";
 
 /**
  * search/fetch with OpenAI's signature (ChatGPT connectors): search(query) →
@@ -307,8 +308,7 @@ const fetchEntity = async (
           `Tipo: ${contract.type} · Inicio ${mx(contract.startDate)}${contract.endDate ? ` · Fin ${mx(contract.endDate)}` : ""} · Estado ${contractStatusLabels[contract.status]}`,
           contract.templateName && `Plantilla: ${contract.templateName}`,
           compensacionLine(contract, ctx),
-          body &&
-            `\n${ctx.piiUnmasked ? body : maskText(body, [person?.rfc, person?.curp, person?.nss])}`,
+          body && `\n${maskContractText(body, ctx, person, contract)}`,
         ),
         url: appUrl(ctx, `/app/personas/${contract.personId}`),
         metadata: {

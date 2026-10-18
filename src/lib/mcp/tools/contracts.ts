@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   getContractById,
   getContractTemplateById,
+  getSeniorityCertificate,
   listContractsByPerson,
   listContractsKeyset,
   listContractTemplates,
@@ -12,8 +13,10 @@ import {
   templateTokensUsed,
 } from "@/lib/contracts";
 import {
+  compensationValues,
   CONTRACT_TEMPLATE_TOKENS,
   contractStatusLabels,
+  contractTemplateTokenLabels,
   isContractInRenewalWindow,
 } from "@/lib/contracts/schema";
 import { getPersonById } from "@/lib/people";
@@ -26,8 +29,14 @@ import {
   pageOf,
 } from "../cursor";
 import { McpToolError, notFound } from "../errors";
-import { maskText } from "../mask";
-import { compensacion, compensacionSchema } from "./compensation";
+import {
+  assertCanCapture,
+  compensacion,
+  compensacionInput,
+  compensacionSchema,
+  compensationFormValues,
+} from "./compensation";
+import { maskContractText } from "./contract-text";
 import { contractHorarioBloques, horarioBloquesSchema } from "./schedule";
 import { defineTool, readAnnotations } from "../run-tool";
 import {
@@ -360,9 +369,7 @@ export const getContractTool = defineTool({
         compensacion: compensacion(contract, ctx),
         ...(include_text
           ? {
-              generated_text: ctx.piiUnmasked
-                ? text
-                : maskText(text, [person?.rfc, person?.curp, person?.nss]),
+              generated_text: maskContractText(text, ctx, person, contract),
             }
           : {}),
         pii_masked: !ctx.piiUnmasked,
@@ -388,7 +395,7 @@ export const getContractTool = defineTool({
 export const listContractTemplatesTool = defineTool({
   name: "list_contract_templates",
   title: "Plantillas de contrato",
-  description: `Plantillas de contrato y los tokens que Workia sabe llenar ({{nombres}}, {{puesto}}, {{rfc}}, {{horario}}…). ${FREE_TEXT_NOTE}`,
+  description: `Plantillas de contrato y los tokens que Workia sabe llenar ({{nombres}}, {{puesto}}, {{curp}}, {{domicilio}}, {{salario_diario}}, {{antiguedad}}, {{empresa_razon_social}}…) con lo que imprime cada uno. ${FREE_TEXT_NOTE}`,
   kind: "read",
   scope: "read",
   permission: "contract_templates:read",
@@ -398,6 +405,9 @@ export const listContractTemplatesTool = defineTool({
   }),
   output: z.object({
     tokens: z.array(z.string()),
+    token_labels: z
+      .record(z.string(), z.string())
+      .describe("Qué imprime cada token."),
     items: z.array(
       z.object({
         id: z.string(),
@@ -417,6 +427,7 @@ export const listContractTemplatesTool = defineTool({
 
     return {
       tokens: [...CONTRACT_TEMPLATE_TOKENS],
+      token_labels: { ...contractTemplateTokenLabels },
       items: templates.map((template) => ({
         id: template.id,
         name: template.name,
@@ -432,7 +443,7 @@ export const previewContractTool = defineTool({
   name: "preview_contract",
   title: "Vista previa de contrato",
   description:
-    "Simula la emisión de un contrato sin guardar nada: el texto que saldría, los tokens que quedarían vacíos (p. ej. persona sin horario o sin RFC) y lo que impediría emitirlo (contrato vigente, falta fecha de fin). El RFC del texto sale enmascarado sin el scope pii.",
+    "Simula la emisión de un contrato sin guardar nada: el texto que saldría, los tokens que quedarían vacíos (p. ej. persona sin horario, sin CURP o sin domicilio) y lo que impediría emitirlo (contrato vigente, falta fecha de fin). Con compensacion llena los tokens de salario. Sin el scope pii los identificadores salen enmascarados y el domicilio oculto; los montos de salario sólo salen con pii y compensation:read.",
   kind: "read",
   scope: "read",
   permission: "contracts:read",
@@ -444,6 +455,7 @@ export const previewContractTool = defineTool({
     end_date: isoDate(
       "Fin (aaaa-mm-dd), obligatorio si es determinado.",
     ).optional(),
+    compensacion: compensacionInput.optional(),
   }),
   output: z.object({
     generated_text: z.string(),
@@ -470,12 +482,17 @@ export const previewContractTool = defineTool({
       throw notFound("La plantilla");
     }
 
+    assertCanCapture(ctx, args.compensacion);
+    const compensation = args.compensacion
+      ? compensationValues(compensationFormValues(args.compensacion))
+      : undefined;
     const preview = await previewContract(ctx.companyId, {
       personId: args.person_id,
       templateId: args.template_id,
       type: args.type,
       startDate: args.start_date,
       endDate: args.end_date,
+      compensation,
     });
 
     if (!preview) {
@@ -483,13 +500,12 @@ export const previewContractTool = defineTool({
     }
 
     return {
-      generated_text: ctx.piiUnmasked
-        ? preview.generatedText
-        : maskText(preview.generatedText, [
-            preview.person.rfc,
-            preview.person.curp,
-            preview.person.nss,
-          ]),
+      generated_text: maskContractText(
+        preview.generatedText,
+        ctx,
+        preview.person,
+        compensation,
+      ),
       missing_tokens: preview.missingTokens,
       blocking: preview.blocking,
       schedule_snapshot: {
@@ -499,6 +515,70 @@ export const previewContractTool = defineTool({
         salida: preview.scheduleSnapshot.scheduleSalida,
       },
       pii_masked: !ctx.piiUnmasked,
+    };
+  },
+});
+
+export const getSeniorityCertificateTool = defineTool({
+  name: "get_seniority_certificate",
+  title: "Constancia de antigüedad",
+  description: `Constancia de antigüedad de una persona, igual que la de la app: fecha de ingreso original, antigüedad a hoy y cadena de contratos, más el texto listo para imprimir. Sin el scope pii la CURP del texto sale enmascarada. ${FREE_TEXT_NOTE}`,
+  kind: "read",
+  scope: "read",
+  permission: "contracts:read",
+  input: z.object({ person_id: uuid("Persona.") }),
+  output: z.object({
+    person: personRefSchema,
+    fecha_ingreso: z.string().nullable(),
+    fecha_ingreso_mx: z.string().nullable(),
+    antiguedad: z.string().nullable(),
+    as_of: z.string(),
+    as_of_mx: z.string().nullable(),
+    contratos: z.array(
+      z.object({
+        id: z.string(),
+        type: z.string(),
+        status: z.string(),
+        start_date: z.string(),
+        end_date: z.string().nullable(),
+      }),
+    ),
+    text: z.string(),
+    pii_masked: z.boolean(),
+    url: z.string(),
+  }),
+  annotations: readAnnotations("Constancia de antigüedad"),
+  handler: async ({ person_id }, ctx) => {
+    requirePermission(ctx, "people:read");
+    const certificate = await getSeniorityCertificate(
+      ctx.companyId,
+      person_id,
+      ctx.today,
+    );
+
+    if (!certificate) {
+      throw notFound("La persona");
+    }
+
+    const { person } = certificate;
+
+    return {
+      person: { id: person.id, nombre_completo: fullName(person) },
+      fecha_ingreso: certificate.fechaIngreso,
+      fecha_ingreso_mx: mx(certificate.fechaIngreso),
+      antiguedad: certificate.antiguedad,
+      as_of: certificate.asOf,
+      as_of_mx: mx(certificate.asOf),
+      contratos: certificate.contratos.map((contract) => ({
+        id: contract.id,
+        type: contract.type,
+        status: contract.status,
+        start_date: contract.startDate,
+        end_date: contract.endDate,
+      })),
+      text: maskContractText(certificate.text, ctx, person),
+      pii_masked: !ctx.piiUnmasked,
+      url: appUrl(ctx, `/app/personas/${person.id}/constancia`),
     };
   },
 });

@@ -26,6 +26,7 @@ import {
   listExpiringContractsTool,
   listRenewalTrayTool,
   previewContractTool,
+  getSeniorityCertificateTool,
 } from "./contracts";
 import {
   issueContractTool,
@@ -65,6 +66,7 @@ export const WORKIA_TOOLS: WorkiaTool[] = [
   getContractTool,
   listContractTemplatesTool,
   previewContractTool,
+  getSeniorityCertificateTool,
   listAssetsTool,
   getAssetTool,
   listAuditEventsTool,

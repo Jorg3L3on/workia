@@ -10,6 +10,8 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { POST as mcpPost } from "@/app/api/mcp/route";
 import { listAuditEventsKeyset } from "@/lib/audit";
 import {
+  createContract,
+  createContractTemplate,
   listContractsKeyset,
   listExpiringContracts,
   listRenewalTrayItems,
@@ -172,7 +174,7 @@ beforeAll(async () => {
 });
 
 describe("protocol surface", () => {
-  it("lists the 33 tools, the 4 resources and the 3 prompts", async () => {
+  it("lists the 34 tools, the 4 resources and the 3 prompts", async () => {
     const tools = (await rpc(tokens.aRead, "tools/list")).result.tools;
     const resources = (await rpc(tokens.aRead, "resources/list")).result
       .resources;
@@ -180,8 +182,8 @@ describe("protocol surface", () => {
       .result.resourceTemplates;
     const prompts = (await rpc(tokens.aRead, "prompts/list")).result.prompts;
 
-    // 18 reads (phase 1) + 13 writes (phase 2) + phase 3 (1 read, 1 write).
-    expect(tools).toHaveLength(33);
+    // 18 reads (phase 1) + 13 writes (phase 2) + phase 3 (2 reads, 1 write).
+    expect(tools).toHaveLength(34);
     expect(resources.map((r: { uri: string }) => r.uri).sort()).toEqual([
       "workia://catalogo",
       "workia://glosario",
@@ -851,6 +853,7 @@ describe("PII sweep and output contracts", () => {
     list_activities: {},
     list_sites: {},
     list_regions: {},
+    get_seniority_certificate: { person_id: a.person.id },
     list_contracts: { person_id: a.person.id },
     list_expiring_contracts: { within_days: 365 },
     list_renewal_tray: {},
@@ -946,5 +949,127 @@ describe("expediente México in the connector (WRK-I1-9)", () => {
       id: `person:${a.person.id}`,
     });
     expect(fetched.structuredContent.text).toContain("Calle Secreta 77");
+  });
+});
+
+// Runs last: it adds templates and a contract to company A.
+describe("official tokens and seniority certificate (WRK-I1-12)", () => {
+  it("mcp:get_seniority_certificate", async () => {
+    const other = await call(tokens.bAll, "get_seniority_certificate", {
+      person_id: a.person.id,
+    });
+    expect(errorCode(other)).toBe("NOT_FOUND");
+
+    const masked = await call(tokens.aRead, "get_seniority_certificate", {
+      person_id: a.person.id,
+    });
+    expect(masked.structuredContent).toMatchObject({
+      person: { id: a.person.id },
+      pii_masked: true,
+      contratos: [{ id: a.contract.id }],
+    });
+    expect(masked.structuredContent.text).toContain("CONSTANCIA DE ANTIGÜEDAD");
+    expect(masked.structuredContent.text).not.toContain(CURP_A());
+
+    const full = await call(tokens.aAll, "get_seniority_certificate", {
+      person_id: a.person.id,
+    });
+    expect(full.structuredContent.text).toContain(CURP_A());
+  });
+
+  it("preview_contract fills the salary tokens only for who may see them", async () => {
+    const template = await createContractTemplate(
+      a.companyId,
+      {
+        name: "Con salario",
+        body: "Salario {{salario_diario}} ({{salario_mensual}}), {{periodicidad}}. CURP {{curp}}. Ingreso {{fecha_ingreso}}.",
+        active: true,
+      },
+      a.admin.id,
+    );
+    const args = {
+      person_id: a.person.id,
+      template_id: template.id,
+      type: "indeterminado",
+      start_date: "2027-01-01",
+      compensacion: {
+        salario_diario: 500,
+        forma_pago: "transferencia",
+        periodicidad: "quincenal",
+      },
+    };
+
+    const full = await call(tokens.aAll, "preview_contract", args);
+    expect(full.structuredContent.generated_text).toContain(
+      "Salario $500.00 ($15,200.00), quincenal.",
+    );
+    expect(full.structuredContent.missing_tokens).not.toContain(
+      "salario_diario",
+    );
+
+    const noPii = await call(tokens.aRead, "preview_contract", args);
+    expect(errorCode(noPii)).toBe("FORBIDDEN_SCOPE");
+
+    const withoutSalary = await call(tokens.aRead, "preview_contract", {
+      ...args,
+      compensacion: undefined,
+    });
+    expect(withoutSalary.structuredContent.missing_tokens).toEqual(
+      expect.arrayContaining(["salario_diario", "salario_mensual"]),
+    );
+    expect(withoutSalary.structuredContent.generated_text).not.toContain(
+      CURP_A(),
+    );
+  });
+
+  it("get_contract hides the salary in the text without compensation access", async () => {
+    const template = await createContractTemplate(
+      a.companyId,
+      {
+        name: "Texto con salario",
+        body: "Salario {{salario_diario}}.",
+        active: true,
+      },
+      a.admin.id,
+    );
+    const [person] = await ownerDb
+      .insert(people)
+      .values({
+        companyId: a.companyId,
+        nombres: "Sin",
+        apellidoPaterno: "Contrato",
+        status: "activa",
+      })
+      .returning();
+    const contract = await createContract(
+      a.companyId,
+      {
+        personId: person.id,
+        templateId: template.id,
+        type: "indeterminado",
+        startDate: "2027-02-01",
+        endDate: "",
+        noticeWindow: "no_avisar",
+        salarioDiario: 650,
+        formaPago: "efectivo",
+        periodicidadPago: "semanal",
+      },
+      a.admin.id,
+    );
+
+    const masked = await call(tokens.aRead, "get_contract", {
+      contract_id: contract.id,
+      include_text: true,
+    });
+    expect(masked.structuredContent.contract.generated_text).toBe(
+      "Salario [salario oculto].",
+    );
+    const full = await call(tokens.aAll, "get_contract", {
+      contract_id: contract.id,
+      include_text: true,
+    });
+    expect(full.structuredContent.contract.generated_text).toBe(
+      "Salario $650.00.",
+    );
   });
 });

@@ -9,6 +9,7 @@ import {
   renewContract,
 } from "@/lib/contracts";
 import {
+  compensationValues,
   contractFormSchema,
   contractNoticeWindowLabels,
   contractTypeLabels,
@@ -124,6 +125,9 @@ export const issueContractTool = defineWriteTool({
       type: args.type,
       startDate: args.start_date,
       endDate: args.end_date,
+      compensation: args.compensacion
+        ? compensationValues(compensationFormValues(args.compensacion))
+        : undefined,
     });
 
     if (!preview) throw notFound("La persona o la plantilla");
