@@ -34,6 +34,11 @@ import {
   decideContractRenewalTool,
   renewContractTool,
 } from "./contracts-writes";
+import {
+  approveOnboardingStepTool,
+  getOnboardingTool,
+  startOnboardingTool,
+} from "./onboarding";
 import { getPersonTool, listPeopleTool } from "./people";
 import {
   createPersonTool,
@@ -46,8 +51,8 @@ import { fetchTool, searchTool } from "./search";
 import { whoamiTool } from "./whoami";
 
 /**
- * Every tool of the connector, in tools/list order: the 18 reads of phase 1
- * and the 13 writes of phase 2. A tool must declare its permission, scope,
+ * Every tool of the connector, in tools/list order: the 18 reads of phase 1,
+ * the 13 writes of phase 2 and the phase 3 tools on «Ciclo laboral México». A tool must declare its permission, scope,
  * annotations and output schema; a write also its preview (mcp-coverage).
  */
 export const WORKIA_TOOLS: WorkiaTool[] = [
@@ -77,6 +82,9 @@ export const WORKIA_TOOLS: WorkiaTool[] = [
   setPersonStatusTool,
   updatePersonScheduleTool,
   updatePersonScheduleBlocksTool,
+  getOnboardingTool,
+  startOnboardingTool,
+  approveOnboardingStepTool,
   createCatalogItemTool,
   linkPositionActivityTool,
   unlinkPositionActivityTool,

@@ -126,6 +126,9 @@ America/Mexico_City. Las listas grandes paginan con `cursor` opaco y firmado
 | `set_person_status` | Da de baja laboral o reactiva a una persona (estatus activa \| baja). | `write:people` (Escribir personas) | `people:update` |
 | `update_person_schedule` | Obsoleta: usa update_person_schedule_blocks (horario por bloques, día de descanso). | `write:people` (Escribir personas) | `people:update` |
 | `update_person_schedule_blocks` | Captura el horario por bloques de una persona: cada bloque con días (lun…dom), entrada, salida y comida opcional, más el día de descanso. | `write:people` (Escribir personas) | `people:update` |
+| `get_onboarding` | Estado de un alta RH → Nóminas por person_id u onboarding_id: etapa, checklist, lo que falta, Infonavit/Fonacot (número y montos sólo con el scope pii) y quién ya aprobó. | `read` (Leer) | `people:read` |
+| `start_onboarding` | Inicia el alta RH → Nóminas de una persona activa que ya tiene expediente (créalo antes con create_person), con el checklist e Infonavit/Fonacot si ya los tienes. | `write:people` (Escribir personas) | `people:update` |
+| `approve_onboarding_step` | Da el visto bueno de la etapa actual de un alta: en «Captura RH» (people:update, checklist completo) la pasa a Nóminas; en «Pendiente Nóminas» (permiso payroll:approve) la completa. | `write:people` (Escribir personas) | `people:update` |
 | `create_catalog_item` | Crea un área, un puesto, una actividad o una ubicación (sucursal o corporativo). | `write:catalog` (Escribir catálogo) | `positions:create` |
 | `link_position_activity` | Agrega una actividad a un puesto. | `write:catalog` (Escribir catálogo) | `positions:update` |
 | `unlink_position_activity` | Quita una actividad de un puesto y advierte cuántas personas activas tienen ese puesto. | `write:catalog` (Escribir catálogo) | `positions:update` |

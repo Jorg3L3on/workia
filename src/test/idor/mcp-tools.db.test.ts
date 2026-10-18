@@ -31,6 +31,7 @@ import type { McpScope } from "@/lib/mcp/scopes";
 import { generateToken } from "@/lib/mcp/tokens";
 import { listPeopleKeyset } from "@/lib/people";
 import { createRegion } from "@/lib/regions";
+import { onboardings } from "@/lib/db/schema";
 import { setSiteRegion } from "@/lib/sites";
 import { listAssetsKeyset } from "@/lib/resguardo";
 
@@ -174,7 +175,7 @@ beforeAll(async () => {
 });
 
 describe("protocol surface", () => {
-  it("lists the 35 tools, the 4 resources and the 3 prompts", async () => {
+  it("lists the 38 tools, the 4 resources and the 3 prompts", async () => {
     const tools = (await rpc(tokens.aRead, "tools/list")).result.tools;
     const resources = (await rpc(tokens.aRead, "resources/list")).result
       .resources;
@@ -182,8 +183,8 @@ describe("protocol surface", () => {
       .result.resourceTemplates;
     const prompts = (await rpc(tokens.aRead, "prompts/list")).result.prompts;
 
-    // 18 reads (phase 1) + 13 writes (phase 2) + phase 3 (2 reads, 2 writes).
-    expect(tools).toHaveLength(35);
+    // 18 reads (phase 1) + 13 writes (phase 2) + phase 3 (3 reads, 4 writes).
+    expect(tools).toHaveLength(38);
     expect(resources.map((r: { uri: string }) => r.uri).sort()).toEqual([
       "workia://catalogo",
       "workia://glosario",
@@ -868,11 +869,23 @@ describe("PII sweep and output contracts", () => {
     list_assets: { holder_id: a.person.id },
     get_asset: { asset_id: a.asset.id },
     list_audit_events: { limit: 100 },
+    get_onboarding: { person_id: a.person.id },
   });
 
   it("never returns a full RFC, CURP or NSS without the pii scope, in any read tool", async () => {
     const { WORKIA_TOOLS } = await import("@/lib/mcp/tools");
     const args = sweepArgs() as Record<string, Record<string, unknown>>;
+    // An alta with Infonavit data, so get_onboarding has something to hide.
+    await ownerDb
+      .insert(onboardings)
+      .values({
+        companyId: a.companyId,
+        personId: a.person.id,
+        infonavitCredito: "INFONAVIT-SECRETO",
+        infonavitTipoDescuento: "porcentaje",
+        infonavitFactor: "20",
+      })
+      .onConflictDoNothing();
 
     expect(Object.keys(args).sort()).toEqual(
       WORKIA_TOOLS.filter((tool) => tool.kind === "read")
@@ -894,6 +907,7 @@ describe("PII sweep and output contracts", () => {
         "Calle Secreta 77",
         "SECRETOINE00000001",
         "Beneficiaria Secreta",
+        "INFONAVIT-SECRETO",
       ]) {
         expect(body, `${tool.name} leaked PII`).not.toContain(secret);
       }

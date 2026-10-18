@@ -3643,6 +3643,8 @@ exports[`/api/mcp transport > keeps the tools/list contract (snapshot) 1`] = `
             "undo",
             "switch",
             "revoke",
+            "approve",
+            "reject",
           ],
           "type": "string",
         },
@@ -3693,6 +3695,7 @@ exports[`/api/mcp transport > keeps the tools/list contract (snapshot) 1`] = `
             "membership",
             "mcp_connection",
             "mcp_settings",
+            "onboarding",
           ],
           "type": "string",
         },
@@ -5315,6 +5318,804 @@ exports[`/api/mcp transport > keeps the tools/list contract (snapshot) 1`] = `
       "type": "object",
     },
     "title": "Cambiar horario por bloques",
+  },
+  {
+    "_meta": {
+      "securitySchemes": [
+        {
+          "scopes": [
+            "read",
+          ],
+          "type": "oauth2",
+        },
+      ],
+    },
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true,
+      "title": "Ver alta",
+    },
+    "description": "Estado de un alta RH → Nóminas por person_id u onboarding_id: etapa, checklist, lo que falta, Infonavit/Fonacot (número y montos sólo con el scope pii) y quién ya aprobó.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "onboarding_id": {
+          "description": "Alta.",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+          "type": "string",
+        },
+        "person_id": {
+          "description": "Persona.",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+          "type": "string",
+        },
+      },
+      "type": "object",
+    },
+    "name": "get_onboarding",
+    "outputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "alta": {
+          "additionalProperties": false,
+          "properties": {
+            "checklist": {
+              "additionalProperties": {
+                "type": "boolean",
+              },
+              "propertyNames": {
+                "type": "string",
+              },
+              "type": "object",
+            },
+            "fonacot": {
+              "additionalProperties": false,
+              "properties": {
+                "capturado": {
+                  "type": "boolean",
+                },
+                "credito": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                    },
+                    {
+                      "type": "null",
+                    },
+                  ],
+                },
+                "descuento": {
+                  "anyOf": [
+                    {
+                      "type": "number",
+                    },
+                    {
+                      "type": "null",
+                    },
+                  ],
+                },
+              },
+              "required": [
+                "capturado",
+              ],
+              "type": "object",
+            },
+            "id": {
+              "type": "string",
+            },
+            "infonavit": {
+              "additionalProperties": false,
+              "description": "Montos y número de crédito sólo con el scope pii.",
+              "properties": {
+                "capturado": {
+                  "type": "boolean",
+                },
+                "credito": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                    },
+                    {
+                      "type": "null",
+                    },
+                  ],
+                },
+                "factor": {
+                  "anyOf": [
+                    {
+                      "type": "number",
+                    },
+                    {
+                      "type": "null",
+                    },
+                  ],
+                },
+                "tipo_descuento": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                    },
+                    {
+                      "type": "null",
+                    },
+                  ],
+                },
+              },
+              "required": [
+                "capturado",
+              ],
+              "type": "object",
+            },
+            "missing": {
+              "items": {
+                "type": "string",
+              },
+              "type": "array",
+            },
+            "nominas_aprobado": {
+              "type": "boolean",
+            },
+            "person": {
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string",
+                },
+                "nombre_completo": {
+                  "type": "string",
+                },
+              },
+              "required": [
+                "id",
+                "nombre_completo",
+              ],
+              "type": "object",
+            },
+            "rechazo": {
+              "anyOf": [
+                {
+                  "type": "string",
+                },
+                {
+                  "type": "null",
+                },
+              ],
+            },
+            "rh_aprobado": {
+              "type": "boolean",
+            },
+            "stage": {
+              "type": "string",
+            },
+            "stage_label": {
+              "type": "string",
+            },
+            "url": {
+              "type": "string",
+            },
+          },
+          "required": [
+            "id",
+            "person",
+            "stage",
+            "stage_label",
+            "checklist",
+            "missing",
+            "infonavit",
+            "fonacot",
+            "rh_aprobado",
+            "nominas_aprobado",
+            "rechazo",
+            "url",
+          ],
+          "type": "object",
+        },
+      },
+      "required": [
+        "alta",
+      ],
+      "type": "object",
+    },
+    "title": "Ver alta",
+  },
+  {
+    "_meta": {
+      "securitySchemes": [
+        {
+          "scopes": [
+            "write:people",
+          ],
+          "type": "oauth2",
+        },
+      ],
+    },
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": false,
+      "title": "Iniciar alta",
+    },
+    "description": "Inicia el alta RH → Nóminas de una persona activa que ya tiene expediente (créalo antes con create_person), con el checklist e Infonavit/Fonacot si ya los tienes. Queda en «Captura RH»; luego approve_onboarding_step. Primero responde una vista previa; repite con confirmation_token para hacerlo.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "checklist": {
+          "additionalProperties": {
+            "type": "boolean",
+          },
+          "description": "Documentos entregados: ine, curp, comprobante_domicilio, nss, constancia_fiscal, cuenta_bancaria, contrato_firmado.",
+          "propertyNames": {
+            "enum": [
+              "ine",
+              "curp",
+              "comprobante_domicilio",
+              "nss",
+              "constancia_fiscal",
+              "cuenta_bancaria",
+              "contrato_firmado",
+            ],
+            "type": "string",
+          },
+          "type": "object",
+        },
+        "confirmation_token": {
+          "description": "Token de la vista previa. Sin él la herramienta sólo muestra qué haría; con él, lo hace. Vence en 10 minutos.",
+          "maxLength": 300,
+          "type": "string",
+        },
+        "fonacot": {
+          "description": "Sólo con el scope pii.",
+          "properties": {
+            "credito": {
+              "maxLength": 40,
+              "type": "string",
+            },
+            "descuento": {
+              "minimum": 0,
+              "type": "number",
+            },
+          },
+          "required": [
+            "credito",
+            "descuento",
+          ],
+          "type": "object",
+        },
+        "idempotency_key": {
+          "description": "Llave única de esta operación (8–80 caracteres). Repetirla con los mismos datos devuelve el mismo resultado sin duplicar.",
+          "maxLength": 80,
+          "minLength": 8,
+          "type": "string",
+        },
+        "infonavit": {
+          "description": "Sólo con el scope pii.",
+          "properties": {
+            "credito": {
+              "maxLength": 40,
+              "type": "string",
+            },
+            "factor": {
+              "minimum": 0,
+              "type": "number",
+            },
+            "tipo_descuento": {
+              "enum": [
+                "porcentaje",
+                "cuota_fija",
+                "veces_salario_minimo",
+              ],
+              "type": "string",
+            },
+          },
+          "required": [
+            "credito",
+            "tipo_descuento",
+            "factor",
+          ],
+          "type": "object",
+        },
+        "person_id": {
+          "description": "Persona.",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+          "type": "string",
+        },
+      },
+      "required": [
+        "person_id",
+        "idempotency_key",
+      ],
+      "type": "object",
+    },
+    "name": "start_onboarding",
+    "outputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "alta": {
+          "additionalProperties": false,
+          "properties": {
+            "checklist": {
+              "additionalProperties": {
+                "type": "boolean",
+              },
+              "propertyNames": {
+                "type": "string",
+              },
+              "type": "object",
+            },
+            "fonacot": {
+              "additionalProperties": false,
+              "properties": {
+                "capturado": {
+                  "type": "boolean",
+                },
+                "credito": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                    },
+                    {
+                      "type": "null",
+                    },
+                  ],
+                },
+                "descuento": {
+                  "anyOf": [
+                    {
+                      "type": "number",
+                    },
+                    {
+                      "type": "null",
+                    },
+                  ],
+                },
+              },
+              "required": [
+                "capturado",
+              ],
+              "type": "object",
+            },
+            "id": {
+              "type": "string",
+            },
+            "infonavit": {
+              "additionalProperties": false,
+              "description": "Montos y número de crédito sólo con el scope pii.",
+              "properties": {
+                "capturado": {
+                  "type": "boolean",
+                },
+                "credito": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                    },
+                    {
+                      "type": "null",
+                    },
+                  ],
+                },
+                "factor": {
+                  "anyOf": [
+                    {
+                      "type": "number",
+                    },
+                    {
+                      "type": "null",
+                    },
+                  ],
+                },
+                "tipo_descuento": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                    },
+                    {
+                      "type": "null",
+                    },
+                  ],
+                },
+              },
+              "required": [
+                "capturado",
+              ],
+              "type": "object",
+            },
+            "missing": {
+              "items": {
+                "type": "string",
+              },
+              "type": "array",
+            },
+            "nominas_aprobado": {
+              "type": "boolean",
+            },
+            "person": {
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string",
+                },
+                "nombre_completo": {
+                  "type": "string",
+                },
+              },
+              "required": [
+                "id",
+                "nombre_completo",
+              ],
+              "type": "object",
+            },
+            "rechazo": {
+              "anyOf": [
+                {
+                  "type": "string",
+                },
+                {
+                  "type": "null",
+                },
+              ],
+            },
+            "rh_aprobado": {
+              "type": "boolean",
+            },
+            "stage": {
+              "type": "string",
+            },
+            "stage_label": {
+              "type": "string",
+            },
+            "url": {
+              "type": "string",
+            },
+          },
+          "required": [
+            "id",
+            "person",
+            "stage",
+            "stage_label",
+            "checklist",
+            "missing",
+            "infonavit",
+            "fonacot",
+            "rh_aprobado",
+            "nominas_aprobado",
+            "rechazo",
+            "url",
+          ],
+          "type": "object",
+        },
+        "audit_event_ids": {
+          "items": {
+            "type": "string",
+          },
+          "type": "array",
+        },
+        "code": {
+          "const": "CONFIRMATION_REQUIRED",
+          "type": "string",
+        },
+        "confirmation_token": {
+          "type": "string",
+        },
+        "expires_at": {
+          "type": "string",
+        },
+        "expires_at_mx": {
+          "type": "string",
+        },
+        "preview": {
+          "additionalProperties": false,
+          "properties": {
+            "details": {
+              "additionalProperties": {},
+              "propertyNames": {
+                "type": "string",
+              },
+              "type": "object",
+            },
+            "summary": {
+              "type": "string",
+            },
+            "warnings": {
+              "items": {
+                "type": "string",
+              },
+              "type": "array",
+            },
+          },
+          "required": [
+            "summary",
+          ],
+          "type": "object",
+        },
+        "status": {
+          "description": "preview: nada se escribió todavía; done: el cambio quedó hecho.",
+          "enum": [
+            "preview",
+            "done",
+          ],
+          "type": "string",
+        },
+      },
+      "required": [
+        "status",
+      ],
+      "type": "object",
+    },
+    "title": "Iniciar alta",
+  },
+  {
+    "_meta": {
+      "securitySchemes": [
+        {
+          "scopes": [
+            "write:people",
+          ],
+          "type": "oauth2",
+        },
+      ],
+    },
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": false,
+      "title": "Aprobar etapa del alta",
+    },
+    "description": "Da el visto bueno de la etapa actual de un alta: en «Captura RH» (people:update, checklist completo) la pasa a Nóminas; en «Pendiente Nóminas» (permiso payroll:approve) la completa. Doble visto bueno: quien aprobó RH no puede aprobar Nóminas (CONFLICT). Primero responde una vista previa; repite con confirmation_token para hacerlo.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "confirmation_token": {
+          "description": "Token de la vista previa. Sin él la herramienta sólo muestra qué haría; con él, lo hace. Vence en 10 minutos.",
+          "maxLength": 300,
+          "type": "string",
+        },
+        "idempotency_key": {
+          "description": "Llave única de esta operación (8–80 caracteres). Repetirla con los mismos datos devuelve el mismo resultado sin duplicar.",
+          "maxLength": 80,
+          "minLength": 8,
+          "type": "string",
+        },
+        "onboarding_id": {
+          "description": "Alta.",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+          "type": "string",
+        },
+      },
+      "required": [
+        "onboarding_id",
+        "idempotency_key",
+      ],
+      "type": "object",
+    },
+    "name": "approve_onboarding_step",
+    "outputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "alta": {
+          "additionalProperties": false,
+          "properties": {
+            "checklist": {
+              "additionalProperties": {
+                "type": "boolean",
+              },
+              "propertyNames": {
+                "type": "string",
+              },
+              "type": "object",
+            },
+            "fonacot": {
+              "additionalProperties": false,
+              "properties": {
+                "capturado": {
+                  "type": "boolean",
+                },
+                "credito": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                    },
+                    {
+                      "type": "null",
+                    },
+                  ],
+                },
+                "descuento": {
+                  "anyOf": [
+                    {
+                      "type": "number",
+                    },
+                    {
+                      "type": "null",
+                    },
+                  ],
+                },
+              },
+              "required": [
+                "capturado",
+              ],
+              "type": "object",
+            },
+            "id": {
+              "type": "string",
+            },
+            "infonavit": {
+              "additionalProperties": false,
+              "description": "Montos y número de crédito sólo con el scope pii.",
+              "properties": {
+                "capturado": {
+                  "type": "boolean",
+                },
+                "credito": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                    },
+                    {
+                      "type": "null",
+                    },
+                  ],
+                },
+                "factor": {
+                  "anyOf": [
+                    {
+                      "type": "number",
+                    },
+                    {
+                      "type": "null",
+                    },
+                  ],
+                },
+                "tipo_descuento": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                    },
+                    {
+                      "type": "null",
+                    },
+                  ],
+                },
+              },
+              "required": [
+                "capturado",
+              ],
+              "type": "object",
+            },
+            "missing": {
+              "items": {
+                "type": "string",
+              },
+              "type": "array",
+            },
+            "nominas_aprobado": {
+              "type": "boolean",
+            },
+            "person": {
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string",
+                },
+                "nombre_completo": {
+                  "type": "string",
+                },
+              },
+              "required": [
+                "id",
+                "nombre_completo",
+              ],
+              "type": "object",
+            },
+            "rechazo": {
+              "anyOf": [
+                {
+                  "type": "string",
+                },
+                {
+                  "type": "null",
+                },
+              ],
+            },
+            "rh_aprobado": {
+              "type": "boolean",
+            },
+            "stage": {
+              "type": "string",
+            },
+            "stage_label": {
+              "type": "string",
+            },
+            "url": {
+              "type": "string",
+            },
+          },
+          "required": [
+            "id",
+            "person",
+            "stage",
+            "stage_label",
+            "checklist",
+            "missing",
+            "infonavit",
+            "fonacot",
+            "rh_aprobado",
+            "nominas_aprobado",
+            "rechazo",
+            "url",
+          ],
+          "type": "object",
+        },
+        "audit_event_ids": {
+          "items": {
+            "type": "string",
+          },
+          "type": "array",
+        },
+        "code": {
+          "const": "CONFIRMATION_REQUIRED",
+          "type": "string",
+        },
+        "confirmation_token": {
+          "type": "string",
+        },
+        "expires_at": {
+          "type": "string",
+        },
+        "expires_at_mx": {
+          "type": "string",
+        },
+        "preview": {
+          "additionalProperties": false,
+          "properties": {
+            "details": {
+              "additionalProperties": {},
+              "propertyNames": {
+                "type": "string",
+              },
+              "type": "object",
+            },
+            "summary": {
+              "type": "string",
+            },
+            "warnings": {
+              "items": {
+                "type": "string",
+              },
+              "type": "array",
+            },
+          },
+          "required": [
+            "summary",
+          ],
+          "type": "object",
+        },
+        "status": {
+          "description": "preview: nada se escribió todavía; done: el cambio quedó hecho.",
+          "enum": [
+            "preview",
+            "done",
+          ],
+          "type": "string",
+        },
+      },
+      "required": [
+        "status",
+      ],
+      "type": "object",
+    },
+    "title": "Aprobar etapa del alta",
   },
   {
     "_meta": {

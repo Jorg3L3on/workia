@@ -16,6 +16,7 @@ import {
   auditEvents,
   contracts,
   mcpConnections,
+  onboardings as onboardingsTable,
   people,
   personSchedules,
   positionActivities,
@@ -1190,5 +1191,128 @@ describe("decide_contract_renewal (WRK-I1-13)", () => {
       .from(people)
       .where(eq(people.id, person.id));
     expect(after.fechaIngreso).toBe("2021-02-01");
+  });
+});
+
+describe("altas RH → Nóminas (WRK-I1-14)", () => {
+  const FULL = {
+    ine: true,
+    curp: true,
+    comprobante_domicilio: true,
+    nss: true,
+    constancia_fiscal: true,
+    cuenta_bancaria: true,
+    contrato_firmado: true,
+  };
+
+  const freshPerson = async () =>
+    (
+      await ownerDb
+        .insert(people)
+        .values({
+          companyId: a.companyId,
+          nombres: "Alta",
+          apellidoPaterno: `MCP ${++keySeq}`,
+          status: "activa",
+        })
+        .returning()
+    )[0];
+
+  it("mcp:start_onboarding", async () => {
+    await expectRefusedWithoutEffect(
+      tokens.b,
+      "start_onboarding",
+      { person_id: a.teammate.id, checklist: FULL },
+      "NOT_FOUND",
+    );
+  });
+
+  it("rbac:mcp:start_onboarding", async () => {
+    const person = await freshPerson();
+    const { done } = await confirm(tokens.aViewer, "start_onboarding", {
+      person_id: person.id,
+    });
+    expect(code(done)).toBe("FORBIDDEN_RBAC");
+  });
+
+  it("starts, reads and approves HR; the same user cannot approve Payroll", async () => {
+    const person = await freshPerson();
+    const noPii = await confirm(tokens.aNoPii, "start_onboarding", {
+      person_id: person.id,
+      checklist: FULL,
+      infonavit: { credito: "123", tipo_descuento: "porcentaje", factor: 20 },
+    });
+    expect(code(noPii.done)).toBe("FORBIDDEN_SCOPE");
+
+    const started = await confirm(tokens.a, "start_onboarding", {
+      person_id: person.id,
+      checklist: FULL,
+      infonavit: { credito: "123", tipo_descuento: "porcentaje", factor: 20 },
+    });
+    expect(started.done.structuredContent).toMatchObject({
+      status: "done",
+      alta: { stage: "rh_captura", missing: [] },
+    });
+    await expectMcpAudit(started.done, "start_onboarding");
+    const altaId = started.done.structuredContent.alta.id;
+
+    const read = await call(tokens.aNoPii, "get_onboarding", {
+      person_id: person.id,
+    });
+    expect(read.structuredContent.alta.infonavit).toEqual({ capturado: true });
+
+    const hr = await confirm(tokens.a, "approve_onboarding_step", {
+      onboarding_id: altaId,
+    });
+    expect(hr.done.structuredContent.alta).toMatchObject({
+      stage: "pendiente_nominas",
+      rh_aprobado: true,
+    });
+
+    const again = await confirm(tokens.a, "approve_onboarding_step", {
+      onboarding_id: altaId,
+    });
+    expect(code(again.done)).toBe("CONFLICT");
+    expect(again.done.structuredContent.error.message).toBe(
+      "La misma persona no puede aprobar las dos etapas del alta.",
+    );
+  });
+
+  it("mcp:get_onboarding", async () => {
+    const alta = await ownerDb
+      .select()
+      .from(onboardingsTable)
+      .where(eq(onboardingsTable.companyId, a.companyId))
+      .limit(1);
+    const result = await call(tokens.b, "get_onboarding", {
+      onboarding_id: alta[0].id,
+    });
+    expect(code(result)).toBe("NOT_FOUND");
+  });
+
+  it("mcp:approve_onboarding_step", async () => {
+    const [alta] = await ownerDb
+      .select()
+      .from(onboardingsTable)
+      .where(eq(onboardingsTable.companyId, a.companyId))
+      .limit(1);
+    await expectRefusedWithoutEffect(
+      tokens.b,
+      "approve_onboarding_step",
+      { onboarding_id: alta.id },
+      "NOT_FOUND",
+    );
+  });
+
+  it("rbac:mcp:approve_onboarding_step", async () => {
+    const [alta] = await ownerDb
+      .select()
+      .from(onboardingsTable)
+      .where(eq(onboardingsTable.companyId, a.companyId))
+      .limit(1);
+    const { done } = await confirm(tokens.aViewer, "approve_onboarding_step", {
+      onboarding_id: alta.id,
+    });
+    expect(code(done)).toBe("FORBIDDEN_RBAC");
   });
 });
