@@ -36,6 +36,7 @@ describe("audit append-only surface", () => {
       "snapshotPersonSchedule",
       "snapshotPosition",
       "snapshotPositionActivity",
+      "snapshotRegion",
       "snapshotSite",
     ]);
   });

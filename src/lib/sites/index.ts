@@ -1,9 +1,9 @@
-import { asc, eq, isNull } from "drizzle-orm";
+import { and, asc, eq, isNull } from "drizzle-orm";
 
 import { buildChanges, recordAuditEvent, snapshotSite } from "@/lib/audit";
 import { tdb } from "@/lib/db";
 import { rethrowDuplicate } from "@/lib/db/errors";
-import { sites } from "@/lib/db/schema";
+import { regions, sites } from "@/lib/db/schema";
 import { withTenant } from "@/lib/tenant/scope";
 
 import type { SiteFormValues } from "./schema";
@@ -42,17 +42,54 @@ export const getSiteById = async (companyId: string, id: string) => {
   return site ?? null;
 };
 
+/** Thrown when a site points at a region that is not an active one of its company. */
+export class RegionNotFoundError extends Error {
+  constructor() {
+    super("La región elegida no existe en esta empresa o está inactiva.");
+    this.name = "RegionNotFoundError";
+  }
+}
+
+const assertActiveRegion = async (companyId: string, regionId: string) => {
+  const [region] = await tdb(companyId)
+    .select({ id: regions.id })
+    .from(regions)
+    .where(
+      withTenant(
+        regions,
+        companyId,
+        and(
+          eq(regions.id, regionId),
+          isNull(regions.deletedAt),
+          eq(regions.active, true),
+        ),
+      ),
+    )
+    .limit(1);
+
+  if (!region) {
+    throw new RegionNotFoundError();
+  }
+};
+
 export const createSite = async (
   companyId: string,
   input: SiteFormValues,
   actorUserId?: string | null,
 ) => {
+  const regionId = input.regionId || null;
+
+  if (regionId) {
+    await assertActiveRegion(companyId, regionId);
+  }
+
   const [created] = await tdb(companyId)
     .insert(sites)
     .values({
       companyId,
       name: input.name,
       kind: input.kind,
+      regionId,
     })
     .returning()
     .catch(rethrowDuplicate("Ya existe una ubicación activa con ese nombre."));
@@ -152,6 +189,59 @@ export const softDeleteSite = async (
       before,
       after: snapshotSite(updated),
       summary: `Ubicación borrada lógicamente: ${existing.name}`,
+    },
+  });
+
+  return updated;
+};
+
+/** Moves a site to a region, or out of any (null). Audited as a site update. */
+export const setSiteRegion = async (
+  companyId: string,
+  siteId: string,
+  regionId: string | null,
+  actorUserId?: string | null,
+) => {
+  const existing = await getSiteById(companyId, siteId);
+
+  if (!existing || existing.deletedAt) {
+    return null;
+  }
+
+  if (regionId) {
+    await assertActiveRegion(companyId, regionId);
+  }
+
+  if ((existing.regionId ?? null) === regionId) {
+    return existing;
+  }
+
+  const [updated] = await tdb(companyId)
+    .update(sites)
+    .set({ regionId })
+    .where(withTenant(sites, companyId, eq(sites.id, siteId)))
+    .returning();
+
+  if (!updated) {
+    return null;
+  }
+
+  const before = snapshotSite(existing);
+  const after = snapshotSite(updated);
+
+  await recordAuditEvent({
+    companyId,
+    actorUserId,
+    resourceType: "site",
+    resourceId: siteId,
+    action: "update",
+    payload: {
+      before,
+      after,
+      changes: buildChanges(before, after, ["regionId"]),
+      summary: regionId
+        ? `Región asignada a ${updated.name}`
+        : `Región quitada a ${updated.name}`,
     },
   });
 

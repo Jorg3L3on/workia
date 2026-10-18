@@ -272,9 +272,18 @@ export type ListPeoplePageOptions = {
   status?: PersonStatus;
   /** Show only soft-deleted records instead of only live ones. */
   deleted?: boolean;
+  /** Only people whose site belongs to this region (WRK-I5-4). */
+  regionId?: string;
   page: number;
   pageSize: number;
 };
+
+/**
+ * People whose site is in the region, as a filter. Plain SQL on purpose: the
+ * RLS-scoped client cannot be nested as a subquery.
+ */
+export const personInRegion = (companyId: string, regionId: string) =>
+  sql`${people.siteId} in (select ${sites.id} from ${sites} where ${sites.companyId} = ${companyId} and ${sites.regionId} = ${regionId})`;
 
 /** One page of the Personas list: only the columns the table shows, plus the total. */
 export const listPeoplePage = async (
@@ -288,6 +297,10 @@ export const listPeoplePage = async (
 
   if (options.status) {
     filters.push(eq(people.status, options.status));
+  }
+
+  if (options.regionId) {
+    filters.push(personInRegion(companyId, options.regionId));
   }
 
   // Every word must appear somewhere in name/RFC/CURP/email.
@@ -1022,6 +1035,8 @@ export type ListPeopleKeysetOptions = {
   areaId?: string;
   positionId?: string;
   siteId?: string;
+  /** Only people whose site is in this region (WRK-I1-15). */
+  regionId?: string;
   missing?: PersonMissingField[];
   /** Keyset position: after (apellido_paterno, id). */
   after?: { key: string; id: string } | null;
@@ -1069,6 +1084,8 @@ export const listPeopleKeyset = async (
   if (options.positionId)
     filters.push(eq(people.positionId, options.positionId));
   if (options.siteId) filters.push(eq(people.siteId, options.siteId));
+  if (options.regionId)
+    filters.push(personInRegion(companyId, options.regionId));
 
   for (const field of options.missing ?? []) {
     filters.push(missingFilter(field));

@@ -13,6 +13,8 @@ import {
   listRenewalTrayItems,
 } from "@/lib/contracts";
 import { requireContractsRead } from "@/lib/contracts/auth";
+import { RegionFilter } from "@/components/list/region-filter";
+import { listRegions } from "@/lib/regions";
 import { userHasPermission } from "@/lib/rbac";
 
 export const dynamic = "force-dynamic";
@@ -26,6 +28,7 @@ type ContratosPageProps = {
     renewed?: string;
     "no-renew"?: string;
     error?: string;
+    region?: string;
   }>;
 };
 
@@ -33,31 +36,46 @@ const RenewalTray = async ({
   canUpdate,
   canSeeCompensation,
   companyId,
+  region,
 }: {
   canUpdate: boolean;
   canSeeCompensation: boolean;
   companyId: string;
+  region?: string;
 }) => {
+  const regions = await listRegions(companyId);
+  // Only a region of this company filters; anything else is ignored.
+  const regionId = regions.some((item) => item.id === region)
+    ? region
+    : undefined;
   const [renewalItems, templates] = await Promise.all([
     listRenewalTrayItems(companyId, undefined, undefined, {
       compensation: canSeeCompensation,
+      regionId,
     }),
     listActiveContractTemplates(companyId),
   ]);
 
   return (
-    <RenewalTrayList
-      canSeeCompensation={canSeeCompensation}
-      canUpdate={canUpdate}
-      items={renewalItems}
-      templates={templates}
-    />
+    <>
+      <RegionFilter
+        id="renewal-region"
+        regions={regions.map((item) => ({ id: item.id, name: item.name }))}
+        value={regionId ?? ""}
+      />
+      <RenewalTrayList
+        canSeeCompensation={canSeeCompensation}
+        canUpdate={canUpdate}
+        items={renewalItems}
+        templates={templates}
+      />
+    </>
   );
 };
 
 const ContratosPage = async ({ searchParams }: ContratosPageProps) => {
   const session = await requireContractsRead();
-  const { renewed, "no-renew": noRenew, error } = await searchParams;
+  const { renewed, "no-renew": noRenew, error, region } = await searchParams;
 
   const [canUpdate, canManageTemplates, canSeeCompensation] = await Promise.all(
     [
@@ -122,6 +140,7 @@ const ContratosPage = async ({ searchParams }: ContratosPageProps) => {
             canSeeCompensation={canSeeCompensation}
             canUpdate={canUpdate}
             companyId={session.companyId}
+            region={region}
           />
         </Suspense>
       </div>

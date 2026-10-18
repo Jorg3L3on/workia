@@ -241,7 +241,14 @@ export const snapshotPositionActivity = (
 export const snapshotSite = (site: Record<string, unknown>) => ({
   name: site.name,
   kind: site.kind,
+  regionId: site.regionId ?? null,
   deletedAt: site.deletedAt,
+});
+
+export const snapshotRegion = (region: Record<string, unknown>) => ({
+  name: region.name,
+  active: region.active,
+  deletedAt: region.deletedAt,
 });
 
 const summarizeGeneratedText = (text: unknown) =>

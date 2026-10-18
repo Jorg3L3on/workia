@@ -49,6 +49,9 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `action:people/deletePersonAction`                  | ✅     | `src/test/idor/people.db.test.ts`                                                                      | `people:delete`             |
 | `action:people/searchManagerOptionsAction`          | ✅     | `src/test/idor/people.db.test.ts`                                                                      | `people:read`               |
 | `action:people/updatePersonAction`                  | ✅     | `src/test/idor/people.db.test.ts`                                                                      | `people:update`             |
+| `action:regions/createRegionAction`                 | ✅     | `src/test/idor/regions.db.test.ts`                                                                     | `sites:create`              |
+| `action:regions/deleteRegionAction`                 | ✅     | `src/test/idor/regions.db.test.ts`                                                                     | `sites:delete`              |
+| `action:regions/updateRegionAction`                 | ✅     | `src/test/idor/regions.db.test.ts`                                                                     | `sites:update`              |
 | `action:resguardo/assertAssetsListAccess`           | ⏭️     | Exento: guard de lectura sin datos (requireAssetsRead); la lista la cubre lib:resguardo/listAssetsPage | `assets:read`               |
 | `action:resguardo/assignAssetAction`                | ✅     | `src/test/idor/resguardo.db.test.ts`                                                                   | `assets:update`             |
 | `action:resguardo/createAssetAction`                | ✅     | `src/test/idor/resguardo.db.test.ts`                                                                   | `assets:create`             |
@@ -56,6 +59,7 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `action:resguardo/returnAssetAction`                | ✅     | `src/test/idor/resguardo.db.test.ts`                                                                   | `assets:update`             |
 | `action:sites/createSiteAction`                     | ✅     | `src/test/idor/catalog.db.test.ts`                                                                     | `sites:create`              |
 | `action:sites/deleteSiteAction`                     | ✅     | `src/test/idor/catalog.db.test.ts`                                                                     | `sites:delete`              |
+| `action:sites/setSiteRegionAction`                  | ✅     | `src/test/idor/regions.db.test.ts`                                                                     | `sites:update`              |
 | `action:tenant/addMemberAction`                     | ✅     | `src/test/idor/tenant.db.test.ts`                                                                      | `members:manage`            |
 | `action:tenant/changeMemberRoleAction`              | ✅     | `src/test/idor/tenant.db.test.ts`                                                                      | `members:manage`            |
 | `action:tenant/createCompanyAction`                 | ✅     | `src/test/idor/tenant.db.test.ts`                                                                      | `companies:manage`          |
@@ -197,6 +201,12 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `lib:people/softDeletePerson`                 | ✅     | `src/test/idor/people.db.test.ts`          | —       |
 | `lib:people/updatePerson`                     | ✅     | `src/test/idor/people.db.test.ts`          | —       |
 | `lib:people/upsertPersonSchedule`             | ✅     | `src/test/idor/people.db.test.ts`          | —       |
+| `lib:regions/createRegion`                    | ✅     | `src/test/idor/regions.db.test.ts`         | —       |
+| `lib:regions/getRegionById`                   | ✅     | `src/test/idor/regions.db.test.ts`         | —       |
+| `lib:regions/listRegions`                     | ✅     | `src/test/idor/regions.db.test.ts`         | —       |
+| `lib:regions/listRegionsWithSiteCounts`       | ✅     | `src/test/idor/regions.db.test.ts`         | —       |
+| `lib:regions/softDeleteRegion`                | ✅     | `src/test/idor/regions.db.test.ts`         | —       |
+| `lib:regions/updateRegion`                    | ✅     | `src/test/idor/regions.db.test.ts`         | —       |
 | `lib:resguardo/assignAsset`                   | ✅     | `src/test/idor/resguardo.db.test.ts`       | —       |
 | `lib:resguardo/countAssignedAssets`           | ✅     | `src/test/idor/resguardo.db.test.ts`       | —       |
 | `lib:resguardo/createAsset`                   | ✅     | `src/test/idor/resguardo.db.test.ts`       | —       |
@@ -212,6 +222,7 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `lib:sites/getSiteById`                       | ✅     | `src/test/idor/catalog.db.test.ts`         | —       |
 | `lib:sites/listActiveSites`                   | ✅     | `src/test/idor/catalog.db.test.ts`         | —       |
 | `lib:sites/listSites`                         | ✅     | `src/test/idor/catalog.db.test.ts`         | —       |
+| `lib:sites/setSiteRegion`                     | ✅     | `src/test/idor/regions.db.test.ts`         | —       |
 | `lib:sites/softDeleteSite`                    | ✅     | `src/test/idor/catalog.db.test.ts`         | —       |
 | `lib:sites/updateSite`                        | ✅     | `src/test/idor/catalog.db.test.ts`         | —       |
 | `lib:tenant/members/addMember`                | ✅     | `src/test/idor/tenant.db.test.ts`          | —       |
@@ -243,6 +254,7 @@ Una conexión de la empresa B llama cada herramienta con ids de la empresa A: la
 | `mcp:list_expiring_contracts`       | ✅     | `src/test/idor/mcp-tools.db.test.ts`       | `contracts:read`          |
 | `mcp:list_people`                   | ✅     | `src/test/idor/mcp-tools.db.test.ts`       | `people:read`             |
 | `mcp:list_positions`                | ✅     | `src/test/idor/mcp-tools.db.test.ts`       | `positions:read`          |
+| `mcp:list_regions`                  | ✅     | `src/test/idor/mcp-tools.db.test.ts`       | `sites:read`              |
 | `mcp:list_renewal_tray`             | ✅     | `src/test/idor/mcp-tools.db.test.ts`       | `contracts:read`          |
 | `mcp:list_sites`                    | ✅     | `src/test/idor/mcp-tools.db.test.ts`       | `sites:read`              |
 | `mcp:mark_contract_no_renew`        | ✅     | `src/test/idor/mcp-write-tools.db.test.ts` | `contracts:update`        |

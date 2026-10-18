@@ -39,6 +39,7 @@ export const pageTitles = {
   puestos: "Puestos",
   actividades: "Actividades",
   sucursales: "Sucursales",
+  regiones: "Regiones",
   auditoria: "Auditoría",
   administracion: "Administración",
   rbac: "RBAC",

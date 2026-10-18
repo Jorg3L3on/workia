@@ -27,6 +27,9 @@ type PersonasDataTableProps = {
   status: "activa" | "baja" | "";
   visibility: PersonListVisibility;
   emptyAction?: ReactNode;
+  /** Region filter (WRK-I5-4); hidden when the company has no regions. */
+  region?: string;
+  regions?: { id: string; name: string }[];
 };
 
 export const PersonasDataTable = ({
@@ -38,8 +41,14 @@ export const PersonasDataTable = ({
   status,
   visibility,
   emptyAction,
+  region = "",
+  regions = [],
 }: PersonasDataTableProps) => {
   const controls = useServerListControls();
+
+  const handleRegionChange = (next: string) => {
+    controls.setFilter("region", next || null);
+  };
 
   const handleStatusChange = (next: string) => {
     controls.setFilter("status", next || null);
@@ -163,7 +172,7 @@ export const PersonasDataTable = ({
         page,
         pageSize,
         query,
-        hasFilters: Boolean(query || status),
+        hasFilters: Boolean(query || status || region),
         onQueryChange: controls.setQuery,
         onPageChange: controls.setPage,
         onPageSizeChange: controls.setPageSize,
@@ -201,6 +210,26 @@ export const PersonasDataTable = ({
               value={visibility}
             />
           </div>
+          {regions.length > 0 ? (
+            <div className="sm:w-48">
+              <label className="sr-only" htmlFor="persona-region">
+                Región
+              </label>
+              <FormSelect
+                aria-label="Región"
+                id="persona-region"
+                onValueChange={handleRegionChange}
+                options={[
+                  { value: "", label: "Todas las regiones" },
+                  ...regions.map((option) => ({
+                    value: option.id,
+                    label: option.name,
+                  })),
+                ]}
+                value={region}
+              />
+            </div>
+          ) : null}
         </div>
       }
     />

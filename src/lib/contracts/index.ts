@@ -25,7 +25,7 @@ import {
   sites,
 } from "@/lib/db/schema";
 import type { ContractStatus } from "@/lib/db/schema/contracts";
-import { getPersonWithRelations } from "@/lib/people";
+import { getPersonWithRelations, personInRegion } from "@/lib/people";
 import { formatHorarioToken, formatPersonName } from "@/lib/people/schema";
 import { siteKindLabels } from "@/lib/sites/schema";
 
@@ -384,7 +384,7 @@ export const listRenewalTrayItems = async (
   companyId: string,
   referenceDate?: string,
   limit?: number,
-  options: { compensation?: boolean } = {},
+  options: { compensation?: boolean; regionId?: string } = {},
 ): Promise<RenewalTrayItem[]> => {
   const query = tdb(companyId)
     .select({
@@ -405,7 +405,14 @@ export const listRenewalTrayItems = async (
     .from(contracts)
     .innerJoin(people, eq(contracts.personId, people.id))
     .leftJoin(areas, eq(people.areaId, areas.id))
-    .where(renewalTrayWhere(companyId, referenceDate))
+    .where(
+      and(
+        renewalTrayWhere(companyId, referenceDate),
+        options.regionId
+          ? personInRegion(companyId, options.regionId)
+          : undefined,
+      ),
+    )
     .orderBy(asc(contracts.endDate));
 
   const rows = await (limit ? query.limit(limit) : query);
@@ -812,6 +819,7 @@ export const listExpiringContracts = async (
     today: string;
     withinDays: number;
     siteId?: string;
+    regionId?: string;
     areaId?: string;
     after?: { key: string; id: string } | null;
     limit: number;
@@ -826,6 +834,7 @@ export const listExpiringContracts = async (
     sql`${contracts.endDate} >= ${options.today}::date`,
     sql`${contracts.endDate} <= ${options.today}::date + ${options.withinDays}::int`,
     options.siteId ? eq(people.siteId, options.siteId) : undefined,
+    options.regionId ? personInRegion(companyId, options.regionId) : undefined,
     options.areaId ? eq(people.areaId, options.areaId) : undefined,
     options.after
       ? sql`(${contracts.endDate}, ${contracts.id}) > (${options.after.key}::date, ${options.after.id}::uuid)`
