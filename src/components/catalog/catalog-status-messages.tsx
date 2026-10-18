@@ -7,6 +7,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   "company-changed": STALE_COMPANY_MESSAGE,
   reference:
     "El área elegida ya no existe en esta empresa. Elige otra de la lista.",
+  "region-not-found":
+    "La región elegida no existe en esta empresa o está inactiva. Elige otra.",
 };
 
 type CatalogStatusMessagesProps = {

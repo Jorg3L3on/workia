@@ -4,8 +4,10 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import {
+  addOfficialTemplates,
   createContract,
   createContractTemplate,
+  decideContractRenewal,
   deactivateContractTemplate,
   markContractNoRenew,
   renewContract,
@@ -22,8 +24,10 @@ import {
 import {
   contractFormSchema,
   contractTemplateFormSchema,
+  renewalDecisionSchema,
   renewContractFormSchema,
 } from "@/lib/contracts/schema";
+import { userHasPermission } from "@/lib/rbac";
 import { AuthorizationError } from "@/lib/rbac/errors";
 import {
   STALE_COMPANY_MESSAGE,
@@ -46,7 +50,26 @@ export type ContractActionState = {
   success?: boolean;
 };
 
-const parseContractForm = (formData: FormData) =>
+/**
+ * Compensation fields of the emit/renew forms (absent when the form did not
+ * show them). Without compensation:read they are ignored even if posted.
+ */
+const compensationFromForm = (formData: FormData, allowed: boolean) => {
+  if (!allowed) {
+    return {};
+  }
+
+  const salario = formData.get("salarioDiario");
+
+  return {
+    salarioDiario: salario === null ? undefined : String(salario).trim(),
+    formaPago: String(formData.get("formaPago") ?? ""),
+    periodicidadPago: String(formData.get("periodicidadPago") ?? ""),
+    diaPago: String(formData.get("diaPago") ?? ""),
+  };
+};
+
+const parseContractForm = (formData: FormData, compensation: boolean) =>
   contractFormSchema.safeParse({
     personId: String(formData.get("personId") ?? ""),
     type: String(formData.get("type") ?? ""),
@@ -54,9 +77,10 @@ const parseContractForm = (formData: FormData) =>
     endDate: String(formData.get("endDate") ?? ""),
     noticeWindow: String(formData.get("noticeWindow") ?? ""),
     templateId: String(formData.get("templateId") ?? ""),
+    ...compensationFromForm(formData, compensation),
   });
 
-const parseRenewForm = (formData: FormData) =>
+const parseRenewForm = (formData: FormData, compensation: boolean) =>
   renewContractFormSchema.safeParse({
     contractId: String(formData.get("contractId") ?? ""),
     type: String(formData.get("type") ?? ""),
@@ -64,6 +88,7 @@ const parseRenewForm = (formData: FormData) =>
     endDate: String(formData.get("endDate") ?? ""),
     noticeWindow: String(formData.get("noticeWindow") ?? ""),
     templateId: String(formData.get("templateId") ?? ""),
+    ...compensationFromForm(formData, compensation),
   });
 
 const parseTemplateForm = (formData: FormData) =>
@@ -102,7 +127,10 @@ export const createContractAction = async (
     redirect("/login");
   }
 
-  const parsed = parseContractForm(formData);
+  const parsed = parseContractForm(
+    formData,
+    await userHasPermission(session.user.id, "compensation:read"),
+  );
 
   if (!parsed.success) {
     return {
@@ -148,7 +176,10 @@ export const renewContractAction = async (
     redirect("/login");
   }
 
-  const parsed = parseRenewForm(formData);
+  const parsed = parseRenewForm(
+    formData,
+    await userHasPermission(session.user.id, "compensation:read"),
+  );
 
   if (!parsed.success) {
     return {
@@ -303,4 +334,97 @@ export const deleteContractTemplateAction = async (templateId: string) => {
   ).catch(() => redirect("/app/contratos/plantillas?error=not-found"));
   revalidateContracts();
   redirect("/app/contratos/plantillas?deleted=1");
+};
+
+/** Adds the base official templates to the active company (WRK-I5-5). */
+export const addOfficialTemplatesAction = async (formData: FormData) => {
+  let session;
+
+  try {
+    session = await requireContractTemplatesCreate();
+  } catch (error) {
+    if (error instanceof AuthorizationError) {
+      redirect("/app/contratos/plantillas?error=create-permission");
+    }
+
+    redirect("/login");
+  }
+
+  const companyId = templateCompanyOrRedirect(session, formData);
+  const created = await addOfficialTemplates(companyId, session.user.id);
+  revalidateContracts();
+  redirect(`/app/contratos/plantillas?official=${created.length}`);
+};
+
+/**
+ * The renewal tray's decision dialog (WRK-I5-6): renew open-ended, renew
+ * fixed-term or not renew with a reason, in one step.
+ */
+export const decideContractRenewalAction = async (
+  _prev: ContractActionState,
+  formData: FormData,
+): Promise<ContractActionState> => {
+  let session;
+
+  try {
+    session = await requireContractsUpdate();
+  } catch (error) {
+    if (error instanceof AuthorizationError) {
+      return { error: "No tienes permiso para decidir renovaciones." };
+    }
+
+    redirect("/login");
+  }
+
+  const text = (name: string) => {
+    const value = formData.get(name);
+    return value === null ? undefined : String(value);
+  };
+  const parsed = renewalDecisionSchema.safeParse({
+    contractId: text("contractId") ?? "",
+    decision: text("decision") ?? "",
+    motivo: text("motivo"),
+    templateId: text("templateId"),
+    startDate: text("startDate"),
+    endDate: text("endDate"),
+    noticeWindow: text("noticeWindow") || undefined,
+    newPositionId: text("newPositionId"),
+    ...compensationFromForm(
+      formData,
+      await userHasPermission(session.user.id, "compensation:read"),
+    ),
+  });
+
+  if (!parsed.success) {
+    return {
+      error: parsed.error.issues[0]?.message ?? "Revisa la decisión.",
+    };
+  }
+
+  let companyId: string;
+
+  try {
+    companyId = writableCompanyIdFromForm(session, formData);
+  } catch {
+    return { error: STALE_COMPANY_MESSAGE };
+  }
+
+  let result;
+
+  try {
+    result = await decideContractRenewal(
+      companyId,
+      parsed.data,
+      session.user.id,
+    );
+  } catch (error) {
+    return { error: (error as Error).message };
+  }
+
+  revalidateContracts(result.previous.personId);
+  redirect(
+    result.decision === "no_renovar"
+      ? "/app/contratos?no-renew=1"
+      : `/app/contratos?renewed=1${result.constanciaAvailable ? `&constancia=${result.previous.personId}` : ""}`,
+  );
 };

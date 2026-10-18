@@ -4,6 +4,8 @@ import {
   date,
   foreignKey,
   index,
+  jsonb,
+  numeric,
   pgEnum,
   pgTable,
   text,
@@ -13,7 +15,9 @@ import {
 } from "drizzle-orm/pg-core";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 
-import { people } from "./people";
+import type { ScheduleBlock } from "@/lib/people/schedule-blocks";
+
+import { people, weekDayEnum } from "./people";
 
 import { companies } from "./companies";
 
@@ -35,6 +39,19 @@ export const contractStatusEnum = pgEnum("contract_status", [
   "renovado",
   "no_renovado",
   "vencido",
+]);
+
+/** Compensation frozen in the contract (WRK-I5-2). */
+export const paymentMethodEnum = pgEnum("payment_method", [
+  "transferencia",
+  "efectivo",
+  "cheque",
+]);
+
+export const payFrequencyEnum = pgEnum("pay_frequency", [
+  "semanal",
+  "quincenal",
+  "mensual",
 ]);
 
 export const contractTemplates = pgTable(
@@ -91,7 +108,17 @@ export const contracts = pgTable(
     scheduleSalidaComer: text("schedule_salida_comer"),
     scheduleRegresoComer: text("schedule_regreso_comer"),
     scheduleSalida: text("schedule_salida"),
+    scheduleBlocks: jsonb("schedule_blocks").$type<ScheduleBlock[]>(),
+    scheduleRestDay: weekDayEnum("schedule_rest_day"),
+    /** Why it was not renewed (WRK-I5-6). */
+    noRenewReason: text("no_renew_reason"),
     status: contractStatusEnum("status").notNull().default("vigente"),
+    // Compensation (WRK-I5-2), frozen when the contract is issued or renewed.
+    salarioDiario: numeric("salario_diario", { precision: 12, scale: 2 }),
+    salarioMensual: numeric("salario_mensual", { precision: 12, scale: 2 }),
+    formaPago: paymentMethodEnum("forma_pago"),
+    periodicidadPago: payFrequencyEnum("periodicidad_pago"),
+    diaPago: text("dia_pago"),
     previousContractId: uuid("previous_contract_id").references(
       (): AnyPgColumn => contracts.id,
       { onDelete: "set null" },

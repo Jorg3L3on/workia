@@ -31,6 +31,10 @@ export default async function AppLayout({ children }: AppLayoutProps) {
       company={toOption(session.membership)}
       companies={session.memberships.map(toOption)}
       canReadMembers={session.permissions.has("members:read")}
+      canUseConnections={
+        session.permissions.has("mcp_connections:create") ||
+        session.permissions.has("mcp_connections:manage")
+      }
       isPlatformAdmin={session.isPlatformAdmin}
     >
       {children}

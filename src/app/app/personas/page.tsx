@@ -12,6 +12,7 @@ import { PersonasDataTable } from "@/components/people/personas-data-table";
 import { Button } from "@/components/ui/button";
 import { parseListPaging } from "@/lib/list/paging";
 import { listPeoplePage } from "@/lib/people";
+import { listRegions } from "@/lib/regions";
 import { assertPeopleListAccess } from "@/lib/people/actions";
 import { formatPersonName } from "@/lib/people/schema";
 import { userHasPermission } from "@/lib/rbac";
@@ -29,6 +30,7 @@ type PersonasPageProps = {
     deleted?: string;
     page?: string;
     pageSize?: string;
+    region?: string;
   }>;
 };
 
@@ -42,12 +44,18 @@ const PersonasPage = async ({ searchParams }: PersonasPageProps) => {
       : undefined;
   const { page, pageSize } = parseListPaging(params);
 
+  const regions = await listRegions(session.companyId);
+  // Only a region of this company filters; anything else is ignored.
+  const regionId = regions.some((region) => region.id === params.region)
+    ? params.region
+    : undefined;
   const [{ rows: people, total }, canCreate, canImport, canExport] =
     await Promise.all([
       listPeoplePage(session.companyId, {
         query: q,
         status,
         deleted: deleted === "1",
+        regionId,
         page,
         pageSize,
       }),
@@ -164,6 +172,11 @@ const PersonasPage = async ({ searchParams }: PersonasPageProps) => {
         pageSize={pageSize}
         people={rows}
         query={q?.trim() ?? ""}
+        region={regionId ?? ""}
+        regions={regions.map((region) => ({
+          id: region.id,
+          name: region.name,
+        }))}
         status={status ?? ""}
         total={total}
         visibility={deleted === "1" ? "deleted" : "expediente"}

@@ -28,6 +28,12 @@ export const env = createEnv({
     DEMO_RRHH_NAME: z.string().min(1).optional(),
     // Hours after an import is applied during which it can still be undone.
     IMPORT_UNDO_WINDOW_HOURS: z.coerce.number().int().positive().default(72),
+    // MCP connector (WRK-I1): "0" or "false" turns off /api/mcp, OAuth and discovery.
+    MCP_ENABLED: z.string().optional(),
+    // Public base URL of the app for OAuth metadata (falls back to the request origin).
+    MCP_PUBLIC_URL: z.string().url().optional(),
+    // Extra browser origins allowed to call /api/mcp, comma separated.
+    MCP_ALLOWED_ORIGINS: z.string().optional(),
     NODE_ENV: z
       .enum(["development", "test", "production"])
       .default("development"),
@@ -39,6 +45,9 @@ export const env = createEnv({
     AUTH_GOOGLE_ID: process.env.AUTH_GOOGLE_ID,
     AUTH_GOOGLE_SECRET: process.env.AUTH_GOOGLE_SECRET,
     IMPORT_UNDO_WINDOW_HOURS: process.env.IMPORT_UNDO_WINDOW_HOURS,
+    MCP_ENABLED: process.env.MCP_ENABLED,
+    MCP_PUBLIC_URL: process.env.MCP_PUBLIC_URL,
+    MCP_ALLOWED_ORIGINS: process.env.MCP_ALLOWED_ORIGINS,
     DEMO_RRHH_EMAIL: process.env.DEMO_RRHH_EMAIL,
     DEMO_RRHH_PASSWORD: process.env.DEMO_RRHH_PASSWORD,
     DEMO_RRHH_NAME: process.env.DEMO_RRHH_NAME,

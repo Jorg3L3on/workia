@@ -18,12 +18,18 @@ import {
   formatContractDate,
 } from "@/lib/contracts/schema";
 import { CompanyField } from "@/components/tenant/company-context";
+import {
+  CompensationFields,
+  type CompensationDefaults,
+} from "@/components/contracts/compensation-fields";
 
 type RenewContractDialogProps = {
   contractId: string;
   personName: string;
   endDate: string;
   templates: ContractTemplate[];
+  canSeeCompensation?: boolean;
+  compensation?: CompensationDefaults;
 };
 
 const initialState: ContractActionState = {};
@@ -43,6 +49,8 @@ export const RenewContractForm = ({
   personName,
   endDate,
   templates,
+  canSeeCompensation = false,
+  compensation,
 }: RenewContractDialogProps) => {
   const [state, formAction] = useActionState(renewContractAction, initialState);
 
@@ -126,6 +134,13 @@ export const RenewContractForm = ({
           />
         </div>
       </div>
+
+      {canSeeCompensation ? (
+        <CompensationFields
+          idPrefix={`renew-${contractId}-`}
+          initial={compensation}
+        />
+      ) : null}
 
       <SubmitButton />
     </form>

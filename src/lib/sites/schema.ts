@@ -16,6 +16,8 @@ export const siteFormSchema = z.object({
     .min(1, "El nombre es obligatorio")
     .max(120, "Máximo 120 caracteres"),
   kind: z.enum(SITE_KINDS),
+  /** Optional region (WRK-I5-4). */
+  regionId: z.union([z.uuid(), z.literal("")]).optional(),
 });
 
 export type SiteFormValues = z.infer<typeof siteFormSchema>;

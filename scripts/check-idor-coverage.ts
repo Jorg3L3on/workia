@@ -4,7 +4,8 @@
  * Surfaces are discovered from the code, not listed by hand:
  *   - every server action (exports of "use server" files under src/lib),
  *   - every route handler method under src/app (except /api/auth),
- *   - every lib function whose first parameter is `companyId: string`.
+ *   - every lib function whose first parameter is `companyId: string`,
+ *   - every MCP tool of the registry (src/lib/mcp/tools), as mcp:<tool>.
  * Each must have a row in docs/idor-matrix.md. A ✅ row needs a test in
  * src/test/idor/*.db.test.ts titled with the surface id; a row whose
  * permission is a write (not :read) also needs a "rbac:<surface>" test. A ⏭️
@@ -66,6 +67,19 @@ export const collectSurfaces = () => {
       /^export const (GET|POST|PUT|PATCH|DELETE)\b/gm,
     )) {
       surfaces.add(`route:${match[1]} ${route}`);
+    }
+  }
+
+  // MCP tools (addendum multiempresa §7): a connection of company B calls
+  // each tool with company A's ids.
+  const toolsDir = path.join(root, "src/lib/mcp/tools");
+  for (const file of walk(toolsDir).filter(
+    (f) => f.endsWith(".ts") && !f.endsWith(".test.ts"),
+  )) {
+    for (const match of readFileSync(file, "utf8").matchAll(
+      /define(?:Write)?Tool\(\{\s*name: "(\w+)"/g,
+    )) {
+      surfaces.add(`mcp:${match[1]}`);
     }
   }
 

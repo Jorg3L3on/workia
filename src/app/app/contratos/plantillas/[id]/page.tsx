@@ -14,7 +14,7 @@ import {
 } from "@/lib/contracts/actions";
 import { getContractTemplateById } from "@/lib/contracts";
 import { requireContractTemplatesRead } from "@/lib/contracts/auth";
-import { CONTRACT_TEMPLATE_TOKENS } from "@/lib/contracts/schema";
+import { TemplateTokensHelp } from "@/components/contracts/template-tokens-help";
 import { userHasPermission } from "@/lib/rbac";
 import { CompanyField } from "@/components/tenant/company-context";
 
@@ -100,12 +100,7 @@ const PlantillaDetailPage = async ({
               name="body"
               required
             />
-            <p className="text-muted-foreground text-xs">
-              Variables:{" "}
-              {CONTRACT_TEMPLATE_TOKENS.map((token) => `{{${token}}}`).join(
-                ", ",
-              )}
-            </p>
+            <TemplateTokensHelp />
           </div>
 
           <label className="flex items-center gap-2 text-sm">

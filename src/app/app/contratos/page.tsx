@@ -13,6 +13,9 @@ import {
   listRenewalTrayItems,
 } from "@/lib/contracts";
 import { requireContractsRead } from "@/lib/contracts/auth";
+import { RegionFilter } from "@/components/list/region-filter";
+import { listRegions } from "@/lib/regions";
+import { listActivePositions } from "@/lib/catalog";
 import { userHasPermission } from "@/lib/rbac";
 
 export const dynamic = "force-dynamic";
@@ -26,38 +29,78 @@ type ContratosPageProps = {
     renewed?: string;
     "no-renew"?: string;
     error?: string;
+    region?: string;
+    constancia?: string;
   }>;
 };
 
 const RenewalTray = async ({
   canUpdate,
+  canSeeCompensation,
   companyId,
+  region,
 }: {
   canUpdate: boolean;
+  canSeeCompensation: boolean;
   companyId: string;
+  region?: string;
 }) => {
-  const [renewalItems, templates] = await Promise.all([
-    listRenewalTrayItems(companyId),
+  const regions = await listRegions(companyId);
+  // Only a region of this company filters; anything else is ignored.
+  const regionId = regions.some((item) => item.id === region)
+    ? region
+    : undefined;
+  const [renewalItems, templates, positions] = await Promise.all([
+    listRenewalTrayItems(companyId, undefined, undefined, {
+      compensation: canSeeCompensation,
+      regionId,
+    }),
     listActiveContractTemplates(companyId),
+    canUpdate ? listActivePositions(companyId) : [],
   ]);
 
   return (
-    <RenewalTrayList
-      canUpdate={canUpdate}
-      items={renewalItems}
-      templates={templates}
-    />
+    <>
+      <RegionFilter
+        id="renewal-region"
+        regions={regions.map((item) => ({ id: item.id, name: item.name }))}
+        value={regionId ?? ""}
+      />
+      <RenewalTrayList
+        canSeeCompensation={canSeeCompensation}
+        canUpdate={canUpdate}
+        items={renewalItems}
+        positions={positions.map((position) => ({
+          id: position.id,
+          name: position.name,
+        }))}
+        templates={templates}
+      />
+    </>
   );
 };
 
 const ContratosPage = async ({ searchParams }: ContratosPageProps) => {
   const session = await requireContractsRead();
-  const { renewed, "no-renew": noRenew, error } = await searchParams;
+  const {
+    renewed,
+    "no-renew": noRenew,
+    error,
+    region,
+    constancia: constanciaParam,
+  } = await searchParams;
+  // Only a uuid goes into the link.
+  const constancia = /^[0-9a-f-]{36}$/i.test(constanciaParam ?? "")
+    ? constanciaParam
+    : undefined;
 
-  const [canUpdate, canManageTemplates] = await Promise.all([
-    userHasPermission(session.user.id, "contracts:update"),
-    userHasPermission(session.user.id, "contract_templates:read"),
-  ]);
+  const [canUpdate, canManageTemplates, canSeeCompensation] = await Promise.all(
+    [
+      userHasPermission(session.user.id, "contracts:update"),
+      userHasPermission(session.user.id, "contract_templates:read"),
+      userHasPermission(session.user.id, "compensation:read"),
+    ],
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -83,6 +126,17 @@ const ContratosPage = async ({ searchParams }: ContratosPageProps) => {
           role="status"
         >
           Contrato renovado correctamente.
+          {constancia ? (
+            <>
+              {" "}
+              <Link
+                className="underline"
+                href={`/app/personas/${constancia}/constancia`}
+              >
+                Ver constancia de antigüedad
+              </Link>
+            </>
+          ) : null}
         </p>
       ) : null}
 
@@ -110,7 +164,12 @@ const ContratosPage = async ({ searchParams }: ContratosPageProps) => {
         </div>
 
         <Suspense fallback={<SectionSkeleton />}>
-          <RenewalTray canUpdate={canUpdate} companyId={session.companyId} />
+          <RenewalTray
+            canSeeCompensation={canSeeCompensation}
+            canUpdate={canUpdate}
+            companyId={session.companyId}
+            region={region}
+          />
         </Suspense>
       </div>
     </div>

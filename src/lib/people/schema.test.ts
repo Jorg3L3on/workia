@@ -175,3 +175,63 @@ describe("personFormSchema identifiers", () => {
     ).toBe(true);
   });
 });
+
+describe("expediente México (WRK-I5-1)", () => {
+  const base = {
+    nombres: "Ana",
+    apellidoPaterno: "López",
+    status: "activa" as const,
+  };
+
+  it("accepts a full Mexican address, civil data, INE and beneficiaries that add up to 100", () => {
+    const parsed = personFormSchema.safeParse({
+      ...base,
+      domicilioCalle: "Av. Central",
+      domicilioNumeroExterior: "123",
+      domicilioColonia: "Centro",
+      domicilioMunicipio: "Tuxtla Gutiérrez",
+      domicilioEstado: "Chiapas",
+      domicilioCodigoPostal: "29000",
+      estadoCivil: "casado",
+      sexo: "M",
+      lugarNacimiento: "Chiapas",
+      nacionalidad: "Mexicana",
+      ineClaveElector: "lprzan80010107m100",
+      beneficiarios: [
+        { nombre: "Hija", parentesco: "Hija", porcentaje: 60 },
+        { nombre: "Hijo", parentesco: "Hijo", porcentaje: 40 },
+      ],
+    });
+
+    expect(parsed.success).toBe(true);
+    expect(parsed.data?.ineClaveElector).toBe("LPRZAN80010107M100");
+  });
+
+  it.each([
+    [{ domicilioCodigoPostal: "2900" }, "domicilioCodigoPostal"],
+    [{ domicilioEstado: "Texas" }, "domicilioEstado"],
+    [{ estadoCivil: "comprometido" }, "estadoCivil"],
+    [{ sexo: "X" }, "sexo"],
+    [{ ineClaveElector: "CORTA" }, "ineClaveElector"],
+    [
+      { beneficiarios: [{ nombre: "A", parentesco: "Hijo", porcentaje: 50 }] },
+      "beneficiarios",
+    ],
+    [
+      { beneficiarios: [{ nombre: "", parentesco: "Hijo", porcentaje: 100 }] },
+      "beneficiarios",
+    ],
+  ])("rejects %j", (overrides, field) => {
+    const parsed = personFormSchema.safeParse({ ...base, ...overrides });
+
+    expect(parsed.success).toBe(false);
+    expect(parsed.error?.issues[0]?.path[0]).toBe(field);
+  });
+
+  it("leaves the México fields out when not sent (they stay as stored)", () => {
+    const parsed = personFormSchema.parse(base);
+
+    expect(parsed.domicilioCalle).toBeUndefined();
+    expect(parsed.beneficiarios).toBeUndefined();
+  });
+});

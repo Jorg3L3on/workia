@@ -27,19 +27,20 @@ import {
   listContractsByPerson,
 } from "@/lib/contracts";
 import { listAssetsByPerson } from "@/lib/resguardo";
-import { getPersonWithRelations } from "@/lib/people";
+import { getPersonWithRelations, listPersonBeneficiaries } from "@/lib/people";
 import { requirePeopleRead } from "@/lib/people/auth";
 import {
   formatDateLabel,
   formatHorarioToken,
   formatPersonName,
-  formatTimeLabel,
+  maritalStatusLabels,
   personDeletedLabel,
   personIsDeleted,
   personStatusLabels,
-  SCHEDULE_FIELD_LABELS,
+  sexLabels,
 } from "@/lib/people/schema";
 import { userHasPermission } from "@/lib/rbac";
+import { formatMexicanAddress } from "@/lib/people/schema";
 import { listActiveSites } from "@/lib/sites";
 import { siteKindLabels } from "@/lib/sites/schema";
 
@@ -58,6 +59,16 @@ const buildSiteLabel = (
 };
 
 export const dynamic = "force-dynamic";
+
+const formatAddress = (person: {
+  domicilioCalle: string | null;
+  domicilioNumeroExterior: string | null;
+  domicilioNumeroInterior: string | null;
+  domicilioColonia: string | null;
+  domicilioMunicipio: string | null;
+  domicilioEstado: string | null;
+  domicilioCodigoPostal: string | null;
+}) => formatMexicanAddress(person);
 
 type PersonaDetailPageProps = {
   params: Promise<{ id: string }>;
@@ -108,10 +119,12 @@ const PersonaDetailPage = async ({
     canReadContracts,
     canCreateContracts,
     canReadAssets,
+    canSeeCompensation,
     personContracts,
     contractTemplates,
     personAssets,
     positionActivities,
+    beneficiaries,
   ] = await Promise.all([
     getPersonWithRelations(session.companyId, id, true),
     userHasPermission(session.user.id, "people:update"),
@@ -120,12 +133,14 @@ const PersonaDetailPage = async ({
     userHasPermission(session.user.id, "contracts:read"),
     userHasPermission(session.user.id, "contracts:create"),
     userHasPermission(session.user.id, "assets:read"),
+    userHasPermission(session.user.id, "compensation:read"),
     listContractsByPerson(session.companyId, id),
     listActiveContractTemplates(session.companyId),
     userHasPermission(session.user.id, "assets:read").then((allowed) =>
       allowed ? listAssetsByPerson(session.companyId, id) : Promise.resolve([]),
     ),
     listActivitiesForPersonPosition(session.companyId, id),
+    listPersonBeneficiaries(session.companyId, id),
   ]);
 
   if (!person) {
@@ -149,6 +164,11 @@ const PersonaDetailPage = async ({
         <PageBreadcrumbLabel label={personName} />
         <PersonForm
           areas={areas}
+          beneficiaries={beneficiaries.map((item) => ({
+            nombre: item.nombre,
+            parentesco: item.parentesco,
+            porcentaje: item.porcentaje,
+          }))}
           initialManager={
             person.manager
               ? {
@@ -244,6 +264,13 @@ const PersonaDetailPage = async ({
               </Link>
             </Button>
           ) : null}
+          {canReadContracts ? (
+            <Button asChild variant="outline">
+              <Link href={`/app/personas/${person.id}/constancia`}>
+                Constancia de antigüedad
+              </Link>
+            </Button>
+          ) : null}
           {canDelete && !isDeleted ? (
             <DeletePersonButton personId={person.id} />
           ) : null}
@@ -263,6 +290,7 @@ const PersonaDetailPage = async ({
           canReadContracts ? (
             <PersonContractsSection
               canCreate={canCreateContracts}
+              canSeeCompensation={canSeeCompensation}
               contracts={personContracts}
               personContext={{
                 nombres: person.nombres,
@@ -323,36 +351,10 @@ const PersonaDetailPage = async ({
                 <dt className="text-muted-foreground">Puesto</dt>
                 <dd className="font-medium">{person.position?.name ?? "—"}</dd>
               </div>
-              <div>
-                <dt className="text-muted-foreground">
-                  {SCHEDULE_FIELD_LABELS.horarioEntrada}
-                </dt>
+              <div className="sm:col-span-2" data-testid="person-schedule">
+                <dt className="text-muted-foreground">Horario</dt>
                 <dd className="font-medium">
-                  {formatTimeLabel(person.schedule?.entrada)}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">
-                  {SCHEDULE_FIELD_LABELS.horarioSalidaComer}
-                </dt>
-                <dd className="font-medium">
-                  {formatTimeLabel(person.schedule?.salidaComer)}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">
-                  {SCHEDULE_FIELD_LABELS.horarioRegresoComer}
-                </dt>
-                <dd className="font-medium">
-                  {formatTimeLabel(person.schedule?.regresoComer)}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">
-                  {SCHEDULE_FIELD_LABELS.horarioSalida}
-                </dt>
-                <dd className="font-medium">
-                  {formatTimeLabel(person.schedule?.salida)}
+                  {formatHorarioToken(person.schedule)}
                 </dd>
               </div>
               {person.position ? (
@@ -400,6 +402,58 @@ const PersonaDetailPage = async ({
               <div className="sm:col-span-2">
                 <dt className="text-muted-foreground">Correo</dt>
                 <dd className="font-medium">{person.email ?? "—"}</dd>
+              </div>
+              <div className="border-t pt-3 sm:col-span-2">
+                <dt className="text-sm font-semibold">Datos México</dt>
+              </div>
+              <div className="sm:col-span-2">
+                <dt className="text-muted-foreground">Domicilio</dt>
+                <dd className="font-medium">{formatAddress(person) ?? "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Estado civil</dt>
+                <dd className="font-medium">
+                  {person.estadoCivil
+                    ? maritalStatusLabels[person.estadoCivil]
+                    : "—"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Sexo</dt>
+                <dd className="font-medium">
+                  {person.sexo ? sexLabels[person.sexo] : "—"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Lugar de nacimiento</dt>
+                <dd className="font-medium">{person.lugarNacimiento ?? "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Nacionalidad</dt>
+                <dd className="font-medium">{person.nacionalidad ?? "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">
+                  Clave de elector (INE)
+                </dt>
+                <dd className="font-medium">{person.ineClaveElector ?? "—"}</dd>
+              </div>
+              <div className="sm:col-span-2">
+                <dt className="text-muted-foreground">Beneficiarios</dt>
+                <dd>
+                  {beneficiaries.length === 0 ? (
+                    <span className="font-medium">—</span>
+                  ) : (
+                    <ul className="space-y-1">
+                      {beneficiaries.map((item) => (
+                        <li className="font-medium" key={item.id}>
+                          {item.nombre} · {item.parentesco} ·{" "}
+                          {item.porcentaje.toLocaleString("es-MX")} %
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </dd>
               </div>
             </dl>
           </div>

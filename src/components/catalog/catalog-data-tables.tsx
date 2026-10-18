@@ -10,7 +10,8 @@ import {
   deletePositionAction,
   unassignActivityFromPositionAction,
 } from "@/lib/catalog/actions";
-import { deleteSiteAction } from "@/lib/sites/actions";
+import { deleteSiteAction, setSiteRegionAction } from "@/lib/sites/actions";
+import { FormSelect } from "@/components/ui/form-select";
 import { CompanyField } from "@/components/tenant/company-context";
 
 export type CatalogPositionActivity = {
@@ -30,7 +31,11 @@ export type CatalogSiteRow = {
   id: string;
   name: string;
   kindLabel: string;
+  regionId: string | null;
+  regionName: string | null;
 };
+
+export type CatalogRegionOption = { id: string; name: string };
 
 type CatalogPositionsTableProps = {
   positions: CatalogPositionRow[];
@@ -41,6 +46,51 @@ type CatalogPositionsTableProps = {
 type CatalogSitesTableProps = {
   sites: CatalogSiteRow[];
   canDelete: boolean;
+  /** Active regions to pick from; with canUpdate the region is editable per row. */
+  regions?: CatalogRegionOption[];
+  canUpdate?: boolean;
+};
+
+/** A site's region, editable in place (WRK-I5-4). */
+const SiteRegionCell = ({
+  row,
+  regions,
+  canUpdate,
+}: {
+  row: CatalogSiteRow;
+  regions: CatalogRegionOption[];
+  canUpdate: boolean;
+}) => {
+  if (!canUpdate) {
+    return (
+      <span className="text-muted-foreground">{row.regionName ?? "—"}</span>
+    );
+  }
+
+  return (
+    <form
+      action={setSiteRegionAction.bind(null, row.id)}
+      className="flex items-center gap-2"
+    >
+      <CompanyField />
+      <FormSelect
+        aria-label={`Región de ${row.name}`}
+        defaultValue={row.regionId ?? ""}
+        name="regionId"
+        options={[
+          { value: "", label: "Sin región" },
+          ...regions.map((region) => ({
+            value: region.id,
+            label: region.name,
+          })),
+        ]}
+        triggerClassName="h-8 min-w-36"
+      />
+      <Button size="sm" type="submit" variant="ghost">
+        Guardar
+      </Button>
+    </form>
+  );
 };
 
 export const CatalogPositionsTable = ({
@@ -157,6 +207,8 @@ export const CatalogPositionsTable = ({
 export const CatalogSitesTable = ({
   sites,
   canDelete,
+  regions = [],
+  canUpdate = false,
 }: CatalogSitesTableProps) => {
   const columns = useMemo<DataTableColumn<CatalogSiteRow>[]>(
     () => [
@@ -170,6 +222,14 @@ export const CatalogSitesTable = ({
         id: "kind",
         header: "Tipo",
         accessor: (row) => row.kindLabel,
+      },
+      {
+        id: "region",
+        header: "Región",
+        accessor: (row) => row.regionName ?? "",
+        cell: (row) => (
+          <SiteRegionCell canUpdate={canUpdate} regions={regions} row={row} />
+        ),
       },
       {
         id: "status",
@@ -197,7 +257,7 @@ export const CatalogSitesTable = ({
           ]
         : []),
     ],
-    [canDelete],
+    [canDelete, canUpdate, regions],
   );
 
   return (

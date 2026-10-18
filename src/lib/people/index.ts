@@ -13,9 +13,11 @@ import {
   sql,
   type SQL,
 } from "drizzle-orm";
+import { formatScheduleBlocks, readStoredBlocks } from "./schedule-blocks";
 
 import {
   buildChanges,
+  MEXICO_AUDIT_FIELDS,
   recordAuditEvent,
   snapshotPerson,
   snapshotPersonSchedule,
@@ -26,6 +28,7 @@ import { personSearchText } from "@/lib/db/schema/people";
 import {
   areas,
   people,
+  personBeneficiaries,
   personSchedules,
   positions,
   sites,
@@ -63,6 +66,147 @@ export type PersonWithRelations = Awaited<
 const normalizeOptional = (value?: string | null) =>
   value?.trim() ? value.trim() : null;
 
+/** Expediente México fields that were sent; absent ones are left as stored. */
+const toMexicoValues = (input: PersonFormValues) => {
+  const values: Partial<typeof people.$inferInsert> = {};
+  const text = (value: string | undefined) =>
+    value === undefined ? undefined : normalizeOptional(value);
+  const set = <K extends keyof typeof people.$inferInsert>(
+    key: K,
+    value: (typeof people.$inferInsert)[K] | undefined,
+  ) => {
+    if (value !== undefined) values[key] = value;
+  };
+
+  set("domicilioCalle", text(input.domicilioCalle));
+  set("domicilioNumeroExterior", text(input.domicilioNumeroExterior));
+  set("domicilioNumeroInterior", text(input.domicilioNumeroInterior));
+  set("domicilioColonia", text(input.domicilioColonia));
+  set("domicilioMunicipio", text(input.domicilioMunicipio));
+  set("domicilioEstado", text(input.domicilioEstado));
+  set("domicilioCodigoPostal", text(input.domicilioCodigoPostal));
+  set(
+    "estadoCivil",
+    input.estadoCivil === undefined
+      ? undefined
+      : ((input.estadoCivil ||
+          null) as (typeof people.$inferInsert)["estadoCivil"]),
+  );
+  set(
+    "sexo",
+    input.sexo === undefined
+      ? undefined
+      : ((input.sexo || null) as (typeof people.$inferInsert)["sexo"]),
+  );
+  set("lugarNacimiento", text(input.lugarNacimiento));
+  set("nacionalidad", text(input.nacionalidad));
+  set("ineClaveElector", text(input.ineClaveElector));
+
+  return values;
+};
+
+/** Replaces the beneficiaries of a person when the input sent a list. */
+const replaceBeneficiaries = async (
+  companyId: string,
+  personId: string,
+  input: PersonFormValues,
+  tx: DbExecutor,
+  audit: (input: AuditInput) => Promise<unknown>,
+  actorUserId?: string | null,
+) => {
+  if (!input.beneficiarios) {
+    return;
+  }
+
+  const before = await tx
+    .select()
+    .from(personBeneficiaries)
+    .where(
+      withTenant(
+        personBeneficiaries,
+        companyId,
+        eq(personBeneficiaries.personId, personId),
+      ),
+    )
+    .orderBy(asc(personBeneficiaries.orden));
+  const describe = (
+    list: { nombre: string; parentesco: string; porcentaje: string | number }[],
+  ) =>
+    list.map(
+      (item) =>
+        `${item.nombre} (${item.parentesco}, ${Number(item.porcentaje)} %)`,
+    );
+  const next = input.beneficiarios.map((item) => ({
+    nombre: item.nombre,
+    parentesco: item.parentesco,
+    porcentaje: item.porcentaje,
+  }));
+
+  if (JSON.stringify(describe(before)) === JSON.stringify(describe(next))) {
+    return;
+  }
+
+  await tx
+    .delete(personBeneficiaries)
+    .where(
+      withTenant(
+        personBeneficiaries,
+        companyId,
+        eq(personBeneficiaries.personId, personId),
+      ),
+    );
+
+  if (next.length > 0) {
+    await tx.insert(personBeneficiaries).values(
+      next.map((item, index) => ({
+        companyId,
+        personId,
+        nombre: item.nombre,
+        parentesco: item.parentesco,
+        porcentaje: item.porcentaje.toFixed(2),
+        orden: index,
+      })),
+    );
+  }
+
+  await audit({
+    actorUserId,
+    resourceType: "person",
+    resourceId: personId,
+    action: "update",
+    payload: {
+      summary: "Beneficiarios actualizados",
+      before: { beneficiarios: describe(before) },
+      after: { beneficiarios: describe(next) },
+    },
+  });
+};
+
+/** The beneficiaries of a person in the company, in their order. */
+export const listPersonBeneficiaries = async (
+  companyId: string,
+  personId: string,
+) =>
+  tdb(companyId)
+    .select({
+      id: personBeneficiaries.id,
+      nombre: personBeneficiaries.nombre,
+      parentesco: personBeneficiaries.parentesco,
+      porcentaje: personBeneficiaries.porcentaje,
+    })
+    .from(personBeneficiaries)
+    .where(
+      withTenant(
+        personBeneficiaries,
+        companyId,
+        eq(personBeneficiaries.personId, personId),
+      ),
+    )
+    .orderBy(asc(personBeneficiaries.orden))
+    .then((rows) =>
+      rows.map((row) => ({ ...row, porcentaje: Number(row.porcentaje) })),
+    );
+
 const toPersonValues = (input: PersonFormValues) => ({
   nombres: input.nombres.trim(),
   apellidoPaterno: input.apellidoPaterno.trim(),
@@ -79,6 +223,7 @@ const toPersonValues = (input: PersonFormValues) => ({
   curp: identifierOrNull(input.curp),
   nss: normalizeOptional(normalizeNss(input.nss)),
   status: input.status,
+  ...toMexicoValues(input),
 });
 
 export const listPeople = async (
@@ -127,9 +272,18 @@ export type ListPeoplePageOptions = {
   status?: PersonStatus;
   /** Show only soft-deleted records instead of only live ones. */
   deleted?: boolean;
+  /** Only people whose site belongs to this region (WRK-I5-4). */
+  regionId?: string;
   page: number;
   pageSize: number;
 };
+
+/**
+ * People whose site is in the region, as a filter. Plain SQL on purpose: the
+ * RLS-scoped client cannot be nested as a subquery.
+ */
+export const personInRegion = (companyId: string, regionId: string) =>
+  sql`${people.siteId} in (select ${sites.id} from ${sites} where ${sites.companyId} = ${companyId} and ${sites.regionId} = ${regionId})`;
 
 /** One page of the Personas list: only the columns the table shows, plus the total. */
 export const listPeoplePage = async (
@@ -143,6 +297,10 @@ export const listPeoplePage = async (
 
   if (options.status) {
     filters.push(eq(people.status, options.status));
+  }
+
+  if (options.regionId) {
+    filters.push(personInRegion(companyId, options.regionId));
   }
 
   // Every word must appear somewhere in name/RFC/CURP/email.
@@ -341,6 +499,12 @@ export const getPersonSchedule = async (
   return schedule ?? null;
 };
 
+// jsonb reorders keys: compare blocks by their meaning (the text), not their JSON.
+const blocksKey = (blocks: unknown) =>
+  Array.isArray(blocks) && blocks.length > 0
+    ? formatScheduleBlocks(readStoredBlocks(blocks, null))
+    : null;
+
 const scheduleChanged = (
   before: PersonScheduleValues | null,
   after: PersonScheduleValues,
@@ -348,7 +512,23 @@ const scheduleChanged = (
   (before?.entrada ?? null) !== (after.entrada ?? null) ||
   (before?.salidaComer ?? null) !== (after.salidaComer ?? null) ||
   (before?.regresoComer ?? null) !== (after.regresoComer ?? null) ||
-  (before?.salida ?? null) !== (after.salida ?? null);
+  (before?.salida ?? null) !== (after.salida ?? null) ||
+  // A simple-schedule write (no blocks sent) only counts its four fields.
+  (after.blocks !== undefined &&
+    (blocksKey(before?.blocks) !== blocksKey(after.blocks) ||
+      (before?.restDay ?? null) !== (after.restDay ?? null)));
+
+/** Columns to store: blocks as sent, or none when a simple schedule changed. */
+const scheduleColumns = (values: PersonScheduleValues) => ({
+  entrada: values.entrada ?? null,
+  salidaComer: values.salidaComer ?? null,
+  regresoComer: values.regresoComer ?? null,
+  salida: values.salida ?? null,
+  blocks: (blocksKey(values.blocks)
+    ? values.blocks
+    : null) as (typeof personSchedules.$inferInsert)["blocks"],
+  restDay: values.restDay ?? null,
+});
 
 export const upsertPersonSchedule = async (
   companyId: string,
@@ -384,6 +564,8 @@ export const upsertPersonSchedule = async (
         salidaComer: null,
         regresoComer: null,
         salida: null,
+        blocks: null,
+        restDay: null,
         deletedAt,
       })
       .where(
@@ -418,13 +600,7 @@ export const upsertPersonSchedule = async (
     const wasDeleted = Boolean(existing.deletedAt);
     const [updated] = await executor
       .update(personSchedules)
-      .set({
-        entrada: values.entrada,
-        salidaComer: values.salidaComer,
-        regresoComer: values.regresoComer,
-        salida: values.salida,
-        deletedAt: null,
-      })
+      .set({ ...scheduleColumns(values), deletedAt: null })
       .where(
         withTenant(
           personSchedules,
@@ -449,6 +625,7 @@ export const upsertPersonSchedule = async (
             salidaComer: null,
             regresoComer: null,
             salida: null,
+            bloques: null,
             deletedAt: null,
           },
           snapshotPersonSchedule(updated) ?? {
@@ -456,9 +633,17 @@ export const upsertPersonSchedule = async (
             salidaComer: null,
             regresoComer: null,
             salida: null,
+            bloques: null,
             deletedAt: null,
           },
-          ["entrada", "salidaComer", "regresoComer", "salida", "deletedAt"],
+          [
+            "entrada",
+            "salidaComer",
+            "regresoComer",
+            "salida",
+            "bloques",
+            "deletedAt",
+          ],
         ),
       },
     });
@@ -471,10 +656,7 @@ export const upsertPersonSchedule = async (
     .values({
       companyId,
       personId,
-      entrada: values.entrada,
-      salidaComer: values.salidaComer,
-      regresoComer: values.regresoComer,
-      salida: values.salida,
+      ...scheduleColumns(values),
     })
     .returning();
 
@@ -649,6 +831,14 @@ export const createPerson = async (
     await upsertPersonSchedule(companyId, created.id, input, actorUserId, tx, {
       schedule: null,
     });
+    await replaceBeneficiaries(
+      companyId,
+      created.id,
+      input,
+      tx,
+      audit,
+      actorUserId,
+    );
 
     return created;
   }, companyId);
@@ -712,6 +902,7 @@ export const updatePerson = async (
       "curp",
       "nss",
       "status",
+      ...MEXICO_AUDIT_FIELDS,
     ]);
 
     let action: "update" | "baja" | "reactivate" = "update";
@@ -731,6 +922,7 @@ export const updatePerson = async (
     await upsertPersonSchedule(companyId, id, input, actorUserId, tx, {
       schedule: current?.schedule?.id ? current.schedule : null,
     });
+    await replaceBeneficiaries(companyId, id, input, tx, audit, actorUserId);
 
     return updated;
   }, companyId);
@@ -818,4 +1010,140 @@ export const countPeopleByStatus = async (companyId: string) => {
 export const countActivePeople = async (companyId: string) => {
   const counts = await countPeopleByStatus(companyId);
   return counts.activa;
+};
+
+/** Fields `list_people` can ask to be missing (D-14): presence only, never the value. */
+export const PERSON_MISSING_FIELDS = [
+  "horario",
+  "rfc",
+  "curp",
+  "nss",
+  "email",
+  "telefono",
+  "sucursal",
+  "puesto",
+] as const;
+
+export type PersonMissingField = (typeof PERSON_MISSING_FIELDS)[number];
+
+export type ListPeopleKeysetOptions = {
+  query?: string;
+  /** Search RFC and CURP too. Off without the pii scope (no PII oracle). */
+  searchIdentifiers?: boolean;
+  status?: PersonStatus;
+  visibility?: "expediente" | "deleted" | "todos";
+  areaId?: string;
+  positionId?: string;
+  siteId?: string;
+  /** Only people whose site is in this region (WRK-I1-15). */
+  regionId?: string;
+  missing?: PersonMissingField[];
+  /** Keyset position: after (apellido_paterno, id). */
+  after?: { key: string; id: string } | null;
+  limit: number;
+};
+
+const hasScheduleTimes = sql`exists (select 1 from ${personSchedules} ps where ps.person_id = ${people.id} and ps.company_id = ${people.companyId} and ps.deleted_at is null and coalesce(ps.entrada, ps.salida_comer, ps.regreso_comer, ps.salida) is not null)`;
+
+const missingFilter = (field: PersonMissingField): SQL => {
+  switch (field) {
+    case "horario":
+      return sql`not ${hasScheduleTimes}`;
+    case "rfc":
+      return sql`coalesce(${people.rfc}, '') = ''`;
+    case "curp":
+      return sql`coalesce(${people.curp}, '') = ''`;
+    case "nss":
+      return sql`coalesce(${people.nss}, '') = ''`;
+    case "email":
+      return sql`coalesce(${people.email}, '') = ''`;
+    case "telefono":
+      return sql`coalesce(${people.telefono}, '') = ''`;
+    case "sucursal":
+      return isNull(people.siteId);
+    case "puesto":
+      return isNull(people.positionId);
+  }
+};
+
+/**
+ * People in a stable order (apellido paterno, id) for cursor paging, with
+ * area, position and site names. Read only; used by the MCP list_people.
+ */
+export const listPeopleKeyset = async (
+  companyId: string,
+  options: ListPeopleKeysetOptions,
+) => {
+  const filters: (SQL | undefined)[] = [eq(people.companyId, companyId)];
+  const visibility = options.visibility ?? "expediente";
+
+  if (visibility === "expediente") filters.push(isNull(people.deletedAt));
+  if (visibility === "deleted") filters.push(isNotNull(people.deletedAt));
+  if (options.status) filters.push(eq(people.status, options.status));
+  if (options.areaId) filters.push(eq(people.areaId, options.areaId));
+  if (options.positionId)
+    filters.push(eq(people.positionId, options.positionId));
+  if (options.siteId) filters.push(eq(people.siteId, options.siteId));
+  if (options.regionId)
+    filters.push(personInRegion(companyId, options.regionId));
+
+  for (const field of options.missing ?? []) {
+    filters.push(missingFilter(field));
+  }
+
+  const searchable = options.searchIdentifiers
+    ? personSearchText(people)
+    : sql`(${people.nombres} || ' ' || ${people.apellidoPaterno} || ' ' || coalesce(${people.apellidoMaterno}, '') || ' ' || coalesce(${people.email}, ''))`;
+
+  for (const term of options.query?.trim().split(/\s+/).filter(Boolean) ?? []) {
+    filters.push(ilike(searchable, `%${escapeLike(term)}%`));
+  }
+
+  if (options.after) {
+    filters.push(
+      sql`(${people.apellidoPaterno}, ${people.id}) > (${options.after.key}, ${options.after.id}::uuid)`,
+    );
+  }
+
+  return tdb(companyId)
+    .select({
+      id: people.id,
+      nombres: people.nombres,
+      apellidoPaterno: people.apellidoPaterno,
+      apellidoMaterno: people.apellidoMaterno,
+      status: people.status,
+      deletedAt: people.deletedAt,
+      fechaIngreso: people.fechaIngreso,
+      area: { id: areas.id, name: areas.name },
+      position: { id: positions.id, name: positions.name },
+      site: { id: sites.id, name: sites.name, kind: sites.kind },
+    })
+    .from(people)
+    .leftJoin(areas, eq(people.areaId, areas.id))
+    .leftJoin(positions, eq(people.positionId, positions.id))
+    .leftJoin(sites, eq(people.siteId, sites.id))
+    .where(and(...filters))
+    .orderBy(asc(people.apellidoPaterno), asc(people.id))
+    .limit(options.limit + 1);
+};
+
+/** Active people (not Borrados) holding a position, for impact warnings. */
+export const countActivePeopleInPosition = async (
+  companyId: string,
+  positionId: string,
+) => {
+  const [row] = await tdb(companyId)
+    .select({ total: count() })
+    .from(people)
+    .where(
+      withTenant(
+        people,
+        companyId,
+        eq(people.positionId, positionId),
+        eq(people.status, "activa"),
+        isNull(people.deletedAt),
+      ),
+    );
+
+  return row?.total ?? 0;
 };

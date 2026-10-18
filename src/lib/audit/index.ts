@@ -1,18 +1,28 @@
 import { createHash } from "node:crypto";
+import {
+  formatScheduleBlocks,
+  readStoredBlocks,
+} from "@/lib/people/schedule-blocks";
 
 import { and, count, desc, eq, gte, lte, sql } from "drizzle-orm";
 
 import { tdb, type DbExecutor } from "@/lib/db";
 import { auditEvents, users } from "@/lib/db/schema";
 
+import { currentAuditContext, noteAuditEvent } from "./context";
 import type { AuditPayload } from "./types";
 import type { ListAuditEventsOptions, RecordAuditEventInput } from "./types";
 
-/** Append-only: audit events are inserted, never updated or deleted via the app. */
+/**
+ * Append-only: audit events are inserted, never updated or deleted via the app.
+ * Inside an MCP tool (runWithAuditContext) the source and request meta come
+ * from the context unless the caller passes them.
+ */
 export const recordAuditEvent = async (
   input: RecordAuditEventInput,
   executor: DbExecutor = tdb(input.companyId),
 ) => {
+  const context = currentAuditContext();
   const [created] = await executor
     .insert(auditEvents)
     .values({
@@ -22,11 +32,15 @@ export const recordAuditEvent = async (
       resourceId: input.resourceId,
       action: input.action,
       result: input.result ?? "success",
-      source: input.source ?? "app",
+      source: input.source ?? context?.source ?? "app",
       payload: input.payload ?? null,
-      requestMeta: input.requestMeta ?? null,
+      requestMeta: input.requestMeta ?? context?.requestMeta ?? null,
     })
     .returning();
+
+  if (created) {
+    noteAuditEvent(created.id);
+  }
 
   return created;
 };
@@ -48,6 +62,10 @@ const buildAuditFilters = (options: ListAuditEventsOptions) => {
 
   if (options.action) {
     filters.push(eq(auditEvents.action, options.action));
+  }
+
+  if (options.source) {
+    filters.push(eq(auditEvents.source, options.source));
   }
 
   if (options.from) {
@@ -131,6 +149,22 @@ export const buildChanges = <T extends Record<string, unknown>>(
   return changes;
 };
 
+/** Expediente México fields kept in person audit snapshots (WRK-I5-1). */
+export const MEXICO_AUDIT_FIELDS = [
+  "domicilioCalle",
+  "domicilioNumeroExterior",
+  "domicilioNumeroInterior",
+  "domicilioColonia",
+  "domicilioMunicipio",
+  "domicilioEstado",
+  "domicilioCodigoPostal",
+  "estadoCivil",
+  "sexo",
+  "lugarNacimiento",
+  "nacionalidad",
+  "ineClaveElector",
+] as const;
+
 export const snapshotPerson = (person: Record<string, unknown>) => ({
   nombres: person.nombres,
   apellidoPaterno: person.apellidoPaterno,
@@ -148,6 +182,9 @@ export const snapshotPerson = (person: Record<string, unknown>) => ({
   nss: person.nss,
   status: person.status,
   deletedAt: person.deletedAt,
+  ...(Object.fromEntries(
+    MEXICO_AUDIT_FIELDS.map((field) => [field, person[field] ?? null]),
+  ) as Record<(typeof MEXICO_AUDIT_FIELDS)[number], unknown>),
 });
 
 export const snapshotPersonSchedule = (
@@ -162,6 +199,12 @@ export const snapshotPersonSchedule = (
     salidaComer: schedule.salidaComer,
     regresoComer: schedule.regresoComer,
     salida: schedule.salida,
+    // Readable text, so a change of blocks compares as one value (WRK-I5-3).
+    bloques: Array.isArray(schedule.blocks)
+      ? formatScheduleBlocks(
+          readStoredBlocks(schedule.blocks, schedule.restDay as string | null),
+        )
+      : null,
     deletedAt: schedule.deletedAt,
   };
 };
@@ -198,7 +241,14 @@ export const snapshotPositionActivity = (
 export const snapshotSite = (site: Record<string, unknown>) => ({
   name: site.name,
   kind: site.kind,
+  regionId: site.regionId ?? null,
   deletedAt: site.deletedAt,
+});
+
+export const snapshotRegion = (region: Record<string, unknown>) => ({
+  name: region.name,
+  active: region.active,
+  deletedAt: region.deletedAt,
 });
 
 const summarizeGeneratedText = (text: unknown) =>
@@ -227,7 +277,12 @@ export const snapshotContract = (contract: Record<string, unknown>) => ({
   scheduleRegresoComer: contract.scheduleRegresoComer,
   scheduleSalida: contract.scheduleSalida,
   status: contract.status,
+  salarioDiario: contract.salarioDiario ?? null,
+  salarioMensual: contract.salarioMensual ?? null,
+  formaPago: contract.formaPago ?? null,
+  periodicidadPago: contract.periodicidadPago ?? null,
   previousContractId: contract.previousContractId,
+  noRenewReason: contract.noRenewReason ?? null,
   deletedAt: contract.deletedAt,
 });
 
@@ -259,3 +314,51 @@ export const snapshotAssetMovement = (movement: Record<string, unknown>) => ({
   conditionNote: movement.conditionNote,
   notes: movement.notes,
 });
+
+export type ListAuditEventsKeysetOptions = Omit<
+  ListAuditEventsOptions,
+  "companyId" | "limit" | "offset"
+> & {
+  source?: NonNullable<RecordAuditEventInput["source"]>;
+  /** Keyset position: before (occurred_at as text, id). */
+  after?: { key: string; id: string } | null;
+  limit: number;
+};
+
+/**
+ * Audit events newest first in a stable order (occurred_at, id) for cursor
+ * paging, with the full payload (callers mask PII). Read only; used by the MCP
+ * list_audit_events.
+ */
+export const listAuditEventsKeyset = async (
+  companyId: string,
+  options: ListAuditEventsKeysetOptions,
+) => {
+  const filters = [
+    buildAuditFilters({ ...options, companyId }),
+    options.after
+      ? sql`(${auditEvents.occurredAt}, ${auditEvents.id}) < (${options.after.key}::timestamptz, ${options.after.id}::uuid)`
+      : undefined,
+  ];
+
+  return tdb(companyId)
+    .select({
+      id: auditEvents.id,
+      actorUserId: auditEvents.actorUserId,
+      actorName: users.name,
+      resourceType: auditEvents.resourceType,
+      resourceId: auditEvents.resourceId,
+      action: auditEvents.action,
+      result: auditEvents.result,
+      source: auditEvents.source,
+      payload: auditEvents.payload,
+      requestMeta: auditEvents.requestMeta,
+      occurredAt: auditEvents.occurredAt,
+      sortKey: sql<string>`${auditEvents.occurredAt}::text`,
+    })
+    .from(auditEvents)
+    .leftJoin(users, eq(auditEvents.actorUserId, users.id))
+    .where(and(...filters))
+    .orderBy(desc(auditEvents.occurredAt), desc(auditEvents.id))
+    .limit(options.limit + 1);
+};

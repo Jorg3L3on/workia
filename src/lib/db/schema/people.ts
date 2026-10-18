@@ -3,6 +3,9 @@ import {
   date,
   foreignKey,
   index,
+  integer,
+  jsonb,
+  numeric,
   pgEnum,
   pgTable,
   text,
@@ -12,6 +15,8 @@ import {
   uuid,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
+
+import type { ScheduleBlock } from "@/lib/people/schedule-blocks";
 
 import { areas, positions } from "./catalog";
 import { sites } from "./sites";
@@ -34,6 +39,29 @@ export const personSearchText = (table: {
   sql`(${table.nombres} || ' ' || ${table.apellidoPaterno} || ' ' || coalesce(${table.apellidoMaterno}, '') || ' ' || coalesce(${table.rfc}, '') || ' ' || coalesce(${table.curp}, '') || ' ' || coalesce(${table.email}, ''))`;
 
 export const personStatusEnum = pgEnum("person_status", ["activa", "baja"]);
+
+/** Day of the week of the schedule by blocks (WRK-I5-3). */
+export const weekDayEnum = pgEnum("week_day", [
+  "lun",
+  "mar",
+  "mie",
+  "jue",
+  "vie",
+  "sab",
+  "dom",
+]);
+
+/** Estado civil del expediente México (WRK-I5-1). */
+export const maritalStatusEnum = pgEnum("marital_status", [
+  "soltero",
+  "casado",
+  "union_libre",
+  "divorciado",
+  "viudo",
+]);
+
+/** Sexo como lo registra la CURP. */
+export const sexEnum = pgEnum("person_sex", ["H", "M"]);
 
 export const people = pgTable(
   "people",
@@ -65,6 +93,19 @@ export const people = pgTable(
     curp: text("curp"),
     nss: text("nss"),
     status: personStatusEnum("status").notNull().default("activa"),
+    // Expediente México (WRK-I5-1): domicilio, datos civiles e INE.
+    domicilioCalle: text("domicilio_calle"),
+    domicilioNumeroExterior: text("domicilio_numero_exterior"),
+    domicilioNumeroInterior: text("domicilio_numero_interior"),
+    domicilioColonia: text("domicilio_colonia"),
+    domicilioMunicipio: text("domicilio_municipio"),
+    domicilioEstado: text("domicilio_estado"),
+    domicilioCodigoPostal: text("domicilio_codigo_postal"),
+    estadoCivil: maritalStatusEnum("estado_civil"),
+    sexo: sexEnum("sexo"),
+    lugarNacimiento: text("lugar_nacimiento"),
+    nacionalidad: text("nacionalidad"),
+    ineClaveElector: text("ine_clave_elector"),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
@@ -126,6 +167,36 @@ export const people = pgTable(
   ],
 );
 
+/** Beneficiaries of a person (WRK-I5-1); the percentages add up to 100. */
+export const personBeneficiaries = pgTable(
+  "person_beneficiaries",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    companyId: uuid("company_id")
+      .notNull()
+      .references(() => companies.id, { onDelete: "restrict" }),
+    personId: uuid("person_id").notNull(),
+    nombre: text("nombre").notNull(),
+    parentesco: text("parentesco").notNull(),
+    porcentaje: numeric("porcentaje", { precision: 5, scale: 2 }).notNull(),
+    orden: integer("orden").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    foreignKey({
+      name: "person_beneficiaries_company_person_fk",
+      columns: [table.companyId, table.personId],
+      foreignColumns: [people.companyId, people.id],
+    }).onDelete("cascade"),
+    index("person_beneficiaries_company_person_idx").on(
+      table.companyId,
+      table.personId,
+    ),
+  ],
+);
+
 export const personSchedules = pgTable(
   "person_schedules",
   {
@@ -141,6 +212,9 @@ export const personSchedules = pgTable(
     salidaComer: text("salida_comer"),
     regresoComer: text("regreso_comer"),
     salida: text("salida"),
+    /** Schedule by blocks (WRK-I5-3); null for a simple schedule. */
+    blocks: jsonb("blocks").$type<ScheduleBlock[]>(),
+    restDay: weekDayEnum("rest_day"),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
@@ -202,3 +276,5 @@ export type NewPerson = typeof people.$inferInsert;
 export type PersonStatus = (typeof personStatusEnum.enumValues)[number];
 export type PersonSchedule = typeof personSchedules.$inferSelect;
 export type NewPersonSchedule = typeof personSchedules.$inferInsert;
+
+export type PersonBeneficiary = typeof personBeneficiaries.$inferSelect;

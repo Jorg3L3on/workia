@@ -5,6 +5,8 @@ export * from "./catalog";
 export * from "./companies";
 export * from "./contracts";
 export * from "./imports";
+export * from "./mcp";
+export * from "./onboardings";
 export * from "./people";
 export * from "./rbac";
 export * from "./sites";

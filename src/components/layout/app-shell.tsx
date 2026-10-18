@@ -7,7 +7,9 @@ import {
   FolderTreeIcon,
   HomeIcon,
   LaptopIcon,
+  UserPlusIcon,
   ScrollTextIcon,
+  PlugIcon,
   UserCogIcon,
   UsersIcon,
 } from "lucide-react";
@@ -56,6 +58,8 @@ type AppShellProps = {
   companies: CompanyOption[];
   /** members:read in the active company: shows Miembros. */
   canReadMembers?: boolean;
+  /** mcp_connections:create or :manage in the active company: shows Conexiones. */
+  canUseConnections?: boolean;
   /** Platform admins also get a link to the platform console. */
   isPlatformAdmin?: boolean;
   user: {
@@ -70,6 +74,7 @@ const navItems = [
   { title: "Personas", href: "/app/personas", icon: UsersIcon },
   { title: "Contratos", href: "/app/contratos", icon: FileTextIcon },
   { title: "Resguardo", href: "/app/resguardo", icon: LaptopIcon },
+  { title: "Altas", href: "/app/altas", icon: UserPlusIcon },
   { title: "Catálogo", href: CATALOG_PATHS.index, icon: FolderTreeIcon },
   { title: "Auditoría", href: "/app/auditoria", icon: ScrollTextIcon },
 ] as const;
@@ -78,6 +83,12 @@ const membersNavItem = {
   title: "Miembros",
   href: "/app/miembros",
   icon: UserCogIcon,
+} as const;
+
+const connectionsNavItem = {
+  title: "Conexiones",
+  href: "/app/conexiones",
+  icon: PlugIcon,
 } as const;
 
 const platformNavItem = {
@@ -92,11 +103,13 @@ export const AppShell = ({
   company,
   companies,
   canReadMembers = false,
+  canUseConnections = false,
   isPlatformAdmin = false,
 }: AppShellProps) => {
   const items = [
     ...navItems,
     ...(canReadMembers ? [membersNavItem] : []),
+    ...(canUseConnections ? [connectionsNavItem] : []),
     ...(isPlatformAdmin ? [platformNavItem] : []),
   ];
   const initials = (user.name ?? "RRHH")

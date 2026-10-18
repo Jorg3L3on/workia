@@ -32,6 +32,7 @@ export const pageTitles = {
   nuevaPlantilla: "Nueva plantilla",
   plantilla: "Plantilla",
   resguardo: "Resguardo",
+  altas: "Altas",
   nuevoActivo: "Nuevo activo",
   activo: "Activo",
   catalogo: "Catálogo",
@@ -39,6 +40,7 @@ export const pageTitles = {
   puestos: "Puestos",
   actividades: "Actividades",
   sucursales: "Sucursales",
+  regiones: "Regiones",
   auditoria: "Auditoría",
   administracion: "Administración",
   rbac: "RBAC",
@@ -47,6 +49,7 @@ export const pageTitles = {
   empresa: "Elegir empresa",
   empresas: "Empresas",
   miembros: "Miembros",
+  conexiones: "Conexiones",
 } as const;
 
 export const companyCopy = {

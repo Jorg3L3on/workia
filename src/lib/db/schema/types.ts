@@ -1,5 +1,12 @@
 export type PermissionAction =
-  "read" | "create" | "update" | "delete" | "manage" | "import" | "export";
+  | "read"
+  | "create"
+  | "update"
+  | "delete"
+  | "manage"
+  | "import"
+  | "export"
+  | "approve";
 
 export type PermissionResource =
   | "users"
@@ -16,7 +23,10 @@ export type PermissionResource =
   | "contract_templates"
   | "assets"
   | "companies"
-  | "members";
+  | "members"
+  | "mcp_connections"
+  | "compensation"
+  | "payroll";
 
 export type PermissionSlug = `${PermissionResource}:${PermissionAction}`;
 
@@ -365,6 +375,36 @@ export const PERMISSIONS: Array<{
       "Add members to the company, change their role, or revoke them",
   },
   {
+    slug: "mcp_connections:create",
+    name: "Create MCP Connections",
+    resource: "mcp_connections",
+    action: "create",
+    description:
+      "Connect an AI assistant to the company (OAuth or personal token)",
+  },
+  {
+    slug: "mcp_connections:manage",
+    name: "Manage MCP Connections",
+    resource: "mcp_connections",
+    action: "manage",
+    description: "View and revoke every AI assistant connection of the company",
+  },
+  {
+    slug: "compensation:read",
+    name: "Read Compensation",
+    resource: "compensation",
+    action: "read",
+    description: "See and capture salaries and payment terms of contracts",
+  },
+  {
+    slug: "payroll:approve",
+    name: "Approve Payroll Onboarding",
+    resource: "payroll",
+    action: "approve",
+    description:
+      "Give Payroll's approval to a hiring (alta) after HR approved it",
+  },
+  {
     slug: "companies:read",
     name: "Read Companies",
     resource: "companies",
@@ -457,6 +497,10 @@ export const ROLES = [
       "assets:delete",
       "members:read",
       "members:manage",
+      "mcp_connections:create",
+      "mcp_connections:manage",
+      "compensation:read",
+      "payroll:approve",
     ] satisfies PermissionSlug[],
   },
   {
@@ -483,6 +527,7 @@ export const ROLES = [
       "assets:read",
       "assets:create",
       "assets:update",
+      "mcp_connections:create",
     ] satisfies PermissionSlug[],
   },
   {

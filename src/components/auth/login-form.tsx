@@ -18,6 +18,18 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
+/**
+ * Where to go after signing in: a same-site path from ?callbackUrl= (the OAuth
+ * consent of the MCP connector comes back this way), else /app.
+ */
+export const safeCallbackPath = (value: string | null) =>
+  value &&
+  value.startsWith("/") &&
+  !value.startsWith("//") &&
+  !value.startsWith("/\\")
+    ? value
+    : "/app";
+
 const fieldLabelClassName =
   "mb-2 block font-mono text-[10.5px] font-medium tracking-[0.09em] text-[color:var(--login-ink-faint)] uppercase";
 
@@ -67,7 +79,11 @@ export const LoginForm = () => {
     }
 
     const navigateToApp = () => {
-      window.location.assign("/app");
+      window.location.assign(
+        safeCallbackPath(
+          new URLSearchParams(window.location.search).get("callbackUrl"),
+        ),
+      );
     };
 
     const reduceMotion = window.matchMedia(

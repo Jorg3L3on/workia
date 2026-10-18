@@ -61,7 +61,79 @@ const formDataToValues = (formData: FormData): PersonFormValues => ({
   status: String(
     formData.get("status") ?? "activa",
   ) as PersonFormValues["status"],
+  ...mexicoValuesFromForm(formData),
+  ...scheduleBlocksFromForm(formData),
 });
+
+/**
+ * The schedule-by-blocks editor posts its value as JSON (WRK-I5-3). Absent
+ * when the form did not render it: then the simple fields are the source.
+ */
+const scheduleBlocksFromForm = (
+  formData: FormData,
+): Pick<PersonFormValues, "horarioBloques"> => {
+  const raw = formData.get("horarioBloques");
+
+  if (raw === null) {
+    return {};
+  }
+
+  try {
+    return { horarioBloques: JSON.parse(String(raw)) };
+  } catch {
+    // Fails validation with the schema's message.
+    return { horarioBloques: { bloques: "inválido" } as never };
+  }
+};
+
+const MEXICO_TEXT_FIELDS = [
+  "domicilioCalle",
+  "domicilioNumeroExterior",
+  "domicilioNumeroInterior",
+  "domicilioColonia",
+  "domicilioMunicipio",
+  "domicilioEstado",
+  "domicilioCodigoPostal",
+  "estadoCivil",
+  "sexo",
+  "lugarNacimiento",
+  "nacionalidad",
+  "ineClaveElector",
+] as const;
+
+/**
+ * Expediente México fields of the form. A field the form did not render stays
+ * undefined (kept as stored); beneficiaries come as parallel lists and are only
+ * read when the form says it rendered the editor.
+ */
+const mexicoValuesFromForm = (formData: FormData) => {
+  const values: Partial<PersonFormValues> = {};
+
+  for (const field of MEXICO_TEXT_FIELDS) {
+    const value = formData.get(field);
+    if (value !== null) {
+      (values as Record<string, unknown>)[field] = String(value);
+    }
+  }
+
+  if (formData.get("beneficiariosEditor") === "1") {
+    const nombres = formData.getAll("beneficiarioNombre").map(String);
+    const parentescos = formData.getAll("beneficiarioParentesco").map(String);
+    const porcentajes = formData.getAll("beneficiarioPorcentaje").map(String);
+
+    values.beneficiarios = nombres
+      .map((nombre, index) => ({
+        nombre,
+        parentesco: parentescos[index] ?? "",
+        porcentaje: Number(porcentajes[index] ?? 0),
+      }))
+      .filter(
+        (row) => row.nombre.trim() || row.parentesco.trim() || row.porcentaje,
+      );
+  }
+
+  return values;
+};
 
 const parsePersonForm = (
   formData: FormData,

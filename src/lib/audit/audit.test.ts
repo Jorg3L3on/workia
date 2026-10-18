@@ -19,10 +19,12 @@ describe("audit append-only surface", () => {
     const exportedKeys = Object.keys(auditModule).sort();
 
     expect(exportedKeys).toEqual([
+      "MEXICO_AUDIT_FIELDS",
       "buildChanges",
       "countAuditEvents",
       "listAuditActors",
       "listAuditEvents",
+      "listAuditEventsKeyset",
       "recordAuditEvent",
       "snapshotActivity",
       "snapshotArea",
@@ -34,6 +36,7 @@ describe("audit append-only surface", () => {
       "snapshotPersonSchedule",
       "snapshotPosition",
       "snapshotPositionActivity",
+      "snapshotRegion",
       "snapshotSite",
     ]);
   });

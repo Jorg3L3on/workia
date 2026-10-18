@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { createSiteAction } from "@/lib/sites/actions";
 import { requireSitesRead } from "@/lib/sites/auth";
 import { listSites } from "@/lib/sites";
+import { listRegions } from "@/lib/regions";
 import { SITE_KINDS, siteKindLabels } from "@/lib/sites/schema";
 import { userHasPermission } from "@/lib/rbac";
 import { CompanyField } from "@/components/tenant/company-context";
@@ -36,11 +37,18 @@ const SucursalesCatalogPage = async ({
   const session = await requireSitesRead();
   const { error, saved, deleted } = await searchParams;
 
-  const [siteRows, canCreateSite, canDeleteSite] = await Promise.all([
-    listSites(session.companyId),
-    userHasPermission(session.user.id, "sites:create"),
-    userHasPermission(session.user.id, "sites:delete"),
-  ]);
+  const [siteRows, regionRows, canCreateSite, canUpdateSite, canDeleteSite] =
+    await Promise.all([
+      listSites(session.companyId),
+      listRegions(session.companyId),
+      userHasPermission(session.user.id, "sites:create"),
+      userHasPermission(session.user.id, "sites:update"),
+      userHasPermission(session.user.id, "sites:delete"),
+    ]);
+  const regionName = new Map(regionRows.map((region) => [region.id, region]));
+  const activeRegions = regionRows
+    .filter((region) => region.active)
+    .map((region) => ({ id: region.id, name: region.name }));
 
   return (
     <div className="flex flex-col gap-6">
@@ -88,6 +96,22 @@ const SucursalesCatalogPage = async ({
                               variant="field"
                             />
                           </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="site-region">Región</Label>
+                            <FormSelect
+                              defaultValue=""
+                              id="site-region"
+                              name="regionId"
+                              options={[
+                                { value: "", label: "Sin región" },
+                                ...activeRegions.map((region) => ({
+                                  value: region.id,
+                                  label: region.name,
+                                })),
+                              ]}
+                              variant="field"
+                            />
+                          </div>
                         </div>
                         <Button type="submit" variant="outline">
                           Crear sucursal
@@ -102,10 +126,16 @@ const SucursalesCatalogPage = async ({
 
         <CatalogSitesTable
           canDelete={canDeleteSite}
+          canUpdate={canUpdateSite}
+          regions={activeRegions}
           sites={siteRows.map((site) => ({
             id: site.id,
             name: site.name,
             kindLabel: siteKindLabels[site.kind],
+            regionId: site.regionId,
+            regionName: site.regionId
+              ? (regionName.get(site.regionId)?.name ?? null)
+              : null,
           }))}
         />
       </section>
