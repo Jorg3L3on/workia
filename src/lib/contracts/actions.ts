@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import {
+  addOfficialTemplates,
   createContract,
   createContractTemplate,
   deactivateContractTemplate,
@@ -331,4 +332,24 @@ export const deleteContractTemplateAction = async (templateId: string) => {
   ).catch(() => redirect("/app/contratos/plantillas?error=not-found"));
   revalidateContracts();
   redirect("/app/contratos/plantillas?deleted=1");
+};
+
+/** Adds the base official templates to the active company (WRK-I5-5). */
+export const addOfficialTemplatesAction = async (formData: FormData) => {
+  let session;
+
+  try {
+    session = await requireContractTemplatesCreate();
+  } catch (error) {
+    if (error instanceof AuthorizationError) {
+      redirect("/app/contratos/plantillas?error=create-permission");
+    }
+
+    redirect("/login");
+  }
+
+  const companyId = templateCompanyOrRedirect(session, formData);
+  const created = await addOfficialTemplates(companyId, session.user.id);
+  revalidateContracts();
+  redirect(`/app/contratos/plantillas?official=${created.length}`);
 };

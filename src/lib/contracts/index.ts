@@ -26,8 +26,17 @@ import {
 } from "@/lib/db/schema";
 import type { ContractStatus } from "@/lib/db/schema/contracts";
 import { getPersonWithRelations, personInRegion } from "@/lib/people";
-import { formatHorarioToken, formatPersonName } from "@/lib/people/schema";
+import {
+  formatHorarioToken,
+  formatMexicanAddress,
+  formatPersonName,
+  maritalStatusLabels,
+} from "@/lib/people/schema";
 import { siteKindLabels } from "@/lib/sites/schema";
+import { formatSeniority } from "@/lib/people/seniority";
+import { getCompanyById } from "@/lib/tenant/companies";
+
+import { OFFICIAL_TEMPLATES } from "./official-templates";
 
 import type {
   ContractFormValues,
@@ -39,8 +48,13 @@ import {
   compensationValues,
   type CompensationValues,
   CONTRACT_TEMPLATE_TOKENS,
+  contractStatusLabels,
+  contractTypeLabels,
   fillContractTemplate,
+  formatContractDate,
+  templateTokenValues,
   type ContractTemplateToken,
+  type TemplateFillContext,
 } from "./schema";
 
 const normalizeEndDate = (
@@ -63,8 +77,12 @@ const resolveTemplateFillContext = async (
   personId: string,
   startDate: string,
   endDate: string | null,
+  compensation?: CompensationValues | null,
 ) => {
-  const person = await getPersonWithRelations(companyId, personId);
+  const [person, company] = await Promise.all([
+    getPersonWithRelations(companyId, personId),
+    getCompanyById(companyId),
+  ]);
 
   if (!person) {
     throw new Error("Persona no encontrada.");
@@ -83,7 +101,24 @@ const resolveTemplateFillContext = async (
       horario: formatHorarioToken(person.schedule),
       fechaInicio: startDate,
       fechaFin: endDate,
-    },
+      // Official templates (WRK-I5-5).
+      curp: person.curp,
+      nss: person.nss,
+      ine: person.ineClaveElector,
+      domicilio: formatMexicanAddress(person),
+      estadoCivil: person.estadoCivil
+        ? maritalStatusLabels[person.estadoCivil]
+        : null,
+      nacionalidad: person.nacionalidad,
+      salarioDiario: compensation?.salarioDiario ?? null,
+      salarioMensual: compensation?.salarioMensual ?? null,
+      formaPago: compensation?.formaPago ?? null,
+      periodicidad: compensation?.periodicidadPago ?? null,
+      fechaIngreso: person.fechaIngreso,
+      empresa: company?.name ?? null,
+      empresaRazonSocial: company?.legalName ?? null,
+      empresaRfc: company?.rfc ?? null,
+    } satisfies TemplateFillContext,
   };
 };
 
@@ -167,6 +202,36 @@ export const createContractTemplate = async (
       after: snapshotContractTemplate(created),
     },
   });
+
+  return created;
+};
+
+/**
+ * Adds the base official templates to the company (WRK-I5-5), skipping any
+ * whose name it already has; returns the ones it created.
+ */
+export const addOfficialTemplates = async (
+  companyId: string,
+  actorUserId: string,
+) => {
+  const existing = new Set(
+    (await listContractTemplates(companyId, true)).map((template) =>
+      template.name.trim().toLowerCase(),
+    ),
+  );
+  const created = [];
+
+  for (const template of OFFICIAL_TEMPLATES) {
+    if (existing.has(template.name.toLowerCase())) continue;
+
+    created.push(
+      await createContractTemplate(
+        companyId,
+        { name: template.name, body: template.body, active: true },
+        actorUserId,
+      ),
+    );
+  }
 
   return created;
 };
@@ -304,6 +369,63 @@ export const listContractsByPerson = async (
       ),
     )
     .orderBy(desc(contracts.startDate), desc(contracts.createdAt));
+
+/**
+ * Seniority certificate of a person (WRK-I5-5): original hire date, seniority
+ * as of a date and the chain of contracts, plus the same content as text (the
+ * connector returns it). Null for a person outside the company.
+ */
+export const getSeniorityCertificate = async (
+  companyId: string,
+  personId: string,
+  asOf: string,
+) => {
+  const [person, company, chain] = await Promise.all([
+    getPersonWithRelations(companyId, personId, true),
+    getCompanyById(companyId),
+    listContractsByPerson(companyId, personId),
+  ]);
+
+  if (!person) {
+    return null;
+  }
+
+  const contratos = [...chain]
+    .sort((a, b) => a.startDate.localeCompare(b.startDate))
+    .map((contract) => ({
+      id: contract.id,
+      type: contract.type,
+      status: contract.status,
+      startDate: contract.startDate,
+      endDate: contract.endDate,
+    }));
+  const name = formatPersonName(person);
+  const antiguedad = formatSeniority(person.fechaIngreso, asOf);
+  const companyName = company?.legalName || company?.name || "La empresa";
+  const text = [
+    "CONSTANCIA DE ANTIGÜEDAD",
+    "",
+    `${companyName}${company?.rfc ? `, con RFC ${company.rfc},` : ""} hace constar que ${name}${person.curp ? ` (CURP ${person.curp})` : ""} ${person.fechaIngreso ? `ingresó a laborar el ${formatContractDate(person.fechaIngreso)} y al ${formatContractDate(asOf)} cuenta con una antigüedad de ${antiguedad ?? "menos de un mes"}` : "no tiene fecha de ingreso capturada"}${person.position?.name ? `, con el puesto de ${person.position.name}` : ""}.`,
+    "",
+    contratos.length > 0 ? "Contratos:" : "Sin contratos registrados.",
+    ...contratos.map(
+      (contract, index) =>
+        `${index + 1}. ${contractTypeLabels[contract.type]} del ${formatContractDate(contract.startDate)}${contract.endDate ? ` al ${formatContractDate(contract.endDate)}` : ""} (${contractStatusLabels[contract.status]})`,
+    ),
+    "",
+    `Se extiende la presente el ${formatContractDate(asOf)}.`,
+  ].join("\n");
+
+  return {
+    person,
+    company,
+    fechaIngreso: person.fechaIngreso,
+    antiguedad,
+    asOf,
+    contratos,
+    text,
+  };
+};
 
 export const getContractById = async (companyId: string, id: string) => {
   const [contract] = await tdb(companyId)
@@ -467,6 +589,7 @@ const prepareContractRecord = async (
     startDate: string;
     endDate: string | null;
     templateId: string;
+    compensation?: CompensationValues;
   },
 ) => {
   const template = await getContractTemplateById(companyId, input.templateId);
@@ -480,6 +603,7 @@ const prepareContractRecord = async (
     input.personId,
     input.startDate,
     input.endDate,
+    input.compensation,
   );
 
   return {
@@ -884,6 +1008,8 @@ export const previewContract = async (
     type: ContractFormValues["type"];
     startDate: string;
     endDate?: string;
+    /** The compensation the contract would freeze, for its tokens. */
+    compensation?: CompensationValues;
   },
 ) => {
   const template = await getContractTemplateById(companyId, input.templateId);
@@ -898,28 +1024,17 @@ export const previewContract = async (
     input.personId,
     input.startDate,
     endDate,
+    input.compensation,
   ).catch(() => ({ person: null, context: null }));
 
   if (!person || !context) {
     return null;
   }
 
-  const values: Record<ContractTemplateToken, unknown> = {
-    nombres: context.nombres,
-    apellido_paterno: context.apellidoPaterno,
-    apellido_materno: context.apellidoMaterno,
-    puesto: context.puesto,
-    area: context.area,
-    sucursal: context.sucursal,
-    rfc: context.rfc,
-    horario: person.schedule ? context.horario : null,
-    fecha_inicio: context.fechaInicio,
-    fecha_fin: context.fechaFin,
-  };
-  const missingTokens = templateTokensUsed(template.body).filter((token) => {
-    const value = values[token];
-    return value === null || value === undefined || String(value).trim() === "";
-  });
+  const values = templateTokenValues(context);
+  const missingTokens = templateTokensUsed(template.body).filter(
+    (token) => values[token] === null,
+  );
   const blocking: string[] = [];
 
   if (await getVigenteContractForPerson(companyId, input.personId)) {

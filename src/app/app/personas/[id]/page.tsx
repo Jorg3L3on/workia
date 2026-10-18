@@ -264,6 +264,13 @@ const PersonaDetailPage = async ({
               </Link>
             </Button>
           ) : null}
+          {canReadContracts ? (
+            <Button asChild variant="outline">
+              <Link href={`/app/personas/${person.id}/constancia`}>
+                Constancia de antigüedad
+              </Link>
+            </Button>
+          ) : null}
           {canDelete && !isDeleted ? (
             <DeletePersonButton personId={person.id} />
           ) : null}

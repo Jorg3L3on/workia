@@ -11,6 +11,7 @@ import {
   normalizeTimeValue,
   type PersonScheduleValues,
 } from "@/lib/people/schema";
+import { formatSeniority } from "@/lib/people/seniority";
 import {
   readStoredBlocks,
   type ScheduleBlock,
@@ -28,9 +29,74 @@ export const CONTRACT_TEMPLATE_TOKENS = [
   "horario",
   "fecha_inicio",
   "fecha_fin",
+  // Official templates (WRK-I5-5).
+  "curp",
+  "nss",
+  "ine",
+  "domicilio",
+  "estado_civil",
+  "nacionalidad",
+  "salario_diario",
+  "salario_mensual",
+  "forma_pago",
+  "periodicidad",
+  "fecha_ingreso",
+  "antiguedad",
+  "empresa",
+  "empresa_razon_social",
+  "empresa_rfc",
 ] as const;
 
 export type ContractTemplateToken = (typeof CONTRACT_TEMPLATE_TOKENS)[number];
+
+/** What each token prints, for the templates help and the connector. */
+export const contractTemplateTokenLabels: Record<
+  ContractTemplateToken,
+  string
+> = {
+  nombres: "Nombre(s)",
+  apellido_paterno: "Apellido paterno",
+  apellido_materno: "Apellido materno",
+  puesto: "Puesto",
+  area: "Área",
+  sucursal: "Sucursal o corporativo",
+  rfc: "RFC",
+  horario: "Horario por bloques en texto",
+  fecha_inicio: "Inicio del contrato (dd/mm/aaaa)",
+  fecha_fin: "Fin del contrato (dd/mm/aaaa)",
+  curp: "CURP",
+  nss: "NSS",
+  ine: "Clave de elector (INE)",
+  domicilio: "Domicilio completo",
+  estado_civil: "Estado civil",
+  nacionalidad: "Nacionalidad",
+  salario_diario: "Salario diario ($)",
+  salario_mensual: "Salario mensual ($, diario × 30.4)",
+  forma_pago: "Forma de pago",
+  periodicidad: "Periodicidad de pago",
+  fecha_ingreso: "Fecha de ingreso original (dd/mm/aaaa)",
+  antiguedad: "Antigüedad al inicio del contrato",
+  empresa: "Nombre comercial de la empresa",
+  empresa_razon_social: "Razón social de la empresa",
+  empresa_rfc: "RFC de la empresa",
+};
+
+/** Tokens with personal identifiers: masked over the connector without pii. */
+export const PII_TEMPLATE_TOKENS: readonly ContractTemplateToken[] = [
+  "rfc",
+  "curp",
+  "nss",
+  "ine",
+  "domicilio",
+];
+
+/** Tokens with the contract's compensation: shown only with compensation:read. */
+export const COMPENSATION_TEMPLATE_TOKENS: readonly ContractTemplateToken[] = [
+  "salario_diario",
+  "salario_mensual",
+  "forma_pago",
+  "periodicidad",
+];
 
 export const contractTypeLabels: Record<ContractType, string> = {
   determinado: "Determinado",
@@ -282,6 +348,87 @@ export type TemplateFillContext = {
   horario?: string | null;
   fechaInicio: string;
   fechaFin?: string | null;
+  curp?: string | null;
+  nss?: string | null;
+  ine?: string | null;
+  domicilio?: string | null;
+  estadoCivil?: string | null;
+  nacionalidad?: string | null;
+  /** Compensation of the contract being emitted (WRK-I5-2). */
+  salarioDiario?: string | null;
+  salarioMensual?: string | null;
+  formaPago?: string | null;
+  periodicidad?: string | null;
+  fechaIngreso?: string | null;
+  empresa?: string | null;
+  empresaRazonSocial?: string | null;
+  empresaRfc?: string | null;
+};
+
+const pesos = (value: string | null | undefined) =>
+  value
+    ? Number(value).toLocaleString("es-MX", {
+        style: "currency",
+        currency: "MXN",
+      })
+    : null;
+
+/**
+ * Each token's value for a context, or null when it has none (the preview
+ * reports those as missing). One place for filling and for reporting.
+ */
+export const templateTokenValues = (
+  context: TemplateFillContext,
+): Record<ContractTemplateToken, string | null> => {
+  const text = (value: string | null | undefined) => value?.trim() || null;
+
+  return {
+    nombres: text(context.nombres),
+    apellido_paterno: text(context.apellidoPaterno),
+    apellido_materno: text(context.apellidoMaterno),
+    puesto: text(context.puesto),
+    area: text(context.area),
+    sucursal: text(context.sucursal),
+    rfc: text(context.rfc),
+    horario:
+      context.horario && context.horario.trim() !== "—"
+        ? context.horario.trim()
+        : null,
+    fecha_inicio: formatContractDate(context.fechaInicio) || null,
+    fecha_fin: context.fechaFin
+      ? formatContractDate(context.fechaFin) || null
+      : null,
+    curp: text(context.curp),
+    nss: text(context.nss),
+    ine: text(context.ine),
+    domicilio: text(context.domicilio),
+    estado_civil: text(context.estadoCivil),
+    nacionalidad: text(context.nacionalidad),
+    salario_diario: pesos(context.salarioDiario),
+    salario_mensual: pesos(context.salarioMensual),
+    // Lowercase: they read mid-sentence («pagadero en forma quincenal»).
+    forma_pago: context.formaPago
+      ? (
+          paymentMethodLabels[
+            context.formaPago as (typeof PAYMENT_METHODS)[number]
+          ] ?? context.formaPago
+        ).toLowerCase()
+      : null,
+    periodicidad: context.periodicidad
+      ? (
+          payFrequencyLabels[
+            context.periodicidad as (typeof PAY_FREQUENCIES)[number]
+          ] ?? context.periodicidad
+        ).toLowerCase()
+      : null,
+    fecha_ingreso: context.fechaIngreso
+      ? formatContractDate(context.fechaIngreso) || null
+      : null,
+    antiguedad: formatSeniority(context.fechaIngreso, context.fechaInicio),
+    empresa: text(context.empresa),
+    empresa_razon_social: text(context.empresaRazonSocial),
+    empresa_rfc: text(context.empresaRfc),
+  };
 };
 
 export type ContractScheduleSnapshot = {
@@ -332,22 +479,13 @@ export const fillContractTemplate = (
   body: string,
   context: TemplateFillContext,
 ) => {
-  const replacements: Record<ContractTemplateToken, string> = {
-    nombres: context.nombres,
-    apellido_paterno: context.apellidoPaterno,
-    apellido_materno: context.apellidoMaterno ?? "",
-    puesto: context.puesto ?? "",
-    area: context.area ?? "",
-    sucursal: context.sucursal ?? "",
-    rfc: context.rfc ?? "",
-    horario: context.horario?.trim() || formatHorarioToken(null),
-    fecha_inicio: formatContractDate(context.fechaInicio),
-    fecha_fin: formatContractDate(context.fechaFin),
-  };
+  const values = templateTokenValues(context);
 
   return body.replace(/\{\{(\w+)\}\}/g, (match, token: string) => {
-    if (token in replacements) {
-      return replacements[token as ContractTemplateToken];
+    if (token in values) {
+      const value = values[token as ContractTemplateToken];
+      // The schedule prints «—» when there is none, as before; the rest empty.
+      return value ?? (token === "horario" ? formatHorarioToken(null) : "");
     }
 
     return match;

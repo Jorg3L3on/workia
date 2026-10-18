@@ -1,12 +1,16 @@
 import { describe, expect, it } from "vitest";
 
+import { OFFICIAL_TEMPLATES } from "@/lib/contracts/official-templates";
 import {
   compensationValues,
+  CONTRACT_TEMPLATE_TOKENS,
   contractFormSchema,
+  contractTemplateTokenLabels,
   fillContractTemplate,
   isContractInRenewalWindow,
   monthlySalary,
   noticeWindowToMonths,
+  templateTokenValues,
 } from "@/lib/contracts/schema";
 
 describe("contract template tokens", () => {
@@ -210,5 +214,67 @@ describe("contract compensation", () => {
       diaPago: null,
     });
     expect(compensationValues({ salarioDiario: "" }).salarioDiario).toBeNull();
+  });
+});
+
+describe("official template tokens", () => {
+  const context = {
+    nombres: "Ana",
+    apellidoPaterno: "Demo",
+    fechaInicio: "2026-09-01",
+    curp: "DEMA900101MCSRNN09",
+    ine: "DMANNA90010107M100",
+    domicilio: "Calle 5, Col. Centro, Tuxtla Gutiérrez, Chiapas, C.P. 29000",
+    estadoCivil: "Soltera",
+    salarioDiario: "500.00",
+    salarioMensual: "15200.00",
+    formaPago: "transferencia",
+    periodicidad: "quincenal",
+    fechaIngreso: "2023-03-15",
+    empresa: "Ferretera",
+    empresaRazonSocial: "Ferretera SA de CV",
+    empresaRfc: "FER010101AB1",
+  };
+
+  it("fills the new tokens", () => {
+    const filled = fillContractTemplate(
+      "{{curp}} {{ine}} | {{domicilio}} | {{estado_civil}} | {{salario_diario}} / {{salario_mensual}} | {{forma_pago}} {{periodicidad}} | {{fecha_ingreso}} | {{antiguedad}} | {{empresa}} {{empresa_razon_social}} {{empresa_rfc}}",
+      context,
+    );
+
+    expect(filled).toBe(
+      "DEMA900101MCSRNN09 DMANNA90010107M100 | Calle 5, Col. Centro, Tuxtla Gutiérrez, Chiapas, C.P. 29000 | Soltera | $500.00 / $15,200.00 | transferencia quincenal | 15/03/2023 | 3 años, 5 meses | Ferretera Ferretera SA de CV FER010101AB1",
+    );
+  });
+
+  it("reports the tokens without a value as null", () => {
+    const values = templateTokenValues({
+      nombres: "Ana",
+      apellidoPaterno: "Demo",
+      fechaInicio: "2026-09-01",
+      horario: "—",
+    });
+    expect(values.horario).toBeNull();
+    expect(values.salario_diario).toBeNull();
+    expect(values.antiguedad).toBeNull();
+    expect(values.nombres).toBe("Ana");
+  });
+
+  it("official templates only use tokens Workia fills, and every token has a label", () => {
+    for (const template of OFFICIAL_TEMPLATES) {
+      const used = [...template.body.matchAll(/\{\{(\w+)\}\}/g)].map(
+        (match) => match[1],
+      );
+      expect(
+        used.filter(
+          (token) =>
+            !(CONTRACT_TEMPLATE_TOKENS as readonly string[]).includes(token),
+        ),
+        template.name,
+      ).toEqual([]);
+    }
+    for (const token of CONTRACT_TEMPLATE_TOKENS) {
+      expect(contractTemplateTokenLabels[token]).toBeTruthy();
+    }
   });
 });
