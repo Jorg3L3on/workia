@@ -22,6 +22,7 @@ import {
   contractTemplates,
   contracts,
   people,
+  positions,
   sites,
 } from "@/lib/db/schema";
 import type { ContractStatus } from "@/lib/db/schema/contracts";
@@ -41,6 +42,7 @@ import { OFFICIAL_TEMPLATES } from "./official-templates";
 import type {
   ContractFormValues,
   ContractTemplateFormValues,
+  RenewalDecisionValues,
   RenewContractFormValues,
 } from "./schema";
 import {
@@ -78,6 +80,8 @@ const resolveTemplateFillContext = async (
   startDate: string,
   endDate: string | null,
   compensation?: CompensationValues | null,
+  /** The position the contract is for, when it changes with it (WRK-I5-6). */
+  puesto?: string,
 ) => {
   const [person, company] = await Promise.all([
     getPersonWithRelations(companyId, personId),
@@ -94,7 +98,7 @@ const resolveTemplateFillContext = async (
       nombres: person.nombres,
       apellidoPaterno: person.apellidoPaterno,
       apellidoMaterno: person.apellidoMaterno,
-      puesto: person.position?.name ?? null,
+      puesto: puesto ?? person.position?.name ?? null,
       area: person.area?.name ?? null,
       sucursal: buildSiteLabel(person.site),
       rfc: person.rfc,
@@ -590,6 +594,7 @@ const prepareContractRecord = async (
     endDate: string | null;
     templateId: string;
     compensation?: CompensationValues;
+    puesto?: string;
   },
 ) => {
   const template = await getContractTemplateById(companyId, input.templateId);
@@ -604,6 +609,7 @@ const prepareContractRecord = async (
     input.startDate,
     input.endDate,
     input.compensation,
+    input.puesto,
   );
 
   return {
@@ -716,6 +722,8 @@ export const renewContract = async (
   companyId: string,
   input: RenewContractFormValues,
   actorUserId: string,
+  /** A position change that goes with the renewal, in the same transaction. */
+  options: { newPosition?: { id: string; name: string } } = {},
 ) => {
   const existing = await getContractById(companyId, input.contractId);
 
@@ -746,9 +754,22 @@ export const renewContract = async (
         : compensationValues(input),
   };
   // Reads happen before the transaction; only the writes go inside it.
-  const prepared = await prepareContractRecord(companyId, next);
+  const prepared = await prepareContractRecord(companyId, {
+    ...next,
+    puesto: options.newPosition?.name,
+  });
 
   return withTransaction(async (tx) => {
+    if (options.newPosition) {
+      await changePersonPosition(
+        companyId,
+        existing.personId,
+        options.newPosition,
+        actorUserId,
+        tx,
+      );
+    }
+
     const [updatedPrevious] = await tx
       .update(contracts)
       .set({ status: "renovado" })
@@ -787,41 +808,186 @@ export const renewContract = async (
   }, companyId);
 };
 
+/** An active position of the company, or a CompanyReference-style error. */
+const activePosition = async (companyId: string, positionId: string) => {
+  const [position] = await tdb(companyId)
+    .select({ id: positions.id, name: positions.name })
+    .from(positions)
+    .where(
+      withTenant(
+        positions,
+        companyId,
+        eq(positions.id, positionId),
+        isNull(positions.deletedAt),
+        eq(positions.active, true),
+      ),
+    )
+    .limit(1);
+
+  if (!position) {
+    throw new Error("El puesto no existe en esta empresa o está inactivo.");
+  }
+
+  return position;
+};
+
+/** Moves the person to a position inside a renewal; never touches fecha_ingreso. */
+const changePersonPosition = async (
+  companyId: string,
+  personId: string,
+  position: { id: string; name: string },
+  actorUserId: string,
+  tx: DbExecutor,
+) => {
+  const [before] = await tx
+    .select({ positionId: people.positionId })
+    .from(people)
+    .where(withTenant(people, companyId, eq(people.id, personId)))
+    .limit(1);
+
+  if (!before || before.positionId === position.id) {
+    return;
+  }
+
+  await tx
+    .update(people)
+    .set({ positionId: position.id })
+    .where(withTenant(people, companyId, eq(people.id, personId)));
+
+  await recordAuditEvent(
+    {
+      companyId,
+      actorUserId,
+      resourceType: "person",
+      resourceId: personId,
+      action: "update",
+      payload: {
+        summary: `Cambio de puesto con la renovación: ${position.name}`,
+        changes: {
+          positionId: { from: before.positionId, to: position.id },
+        },
+      },
+    },
+    tx,
+  );
+};
+
+/**
+ * The renewal tray's decision in one step (WRK-I5-6): renew open-ended,
+ * renew fixed-term (each optionally with a new position and compensation) or
+ * not renew with a reason. One transaction; the hire date never changes.
+ */
+export const decideContractRenewal = async (
+  companyId: string,
+  input: RenewalDecisionValues,
+  actorUserId: string,
+) => {
+  const existing = await getContractById(companyId, input.contractId);
+
+  if (!existing || existing.status !== "vigente") {
+    throw new ContractNotVigenteError();
+  }
+
+  if (input.decision === "no_renovar") {
+    const updated = await markContractNoRenew(
+      companyId,
+      existing.id,
+      actorUserId,
+      input.motivo,
+    );
+
+    return {
+      decision: input.decision,
+      previous: updated,
+      contract: null,
+      constanciaAvailable: false,
+    };
+  }
+
+  const indefinite = input.decision === "renovar_indeterminado";
+  const newPosition = input.newPositionId
+    ? await activePosition(companyId, input.newPositionId)
+    : undefined;
+  const contract = await renewContract(
+    companyId,
+    {
+      contractId: existing.id,
+      type: indefinite ? "indeterminado" : "determinado",
+      startDate: input.startDate || existing.endDate || existing.startDate,
+      endDate: indefinite ? "" : input.endDate,
+      noticeWindow: input.noticeWindow ?? (indefinite ? "no_avisar" : "1"),
+      templateId: input.templateId!,
+      salarioDiario: input.salarioDiario,
+      formaPago: input.formaPago,
+      periodicidadPago: input.periodicidadPago,
+      diaPago: input.diaPago,
+    },
+    actorUserId,
+    { newPosition },
+  );
+
+  return {
+    decision: input.decision,
+    previous: { ...existing, status: "renovado" as const },
+    contract,
+    constanciaAvailable: indefinite,
+  };
+};
+
 export const markContractNoRenew = async (
   companyId: string,
   contractId: string,
   actorUserId: string,
-  /** Why not; kept in the audit summary until P5 gives it a column. */
+  /** Why not (WRK-I5-6): stored in no_renew_reason and in the audit summary. */
   motivo?: string,
 ) => {
   const existing = await getContractById(companyId, contractId);
 
   if (!existing || existing.status !== "vigente") {
-    throw new Error("Contrato no encontrado o ya no está vigente.");
+    throw new ContractNotVigenteError();
   }
 
-  const [updated] = await tdb(companyId)
-    .update(contracts)
-    .set({ status: "no_renovado" })
-    .where(withTenant(contracts, companyId, eq(contracts.id, contractId)))
-    .returning();
+  const reason = motivo?.trim() || null;
 
-  await recordAuditEvent({
-    companyId,
-    actorUserId,
-    resourceType: "contract",
-    resourceId: contractId,
-    action: "no_renew",
-    payload: {
-      summary: motivo?.trim()
-        ? `Decisión: no renovar contrato · Motivo: ${motivo.trim()}`
-        : "Decisión: no renovar contrato",
-      before: snapshotContract(existing),
-      after: snapshotContract(updated),
-    },
-  });
+  // The status change and its audit event commit together.
+  return withTransaction(async (tx) => {
+    const [updated] = await tx
+      .update(contracts)
+      .set({ status: "no_renovado", noRenewReason: reason })
+      .where(
+        withTenant(
+          contracts,
+          companyId,
+          eq(contracts.id, contractId),
+          eq(contracts.status, "vigente"),
+        ),
+      )
+      .returning();
 
-  return updated;
+    if (!updated) {
+      throw new ContractNotVigenteError();
+    }
+
+    await recordAuditEvent(
+      {
+        companyId,
+        actorUserId,
+        resourceType: "contract",
+        resourceId: contractId,
+        action: "no_renew",
+        payload: {
+          summary: reason
+            ? `Decisión: no renovar contrato · Motivo: ${reason}`
+            : "Decisión: no renovar contrato",
+          before: snapshotContract(existing),
+          after: snapshotContract(updated),
+        },
+      },
+      tx,
+    );
+
+    return updated;
+  }, companyId);
 };
 
 export const softDeleteContract = async (

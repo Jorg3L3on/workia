@@ -6008,7 +6008,7 @@ exports[`/api/mcp transport > keeps the tools/list contract (snapshot) 1`] = `
       "readOnlyHint": false,
       "title": "Renovar contrato",
     },
-    "description": "Renueva un contrato vigente: el anterior queda «renovado» y se emite el nuevo ligado a él, en un solo paso (si algo falla no cambia nada). Primero responde una vista previa; repite con confirmation_token para hacerlo.",
+    "description": "Renueva un contrato vigente: el anterior queda «renovado» y se emite el nuevo ligado a él, en un solo paso (si algo falla no cambia nada). Para decidir desde la bandeja (con cambio de puesto o no renovar) prefiere decide_contract_renewal. Primero responde una vista previa; repite con confirmation_token para hacerlo.",
     "inputSchema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "properties": {
@@ -6250,7 +6250,7 @@ exports[`/api/mcp transport > keeps the tools/list contract (snapshot) 1`] = `
       "readOnlyHint": false,
       "title": "No renovar contrato",
     },
-    "description": "Registra la decisión de no renovar un contrato vigente; sale de la bandeja de renovación. El motivo queda en la auditoría. Primero responde una vista previa; repite con confirmation_token para hacerlo.",
+    "description": "Registra la decisión de no renovar un contrato vigente; sale de la bandeja de renovación. El motivo queda en el contrato y en la auditoría. Prefiere decide_contract_renewal, que lo exige. Primero responde una vista previa; repite con confirmation_token para hacerlo.",
     "inputSchema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "properties": {
@@ -6385,6 +6385,289 @@ exports[`/api/mcp transport > keeps the tools/list contract (snapshot) 1`] = `
       "type": "object",
     },
     "title": "No renovar contrato",
+  },
+  {
+    "_meta": {
+      "securitySchemes": [
+        {
+          "scopes": [
+            "write:contracts",
+          ],
+          "type": "oauth2",
+        },
+      ],
+    },
+    "annotations": {
+      "destructiveHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": false,
+      "title": "Decidir renovación",
+    },
+    "description": "La decisión de la bandeja de renovación en un paso, igual que la app: renovar_indeterminado, renovar_determinado (con end_date) o no_renovar (motivo obligatorio). Al renovar puede cambiar el puesto (new_position_id) y la compensación (sin compensacion conserva la anterior). Nunca cambia la fecha de ingreso. Tras renovar a indeterminado avisa que la constancia de antigüedad está disponible. Primero responde una vista previa; repite con confirmation_token para hacerlo.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "compensacion": {
+          "description": "Compensación que se congela en el contrato. Sólo con el scope pii y el permiso compensation:read. En renew_contract, si no se envía se conserva la del contrato anterior.",
+          "properties": {
+            "dia_pago": {
+              "description": "Texto libre, p. ej. «15 y último».",
+              "maxLength": 60,
+              "type": "string",
+            },
+            "forma_pago": {
+              "enum": [
+                "transferencia",
+                "efectivo",
+                "cheque",
+              ],
+              "type": "string",
+            },
+            "periodicidad": {
+              "enum": [
+                "semanal",
+                "quincenal",
+                "mensual",
+              ],
+              "type": "string",
+            },
+            "salario_diario": {
+              "description": "Salario diario en pesos; el mensual se calcula × 30.4.",
+              "exclusiveMinimum": 0,
+              "maximum": 100000,
+              "type": "number",
+            },
+          },
+          "required": [
+            "salario_diario",
+            "forma_pago",
+            "periodicidad",
+          ],
+          "type": "object",
+        },
+        "confirmation_token": {
+          "description": "Token de la vista previa. Sin él la herramienta sólo muestra qué haría; con él, lo hace. Vence en 10 minutos.",
+          "maxLength": 300,
+          "type": "string",
+        },
+        "contract_id": {
+          "description": "Contrato vigente.",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+          "type": "string",
+        },
+        "decision": {
+          "enum": [
+            "renovar_indeterminado",
+            "renovar_determinado",
+            "no_renovar",
+          ],
+          "type": "string",
+        },
+        "end_date": {
+          "description": "Fin (obligatorio en renovar_determinado).",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "type": "string",
+        },
+        "idempotency_key": {
+          "description": "Llave única de esta operación (8–80 caracteres). Repetirla con los mismos datos devuelve el mismo resultado sin duplicar.",
+          "maxLength": 80,
+          "minLength": 8,
+          "type": "string",
+        },
+        "motivo": {
+          "description": "Obligatorio en no_renovar.",
+          "maxLength": 500,
+          "type": "string",
+        },
+        "new_position_id": {
+          "description": "Nuevo puesto (opcional).",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+          "type": "string",
+        },
+        "notice_window": {
+          "enum": [
+            "1",
+            "2",
+            "3",
+            "6",
+            "no_avisar",
+          ],
+          "type": "string",
+        },
+        "start_date": {
+          "description": "Inicio del nuevo contrato; por defecto el fin del actual.",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "type": "string",
+        },
+        "template_id": {
+          "description": "Plantilla del nuevo contrato (al renovar).",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+          "type": "string",
+        },
+      },
+      "required": [
+        "contract_id",
+        "decision",
+        "idempotency_key",
+      ],
+      "type": "object",
+    },
+    "name": "decide_contract_renewal",
+    "outputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "audit_event_ids": {
+          "items": {
+            "type": "string",
+          },
+          "type": "array",
+        },
+        "code": {
+          "const": "CONFIRMATION_REQUIRED",
+          "type": "string",
+        },
+        "confirmation_token": {
+          "type": "string",
+        },
+        "constancia_antiguedad": {
+          "additionalProperties": false,
+          "properties": {
+            "available": {
+              "type": "boolean",
+            },
+            "url": {
+              "anyOf": [
+                {
+                  "type": "string",
+                },
+                {
+                  "type": "null",
+                },
+              ],
+            },
+          },
+          "required": [
+            "available",
+            "url",
+          ],
+          "type": "object",
+        },
+        "contract": {
+          "anyOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "end_date": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                    },
+                    {
+                      "type": "null",
+                    },
+                  ],
+                },
+                "id": {
+                  "type": "string",
+                },
+                "start_date": {
+                  "type": "string",
+                },
+                "status": {
+                  "type": "string",
+                },
+                "type": {
+                  "type": "string",
+                },
+                "url": {
+                  "type": "string",
+                },
+              },
+              "required": [
+                "id",
+                "type",
+                "status",
+                "start_date",
+                "end_date",
+                "url",
+              ],
+              "type": "object",
+            },
+            {
+              "type": "null",
+            },
+          ],
+        },
+        "decision": {
+          "type": "string",
+        },
+        "expires_at": {
+          "type": "string",
+        },
+        "expires_at_mx": {
+          "type": "string",
+        },
+        "preview": {
+          "additionalProperties": false,
+          "properties": {
+            "details": {
+              "additionalProperties": {},
+              "propertyNames": {
+                "type": "string",
+              },
+              "type": "object",
+            },
+            "summary": {
+              "type": "string",
+            },
+            "warnings": {
+              "items": {
+                "type": "string",
+              },
+              "type": "array",
+            },
+          },
+          "required": [
+            "summary",
+          ],
+          "type": "object",
+        },
+        "previous": {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "string",
+            },
+            "status": {
+              "type": "string",
+            },
+          },
+          "required": [
+            "id",
+            "status",
+          ],
+          "type": "object",
+        },
+        "status": {
+          "description": "preview: nada se escribió todavía; done: el cambio quedó hecho.",
+          "enum": [
+            "preview",
+            "done",
+          ],
+          "type": "string",
+        },
+      },
+      "required": [
+        "status",
+      ],
+      "type": "object",
+    },
+    "title": "Decidir renovación",
   },
   {
     "_meta": {

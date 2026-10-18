@@ -15,6 +15,7 @@ import {
 import { requireContractsRead } from "@/lib/contracts/auth";
 import { RegionFilter } from "@/components/list/region-filter";
 import { listRegions } from "@/lib/regions";
+import { listActivePositions } from "@/lib/catalog";
 import { userHasPermission } from "@/lib/rbac";
 
 export const dynamic = "force-dynamic";
@@ -29,6 +30,7 @@ type ContratosPageProps = {
     "no-renew"?: string;
     error?: string;
     region?: string;
+    constancia?: string;
   }>;
 };
 
@@ -48,12 +50,13 @@ const RenewalTray = async ({
   const regionId = regions.some((item) => item.id === region)
     ? region
     : undefined;
-  const [renewalItems, templates] = await Promise.all([
+  const [renewalItems, templates, positions] = await Promise.all([
     listRenewalTrayItems(companyId, undefined, undefined, {
       compensation: canSeeCompensation,
       regionId,
     }),
     listActiveContractTemplates(companyId),
+    canUpdate ? listActivePositions(companyId) : [],
   ]);
 
   return (
@@ -67,6 +70,10 @@ const RenewalTray = async ({
         canSeeCompensation={canSeeCompensation}
         canUpdate={canUpdate}
         items={renewalItems}
+        positions={positions.map((position) => ({
+          id: position.id,
+          name: position.name,
+        }))}
         templates={templates}
       />
     </>
@@ -75,7 +82,17 @@ const RenewalTray = async ({
 
 const ContratosPage = async ({ searchParams }: ContratosPageProps) => {
   const session = await requireContractsRead();
-  const { renewed, "no-renew": noRenew, error, region } = await searchParams;
+  const {
+    renewed,
+    "no-renew": noRenew,
+    error,
+    region,
+    constancia: constanciaParam,
+  } = await searchParams;
+  // Only a uuid goes into the link.
+  const constancia = /^[0-9a-f-]{36}$/i.test(constanciaParam ?? "")
+    ? constanciaParam
+    : undefined;
 
   const [canUpdate, canManageTemplates, canSeeCompensation] = await Promise.all(
     [
@@ -109,6 +126,17 @@ const ContratosPage = async ({ searchParams }: ContratosPageProps) => {
           role="status"
         >
           Contrato renovado correctamente.
+          {constancia ? (
+            <>
+              {" "}
+              <Link
+                className="underline"
+                href={`/app/personas/${constancia}/constancia`}
+              >
+                Ver constancia de antigüedad
+              </Link>
+            </>
+          ) : null}
         </p>
       ) : null}
 

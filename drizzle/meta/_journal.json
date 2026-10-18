@@ -162,6 +162,13 @@
       "when": 1787806800000,
       "tag": "0022_regions",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1787810400000,
+      "tag": "0023_no_renew_reason",
+      "breakpoints": true
     }
   ]
 }

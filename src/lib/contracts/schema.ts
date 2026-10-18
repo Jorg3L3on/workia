@@ -282,6 +282,83 @@ export const renewContractFormSchema = z
 
 export type RenewContractFormValues = z.infer<typeof renewContractFormSchema>;
 
+export const RENEWAL_DECISIONS = [
+  "renovar_indeterminado",
+  "renovar_determinado",
+  "no_renovar",
+] as const;
+
+export type RenewalDecision = (typeof RENEWAL_DECISIONS)[number];
+
+export const renewalDecisionLabels: Record<RenewalDecision, string> = {
+  renovar_indeterminado: "Renovar por tiempo indeterminado",
+  renovar_determinado: "Renovar por tiempo determinado",
+  no_renovar: "No renovar",
+};
+
+/**
+ * One renewal decision from the tray (WRK-I5-6). Renewing needs a template
+ * (and an end date when fixed-term); not renewing needs a reason. Position
+ * and compensation are optional: absent keeps the current ones.
+ */
+export const renewalDecisionSchema = z
+  .object({
+    contractId: z.uuid(),
+    decision: z.enum(RENEWAL_DECISIONS),
+    motivo: z.string().trim().max(500).optional(),
+    templateId: z.union([z.uuid(), z.literal("")]).optional(),
+    startDate: z.string().optional(),
+    endDate: z.string().optional(),
+    noticeWindow: z.enum(["1", "2", "3", "6", "no_avisar"]).optional(),
+    newPositionId: z.union([z.uuid(), z.literal("")]).optional(),
+    ...compensationFields,
+  })
+  .superRefine((data, ctx) => {
+    if (data.decision === "no_renovar") {
+      if (!data.motivo) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Indica el motivo para no renovar.",
+          path: ["motivo"],
+        });
+      }
+      return;
+    }
+
+    refineCompensation(data, ctx);
+
+    if (!data.templateId) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Selecciona una plantilla.",
+        path: ["templateId"],
+      });
+    }
+
+    if (data.decision === "renovar_determinado" && !data.endDate?.trim()) {
+      ctx.addIssue({
+        code: "custom",
+        message: "La fecha de fin es obligatoria para contratos determinados.",
+        path: ["endDate"],
+      });
+    }
+
+    if (
+      data.startDate &&
+      data.endDate &&
+      data.decision === "renovar_determinado" &&
+      data.endDate < data.startDate
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        message: "La fecha de fin es anterior al inicio.",
+        path: ["endDate"],
+      });
+    }
+  });
+
+export type RenewalDecisionValues = z.infer<typeof renewalDecisionSchema>;
+
 export const contractTemplateFormSchema = z.object({
   name: z.string().trim().min(1, "El nombre es obligatorio."),
   body: z.string().trim().min(1, "El cuerpo de la plantilla es obligatorio."),

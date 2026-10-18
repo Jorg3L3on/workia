@@ -8,6 +8,7 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/lib/contracts/actions", () => ({
   renewContractAction: async () => ({}),
   noRenewContractAction: async () => undefined,
+  decideContractRenewalAction: async () => ({}),
 }));
 
 import { RenewalTrayList } from "@/components/contracts/renewal-tray-list";
@@ -30,6 +31,7 @@ const buildContract = (id: string, personId: string): Contract => ({
   scheduleSalida: null,
   scheduleBlocks: null,
   scheduleRestDay: null,
+  noRenewReason: null,
   status: "vigente",
   salarioDiario: null,
   salarioMensual: null,
@@ -132,9 +134,9 @@ describe("RenewalTrayList", () => {
     );
 
     expect(screen.queryByLabelText("Nuevo tipo")).toBeNull();
-    expect(screen.getAllByRole("button", { name: "No renovar" })).toHaveLength(
-      2,
-    );
+    expect(
+      screen.getAllByRole("button", { name: /^Decidir renovación de / }),
+    ).toHaveLength(2);
     expect(
       screen.getByRole("link", { name: "Ver expediente de Ana Demo" }),
     ).toBeTruthy();

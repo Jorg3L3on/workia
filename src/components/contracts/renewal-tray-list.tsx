@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import type { CompensationDefaults } from "@/components/contracts/compensation-fields";
 
-import { NoRenewButton } from "@/components/contracts/no-renew-button";
+import { RenewalDecisionDialog } from "@/components/contracts/renewal-decision-dialog";
 import { RenewContractForm } from "@/components/contracts/renew-contract-form";
 import { DataTable, type DataTableColumn } from "@/components/list/data-table";
 import { ListRowAction } from "@/components/list/list-row-action";
@@ -29,6 +29,8 @@ export type RenewalTrayListProps = {
   canUpdate: boolean;
   templates: ContractTemplate[];
   canSeeCompensation?: boolean;
+  /** Active positions, for a position change with the renewal (WRK-I5-6). */
+  positions?: { id: string; name: string }[];
 };
 
 type RenewalRow = {
@@ -46,6 +48,7 @@ export const RenewalTrayList = ({
   canUpdate,
   templates,
   canSeeCompensation = false,
+  positions = [],
 }: RenewalTrayListProps) => {
   const [expandedContractId, setExpandedContractId] = useState<string | null>(
     null,
@@ -129,7 +132,17 @@ export const RenewalTrayList = ({
                   Renovar
                 </Button>
               ) : null}
-              {canUpdate ? <NoRenewButton contractId={row.id} /> : null}
+              {canUpdate ? (
+                <RenewalDecisionDialog
+                  canSeeCompensation={canSeeCompensation}
+                  compensation={row.compensation}
+                  contractId={row.id}
+                  endDate={row.endDate}
+                  personName={row.personName}
+                  positions={positions}
+                  templates={templates}
+                />
+              ) : null}
               <ListRowAction
                 aria-label={`Ver expediente de ${row.personName}`}
                 href={`/app/personas/${row.personId}`}
@@ -141,7 +154,14 @@ export const RenewalTrayList = ({
         },
       },
     ],
-    [canRenew, canUpdate, expandedContractId],
+    [
+      canRenew,
+      canUpdate,
+      expandedContractId,
+      canSeeCompensation,
+      positions,
+      templates,
+    ],
   );
 
   return (

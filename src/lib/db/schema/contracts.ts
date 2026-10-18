@@ -110,6 +110,8 @@ export const contracts = pgTable(
     scheduleSalida: text("schedule_salida"),
     scheduleBlocks: jsonb("schedule_blocks").$type<ScheduleBlock[]>(),
     scheduleRestDay: weekDayEnum("schedule_rest_day"),
+    /** Why it was not renewed (WRK-I5-6). */
+    noRenewReason: text("no_renew_reason"),
     status: contractStatusEnum("status").notNull().default("vigente"),
     // Compensation (WRK-I5-2), frozen when the contract is issued or renewed.
     salarioDiario: numeric("salario_diario", { precision: 12, scale: 2 }),

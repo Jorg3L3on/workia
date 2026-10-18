@@ -7,6 +7,7 @@ import {
   addOfficialTemplates,
   createContract,
   createContractTemplate,
+  decideContractRenewal,
   deactivateContractTemplate,
   markContractNoRenew,
   renewContract,
@@ -23,6 +24,7 @@ import {
 import {
   contractFormSchema,
   contractTemplateFormSchema,
+  renewalDecisionSchema,
   renewContractFormSchema,
 } from "@/lib/contracts/schema";
 import { userHasPermission } from "@/lib/rbac";
@@ -352,4 +354,77 @@ export const addOfficialTemplatesAction = async (formData: FormData) => {
   const created = await addOfficialTemplates(companyId, session.user.id);
   revalidateContracts();
   redirect(`/app/contratos/plantillas?official=${created.length}`);
+};
+
+/**
+ * The renewal tray's decision dialog (WRK-I5-6): renew open-ended, renew
+ * fixed-term or not renew with a reason, in one step.
+ */
+export const decideContractRenewalAction = async (
+  _prev: ContractActionState,
+  formData: FormData,
+): Promise<ContractActionState> => {
+  let session;
+
+  try {
+    session = await requireContractsUpdate();
+  } catch (error) {
+    if (error instanceof AuthorizationError) {
+      return { error: "No tienes permiso para decidir renovaciones." };
+    }
+
+    redirect("/login");
+  }
+
+  const text = (name: string) => {
+    const value = formData.get(name);
+    return value === null ? undefined : String(value);
+  };
+  const parsed = renewalDecisionSchema.safeParse({
+    contractId: text("contractId") ?? "",
+    decision: text("decision") ?? "",
+    motivo: text("motivo"),
+    templateId: text("templateId"),
+    startDate: text("startDate"),
+    endDate: text("endDate"),
+    noticeWindow: text("noticeWindow") || undefined,
+    newPositionId: text("newPositionId"),
+    ...compensationFromForm(
+      formData,
+      await userHasPermission(session.user.id, "compensation:read"),
+    ),
+  });
+
+  if (!parsed.success) {
+    return {
+      error: parsed.error.issues[0]?.message ?? "Revisa la decisión.",
+    };
+  }
+
+  let companyId: string;
+
+  try {
+    companyId = writableCompanyIdFromForm(session, formData);
+  } catch {
+    return { error: STALE_COMPANY_MESSAGE };
+  }
+
+  let result;
+
+  try {
+    result = await decideContractRenewal(
+      companyId,
+      parsed.data,
+      session.user.id,
+    );
+  } catch (error) {
+    return { error: (error as Error).message };
+  }
+
+  revalidateContracts(result.previous.personId);
+  redirect(
+    result.decision === "no_renovar"
+      ? "/app/contratos?no-renew=1"
+      : `/app/contratos?renewed=1${result.constanciaAvailable ? `&constancia=${result.previous.personId}` : ""}`,
+  );
 };
