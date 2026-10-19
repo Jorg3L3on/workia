@@ -343,7 +343,7 @@ export const DataTable = <TData,>({
             />
             <Input
               aria-label={searchAriaLabel}
-              className="bg-card h-10 rounded-xl pl-9"
+              className="bg-card h-10 pl-9"
               id={searchId}
               onChange={handleSearchChange}
               placeholder={searchPlaceholder}
@@ -518,7 +518,7 @@ export const DataTable = <TData,>({
                 }
                 size="sm"
                 type="button"
-                variant="outline"
+                variant="secondary"
               >
                 Anterior
               </Button>
@@ -534,7 +534,7 @@ export const DataTable = <TData,>({
                 }
                 size="sm"
                 type="button"
-                variant="outline"
+                variant="secondary"
               >
                 Siguiente
               </Button>

@@ -52,7 +52,7 @@ const RegionesCatalogPage = async ({
 
       <CatalogStatusMessages error={error} deleted={deleted} saved={saved} />
 
-      <section className="workia-pass-card space-y-4 p-5">
+      <section className="space-y-4">
         <CatalogFormTray
           actions={
             canCreate
@@ -73,7 +73,7 @@ const RegionesCatalogPage = async ({
                             required
                           />
                         </div>
-                        <Button type="submit" variant="outline">
+                        <Button type="submit" variant="secondary">
                           Crear región
                         </Button>
                       </form>

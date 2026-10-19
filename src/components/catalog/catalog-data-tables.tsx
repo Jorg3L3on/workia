@@ -4,7 +4,7 @@ import { useMemo } from "react";
 
 import { CatalogRowDeleteButton } from "@/components/catalog/catalog-row-delete-button";
 import { DataTable, type DataTableColumn } from "@/components/list/data-table";
-import { ListStatusBadge } from "@/components/list/list-status-badge";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   deletePositionAction,
@@ -13,6 +13,7 @@ import {
 import { deleteSiteAction, setSiteRegionAction } from "@/lib/sites/actions";
 import { FormSelect } from "@/components/ui/form-select";
 import { CompanyField } from "@/components/tenant/company-context";
+import { activeTone } from "@/lib/ui/status-tone";
 
 export type CatalogPositionActivity = {
   id: string;
@@ -155,12 +156,11 @@ export const CatalogPositionsTable = ({
         id: "status",
         header: "Estado",
         accessor: (row) => (row.active ? "Activo" : "Inactivo"),
-        cell: (row) =>
-          row.active ? (
-            <ListStatusBadge tone="active">Activo</ListStatusBadge>
-          ) : (
-            <ListStatusBadge tone="inactive">Inactivo</ListStatusBadge>
-          ),
+        cell: (row) => (
+          <Badge tone={activeTone(row.active)}>
+            {row.active ? "Activo" : "Inactivo"}
+          </Badge>
+        ),
       },
       ...(canDelete
         ? [
@@ -235,7 +235,7 @@ export const CatalogSitesTable = ({
         id: "status",
         header: "Estado",
         accessor: () => "Activa",
-        cell: () => <ListStatusBadge tone="active">Activa</ListStatusBadge>,
+        cell: () => <Badge tone={activeTone(true)}>Activa</Badge>,
       },
       ...(canDelete
         ? [

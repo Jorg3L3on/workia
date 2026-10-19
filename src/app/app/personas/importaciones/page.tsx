@@ -2,10 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { ImportUndoButton } from "@/components/import/import-undo-button";
-import {
-  ListPageHeader,
-  listPrimaryActionClassName,
-} from "@/components/list/list-page-header";
+import { ListPageHeader } from "@/components/list/list-page-header";
 import { Button } from "@/components/ui/button";
 import { pageTitles } from "@/lib/brand/chrome-copy";
 import { isUndoWindowOpen } from "@/lib/import/undo-window";
@@ -43,7 +40,7 @@ const ImportacionesPage = async () => {
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
       <ListPageHeader
         actions={
-          <Button asChild className={listPrimaryActionClassName}>
+          <Button asChild>
             <Link href="/app/personas/importar">Nueva importación</Link>
           </Button>
         }
@@ -56,7 +53,7 @@ const ImportacionesPage = async () => {
           Todavía no hay importaciones.
         </p>
       ) : (
-        <div className="bg-card ring-foreground/10 overflow-x-auto rounded-xl ring-1">
+        <div className="bg-card ring-foreground/10 overflow-x-auto rounded-lg ring-1">
           <table className="w-full text-sm">
             <caption className="sr-only">Importaciones de personas</caption>
             <thead>
@@ -114,14 +111,14 @@ const ImportacionesPage = async () => {
                     <td className="px-3 py-2">
                       <div className="flex flex-wrap gap-2">
                         {RESUMABLE.includes(job.status) ? (
-                          <Button asChild size="sm" variant="outline">
+                          <Button asChild size="sm" variant="secondary">
                             <Link href={`/app/personas/importar?job=${job.id}`}>
                               Continuar
                             </Link>
                           </Button>
                         ) : null}
                         {errors > 0 && job.status !== "uploading" ? (
-                          <Button asChild size="sm" variant="outline">
+                          <Button asChild size="sm" variant="secondary">
                             <a
                               download
                               href={`/api/import/personas/${job.id}/errors`}

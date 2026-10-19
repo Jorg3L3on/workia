@@ -49,7 +49,3 @@ export const ListPageHeader = ({
     ) : null}
   </header>
 );
-
-/** Solid blue pill CTA used on authenticated list pages. */
-export const listPrimaryActionClassName =
-  "h-10 rounded-full border-0 bg-primary px-4 text-primary-foreground shadow-sm hover:bg-[color:var(--workia-accent-blue-hover)]";

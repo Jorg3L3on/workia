@@ -79,7 +79,7 @@ export const FormSelect = ({
           className={cn(
             "bg-card w-full",
             variant === "filter"
-              ? "h-10 rounded-xl data-[size=default]:h-10"
+              ? "h-10 rounded-lg data-[size=default]:h-10"
               : "h-8 rounded-lg data-[size=default]:h-8 data-[size=sm]:h-8",
             triggerClassName,
           )}

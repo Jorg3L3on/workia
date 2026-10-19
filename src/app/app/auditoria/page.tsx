@@ -107,6 +107,7 @@ const AuditoriaPage = async ({ searchParams }: AuditoriaPageProps) => {
             ID de recurso
           </label>
           <Input
+            className="bg-card h-10"
             defaultValue={filters.resourceId ?? ""}
             id="resourceId"
             name="resourceId"
@@ -172,18 +173,28 @@ const AuditoriaPage = async ({ searchParams }: AuditoriaPageProps) => {
           <label className="text-sm font-medium" htmlFor="from">
             Desde
           </label>
-          <DateInput defaultValue={filters.from ?? ""} id="from" name="from" />
+          <DateInput
+            className="bg-card h-10"
+            defaultValue={filters.from ?? ""}
+            id="from"
+            name="from"
+          />
         </div>
 
         <div className="space-y-2">
           <label className="text-sm font-medium" htmlFor="to">
             Hasta
           </label>
-          <DateInput defaultValue={filters.to ?? ""} id="to" name="to" />
+          <DateInput
+            className="bg-card h-10"
+            defaultValue={filters.to ?? ""}
+            id="to"
+            name="to"
+          />
         </div>
 
         <div className="flex items-end md:col-span-2 xl:col-span-3">
-          <Button className="h-10 rounded-full" type="submit" variant="outline">
+          <Button type="submit" variant="secondary">
             Filtrar
           </Button>
         </div>

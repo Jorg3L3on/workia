@@ -23,6 +23,7 @@ import {
   revokeMemberAction,
   type AdminActionState,
 } from "@/lib/tenant/admin-actions";
+import { toneFor } from "@/lib/ui/status-tone";
 
 export type MembersPanelMember = {
   id: string;
@@ -117,7 +118,12 @@ const AddMemberForm = ({
           variant="field"
         />
       </div>
-      <Button type="submit" disabled={pending}>
+      <Button
+        type="submit"
+        disabled={pending}
+        // On /admin/empresas/[id] «Guardar cambios» is the view's primary.
+        variant={scope.kind === "platform" ? "secondary" : "primary"}
+      >
         Agregar miembro
       </Button>
       {state.error ? (
@@ -169,7 +175,7 @@ const MemberRowActions = ({
         <Button
           type="submit"
           size="sm"
-          variant="outline"
+          variant="secondary"
           disabled={rolePending}
         >
           Cambiar rol
@@ -239,9 +245,7 @@ export const MembersPanel = ({
               </TableCell>
               <TableCell>{member.roleName}</TableCell>
               <TableCell>
-                <Badge
-                  variant={member.status === "activa" ? "secondary" : "outline"}
-                >
+                <Badge tone={toneFor("membership", member.status)}>
                   {member.status === "activa" ? "Activo" : "Revocado"}
                 </Badge>
               </TableCell>

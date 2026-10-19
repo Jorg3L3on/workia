@@ -107,7 +107,7 @@ const ContratosPage = async ({ searchParams }: ContratosPageProps) => {
       <ListPageHeader
         actions={
           canManageTemplates ? (
-            <Button asChild className="h-10 rounded-full" variant="outline">
+            <Button asChild variant="secondary">
               <Link href="/app/contratos/plantillas">
                 <FileTextIcon className="size-4" aria-hidden />
                 Plantillas

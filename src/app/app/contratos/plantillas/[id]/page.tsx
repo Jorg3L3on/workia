@@ -55,9 +55,6 @@ const PlantillaDetailPage = async ({
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
       <PageBreadcrumbLabel label={template.name} />
       <header className="space-y-1">
-        <p className="text-muted-foreground font-mono text-[10.5px] font-medium tracking-[0.09em] uppercase">
-          Contratos
-        </p>
         <h1 className="text-2xl font-semibold tracking-tight">
           {template.name}
         </h1>
@@ -130,7 +127,7 @@ const PlantillaDetailPage = async ({
         <div className="flex flex-wrap gap-2">
           {template.active ? (
             <form action={deactivateAction}>
-              <Button type="submit" variant="outline">
+              <Button type="submit" variant="secondary">
                 Desactivar
               </Button>
             </form>

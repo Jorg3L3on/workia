@@ -10,6 +10,7 @@ import {
   setWritesEnabledAction,
   type ConnectionActionState,
 } from "@/lib/mcp/actions";
+import { activeTone } from "@/lib/ui/status-tone";
 
 type WritesSwitchProps = {
   enabled: boolean;
@@ -38,7 +39,7 @@ export const WritesSwitch = ({ enabled, canToggle }: WritesSwitchProps) => {
       <div className="space-y-1">
         <div className="flex items-center gap-2">
           <h2 className="text-lg font-semibold">Escrituras por asistente</h2>
-          <Badge variant={enabled ? "secondary" : "outline"}>
+          <Badge tone={activeTone(enabled)}>
             {enabled ? "Encendidas" : "Apagadas"}
           </Badge>
         </div>
@@ -58,7 +59,7 @@ export const WritesSwitch = ({ enabled, canToggle }: WritesSwitchProps) => {
           />
           <Button
             type="submit"
-            variant={enabled ? "destructive" : "outline"}
+            variant={enabled ? "destructive" : "secondary"}
             disabled={pending}
           >
             {enabled ? "Apagar escrituras" : "Encender escrituras"}

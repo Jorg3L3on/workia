@@ -4,11 +4,12 @@ import { useMemo } from "react";
 
 import { CatalogRowDeleteButton } from "@/components/catalog/catalog-row-delete-button";
 import { DataTable, type DataTableColumn } from "@/components/list/data-table";
-import { ListStatusBadge } from "@/components/list/list-status-badge";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CompanyField } from "@/components/tenant/company-context";
 import { deleteRegionAction, updateRegionAction } from "@/lib/regions/actions";
+import { activeTone } from "@/lib/ui/status-tone";
 
 export type CatalogRegionRow = {
   id: string;
@@ -84,17 +85,17 @@ export const CatalogRegionsTable = ({
                 type="hidden"
                 value={row.active ? "false" : "true"}
               />
-              <ListStatusBadge tone={row.active ? "active" : "inactive"}>
+              <Badge tone={activeTone(row.active)}>
                 {row.active ? "Activa" : "Inactiva"}
-              </ListStatusBadge>
+              </Badge>
               <Button size="sm" type="submit" variant="ghost">
                 {row.active ? "Desactivar" : "Activar"}
               </Button>
             </form>
           ) : (
-            <ListStatusBadge tone={row.active ? "active" : "inactive"}>
+            <Badge tone={activeTone(row.active)}>
               {row.active ? "Activa" : "Inactiva"}
-            </ListStatusBadge>
+            </Badge>
           ),
       },
       ...(canDelete

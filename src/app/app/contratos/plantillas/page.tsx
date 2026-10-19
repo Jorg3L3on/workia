@@ -3,10 +3,7 @@ import Link from "next/link";
 import { FileCheckIcon, PlusIcon } from "lucide-react";
 
 import { PlantillasDataTable } from "@/components/contracts/plantillas-data-table";
-import {
-  ListPageHeader,
-  listPrimaryActionClassName,
-} from "@/components/list/list-page-header";
+import { ListPageHeader } from "@/components/list/list-page-header";
 import { pageTitles } from "@/lib/brand/chrome-copy";
 import { Button } from "@/components/ui/button";
 import { listContractTemplates } from "@/lib/contracts";
@@ -45,17 +42,16 @@ const PlantillasPage = async ({ searchParams }: PlantillasPageProps) => {
       <ListPageHeader
         actions={
           <>
-            <Button asChild className="h-10 rounded-full" variant="outline">
+            <Button asChild variant="secondary">
               <Link href="/app/contratos">Volver a Contratos</Link>
             </Button>
             {canCreate ? (
               <form action={addOfficialTemplatesAction}>
                 <CompanyField />
                 <Button
-                  className="h-10 rounded-full"
                   title="Crea dos plantillas base (determinado con periodo de prueba e indeterminado con anexo de horario). Revísalas con tu asesor legal antes de usarlas."
                   type="submit"
-                  variant="outline"
+                  variant="secondary"
                 >
                   <FileCheckIcon className="size-4" aria-hidden />
                   Agregar plantillas oficiales
@@ -63,7 +59,7 @@ const PlantillasPage = async ({ searchParams }: PlantillasPageProps) => {
               </form>
             ) : null}
             {canCreate ? (
-              <Button asChild className={listPrimaryActionClassName}>
+              <Button asChild>
                 <Link href="/app/contratos/plantillas/nueva">
                   <PlusIcon className="size-4" aria-hidden />
                   Nueva plantilla

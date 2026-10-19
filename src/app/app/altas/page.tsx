@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { ListPageHeader } from "@/components/list/list-page-header";
-import { ListStatusBadge } from "@/components/list/list-status-badge";
+import { Badge } from "@/components/ui/badge";
 import { CompanyField } from "@/components/tenant/company-context";
 import { Button } from "@/components/ui/button";
 import { FormSelect } from "@/components/ui/form-select";
@@ -19,6 +19,7 @@ import { listActivePeopleForSelect } from "@/lib/people";
 import { requirePeopleRead } from "@/lib/people/auth";
 import { formatPersonName } from "@/lib/people/schema";
 import { userHasPermission } from "@/lib/rbac";
+import { toneFor } from "@/lib/ui/status-tone";
 
 export const dynamic = "force-dynamic";
 
@@ -29,13 +30,6 @@ export const metadata: Metadata = {
 type AltasPageProps = {
   searchParams: Promise<{ error?: string; message?: string }>;
 };
-
-const tone = {
-  rh_captura: "neutral",
-  pendiente_nominas: "neutral",
-  completo: "active",
-  rechazado: "inactive",
-} as const;
 
 /** Hiring from HR to Payroll with two approvals (WRK-I5-7). */
 const AltasPage = async ({ searchParams }: AltasPageProps) => {
@@ -97,7 +91,7 @@ const AltasPage = async ({ searchParams }: AltasPageProps) => {
                   variant="field"
                 />
               </div>
-              <Button type="submit" variant="outline">
+              <Button type="submit" variant="secondary">
                 Iniciar alta
               </Button>
             </form>
@@ -126,9 +120,9 @@ const AltasPage = async ({ searchParams }: AltasPageProps) => {
                     {formatPersonName(person)}
                   </td>
                   <td className="py-2">
-                    <ListStatusBadge tone={tone[onboarding.stage]}>
+                    <Badge tone={toneFor("onboarding", onboarding.stage)}>
                       {onboardingStageLabels[onboarding.stage]}
-                    </ListStatusBadge>
+                    </Badge>
                   </td>
                   <td className="text-muted-foreground py-2">
                     {7 - missingChecklist(onboarding.checklist).length}/7

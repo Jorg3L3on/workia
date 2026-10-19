@@ -60,7 +60,7 @@ const SucursalesCatalogPage = async ({
 
       <CatalogStatusMessages error={error} deleted={deleted} saved={saved} />
 
-      <section className="workia-pass-card space-y-4 p-5">
+      <section className="space-y-4">
         <CatalogFormTray
           actions={
             canCreateSite
@@ -113,7 +113,7 @@ const SucursalesCatalogPage = async ({
                             />
                           </div>
                         </div>
-                        <Button type="submit" variant="outline">
+                        <Button type="submit" variant="secondary">
                           Crear sucursal
                         </Button>
                       </form>

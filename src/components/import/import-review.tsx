@@ -162,7 +162,7 @@ export const ImportReview = ({ job, version }: Props) => {
           (action) => (
             <button
               aria-pressed={filter === action}
-              className="bg-card ring-foreground/10 aria-pressed:ring-primary rounded-xl p-3 text-left ring-1 aria-pressed:ring-2"
+              className="bg-card ring-foreground/10 aria-pressed:ring-primary rounded-lg p-3 text-left ring-1 aria-pressed:ring-2"
               key={action}
               onClick={() => {
                 setFilter(filter === action ? "all" : action);
@@ -212,7 +212,7 @@ export const ImportReview = ({ job, version }: Props) => {
           </Button>
         ) : null}
         {(counts.error ?? 0) > 0 ? (
-          <Button asChild className="ml-auto" size="sm" variant="outline">
+          <Button asChild className="ml-auto" size="sm" variant="secondary">
             <a download href={`/api/import/personas/${job.id}/errors`}>
               <DownloadIcon aria-hidden />
               Descargar errores
@@ -227,7 +227,7 @@ export const ImportReview = ({ job, version }: Props) => {
         </p>
       ) : null}
 
-      <div className="bg-card ring-foreground/10 overflow-x-auto rounded-xl ring-1">
+      <div className="bg-card ring-foreground/10 overflow-x-auto rounded-lg ring-1">
         <table className="w-full text-sm">
           <caption className="sr-only">Filas de la importación</caption>
           <thead>
@@ -289,7 +289,7 @@ export const ImportReview = ({ job, version }: Props) => {
             onClick={() => setPage(page - 1)}
             size="sm"
             type="button"
-            variant="outline"
+            variant="secondary"
           >
             Anterior
           </Button>
@@ -298,7 +298,7 @@ export const ImportReview = ({ job, version }: Props) => {
             onClick={() => setPage(page + 1)}
             size="sm"
             type="button"
-            variant="outline"
+            variant="secondary"
           >
             Siguiente
           </Button>

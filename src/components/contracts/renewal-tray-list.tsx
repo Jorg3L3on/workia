@@ -127,7 +127,7 @@ export const RenewalTrayList = ({
                   onClick={() => handleToggleRenewForm(row.id)}
                   size="sm"
                   type="button"
-                  variant="outline"
+                  variant="secondary"
                 >
                   Renovar
                 </Button>

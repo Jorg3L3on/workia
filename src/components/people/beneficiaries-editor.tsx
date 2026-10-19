@@ -120,7 +120,7 @@ export const BeneficiariesEditor = ({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           size="sm"
           disabled={rows.length >= MAX_ROWS}
           onClick={() =>

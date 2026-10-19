@@ -29,4 +29,4 @@ export const ListFilterBar = ({
 
 /** Shared select chrome for list toolbars (Zigzag-like compact filters). */
 export const listFilterSelectClassName =
-  "border-input bg-card focus-visible:border-ring focus-visible:ring-ring/50 h-10 w-full rounded-xl border px-3 text-sm outline-none focus-visible:ring-3";
+  "border-input bg-card focus-visible:border-ring focus-visible:ring-ring/50 h-10 w-full rounded-lg border px-3 text-sm outline-none focus-visible:ring-3";

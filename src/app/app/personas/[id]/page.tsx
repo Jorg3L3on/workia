@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { PencilIcon } from "lucide-react";
+import { EllipsisIcon, PencilIcon } from "lucide-react";
 
 import { pageTitles } from "@/lib/brand/chrome-copy";
 
@@ -10,12 +10,20 @@ import { AuditEventList } from "@/components/audit/audit-event-list";
 import { PersonContractsSection } from "@/components/contracts/person-contracts-section";
 import { PersonAssetsSection } from "@/components/resguardo/person-assets-section";
 import { PersonExpedienteTabs } from "@/components/people/person-expediente-tabs";
-import { DeletePersonButton } from "@/components/people/delete-person-button";
 import { PersonForm } from "@/components/people/person-form";
 import { SectionSkeleton } from "@/components/loading/page-skeletons";
 import { PageBreadcrumbLabel } from "@/components/layout/app-breadcrumbs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { IconButton } from "@/components/ui/icon-button";
+import { ActionMenuItem } from "@/components/ui/action-menu-item";
 import { listAuditEvents } from "@/lib/audit";
 import {
   listActiveAreas,
@@ -43,6 +51,8 @@ import { userHasPermission } from "@/lib/rbac";
 import { formatMexicanAddress } from "@/lib/people/schema";
 import { listActiveSites } from "@/lib/sites";
 import { siteKindLabels } from "@/lib/sites/schema";
+import { deletedTone, toneFor } from "@/lib/ui/status-tone";
+import { deletePersonAction } from "@/lib/people/actions";
 
 export const metadata: Metadata = {
   title: pageTitles.expediente,
@@ -195,29 +205,22 @@ const PersonaDetailPage = async ({
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
       <PageBreadcrumbLabel label={personName} />
-      <div className="workia-pass-card space-y-4 p-5 sm:p-6">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="space-y-1">
-            <p className="text-muted-foreground font-mono text-[10.5px] font-medium tracking-[0.09em] uppercase">
-              Expediente
-            </p>
+      <div className="space-y-4">
+        <div className="space-y-1">
+          <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-2xl font-semibold tracking-tight">
               {formatPersonName(person)}
             </h1>
-            <p className="text-muted-foreground text-sm">
-              Datos de empresa, identificadores y relación laboral.
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge
-              variant={person.status === "activa" ? "default" : "secondary"}
-            >
+            <Badge tone={toneFor("person", person.status)}>
               {personStatusLabels[person.status]}
             </Badge>
             {isDeleted ? (
-              <Badge variant="destructive">{personDeletedLabel}</Badge>
+              <Badge tone={deletedTone}>{personDeletedLabel}</Badge>
             ) : null}
           </div>
+          <p className="text-muted-foreground text-sm">
+            Datos de empresa, identificadores y relación laboral.
+          </p>
         </div>
 
         {isDeleted ? (
@@ -248,9 +251,9 @@ const PersonaDetailPage = async ({
           </p>
         ) : null}
 
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap gap-2">
           {canUpdate && !isDeleted ? (
-            <Button asChild variant="outline">
+            <Button asChild>
               <Link href={`/app/personas/${person.id}?edit=1`}>
                 <PencilIcon className="size-4" aria-hidden />
                 Editar
@@ -258,21 +261,40 @@ const PersonaDetailPage = async ({
             </Button>
           ) : null}
           {canCreateContracts && canReadContracts && !isDeleted ? (
-            <Button asChild variant="outline">
+            <Button asChild variant="secondary">
               <Link href={`/app/personas/${person.id}?emit=1`}>
                 Emitir contrato
               </Link>
             </Button>
           ) : null}
-          {canReadContracts ? (
-            <Button asChild variant="outline">
-              <Link href={`/app/personas/${person.id}/constancia`}>
-                Constancia de antigüedad
-              </Link>
-            </Button>
-          ) : null}
-          {canDelete && !isDeleted ? (
-            <DeletePersonButton personId={person.id} />
+          {canReadContracts || (canDelete && !isDeleted) ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <IconButton label="Más acciones" variant="secondary">
+                  <EllipsisIcon aria-hidden />
+                </IconButton>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                {canReadContracts ? (
+                  <DropdownMenuItem asChild>
+                    <Link href={`/app/personas/${person.id}/constancia`}>
+                      Constancia de antigüedad
+                    </Link>
+                  </DropdownMenuItem>
+                ) : null}
+                {canDelete && !isDeleted ? (
+                  <>
+                    {canReadContracts ? <DropdownMenuSeparator /> : null}
+                    <ActionMenuItem
+                      action={deletePersonAction.bind(null, person.id)}
+                      variant="destructive"
+                    >
+                      Borrar expediente (lógico)
+                    </ActionMenuItem>
+                  </>
+                ) : null}
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : null}
           <Button asChild variant="ghost">
             <Link
@@ -461,8 +483,8 @@ const PersonaDetailPage = async ({
         defaultValue={defaultTab}
         historial={
           canReadAudit ? (
-            <div className="workia-pass-card overflow-hidden">
-              <div className="border-b px-5 py-4">
+            <section className="space-y-3">
+              <div>
                 <h2 className="text-base font-semibold">
                   Historial de cambios
                 </h2>
@@ -473,7 +495,7 @@ const PersonaDetailPage = async ({
               <Suspense fallback={<SectionSkeleton rows={3} />}>
                 <PersonHistory companyId={session.companyId} personId={id} />
               </Suspense>
-            </div>
+            </section>
           ) : undefined
         }
         resguardo={

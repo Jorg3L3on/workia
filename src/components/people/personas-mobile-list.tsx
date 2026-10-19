@@ -2,10 +2,11 @@
 
 import { ListMobileCard } from "@/components/list/list-mobile-card";
 import { ListRowAction } from "@/components/list/list-row-action";
-import { ListStatusBadge } from "@/components/list/list-status-badge";
+import { Badge } from "@/components/ui/badge";
 import type { PersonaListRow } from "@/components/people/persona-list-row";
 import { formatDateMx } from "@/lib/format/date";
 import { personDeletedLabel, personStatusLabels } from "@/lib/people/schema";
+import { deletedTone, toneFor } from "@/lib/ui/status-tone";
 
 type PersonasMobileListProps = {
   people: PersonaListRow[];
@@ -56,15 +57,11 @@ export const PersonasMobileList = ({ people }: PersonasMobileListProps) => (
               </dt>
               <dd className="mt-0.5">
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <ListStatusBadge
-                    tone={person.status === "activa" ? "active" : "inactive"}
-                  >
+                  <Badge tone={toneFor("person", person.status)}>
                     {personStatusLabels[person.status]}
-                  </ListStatusBadge>
+                  </Badge>
                   {person.deleted ? (
-                    <ListStatusBadge tone="destructive">
-                      {personDeletedLabel}
-                    </ListStatusBadge>
+                    <Badge tone={deletedTone}>{personDeletedLabel}</Badge>
                   ) : null}
                 </div>
               </dd>

@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 
 import { DataTable, type DataTableColumn } from "@/components/list/data-table";
-import { ListStatusBadge } from "@/components/list/list-status-badge";
+import { Tag } from "@/components/ui/badge";
 import type { AuditPayload } from "@/lib/audit/types";
 import {
   auditActionLabels,
@@ -129,11 +129,7 @@ export const AuditEventList = ({
           <div>
             <div className="flex flex-wrap items-center gap-1.5 font-medium">
               {row.actorLabel}
-              {mcpBadgeLabel(row) ? (
-                <ListStatusBadge tone="neutral">
-                  {mcpBadgeLabel(row)}
-                </ListStatusBadge>
-              ) : null}
+              {mcpBadgeLabel(row) ? <Tag>{mcpBadgeLabel(row)}</Tag> : null}
             </div>
             {row.actorEmail ? (
               <div className="text-muted-foreground text-xs">
@@ -147,9 +143,7 @@ export const AuditEventList = ({
         id: "resource",
         header: "Recurso",
         accessor: (row) => row.resourceLabel,
-        cell: (row) => (
-          <ListStatusBadge tone="neutral">{row.resourceLabel}</ListStatusBadge>
-        ),
+        cell: (row) => <Tag>{row.resourceLabel}</Tag>,
       },
       {
         id: "action",

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { Badge } from "@/components/ui/badge";
+import { Tag } from "@/components/ui/badge";
 import { pageTitles } from "@/lib/brand/chrome-copy";
 import { Button } from "@/components/ui/button";
 import {
@@ -55,7 +55,7 @@ export default async function AdminPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button asChild>
+            <Button asChild variant="secondary">
               <Link href="/admin/rbac">Open RBAC dashboard</Link>
             </Button>
           </CardContent>
@@ -70,12 +70,10 @@ export default async function AdminPage() {
           <CardContent>
             <div className="flex flex-wrap gap-2">
               {permissions.slice(0, 6).map((permission) => (
-                <Badge key={permission} variant="secondary">
-                  {permission}
-                </Badge>
+                <Tag key={permission}>{permission}</Tag>
               ))}
               {permissions.length > 6 ? (
-                <Badge variant="outline">+{permissions.length - 6} more</Badge>
+                <Tag>+{permissions.length - 6} more</Tag>
               ) : null}
             </div>
           </CardContent>

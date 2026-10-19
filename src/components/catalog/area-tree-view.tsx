@@ -1,9 +1,10 @@
 import type { AreaTreeNode } from "@/lib/catalog/schema";
 import { CatalogRowDeleteButton } from "@/components/catalog/catalog-row-delete-button";
 import { ListEmptyState } from "@/components/list/list-table-shell";
-import { ListStatusBadge } from "@/components/list/list-status-badge";
+import { Badge } from "@/components/ui/badge";
 import { deleteAreaAction } from "@/lib/catalog/actions";
 import { FolderIcon, FolderOpenIcon } from "lucide-react";
+import { activeTone, deletedTone } from "@/lib/ui/status-tone";
 
 type AreaTreeViewProps = {
   nodes: AreaTreeNode[];
@@ -25,10 +26,10 @@ const AreaTreeItem = ({
   const Icon = hasChildren ? FolderOpenIcon : FolderIcon;
 
   return (
-    <li className="space-y-2">
+    <li>
       <div
-        className="bg-card flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2"
-        style={{ marginLeft: depth * 16 }}
+        className="flex flex-wrap items-center justify-between gap-2 py-2 pr-3"
+        style={{ paddingLeft: 12 + depth * 20 }}
       >
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <Icon aria-hidden className="text-muted-foreground size-4 shrink-0" />
@@ -38,11 +39,9 @@ const AreaTreeItem = ({
             {node.name}
           </span>
           {!node.active ? (
-            <ListStatusBadge tone="inactive">Inactiva</ListStatusBadge>
+            <Badge tone={activeTone(false)}>Inactiva</Badge>
           ) : null}
-          {isDeleted ? (
-            <ListStatusBadge tone="destructive">Borrada</ListStatusBadge>
-          ) : null}
+          {isDeleted ? <Badge tone={deletedTone}>Borrada</Badge> : null}
         </div>
         {canDelete && !isDeleted ? (
           <CatalogRowDeleteButton
@@ -53,7 +52,7 @@ const AreaTreeItem = ({
         ) : null}
       </div>
       {hasChildren ? (
-        <ul className="space-y-2">
+        <ul className="divide-y border-t">
           {node.children.map((child) => (
             <AreaTreeItem
               canDelete={canDelete}
@@ -84,7 +83,7 @@ export const AreaTreeView = ({
   }
 
   return (
-    <ul className="space-y-2">
+    <ul className="workia-pass-card divide-y">
       {nodes.map((node) => (
         <AreaTreeItem
           canDelete={canDelete}

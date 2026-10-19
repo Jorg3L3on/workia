@@ -33,6 +33,7 @@ import { grantableScopes, isMcpScope, scopeLabels } from "@/lib/mcp/scopes";
 import { getMcpSettings } from "@/lib/mcp/settings";
 import { requireCompanyPage } from "@/lib/tenant/context";
 import { cn } from "@/lib/utils";
+import { toneFor } from "@/lib/ui/status-tone";
 
 export const dynamic = "force-dynamic";
 
@@ -46,7 +47,7 @@ type ConexionesPageProps = {
 
 const connectionState = (connection: ConnectionListItem, now: Date) => {
   if (connection.revokedAt) {
-    return { label: "Revocada", active: false };
+    return { label: "Revocada", status: "revocada", active: false };
   }
 
   const usableUntil =
@@ -55,8 +56,8 @@ const connectionState = (connection: ConnectionListItem, now: Date) => {
       : connection.tokenExpiresAt;
 
   return usableUntil <= now
-    ? { label: "Vencida", active: false }
-    : { label: "Activa", active: true };
+    ? { label: "Vencida", status: "vencida", active: false }
+    : { label: "Activa", status: "activa", active: true };
 };
 
 const scopeList = (scopes: string[]) =>
@@ -249,7 +250,7 @@ const ConexionesPage = async ({ searchParams }: ConexionesPageProps) => {
                       {formatDateTimeMx(connection.lastUsedAt)}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={state.active ? "secondary" : "outline"}>
+                      <Badge tone={toneFor("connection", state.status)}>
                         {state.label}
                       </Badge>
                     </TableCell>
@@ -324,11 +325,7 @@ const ConexionesPage = async ({ searchParams }: ConexionesPageProps) => {
                     ) : null}
                   </TableCell>
                   <TableCell>
-                    <Badge
-                      variant={
-                        call.result === "success" ? "secondary" : "outline"
-                      }
-                    >
+                    <Badge tone={toneFor("toolCall", call.result)}>
                       {call.result === "success"
                         ? "Correcto"
                         : call.result === "denied"

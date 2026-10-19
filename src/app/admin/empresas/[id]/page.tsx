@@ -19,6 +19,7 @@ import { pageTitles } from "@/lib/brand/chrome-copy";
 import { requireAuth } from "@/lib/auth/session";
 import { getCompanyById } from "@/lib/tenant/companies";
 import { listCompanyMembers, listRoles } from "@/lib/tenant/members";
+import { toneFor } from "@/lib/ui/status-tone";
 
 export const dynamic = "force-dynamic";
 
@@ -54,9 +55,7 @@ const EmpresaPage = async ({ params, searchParams }: EmpresaPageProps) => {
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight">
             {company.name}{" "}
-            <Badge
-              variant={company.status === "activa" ? "secondary" : "outline"}
-            >
+            <Badge tone={toneFor("company", company.status)}>
               {company.status === "activa" ? "Activa" : "Suspendida"}
             </Badge>
           </h1>

@@ -9,6 +9,7 @@ import {
   HomeIcon,
   LaptopIcon,
   ScrollTextIcon,
+  SearchIcon,
   UsersIcon,
 } from "lucide-react";
 
@@ -16,6 +17,7 @@ import {
   CommandPalette,
   type CommandItem,
 } from "@/components/motion/command-palette";
+import { Button } from "@/components/ui/button";
 import { CATALOG_NAV_CHILDREN, CATALOG_PATHS } from "@/lib/catalog/paths";
 
 const OPEN_EVENT = "workia:open-command-palette";
@@ -132,12 +134,18 @@ export const AppCommandPalette = () => {
 };
 
 export const AppCommandPaletteHint = () => (
-  <button
+  <Button
+    aria-keyshortcuts="Meta+K"
     aria-label="Buscar en Workia"
-    className="text-muted-foreground hover:bg-muted hidden rounded-md px-2 py-1 font-mono text-xs transition-colors sm:block"
+    className="text-muted-foreground hidden w-48 justify-start sm:inline-flex"
     onClick={openAppCommandPalette}
     type="button"
+    variant="secondary"
   >
-    ⌘K
-  </button>
+    <SearchIcon aria-hidden />
+    Buscar
+    <kbd className="bg-muted ml-auto rounded px-1.5 font-sans text-[11px] font-medium">
+      ⌘K
+    </kbd>
+  </Button>
 );

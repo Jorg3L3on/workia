@@ -38,7 +38,7 @@ const SubmitButton = () => {
   const { pending } = useFormStatus();
 
   return (
-    <Button disabled={pending} size="sm" type="submit" variant="outline">
+    <Button disabled={pending} size="sm" type="submit" variant="secondary">
       {pending ? "Renovando…" : "Renovar"}
     </Button>
   );

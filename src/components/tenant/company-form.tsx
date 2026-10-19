@@ -11,6 +11,14 @@ import {
   setCompanyStatusAction,
   updateCompanyAction,
 } from "@/lib/tenant/admin-actions";
+import { EllipsisIcon } from "lucide-react";
+import { ActionMenuItem } from "@/components/ui/action-menu-item";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { IconButton } from "@/components/ui/icon-button";
 
 type CompanyFormProps = {
   company?: {
@@ -103,22 +111,37 @@ export const CompanyStatusButton = ({
   const next = status === "activa" ? "suspendida" : "activa";
 
   return (
-    <form action={action} className="flex items-center gap-3">
-      <input type="hidden" name="targetCompanyId" value={companyId} />
-      <input type="hidden" name="status" value={next} />
-      <Button
-        type="submit"
-        variant={next === "suspendida" ? "outline" : "default"}
-        className={next === "suspendida" ? "text-destructive" : undefined}
-        disabled={pending}
-      >
-        {next === "suspendida" ? "Suspender empresa" : "Reactivar empresa"}
-      </Button>
+    <div className="flex items-center gap-3">
       {state.error ? (
         <p role="alert" className="text-destructive text-sm">
           {state.error}
         </p>
       ) : null}
-    </form>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <IconButton
+            disabled={pending}
+            label="Más acciones"
+            variant="secondary"
+          >
+            <EllipsisIcon aria-hidden />
+          </IconButton>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-52">
+          <ActionMenuItem
+            action={action}
+            fields={
+              <>
+                <input type="hidden" name="targetCompanyId" value={companyId} />
+                <input type="hidden" name="status" value={next} />
+              </>
+            }
+            variant={next === "suspendida" ? "destructive" : "default"}
+          >
+            {next === "suspendida" ? "Suspender empresa" : "Reactivar empresa"}
+          </ActionMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
   );
 };

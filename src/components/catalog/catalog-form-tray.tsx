@@ -50,7 +50,7 @@ export const CatalogFormTray = ({ actions }: CatalogFormTrayProps) => {
               onClick={() => handleToggleAction(action.id)}
               size="sm"
               type="button"
-              variant="outline"
+              variant="secondary"
             >
               {action.actionLabel}
             </Button>

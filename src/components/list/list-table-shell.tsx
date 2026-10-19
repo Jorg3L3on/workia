@@ -29,7 +29,7 @@ export const ListTableShell = ({
 }: ListTableShellProps) => (
   <div
     className={cn(
-      "border-border/60 bg-card overflow-hidden rounded-2xl border shadow-sm",
+      "border-border/60 bg-card overflow-hidden rounded-lg border",
       desktopOnly && "hidden md:block",
       className,
     )}
@@ -87,7 +87,7 @@ export const ListResultCount = ({
   return (
     <p
       className={cn(
-        "bg-muted text-muted-foreground inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium tabular-nums",
+        "text-muted-foreground text-sm tabular-nums sm:ml-auto",
         className,
       )}
     >

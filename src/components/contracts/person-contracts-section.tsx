@@ -13,6 +13,7 @@ import {
   paymentMethodLabels,
   contractScheduleText,
 } from "@/lib/contracts/schema";
+import { toneFor } from "@/lib/ui/status-tone";
 
 type PersonContractsSectionProps = {
   personId: string;
@@ -46,8 +47,8 @@ export const PersonContractsSection = ({
   const vigente = contracts.find((contract) => contract.status === "vigente");
 
   return (
-    <div className="workia-pass-card overflow-hidden">
-      <div className="border-b px-5 py-4">
+    <section className="space-y-3">
+      <div>
         <h2 className="text-base font-semibold">Contratos</h2>
         <p className="text-muted-foreground text-sm">
           Historial de contratos en el expediente — cada emisión conserva su
@@ -55,12 +56,12 @@ export const PersonContractsSection = ({
         </p>
       </div>
 
-      <div className="space-y-4 p-5">
+      <div className="space-y-4">
         {vigente ? (
-          <div className="rounded-lg border p-4">
+          <div className="workia-pass-card p-4">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
-                <p className="text-muted-foreground font-mono text-[10px] tracking-[0.08em] uppercase">
+                <p className="text-muted-foreground text-xs font-medium">
                   Contrato vigente
                 </p>
                 <p className="font-medium">
@@ -75,7 +76,9 @@ export const PersonContractsSection = ({
                   {contractNoticeWindowLabels[vigente.noticeWindow]}
                 </p>
               </div>
-              <Badge>{contractStatusLabels[vigente.status]}</Badge>
+              <Badge tone={toneFor("contract", vigente.status)}>
+                {contractStatusLabels[vigente.status]}
+              </Badge>
             </div>
             <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
               <div className="sm:col-span-2">
@@ -130,7 +133,7 @@ export const PersonContractsSection = ({
         )}
 
         {canCreate && showEmitForm && !vigente && templates.length > 0 ? (
-          <div className="rounded-lg border p-4">
+          <div className="workia-pass-card p-4">
             <h3 className="mb-3 text-sm font-semibold">Emitir contrato</h3>
             <ContractForm
               canSeeCompensation={canSeeCompensation}
@@ -156,7 +159,7 @@ export const PersonContractsSection = ({
         {contracts.length > 0 ? (
           <div className="space-y-2">
             <h3 className="text-sm font-semibold">Historial</h3>
-            <ul className="divide-y rounded-lg border">
+            <ul className="workia-pass-card divide-y">
               {contracts.map((contract) => (
                 <li
                   key={contract.id}
@@ -172,7 +175,7 @@ export const PersonContractsSection = ({
                       {contractStatusLabels[contract.status]}
                     </p>
                   </div>
-                  <Badge variant="secondary">
+                  <Badge tone={toneFor("contract", contract.status)}>
                     {contractStatusLabels[contract.status]}
                   </Badge>
                 </li>
@@ -181,6 +184,6 @@ export const PersonContractsSection = ({
           </div>
         ) : null}
       </div>
-    </div>
+    </section>
   );
 };

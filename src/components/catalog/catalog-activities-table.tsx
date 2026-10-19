@@ -5,10 +5,11 @@ import Link from "next/link";
 
 import { CatalogRowDeleteButton } from "@/components/catalog/catalog-row-delete-button";
 import { DataTable, type DataTableColumn } from "@/components/list/data-table";
-import { ListStatusBadge } from "@/components/list/list-status-badge";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { deleteActivityAction } from "@/lib/catalog/actions";
 import { CATALOG_PATHS, catalogHref } from "@/lib/catalog/paths";
+import { activeTone } from "@/lib/ui/status-tone";
 
 export type CatalogActivityRow = {
   id: string;
@@ -39,12 +40,11 @@ export const CatalogActivitiesTable = ({
         id: "status",
         header: "Estado",
         accessor: (row) => (row.active ? "Activa" : "Inactiva"),
-        cell: (row) =>
-          row.active ? (
-            <ListStatusBadge tone="active">Activa</ListStatusBadge>
-          ) : (
-            <ListStatusBadge tone="inactive">Inactiva</ListStatusBadge>
-          ),
+        cell: (row) => (
+          <Badge tone={activeTone(row.active)}>
+            {row.active ? "Activa" : "Inactiva"}
+          </Badge>
+        ),
       },
       ...(canUpdate || canDelete
         ? [

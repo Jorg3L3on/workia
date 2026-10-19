@@ -47,7 +47,7 @@ const datosPanel = (page: import("@playwright/test").Page) =>
 const contractCard = (page: import("@playwright/test").Page) =>
   page
     .getByRole("heading", { name: "Contratos" })
-    .locator("xpath=ancestor::div[contains(@class,'workia-pass-card')]");
+    .locator("xpath=ancestor::section[1]");
 
 const expectScheduleOnFicha = async (
   root: import("@playwright/test").Locator,

@@ -3,8 +3,8 @@ import { CalendarClockIcon, LaptopIcon, UserPlusIcon } from "lucide-react";
 
 import { ListPageHeader } from "@/components/list/list-page-header";
 import { ListEmptyState } from "@/components/list/list-table-shell";
-import { AnimatedBadge } from "@/components/motion/animated-badge";
 import { CountUp } from "@/components/motion/count-up";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { RenewalTrayItem } from "@/lib/contracts";
 import {
@@ -57,13 +57,11 @@ const AttentionSection = ({
           </div>
           <p className="text-muted-foreground text-sm">{description}</p>
         </div>
-        <AnimatedBadge
-          pulse={urgent && pendingCount > 0}
-          size="sm"
-          status={pendingCount === 0 ? "success" : urgent ? "warning" : "info"}
+        <Badge
+          tone={pendingCount === 0 ? "success" : urgent ? "warning" : "info"}
         >
           {pendingCount} pendiente{pendingCount === 1 ? "" : "s"}
-        </AnimatedBadge>
+        </Badge>
       </div>
 
       {pendingCount === 0 ? (
@@ -95,21 +93,18 @@ export const TodayDashboard = ({
       <ListPageHeader
         actions={
           isCalm ? (
-            <AnimatedBadge size="sm" status="success">
-              Nada urgente hoy
-            </AnimatedBadge>
+            <Badge tone="success">Nada urgente hoy</Badge>
           ) : (
-            <AnimatedBadge pulse size="sm" status="danger">
+            <Badge tone="danger">
               {urgentCount} urgente{urgentCount === 1 ? "" : "s"}
-            </AnimatedBadge>
+            </Badge>
           )
         }
         description="Vencimientos de contrato y resguardo de equipo aparecen aquí cuando requieren tu atención."
-        eyebrow="Hoy"
         title="Qué hay que atender hoy"
       />
 
-      <div className="workia-pass-card flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         {canReadPeople ? (
           <p className="text-sm">
             <CountUp
@@ -128,14 +123,14 @@ export const TodayDashboard = ({
           </p>
         )}
         {canManagePeople ? (
-          <Button asChild size="sm" variant="outline">
+          <Button asChild size="sm" variant="secondary">
             <Link href="/app/personas/nueva">
               <UserPlusIcon className="size-4" aria-hidden />
               Dar de alta
             </Link>
           </Button>
         ) : canReadPeople ? (
-          <Button asChild size="sm" variant="outline">
+          <Button asChild size="sm" variant="secondary">
             <Link href="/app/personas">Ver personas</Link>
           </Button>
         ) : null}
@@ -152,11 +147,11 @@ export const TodayDashboard = ({
           urgent={contractPendingCount > 0}
         >
           {canReadContracts ? (
-            <ul className="space-y-2">
+            <ul className="divide-y">
               {renewalItems.map((item) => (
                 <li
                   key={item.contract.id}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm"
+                  className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm first:pt-0"
                 >
                   <div>
                     <p className="font-medium">{item.personName}</p>
@@ -165,13 +160,18 @@ export const TodayDashboard = ({
                       {contractNoticeWindowLabels[item.noticeWindow]}
                     </p>
                   </div>
-                  <Button asChild size="sm" variant="outline">
+                  <Button asChild size="sm" variant="secondary">
                     <Link href="/app/contratos">Atender</Link>
                   </Button>
                 </li>
               ))}
               {urgentCount > renewalItems.length ? (
-                <Button asChild className="w-full" size="sm" variant="ghost">
+                <Button
+                  asChild
+                  className="mt-2 w-full"
+                  size="sm"
+                  variant="ghost"
+                >
                   <Link href="/app/contratos">
                     Ver {urgentCount - renewalItems.length} más en Contratos
                   </Link>

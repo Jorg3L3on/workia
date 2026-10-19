@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { EllipsisIcon } from "lucide-react";
 import { notFound } from "next/navigation";
 
 import { pageTitles } from "@/lib/brand/chrome-copy";
@@ -8,8 +9,16 @@ import { AuditEventList } from "@/components/audit/audit-event-list";
 import { AssignAssetForm } from "@/components/resguardo/assign-asset-form";
 import { ReturnAssetForm } from "@/components/resguardo/return-asset-form";
 import { PageBreadcrumbLabel } from "@/components/layout/app-breadcrumbs";
-import { Badge } from "@/components/ui/badge";
+import { ListTableShell } from "@/components/list/list-table-shell";
+import { Badge, Tag } from "@/components/ui/badge";
+import { ActionMenuItem } from "@/components/ui/action-menu-item";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { IconButton } from "@/components/ui/icon-button";
 import {
   Table,
   TableBody,
@@ -31,6 +40,7 @@ import {
 import { listActivePeopleForSelect } from "@/lib/people";
 import { formatPersonName } from "@/lib/people/schema";
 import { userHasPermission } from "@/lib/rbac";
+import { toneFor } from "@/lib/ui/status-tone";
 
 export const dynamic = "force-dynamic";
 
@@ -111,30 +121,21 @@ const AssetDetailPage = async ({
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
       <PageBreadcrumbLabel label={asset.name} />
-      <div className="workia-pass-card space-y-4 p-5 sm:p-6">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="space-y-1">
-            <p className="text-muted-foreground font-mono text-[10.5px] font-medium tracking-[0.09em] uppercase">
-              Resguardo
-            </p>
+      <div className="space-y-4">
+        <div className="space-y-1">
+          <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-2xl font-semibold tracking-tight">
               {asset.name}
             </h1>
-            <p className="text-muted-foreground text-sm">
-              {asset.identifier} ·{" "}
-              {assetCategoryLabels[asset.category] ?? asset.category}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Badge
-              variant={asset.status === "asignado" ? "default" : "secondary"}
-            >
+            <Badge tone={toneFor("asset", asset.status)}>
               {assetStatusLabels[asset.status]}
             </Badge>
-            {!asset.tracksHistory ? (
-              <Badge variant="outline">Sin historial</Badge>
-            ) : null}
+            {!asset.tracksHistory ? <Tag>Sin historial</Tag> : null}
           </div>
+          <p className="text-muted-foreground text-sm">
+            <span className="font-mono">{asset.identifier}</span> ·{" "}
+            {assetCategoryLabels[asset.category] ?? asset.category}
+          </p>
         </div>
 
         {created === "1" ? (
@@ -192,23 +193,33 @@ const AssetDetailPage = async ({
           </div>
         </dl>
 
-        <div className="flex flex-wrap gap-3 pt-1">
+        <div className="flex flex-wrap gap-2 pt-1">
           {canAssign && !showAssignForm ? (
-            <Button asChild variant="outline">
+            <Button asChild>
               <Link href={`/app/resguardo/${asset.id}?assign=1`}>Entregar</Link>
             </Button>
           ) : null}
           {canReturn && !showReturnForm ? (
-            <Button asChild variant="outline">
+            <Button asChild>
               <Link href={`/app/resguardo/${asset.id}?return=1`}>Devolver</Link>
             </Button>
           ) : null}
           {canDelete && asset.status !== "asignado" ? (
-            <form action={deleteAssetAction.bind(null, asset.id)}>
-              <Button type="submit" variant="destructive">
-                Dar de baja
-              </Button>
-            </form>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <IconButton label="Más acciones" variant="secondary">
+                  <EllipsisIcon aria-hidden />
+                </IconButton>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <ActionMenuItem
+                  action={deleteAssetAction.bind(null, asset.id)}
+                  variant="destructive"
+                >
+                  Dar de baja
+                </ActionMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : null}
           <Button asChild variant="ghost">
             <Link href="/app/resguardo">Volver al inventario</Link>
@@ -229,8 +240,8 @@ const AssetDetailPage = async ({
       ) : null}
 
       {asset.tracksHistory ? (
-        <div className="workia-pass-card overflow-hidden rounded-xl border">
-          <div className="border-b px-5 py-4">
+        <section className="space-y-3 pt-2">
+          <div>
             <h2 className="text-base font-semibold">
               Historial de movimientos
             </h2>
@@ -241,62 +252,60 @@ const AssetDetailPage = async ({
           </div>
 
           {movements.length === 0 ? (
-            <div className="workia-empty-state m-4 px-4 py-8 text-center">
+            <div className="workia-empty-state px-4 py-8 text-center">
               <p className="text-sm font-medium">Sin movimientos aún</p>
               <p className="text-muted-foreground mt-1 text-sm">
                 La primera entrega quedará registrada aquí.
               </p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow className="hover:bg-transparent">
-                  <TableHead>Fecha</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Persona</TableHead>
-                  <TableHead>Condición</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {movements.map((movement) => (
-                  <TableRow key={movement.id} className="hover:bg-muted/40">
-                    <TableCell className="text-muted-foreground">
-                      {formatAssetDate(movement.movementDate)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          movement.type === "entrega" ? "default" : "secondary"
-                        }
-                      >
-                        {assetMovementTypeLabels[movement.type]}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Link
-                        className="text-primary font-medium hover:underline"
-                        href={`/app/personas/${movement.person.id}`}
-                      >
-                        {formatPersonName(movement.person)}
-                      </Link>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {movement.conditionNote}
-                      {movement.notes ? (
-                        <span className="block text-xs">{movement.notes}</span>
-                      ) : null}
-                    </TableCell>
+            <ListTableShell>
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead>Fecha</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>Persona</TableHead>
+                    <TableHead>Condición</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {movements.map((movement) => (
+                    <TableRow key={movement.id} className="hover:bg-muted/40">
+                      <TableCell className="text-muted-foreground">
+                        {formatAssetDate(movement.movementDate)}
+                      </TableCell>
+                      <TableCell>
+                        <Tag>{assetMovementTypeLabels[movement.type]}</Tag>
+                      </TableCell>
+                      <TableCell>
+                        <Link
+                          className="text-primary font-medium hover:underline"
+                          href={`/app/personas/${movement.person.id}`}
+                        >
+                          {formatPersonName(movement.person)}
+                        </Link>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {movement.conditionNote}
+                        {movement.notes ? (
+                          <span className="block text-xs">
+                            {movement.notes}
+                          </span>
+                        ) : null}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </ListTableShell>
           )}
-        </div>
+        </section>
       ) : null}
 
       {canReadAudit ? (
-        <div className="workia-pass-card overflow-hidden">
-          <div className="border-b px-5 py-4">
+        <section className="space-y-3 pt-2">
+          <div>
             <h2 className="text-base font-semibold">Auditoría</h2>
             <p className="text-muted-foreground text-sm">
               Cambios registrados sobre este activo.
@@ -306,7 +315,7 @@ const AssetDetailPage = async ({
             emptyMessage="Aún no hay eventos de auditoría para este activo."
             events={auditEvents}
           />
-        </div>
+        </section>
       ) : null}
     </div>
   );

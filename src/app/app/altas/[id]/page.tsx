@@ -224,7 +224,7 @@ const AltaPage = async ({ params, searchParams }: AltaPageProps) => {
         </fieldset>
 
         {canEdit ? (
-          <Button type="submit" variant="outline">
+          <Button type="submit" variant="secondary">
             Guardar captura
           </Button>
         ) : null}

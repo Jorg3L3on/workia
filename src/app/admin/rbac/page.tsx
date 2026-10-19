@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { Badge } from "@/components/ui/badge";
+import { Badge, Tag } from "@/components/ui/badge";
 import { pageTitles } from "@/lib/brand/chrome-copy";
 import {
   Card,
@@ -114,7 +114,7 @@ const AdminRbacPage = async () => {
                       {matrix.roles.map((role) => (
                         <TableCell key={role.id} className="text-center">
                           {matrix.hasPermission(role.id, permission.id) ? (
-                            <Badge variant="secondary">Allowed</Badge>
+                            <Badge tone="success">Allowed</Badge>
                           ) : (
                             <span className="text-muted-foreground">—</span>
                           )}
@@ -153,7 +153,7 @@ const AdminRbacPage = async () => {
                       <TableCell>
                         <div className="flex flex-wrap gap-2">
                           {user.roles.map((role) => (
-                            <Badge key={role}>{role}</Badge>
+                            <Tag key={role}>{role}</Tag>
                           ))}
                         </div>
                       </TableCell>
@@ -189,9 +189,7 @@ const AdminRbacPage = async () => {
                   <Separator />
                   <div className="flex flex-wrap gap-2">
                     {demoPermissions.map((permission) => (
-                      <Badge key={permission} variant="outline">
-                        {permission}
-                      </Badge>
+                      <Tag key={permission}>{permission}</Tag>
                     ))}
                   </div>
                 </>

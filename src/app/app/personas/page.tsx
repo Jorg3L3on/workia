@@ -4,10 +4,7 @@ import { DownloadIcon, PlusIcon, UploadIcon } from "lucide-react";
 
 import { pageTitles } from "@/lib/brand/chrome-copy";
 
-import {
-  ListPageHeader,
-  listPrimaryActionClassName,
-} from "@/components/list/list-page-header";
+import { ListPageHeader } from "@/components/list/list-page-header";
 import { PersonasDataTable } from "@/components/people/personas-data-table";
 import { Button } from "@/components/ui/button";
 import { parseListPaging } from "@/lib/list/paging";
@@ -88,8 +85,8 @@ const PersonasPage = async ({ searchParams }: PersonasPageProps) => {
                 <>
                   <Button
                     asChild
-                    className="h-10 rounded-full"
-                    variant="outline"
+
+                    variant="secondary"
                   >
                     <Link href="/app/personas/importaciones">
                       Importaciones
@@ -97,8 +94,8 @@ const PersonasPage = async ({ searchParams }: PersonasPageProps) => {
                   </Button>
                   <Button
                     asChild
-                    className="h-10 rounded-full"
-                    variant="outline"
+
+                    variant="secondary"
                   >
                     <Link href="/app/personas/importar">
                       <UploadIcon className="size-4" aria-hidden />
@@ -108,7 +105,7 @@ const PersonasPage = async ({ searchParams }: PersonasPageProps) => {
                 </>
               ) : null}
               {canImport ? (
-                <Button asChild className="h-10 rounded-full" variant="outline">
+                <Button asChild variant="secondary">
                   {/* Plain anchor: this is a file download, not a page. */}
                   <a href="/app/personas/plantilla" download>
                     <DownloadIcon className="size-4" aria-hidden />
@@ -120,8 +117,8 @@ const PersonasPage = async ({ searchParams }: PersonasPageProps) => {
                 <>
                   <Button
                     asChild
-                    className="h-10 rounded-full"
-                    variant="outline"
+
+                    variant="secondary"
                   >
                     <a href={`/app/personas/exportar?${exportQuery}`} download>
                       <DownloadIcon className="size-4" aria-hidden />
@@ -130,8 +127,8 @@ const PersonasPage = async ({ searchParams }: PersonasPageProps) => {
                   </Button>
                   <Button
                     asChild
-                    className="h-10 rounded-full"
-                    variant="outline"
+
+                    variant="secondary"
                   >
                     <a
                       href={`/app/personas/exportar?${new URLSearchParams({ ...Object.fromEntries(exportQuery), format: "csv" })}`}
@@ -143,7 +140,7 @@ const PersonasPage = async ({ searchParams }: PersonasPageProps) => {
                 </>
               ) : null}
               {canCreate ? (
-                <Button asChild className={listPrimaryActionClassName}>
+                <Button asChild>
                   <Link href="/app/personas/nueva">
                     <PlusIcon className="size-4" aria-hidden />
                     Nueva persona
@@ -161,7 +158,7 @@ const PersonasPage = async ({ searchParams }: PersonasPageProps) => {
       <PersonasDataTable
         emptyAction={
           canCreate ? (
-            <Button asChild className={listPrimaryActionClassName}>
+            <Button asChild>
               <Link href="/app/personas/nueva">
                 Dar de alta a la primera persona
               </Link>

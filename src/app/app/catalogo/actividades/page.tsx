@@ -66,7 +66,7 @@ const ActividadesCatalogPage = async ({
 
       <CatalogStatusMessages error={error} deleted={deleted} saved={saved} />
 
-      <section className="workia-pass-card space-y-4 p-5">
+      <section className="space-y-4">
         {isEditing && editingActivity ? (
           <div className="bg-muted/20 space-y-3 rounded-lg p-4">
             <p className="text-sm font-medium">Editar actividad</p>
@@ -94,7 +94,7 @@ const ActividadesCatalogPage = async ({
                 />
                 Activa
               </label>
-              <Button type="submit" variant="outline">
+              <Button type="submit" variant="secondary">
                 Guardar cambios
               </Button>
             </form>
@@ -132,7 +132,7 @@ const ActividadesCatalogPage = async ({
                             />
                             Activa
                           </label>
-                          <Button type="submit" variant="outline">
+                          <Button type="submit" variant="secondary">
                             Crear actividad
                           </Button>
                         </form>

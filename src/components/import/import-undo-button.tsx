@@ -64,7 +64,7 @@ export const ImportUndoButton = ({ jobId, fileName }: Props) => {
   return (
     <Dialog onOpenChange={(next) => void onOpenChange(next)} open={open}>
       <DialogTrigger asChild>
-        <Button size="sm" type="button" variant="outline">
+        <Button size="sm" type="button" variant="secondary">
           Deshacer
         </Button>
       </DialogTrigger>
@@ -124,7 +124,7 @@ export const ImportUndoButton = ({ jobId, fileName }: Props) => {
             disabled={busy}
             onClick={() => void onOpenChange(false)}
             type="button"
-            variant="outline"
+            variant="secondary"
           >
             Cancelar
           </Button>

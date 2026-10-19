@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/table";
 import { pageTitles } from "@/lib/brand/chrome-copy";
 import { listCompaniesWithCounts } from "@/lib/tenant/companies";
+import { toneFor } from "@/lib/ui/status-tone";
 
 export const dynamic = "force-dynamic";
 
@@ -85,11 +86,7 @@ const EmpresasPage = async () => {
                   </TableCell>
                   <TableCell>{company.members}</TableCell>
                   <TableCell>
-                    <Badge
-                      variant={
-                        company.status === "activa" ? "secondary" : "outline"
-                      }
-                    >
+                    <Badge tone={toneFor("company", company.status)}>
                       {company.status === "activa" ? "Activa" : "Suspendida"}
                     </Badge>
                   </TableCell>

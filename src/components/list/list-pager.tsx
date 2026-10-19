@@ -55,7 +55,7 @@ export const ListPager = ({
       <PaginationContent>
         <PaginationItem>
           {page > 1 ? (
-            <Button asChild size="sm" variant="outline">
+            <Button asChild size="sm" variant="secondary">
               <Link
                 aria-label="Página anterior"
                 href={hrefFor(pathname, params, page - 1)}
@@ -64,14 +64,14 @@ export const ListPager = ({
               </Link>
             </Button>
           ) : (
-            <Button disabled size="sm" variant="outline">
+            <Button disabled size="sm" variant="secondary">
               Anterior
             </Button>
           )}
         </PaginationItem>
         <PaginationItem>
           {page < pageCount ? (
-            <Button asChild size="sm" variant="outline">
+            <Button asChild size="sm" variant="secondary">
               <Link
                 aria-label="Página siguiente"
                 href={hrefFor(pathname, params, page + 1)}
@@ -80,7 +80,7 @@ export const ListPager = ({
               </Link>
             </Button>
           ) : (
-            <Button disabled size="sm" variant="outline">
+            <Button disabled size="sm" variant="secondary">
               Siguiente
             </Button>
           )}

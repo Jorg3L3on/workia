@@ -4,12 +4,9 @@ import { PlusIcon, SearchIcon } from "lucide-react";
 
 import { pageTitles } from "@/lib/brand/chrome-copy";
 import { FormSelect } from "@/components/ui/form-select";
-import {
-  ListPageHeader,
-  listPrimaryActionClassName,
-} from "@/components/list/list-page-header";
+import { ListPageHeader } from "@/components/list/list-page-header";
 import { ListRowAction } from "@/components/list/list-row-action";
-import { ListStatusBadge } from "@/components/list/list-status-badge";
+import { Badge } from "@/components/ui/badge";
 import {
   ListEmptyState,
   ListResultCount,
@@ -32,6 +29,7 @@ import { listAssetsPage } from "@/lib/resguardo";
 import { assertAssetsListAccess } from "@/lib/resguardo/actions";
 import { assetCategoryLabels, assetStatusLabels } from "@/lib/resguardo/schema";
 import { userHasPermission } from "@/lib/rbac";
+import { toneFor } from "@/lib/ui/status-tone";
 
 export const dynamic = "force-dynamic";
 
@@ -66,7 +64,7 @@ const ResguardoPage = async ({ searchParams }: ResguardoPageProps) => {
       <ListPageHeader
         actions={
           canCreate ? (
-            <Button asChild className={listPrimaryActionClassName}>
+            <Button asChild>
               <Link href="/app/resguardo/nuevo">
                 <PlusIcon className="size-4" aria-hidden />
                 Nuevo activo
@@ -102,7 +100,7 @@ const ResguardoPage = async ({ searchParams }: ResguardoPageProps) => {
           />
           <Input
             aria-label="Buscar activos"
-            className="bg-card h-10 rounded-xl pl-9"
+            className="bg-card h-10 rounded-lg pl-9"
             defaultValue={q ?? ""}
             id="q"
             name="q"
@@ -126,7 +124,7 @@ const ResguardoPage = async ({ searchParams }: ResguardoPageProps) => {
             ]}
           />
         </div>
-        <Button className="h-10 rounded-full" type="submit" variant="outline">
+        <Button type="submit" variant="secondary">
           Filtrar
         </Button>
         <ListResultCount count={total} plural="activos" singular="activo" />
@@ -137,7 +135,7 @@ const ResguardoPage = async ({ searchParams }: ResguardoPageProps) => {
           <ListEmptyState
             action={
               canCreate && !q && !status ? (
-                <Button asChild className={listPrimaryActionClassName}>
+                <Button asChild>
                   <Link href="/app/resguardo/nuevo">
                     Registrar primer activo
                   </Link>
@@ -182,17 +180,9 @@ const ResguardoPage = async ({ searchParams }: ResguardoPageProps) => {
                     {assetCategoryLabels[item.category] ?? item.category}
                   </TableCell>
                   <TableCell>
-                    <ListStatusBadge
-                      tone={
-                        item.status === "asignado"
-                          ? "active"
-                          : item.status === "baja"
-                            ? "destructive"
-                            : "inactive"
-                      }
-                    >
+                    <Badge tone={toneFor("asset", item.status)}>
                       {assetStatusLabels[item.status]}
-                    </ListStatusBadge>
+                    </Badge>
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {item.holderName ?? "—"}

@@ -4,7 +4,8 @@ import { useMemo } from "react";
 
 import { DataTable, type DataTableColumn } from "@/components/list/data-table";
 import { ListRowAction } from "@/components/list/list-row-action";
-import { ListStatusBadge } from "@/components/list/list-status-badge";
+import { Badge } from "@/components/ui/badge";
+import { activeTone } from "@/lib/ui/status-tone";
 
 export type PlantillaListRow = {
   id: string;
@@ -32,9 +33,9 @@ export const PlantillasDataTable = ({
         header: "Estado",
         accessor: (row) => (row.active ? "Activa" : "Inactiva"),
         cell: (row) => (
-          <ListStatusBadge tone={row.active ? "active" : "inactive"}>
+          <Badge tone={activeTone(row.active)}>
             {row.active ? "Activa" : "Inactiva"}
-          </ListStatusBadge>
+          </Badge>
         ),
       },
       {

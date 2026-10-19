@@ -90,7 +90,7 @@ export const PositionActivitiesAssign = ({
       <Button
         disabled={availableActivities.length === 0}
         type="submit"
-        variant="outline"
+        variant="secondary"
       >
         Asignar actividad
       </Button>

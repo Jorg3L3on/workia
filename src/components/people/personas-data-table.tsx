@@ -5,7 +5,7 @@ import { useMemo, type ReactNode } from "react";
 import { DataTable, type DataTableColumn } from "@/components/list/data-table";
 import { useServerListControls } from "@/components/list/use-server-list-controls";
 import { ListRowAction } from "@/components/list/list-row-action";
-import { ListStatusBadge } from "@/components/list/list-status-badge";
+import { Badge } from "@/components/ui/badge";
 import type { PersonaListRow } from "@/components/people/persona-list-row";
 import { PersonasMobileList } from "@/components/people/personas-mobile-list";
 import { FormSelect } from "@/components/ui/form-select";
@@ -15,6 +15,7 @@ import {
   personStatusLabels,
   type PersonListVisibility,
 } from "@/lib/people/schema";
+import { deletedTone, toneFor } from "@/lib/ui/status-tone";
 
 export type { PersonaListRow } from "@/components/people/persona-list-row";
 
@@ -93,15 +94,11 @@ export const PersonasDataTable = ({
             : personStatusLabels[row.status],
         cell: (row) => (
           <div className="flex flex-wrap items-center gap-1.5">
-            <ListStatusBadge
-              tone={row.status === "activa" ? "active" : "inactive"}
-            >
+            <Badge tone={toneFor("person", row.status)}>
               {personStatusLabels[row.status]}
-            </ListStatusBadge>
+            </Badge>
             {row.deleted ? (
-              <ListStatusBadge tone="destructive">
-                {personDeletedLabel}
-              </ListStatusBadge>
+              <Badge tone={deletedTone}>{personDeletedLabel}</Badge>
             ) : null}
           </div>
         ),

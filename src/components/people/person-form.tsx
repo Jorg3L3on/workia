@@ -42,6 +42,7 @@ import {
 } from "@/lib/people/schema";
 import { siteKindLabels } from "@/lib/sites/schema";
 import { CompanyField } from "@/components/tenant/company-context";
+import { toneFor } from "@/lib/ui/status-tone";
 
 type PersonFormProps = {
   mode: "create" | "edit";
@@ -143,9 +144,6 @@ export const PersonForm = ({
     <form action={formAction} className="workia-pass-card space-y-6 p-5 sm:p-6">
       <CompanyField />
       <div className="space-y-1">
-        <p className="text-muted-foreground font-mono text-[10.5px] font-medium tracking-[0.09em] uppercase">
-          Expediente
-        </p>
         <h2 className="text-lg font-semibold tracking-tight">
           {mode === "create" ? "Nueva persona" : "Editar persona"}
         </h2>
@@ -516,7 +514,7 @@ export const PersonForm = ({
         <SubmitButton
           label={mode === "create" ? "Dar de alta" : "Guardar cambios"}
         />
-        <Button asChild variant="outline">
+        <Button asChild variant="secondary">
           <Link
             href={
               mode === "create"
@@ -528,7 +526,7 @@ export const PersonForm = ({
           </Link>
         </Button>
         {mode === "edit" && person ? (
-          <Badge variant={person.status === "activa" ? "default" : "secondary"}>
+          <Badge tone={toneFor("person", person.status)}>
             {personStatusLabels[person.status]}
           </Badge>
         ) : null}

@@ -111,7 +111,7 @@ export const ScheduleBlocksEditor = ({
                     key={day}
                     type="button"
                     size="sm"
-                    variant={pressed ? "default" : "outline"}
+                    variant={pressed ? "primary" : "secondary"}
                     aria-pressed={pressed}
                     aria-label={weekDayLabels[day]}
                     className="h-8 min-w-10 px-2"
@@ -168,7 +168,7 @@ export const ScheduleBlocksEditor = ({
       <div className="grid gap-3 sm:grid-cols-[auto_1fr] sm:items-end">
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           size="sm"
           disabled={rows.length >= 7 || used.size >= 7}
           onClick={() =>

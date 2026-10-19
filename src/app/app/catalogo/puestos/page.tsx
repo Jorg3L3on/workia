@@ -84,7 +84,7 @@ const PuestosCatalogPage = async ({
         unassigned={unassigned}
       />
 
-      <section className="workia-pass-card space-y-4 p-5">
+      <section className="space-y-4">
         <CatalogFormTray
           actions={[
             ...(canCreatePosition
@@ -129,7 +129,7 @@ const PuestosCatalogPage = async ({
                           />
                           Activo
                         </label>
-                        <Button type="submit" variant="outline">
+                        <Button type="submit" variant="secondary">
                           Crear puesto
                         </Button>
                       </form>

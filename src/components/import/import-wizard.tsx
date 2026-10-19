@@ -353,7 +353,7 @@ export const ImportWizard = ({ initialJob }: Props) => {
             </p>
           ) : null}
           <label
-            className="border-input hover:bg-muted/50 focus-within:ring-ring/50 flex cursor-pointer flex-col items-center gap-2 rounded-xl border border-dashed p-8 text-center focus-within:ring-3"
+            className="border-input hover:bg-muted/50 focus-within:ring-ring/50 flex cursor-pointer flex-col items-center gap-2 rounded-lg border border-dashed p-8 text-center focus-within:ring-3"
             htmlFor="import-file"
           >
             <UploadIcon aria-hidden className="size-6" />
@@ -403,7 +403,7 @@ export const ImportWizard = ({ initialJob }: Props) => {
                 setStep("upload");
               }}
               type="button"
-              variant="outline"
+              variant="secondary"
             >
               Elegir otro archivo
             </Button>
@@ -432,7 +432,7 @@ export const ImportWizard = ({ initialJob }: Props) => {
             </p>
           ) : null}
 
-          <fieldset className="flex flex-col gap-3 rounded-xl border p-3">
+          <fieldset className="flex flex-col gap-3 rounded-lg border p-3">
             <legend className="px-1 text-sm font-medium">Opciones</legend>
             <label className="flex items-center gap-2 text-sm">
               <input
@@ -467,7 +467,7 @@ export const ImportWizard = ({ initialJob }: Props) => {
                   onClick={() => void revalidate()}
                   size="sm"
                   type="button"
-                  variant="outline"
+                  variant="secondary"
                 >
                   Volver a validar con estas opciones
                 </Button>
@@ -529,7 +529,7 @@ export const ImportWizard = ({ initialJob }: Props) => {
             <Button
               onClick={() => setStep("review")}
               type="button"
-              variant="outline"
+              variant="secondary"
             >
               Volver a la revisión
             </Button>
@@ -594,7 +594,7 @@ export const ImportWizard = ({ initialJob }: Props) => {
                   void pauseApply(job.id).catch(fail);
                 }}
                 type="button"
-                variant="outline"
+                variant="secondary"
               >
                 Pausar
               </Button>
@@ -621,11 +621,11 @@ export const ImportWizard = ({ initialJob }: Props) => {
             <Button asChild>
               <Link href="/app/personas">Ver personas</Link>
             </Button>
-            <Button asChild variant="outline">
+            <Button asChild variant="secondary">
               <Link href="/app/personas/importaciones">Ver historial</Link>
             </Button>
             {errors > 0 ? (
-              <Button asChild variant="outline">
+              <Button asChild variant="secondary">
                 <a download href={`/api/import/personas/${job.id}/errors`}>
                   Descargar errores
                 </a>
