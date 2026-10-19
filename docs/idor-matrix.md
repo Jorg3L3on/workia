@@ -54,6 +54,7 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `action:people/createPersonAction`                  | ✅     | `src/test/idor/people.db.test.ts`                                                                      | `people:create`             |
 | `action:people/deletePersonAction`                  | ✅     | `src/test/idor/people.db.test.ts`                                                                      | `people:delete`             |
 | `action:people/searchManagerOptionsAction`          | ✅     | `src/test/idor/people.db.test.ts`                                                                      | `people:read`               |
+| `action:people/setPersonStatusAction`               | ✅     | `src/test/idor/people.db.test.ts`                                                                      | `people:update`             |
 | `action:people/updatePersonAction`                  | ✅     | `src/test/idor/people.db.test.ts`                                                                      | `people:update`             |
 | `action:regions/createRegionAction`                 | ✅     | `src/test/idor/regions.db.test.ts`                                                                     | `sites:create`              |
 | `action:regions/deleteRegionAction`                 | ✅     | `src/test/idor/regions.db.test.ts`                                                                     | `sites:delete`              |
@@ -214,6 +215,7 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `lib:people/listPeoplePage`                   | ✅     | `src/test/idor/people.db.test.ts`             | —       |
 | `lib:people/listPersonBeneficiaries`          | ✅     | `src/test/idor/people.db.test.ts`             | —       |
 | `lib:people/searchActivePeopleForSelect`      | ✅     | `src/test/idor/people.db.test.ts`             | —       |
+| `lib:people/setPersonStatus`                  | ✅     | `src/test/idor/people.db.test.ts`             | —       |
 | `lib:people/softDeletePerson`                 | ✅     | `src/test/idor/people.db.test.ts`             | —       |
 | `lib:people/updatePerson`                     | ✅     | `src/test/idor/people.db.test.ts`             | —       |
 | `lib:people/upsertPersonSchedule`             | ✅     | `src/test/idor/people.db.test.ts`             | —       |

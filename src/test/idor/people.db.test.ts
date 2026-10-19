@@ -17,6 +17,7 @@ import {
   listPeople,
   listPeoplePage,
   searchActivePeopleForSelect,
+  setPersonStatus,
   softDeletePerson,
   updatePerson,
   upsertPersonSchedule,
@@ -25,6 +26,7 @@ import {
   createPersonAction,
   deletePersonAction,
   searchManagerOptionsAction,
+  setPersonStatusAction,
   updatePersonAction,
 } from "@/lib/people/actions";
 import type { PersonFormValues } from "@/lib/people/schema";
@@ -211,6 +213,15 @@ describe("people writes cannot reach another company", () => {
     ).toBeNull();
   });
 
+  it("lib:people/setPersonStatus", async () => {
+    expect(
+      await setPersonStatus(b.companyId, a.person.id, "baja", b.admin.id),
+    ).toBeNull();
+    expect((await getPersonById(a.companyId, a.person.id))?.status).toBe(
+      "activa",
+    );
+  });
+
   it("lib:people/upsertPersonSchedule", async () => {
     const before = await snapshotTenant(a);
     // B's company id on A's person: the schedule lookup finds nothing of A to change,
@@ -266,6 +277,19 @@ describe("people actions with company B's session", () => {
     ).toBeNull();
   });
 
+  it("action:people/setPersonStatusAction", async () => {
+    actAs(b.admin);
+    await expect(
+      setPersonStatusAction(a.person.id, "baja"),
+    ).rejects.toMatchObject({
+      kind: "redirect",
+      url: "/app/personas?error=not-found",
+    });
+    expect((await getPersonById(a.companyId, a.person.id))?.status).toBe(
+      "activa",
+    );
+  });
+
   it("action:people/searchManagerOptionsAction", async () => {
     actAs(b.admin);
     noLeak(await searchManagerOptionsAction("Persona"));
@@ -315,6 +339,18 @@ describe("people permissions", () => {
     await expect(deletePersonAction(b.person.id)).rejects.toMatchObject({
       url: `/app/personas/${b.person.id}?error=delete-forbidden`,
     });
+  });
+
+  it("rbac:action:people/setPersonStatusAction", async () => {
+    actAs(b.viewer);
+    await expect(
+      setPersonStatusAction(b.person.id, "baja"),
+    ).rejects.toMatchObject({
+      url: `/app/personas/${b.person.id}?error=status-forbidden`,
+    });
+    expect((await getPersonById(b.companyId, b.person.id))?.status).toBe(
+      "activa",
+    );
   });
 
   it("a user without membership gets no company and nothing", async () => {
