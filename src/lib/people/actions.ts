@@ -15,6 +15,7 @@ import {
   createPerson,
   getPersonById,
   searchActivePeopleForSelect,
+  setPersonStatus,
   softDeletePerson,
   updatePerson,
 } from "./index";
@@ -28,6 +29,7 @@ import {
   formatPersonName,
   personFormSchema,
   type PersonFormValues,
+  type PersonStatusValue,
 } from "./schema";
 
 export type PersonActionState = {
@@ -280,7 +282,13 @@ export const updatePersonAction = async (
   }
 
   try {
-    await updatePerson(companyId, personId, parsed, session.user.id);
+    // The form never changes the status: baja and reactivation are their own action.
+    await updatePerson(
+      companyId,
+      personId,
+      { ...parsed, status: existing.status },
+      session.user.id,
+    );
   } catch (error) {
     if (error instanceof DuplicateIdentityError) {
       return duplicateIdentityState(error);
@@ -295,6 +303,38 @@ export const updatePersonAction = async (
 
   revalidatePersonPaths(personId);
   redirect(`/app/personas/${personId}?saved=1`);
+};
+
+/** «Dar de baja» / «Reactivar» from the expediente's actions menu. */
+export const setPersonStatusAction = async (
+  personId: string,
+  status: PersonStatusValue,
+): Promise<void> => {
+  let session;
+
+  try {
+    session = await requirePeopleUpdate();
+  } catch (error) {
+    if (error instanceof AuthorizationError) {
+      redirect(`/app/personas/${personId}?error=status-forbidden`);
+    }
+
+    redirect("/login");
+  }
+
+  const updated = await setPersonStatus(
+    session.companyId,
+    personId,
+    status,
+    session.user.id,
+  );
+
+  if (!updated) {
+    redirect("/app/personas?error=not-found");
+  }
+
+  revalidatePersonPaths(personId);
+  redirect(`/app/personas/${personId}`);
 };
 
 export const deletePersonAction = async (personId: string): Promise<void> => {

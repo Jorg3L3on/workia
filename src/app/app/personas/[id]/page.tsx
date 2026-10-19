@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { EllipsisIcon, PencilIcon } from "lucide-react";
+import { PencilIcon } from "lucide-react";
 
 import { pageTitles } from "@/lib/brand/chrome-copy";
 
@@ -10,20 +10,12 @@ import { AuditEventList } from "@/components/audit/audit-event-list";
 import { PersonContractsSection } from "@/components/contracts/person-contracts-section";
 import { PersonAssetsSection } from "@/components/resguardo/person-assets-section";
 import { PersonExpedienteTabs } from "@/components/people/person-expediente-tabs";
+import { PersonActionsMenu } from "@/components/people/person-actions-menu";
 import { PersonForm } from "@/components/people/person-form";
 import { SectionSkeleton } from "@/components/loading/page-skeletons";
 import { PageBreadcrumbLabel } from "@/components/layout/app-breadcrumbs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { IconButton } from "@/components/ui/icon-button";
-import { ActionMenuItem } from "@/components/ui/action-menu-item";
 import { listAuditEvents } from "@/lib/audit";
 import {
   listActiveAreas,
@@ -52,7 +44,10 @@ import { formatMexicanAddress } from "@/lib/people/schema";
 import { listActiveSites } from "@/lib/sites";
 import { siteKindLabels } from "@/lib/sites/schema";
 import { deletedTone, toneFor } from "@/lib/ui/status-tone";
-import { deletePersonAction } from "@/lib/people/actions";
+import {
+  deletePersonAction,
+  setPersonStatusAction,
+} from "@/lib/people/actions";
 
 export const metadata: Metadata = {
   title: pageTitles.expediente,
@@ -170,7 +165,7 @@ const PersonaDetailPage = async ({
     ]);
 
     return (
-      <div className="mx-auto w-full max-w-3xl">
+      <div className="mx-auto w-full max-w-5xl">
         <PageBreadcrumbLabel label={personName} />
         <PersonForm
           areas={areas}
@@ -267,35 +262,26 @@ const PersonaDetailPage = async ({
               </Link>
             </Button>
           ) : null}
-          {canReadContracts || (canDelete && !isDeleted) ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <IconButton label="Más acciones" variant="secondary">
-                  <EllipsisIcon aria-hidden />
-                </IconButton>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                {canReadContracts ? (
-                  <DropdownMenuItem asChild>
-                    <Link href={`/app/personas/${person.id}/constancia`}>
-                      Constancia de antigüedad
-                    </Link>
-                  </DropdownMenuItem>
-                ) : null}
-                {canDelete && !isDeleted ? (
-                  <>
-                    {canReadContracts ? <DropdownMenuSeparator /> : null}
-                    <ActionMenuItem
-                      action={deletePersonAction.bind(null, person.id)}
-                      variant="destructive"
-                    >
-                      Borrar expediente (lógico)
-                    </ActionMenuItem>
-                  </>
-                ) : null}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : null}
+          <PersonActionsMenu
+            deleteAction={
+              canDelete && !isDeleted
+                ? deletePersonAction.bind(null, person.id)
+                : undefined
+            }
+            personId={person.id}
+            personName={personName}
+            showConstancia={canReadContracts}
+            status={person.status}
+            statusAction={
+              canUpdate && !isDeleted
+                ? setPersonStatusAction.bind(
+                    null,
+                    person.id,
+                    person.status === "baja" ? "activa" : "baja",
+                  )
+                : undefined
+            }
+          />
           <Button asChild variant="ghost">
             <Link
               href={isDeleted ? "/app/personas?deleted=1" : "/app/personas"}

@@ -39,7 +39,7 @@ const createAndSoftDeleteDummy = async (
   await page.locator("#nombres").fill("Persona");
   await page.locator("#apellidoPaterno").fill("Borrada");
   await page.locator("#apellidoMaterno").fill(`Demo${suffix}`);
-  await page.getByRole("button", { name: "Dar de alta" }).click();
+  await page.getByRole("button", { name: "Guardar persona" }).click();
 
   await expect(page).toHaveURL(/\/app\/personas\/[0-9a-f-]{36}$/);
   await expect(
@@ -118,6 +118,64 @@ test("soft-deleted expediente stays open and appears in borrados", async ({
   await expect(
     page.locator("table").getByText(fullName, { exact: true }),
   ).toHaveCount(0);
+});
+
+test("baja and reactivation live in the expediente menu, not the form", async ({
+  page,
+}) => {
+  const suffix = Date.now().toString().slice(-6);
+  const fullName = `Persona Baja Demo${suffix}`;
+
+  try {
+    await loginAsDemoAdmin(page);
+    await page.goto("/app/personas/nueva");
+    await expect(page.getByText("Relación laboral")).toHaveCount(0);
+    await expect(
+      page.getByRole("main").getByTestId("pendientes-obligatorios"),
+    ).toHaveText("2 campos obligatorios pendientes");
+    await page.locator("#nombres").fill("Persona");
+    await page.locator("#apellidoPaterno").fill("Baja");
+    await page.locator("#apellidoMaterno").fill(`Demo${suffix}`);
+    await expect(
+      page.getByRole("main").getByTestId("pendientes-obligatorios"),
+    ).toHaveText("Campos obligatorios completos");
+    await page.getByRole("button", { name: "Guardar persona" }).click();
+
+    await expect(page).toHaveURL(/\/app\/personas\/[0-9a-f-]{36}$/);
+    const heading = page.getByRole("heading", { name: fullName, exact: true });
+    await expect(heading).toBeVisible();
+    await expect(
+      page.getByText("Activa", { exact: true }).first(),
+    ).toBeVisible();
+
+    await page.getByRole("button", { name: "Más acciones" }).click();
+    await page.getByRole("menuitem", { name: "Dar de baja" }).click();
+    const dialog = page.getByRole("alertdialog");
+    await expect(dialog).toContainText("El expediente no se borra");
+    await dialog.getByRole("button", { name: "Dar de baja" }).click();
+    await expect(dialog).toHaveCount(0);
+    await expect(page.getByText("Baja", { exact: true }).first()).toBeVisible();
+
+    await page.getByRole("button", { name: "Más acciones" }).click();
+    await page.getByRole("menuitem", { name: "Reactivar" }).click();
+    await page
+      .getByRole("alertdialog")
+      .getByRole("button", { name: "Reactivar" })
+      .click();
+    await expect(
+      page.getByText("Activa", { exact: true }).first(),
+    ).toBeVisible();
+
+    await page.getByRole("button", { name: "Más acciones" }).click();
+    await page
+      .getByRole("menuitem", { name: "Borrar expediente (lógico)" })
+      .click();
+    await expect(
+      page.getByRole("status").filter({ hasText: "Expediente borrado" }),
+    ).toBeVisible();
+  } finally {
+    hardDeleteBorradosFixture(fullName);
+  }
 });
 
 test("borrados shows the official demo deleted person without e2e residue", async ({

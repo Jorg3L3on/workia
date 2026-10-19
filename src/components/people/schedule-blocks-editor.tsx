@@ -83,19 +83,54 @@ export const ScheduleBlocksEditor = ({
   };
 
   return (
-    <div className="space-y-3" data-testid="schedule-blocks-editor">
+    <div
+      className="bg-muted/30 space-y-3 rounded-lg border p-3 sm:p-4"
+      data-testid="schedule-blocks-editor"
+    >
       <input
         type="hidden"
         name="horarioBloques"
         value={JSON.stringify(value)}
       />
-      {rows.length === 0 ? (
-        <p className="text-muted-foreground text-sm">Sin horario capturado.</p>
-      ) : null}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p
+          className={cn(
+            "text-sm",
+            parsed.success ? "text-muted-foreground" : "text-destructive",
+          )}
+          aria-live="polite"
+        >
+          {!parsed.success
+            ? parsed.error.issues[0]?.message
+            : rows.length === 0
+              ? "Sin horario capturado."
+              : formatScheduleBlocks(parsed.data)}
+        </p>
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          disabled={rows.length >= 7 || used.size >= 7}
+          onClick={() =>
+            setRows((current) => [
+              ...current,
+              {
+                dias: nextDays(),
+                entrada: "08:00",
+                salida: current.length === 0 ? "17:00" : "13:00",
+                comidaInicio: current.length === 0 ? "13:00" : "",
+                comidaFin: current.length === 0 ? "14:00" : "",
+              },
+            ])
+          }
+        >
+          <PlusIcon aria-hidden /> Agregar bloque
+        </Button>
+      </div>
       {rows.map((row, index) => (
         <fieldset
           key={index}
-          className="space-y-3 rounded-lg border p-3"
+          className="bg-background space-y-3 rounded-lg border p-3"
           aria-label={`Bloque ${index + 1}`}
         >
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -141,8 +176,8 @@ export const ScheduleBlocksEditor = ({
               [
                 ["entrada", "Entrada"],
                 ["salida", "Salida"],
-                ["comidaInicio", "Comida inicio"],
-                ["comidaFin", "Comida fin"],
+                ["comidaInicio", "Comida inicio (opcional)"],
+                ["comidaFin", "Comida fin (opcional)"],
               ] as const
             ).map(([field, label]) => (
               <div key={field} className="space-y-1">
@@ -165,57 +200,24 @@ export const ScheduleBlocksEditor = ({
           </div>
         </fieldset>
       ))}
-      <div className="grid gap-3 sm:grid-cols-[auto_1fr] sm:items-end">
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          disabled={rows.length >= 7 || used.size >= 7}
-          onClick={() =>
-            setRows((current) => [
-              ...current,
-              {
-                dias: nextDays(),
-                entrada: "08:00",
-                salida: current.length === 0 ? "17:00" : "13:00",
-                comidaInicio: current.length === 0 ? "13:00" : "",
-                comidaFin: current.length === 0 ? "14:00" : "",
-              },
-            ])
-          }
-        >
-          <PlusIcon aria-hidden /> Agregar bloque
-        </Button>
-        <div className="space-y-1 sm:max-w-56 sm:justify-self-end">
-          <label className="text-xs font-medium" htmlFor="diaDescanso">
-            Día de descanso
-          </label>
-          <FormSelect
-            id="diaDescanso"
-            value={diaDescanso}
-            onValueChange={(next) => setDiaDescanso(next as WeekDay | "")}
-            options={[
-              { value: "", label: "Sin capturar" },
-              ...WEEK_DAYS.map((day) => ({
-                value: day,
-                label: weekDayLabels[day],
-              })),
-            ]}
-            variant="field"
-          />
-        </div>
+      <div className="space-y-1 sm:max-w-56">
+        <label className="text-xs font-medium" htmlFor="diaDescanso">
+          Día de descanso (opcional)
+        </label>
+        <FormSelect
+          id="diaDescanso"
+          value={diaDescanso}
+          onValueChange={(next) => setDiaDescanso(next as WeekDay | "")}
+          options={[
+            { value: "", label: "Sin capturar" },
+            ...WEEK_DAYS.map((day) => ({
+              value: day,
+              label: weekDayLabels[day],
+            })),
+          ]}
+          variant="field"
+        />
       </div>
-      <p
-        className={cn(
-          "text-xs",
-          parsed.success ? "text-muted-foreground" : "text-destructive",
-        )}
-        aria-live="polite"
-      >
-        {parsed.success
-          ? formatScheduleBlocks(parsed.data)
-          : parsed.error.issues[0]?.message}
-      </p>
       {error ? (
         <p className="text-destructive text-xs" role="alert">
           {error}

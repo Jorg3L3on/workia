@@ -99,7 +99,7 @@ test.describe("Horario por persona", () => {
       "Sucursal Centro Demo (Sucursal)",
     );
     await fillSchedule(page, scheduleA);
-    await page.getByRole("button", { name: "Dar de alta" }).click();
+    await page.getByRole("button", { name: "Guardar persona" }).click();
     await expect(page).toHaveURL(/\/app\/personas\/[0-9a-f-]{36}/);
     await expect(
       page.getByRole("heading", { name: nameA, exact: true }),
@@ -117,7 +117,7 @@ test.describe("Horario por persona", () => {
       "Sucursal Centro Demo (Sucursal)",
     );
     await fillSchedule(page, scheduleB);
-    await page.getByRole("button", { name: "Dar de alta" }).click();
+    await page.getByRole("button", { name: "Guardar persona" }).click();
     await expect(page).toHaveURL(/\/app\/personas\/[0-9a-f-]{36}/);
     await expect(
       page.getByRole("heading", { name: nameB, exact: true }),
@@ -173,7 +173,7 @@ test.describe("Horario por persona", () => {
 
     await page.getByRole("link", { name: "Editar" }).click();
     await fillSchedule(page, laterSchedule);
-    await page.getByRole("button", { name: "Guardar cambios" }).click();
+    await page.getByRole("button", { name: "Guardar persona" }).click();
     await expect(page).toHaveURL(/saved=1/);
     await expectScheduleOnFicha(datosPanel(page), laterSchedule);
 
