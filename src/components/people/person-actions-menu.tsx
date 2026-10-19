@@ -5,7 +5,6 @@ import { useState } from "react";
 import { useFormStatus } from "react-dom";
 import { EllipsisIcon } from "lucide-react";
 
-import { ActionMenuItem } from "@/components/ui/action-menu-item";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -62,6 +61,7 @@ export const PersonActionsMenu = ({
   showConstancia,
 }: PersonActionsMenuProps) => {
   const [statusOpen, setStatusOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const isBaja = status === "baja";
 
   if (!showConstancia && !statusAction && !deleteAction) {
@@ -93,9 +93,12 @@ export const PersonActionsMenu = ({
                 </DropdownMenuItem>
               ) : null}
               {deleteAction ? (
-                <ActionMenuItem action={deleteAction} variant="destructive">
-                  Borrar expediente (lógico)
-                </ActionMenuItem>
+                <DropdownMenuItem
+                  onSelect={() => setDeleteOpen(true)}
+                  variant="destructive"
+                >
+                  Eliminar expediente
+                </DropdownMenuItem>
               ) : null}
             </>
           ) : null}
@@ -124,6 +127,29 @@ export const PersonActionsMenu = ({
                   label={isBaja ? "Reactivar" : "Dar de baja"}
                   variant={isBaja ? "primary" : "destructive"}
                 />
+              </AlertDialogFooter>
+            </form>
+          </AlertDialogContent>
+        </AlertDialog>
+      ) : null}
+
+      {deleteAction ? (
+        <AlertDialog onOpenChange={setDeleteOpen} open={deleteOpen}>
+          <AlertDialogContent>
+            <form action={deleteAction} className="contents">
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  Eliminar el expediente de {personName}
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  Sale de las listas, altas y contratos. Nada se pierde: se
+                  puede consultar en Personas, entre los borrados, y cada cambio
+                  queda en Auditoría.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel type="button">Cancelar</AlertDialogCancel>
+                <ConfirmButton label="Eliminar" variant="destructive" />
               </AlertDialogFooter>
             </form>
           </AlertDialogContent>

@@ -1,15 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { signOut } from "next-auth/react";
+import { usePathname } from "next/navigation";
 import {
+  ArrowLeftIcon,
   Building2Icon,
   LayoutDashboardIcon,
-  LogOutIcon,
   ShieldIcon,
 } from "lucide-react";
 
+import { WorkiaMark } from "@/components/brand/workia-mark";
 import {
   AppBreadcrumbs,
   BreadcrumbLabelsProvider,
@@ -21,7 +21,9 @@ import {
   SHELL_TOP_NAV_CLASS_NAME,
   SHELL_VIEWPORT_CLASS_NAME,
 } from "@/components/layout/shell-top-nav";
-import { Button } from "@/components/ui/button";
+import { NavUser } from "@/components/nav-user";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
   Sidebar,
@@ -29,71 +31,90 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarInset,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
+  SidebarRail,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
+import { pageTitles } from "@/lib/brand/chrome-copy";
 import { cn } from "@/lib/utils";
 
 const adminNavItems = [
-  {
-    title: "Resumen",
-    href: "/admin",
-    icon: LayoutDashboardIcon,
-  },
-  {
-    title: "Empresas",
-    href: "/admin/empresas",
-    icon: Building2Icon,
-  },
-  {
-    title: "RBAC",
-    href: "/admin/rbac",
-    icon: ShieldIcon,
-  },
+  { title: "Resumen", href: "/admin", icon: LayoutDashboardIcon, exact: true },
+  { title: "Empresas", href: "/admin/empresas", icon: Building2Icon },
+  { title: pageTitles.rbac, href: "/admin/rbac", icon: ShieldIcon },
 ];
 
 type AdminShellProps = {
   children: React.ReactNode;
+  user: {
+    name?: string | null;
+    email?: string | null;
+    image?: string | null;
+  };
 };
 
-export const AdminShell = ({ children }: AdminShellProps) => {
+/** The /admin shell: the /app brand and chrome with an «Administración» badge. */
+export const AdminShell = ({ children, user }: AdminShellProps) => {
   const pathname = usePathname();
-  const router = useRouter();
-
-  const handleCerrarSesionClick = async () => {
-    await signOut({ redirect: false });
-    router.push("/login");
-  };
+  const initials = (user.name ?? "Admin")
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 
   return (
     <BreadcrumbLabelsProvider>
-      <div className={cn("relative flex flex-col", SHELL_VIEWPORT_CLASS_NAME)}>
+      <div
+        className={cn(
+          "workia-shell relative flex flex-col",
+          SHELL_VIEWPORT_CLASS_NAME,
+        )}
+      >
         <SidebarProvider
           className={cn("relative z-10 flex w-full", SHELL_VIEWPORT_CLASS_NAME)}
         >
           <NavigationProgress />
-          <Sidebar collapsible="icon">
-            <SidebarHeader className="border-sidebar-border border-b p-4">
-              <Link className="font-semibold tracking-tight" href="/admin">
-                workia admin
+          <Sidebar
+            collapsible="icon"
+            className="border-sidebar-border border-r"
+          >
+            <SidebarHeader className="border-sidebar-border border-b p-3">
+              <Link
+                className="flex items-center gap-2.5 px-1 font-semibold tracking-tight"
+                href="/admin"
+              >
+                <WorkiaMark className="size-7" />
+                <span className="truncate group-data-[collapsible=icon]:hidden">
+                  workia
+                </span>
+                <Badge
+                  className="group-data-[collapsible=icon]:hidden"
+                  tone="info"
+                >
+                  Administración
+                </Badge>
               </Link>
             </SidebarHeader>
             <SidebarContent>
               <SidebarGroup>
-                <SidebarGroupLabel>Administración</SidebarGroupLabel>
                 <SidebarGroupContent>
                   <SidebarMenu>
                     {adminNavItems.map((item) => (
                       <SidebarMenuItem key={item.href}>
                         <SidebarMenuButton
                           asChild
-                          isActive={pathname === item.href}
+                          isActive={
+                            item.exact
+                              ? pathname === item.href
+                              : pathname.startsWith(item.href)
+                          }
+                          tooltip={item.title}
                         >
                           <Link href={item.href}>
                             <item.icon />
@@ -106,39 +127,58 @@ export const AdminShell = ({ children }: AdminShellProps) => {
                 </SidebarGroupContent>
               </SidebarGroup>
             </SidebarContent>
-            <SidebarFooter className="border-sidebar-border border-t p-2">
-              <Button
-                aria-label="Cerrar sesión"
-                className="w-full justify-start"
-                variant="ghost"
-                type="button"
-                onClick={() => {
-                  void handleCerrarSesionClick();
+            <SidebarFooter className="border-sidebar-border border-t">
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    className="text-muted-foreground"
+                    size="sm"
+                    tooltip="Volver a la app"
+                  >
+                    <Link href="/app">
+                      <ArrowLeftIcon aria-hidden />
+                      <span>Volver a la app</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+              <NavUser
+                user={{
+                  name: user.name ?? "Administrador",
+                  email: user.email ?? "",
+                  avatar: user.image ?? "",
+                  initials,
                 }}
-              >
-                <LogOutIcon className="size-4" />
-                Cerrar sesión
-              </Button>
+              />
             </SidebarFooter>
+            <SidebarRail />
           </Sidebar>
-          <SidebarInset className={cn("bg-background", SHELL_INSET_CLASS_NAME)}>
+          <SidebarInset
+            className={cn("bg-transparent", SHELL_INSET_CLASS_NAME)}
+          >
             <header
               className={cn(
-                "border-border flex h-14 shrink-0 items-center gap-2 border-b px-4",
+                "workia-credential-header flex h-14 shrink-0 items-center gap-2 border-b",
                 SHELL_TOP_NAV_CLASS_NAME,
               )}
               data-slot="shell-top-nav"
             >
-              <SidebarTrigger />
-              <Separator
-                className="mr-2 data-[orientation=vertical]:h-4"
-                orientation="vertical"
-              />
-              <AppBreadcrumbs />
+              <div className="flex flex-1 items-center gap-2 px-4">
+                <SidebarTrigger className="-ml-1" />
+                <Separator
+                  className="mr-2 data-[orientation=vertical]:h-4"
+                  orientation="vertical"
+                />
+                <AppBreadcrumbs />
+              </div>
+              <div className="flex items-center gap-1 px-4">
+                <ThemeToggle />
+              </div>
             </header>
             <div
               className={cn(
-                "flex w-full flex-col p-6",
+                "mx-auto flex w-full max-w-6xl flex-col gap-4 p-4 md:p-6",
                 SHELL_MAIN_SCROLL_CLASS_NAME,
               )}
               data-slot="shell-main-scroll"

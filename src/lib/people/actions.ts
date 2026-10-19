@@ -14,6 +14,7 @@ import { DuplicateIdentityError } from "./identity";
 import {
   createPerson,
   getPersonById,
+  listPeoplePage,
   searchActivePeopleForSelect,
   setPersonStatus,
   softDeletePerson,
@@ -28,6 +29,7 @@ import {
 import {
   formatPersonName,
   personFormSchema,
+  personStatusLabels,
   type PersonFormValues,
   type PersonStatusValue,
 } from "./schema";
@@ -386,4 +388,47 @@ export const searchManagerOptionsAction = async (
   );
 
   return rows.map((row) => ({ id: row.id, label: formatPersonName(row) }));
+};
+
+export type PersonSearchResult = {
+  id: string;
+  label: string;
+  /** «RFC · Estado», shown beside the name. */
+  detail: string;
+};
+
+/**
+ * Server action behind the ⌘K «Personas» group: the Personas list search
+ * (name, RFC, CURP, email), first page only. Without people:read it finds no one.
+ */
+export const searchPeopleForPaletteAction = async (
+  query: string,
+): Promise<PersonSearchResult[]> => {
+  const trimmed = query.trim().slice(0, 80);
+
+  if (trimmed.length < 2) {
+    return [];
+  }
+
+  let session;
+
+  try {
+    session = await requirePeopleRead();
+  } catch {
+    return [];
+  }
+
+  const { rows } = await listPeoplePage(session.companyId, {
+    query: trimmed,
+    page: 1,
+    pageSize: 6,
+  });
+
+  return rows.map((row) => ({
+    id: row.id,
+    label: formatPersonName(row),
+    detail: [row.rfc, personStatusLabels[row.status]]
+      .filter(Boolean)
+      .join(" · "),
+  }));
 };

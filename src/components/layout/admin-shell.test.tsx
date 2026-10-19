@@ -25,7 +25,22 @@ vi.mock("@/hooks/use-mobile", () => ({
   useIsMobile: () => false,
 }));
 
-import { AdminShell } from "@/components/layout/admin-shell";
+vi.mock("@/components/theme-toggle", () => ({
+  ThemeToggle: () => null,
+}));
+
+import { AdminShell as BaseAdminShell } from "@/components/layout/admin-shell";
+import { TooltipProvider } from "@/components/ui/tooltip";
+
+const AdminShell = ({ children }: { children: React.ReactNode }) => (
+  <TooltipProvider>
+    <BaseAdminShell
+      user={{ name: "System Admin", email: "admin@workia.local" }}
+    >
+      {children}
+    </BaseAdminShell>
+  </TooltipProvider>
+);
 import { chromeCopy } from "@/lib/brand/chrome-copy";
 
 afterEach(() => {
@@ -44,7 +59,11 @@ describe("AdminShell", () => {
       </AdminShell>,
     );
 
-    fireEvent.click(screen.getByLabelText("Cerrar sesión"));
+    const userMenu = screen.getByLabelText("Menú de usuario");
+    fireEvent.pointerDown(userMenu, { button: 0, ctrlKey: false });
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "Cerrar sesión" }),
+    );
 
     await waitFor(() => {
       expect(signOut).toHaveBeenCalledWith({ redirect: false });
@@ -118,7 +137,21 @@ describe("AdminShell", () => {
     ).toBeTruthy();
   });
 
-  it("starts the top loader when navigating to RBAC", () => {
+  it("shows the /app brand with an Administración badge and Spanish nav", () => {
+    render(
+      <AdminShell>
+        <p>Admin</p>
+      </AdminShell>,
+    );
+
+    const brand = screen.getByRole("link", { name: /workia/ });
+    expect(brand.textContent).toContain("Administración");
+    expect(screen.getByRole("link", { name: "Resumen" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Volver a la app" })).toBeTruthy();
+    expect(screen.queryByText(/workia admin/i)).toBeNull();
+  });
+
+  it("starts the top loader when navigating to Roles y permisos", () => {
     render(
       <AdminShell>
         <p>Admin</p>
@@ -127,7 +160,7 @@ describe("AdminShell", () => {
 
     expect(screen.queryByRole("progressbar")).toBeNull();
 
-    fireEvent.click(screen.getByRole("link", { name: "RBAC" }));
+    fireEvent.click(screen.getByRole("link", { name: "Roles y permisos" }));
 
     expect(
       screen.getByRole("progressbar", { name: chromeCopy.navigationProgress }),

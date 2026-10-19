@@ -35,6 +35,10 @@ vi.mock("@/components/theme-toggle", () => ({
   ThemeToggle: () => null,
 }));
 
+vi.mock("@/lib/people/actions", () => ({
+  searchPeopleForPaletteAction: vi.fn(async () => []),
+}));
+
 vi.mock("@/lib/tenant/actions", () => ({
   switchCompanyAction: vi.fn(),
 }));
@@ -45,13 +49,20 @@ import { chromeCopy } from "@/lib/brand/chrome-copy";
 const companyA = { id: "a", name: "Ferretera Mandiola", roleName: "Admin" };
 const companyB = { id: "b", name: "Comercial del Norte", roleName: "Viewer" };
 
-const renderShell = () =>
+const renderShell = (
+  access: {
+    canReadMembers?: boolean;
+    canUseConnections?: boolean;
+    isPlatformAdmin?: boolean;
+  } = {},
+) =>
   render(
     <TooltipProvider>
       <AppShell
         user={{ name: "Elena Demo", email: "rrhh@workia.local" }}
         company={companyA}
         companies={[companyA, companyB]}
+        {...access}
       >
         <p>Contenido</p>
       </AppShell>
@@ -163,6 +174,57 @@ describe("AppShell", () => {
     expect(breadcrumb).toBeTruthy();
     expect(breadcrumb.textContent).toContain("Inicio");
     expect(headersContainBreadcrumb()).toBe(true);
+  });
+
+  it("groups the sidebar into Operación, Catálogo and Empresa", () => {
+    renderShell({ canReadMembers: true, canUseConnections: true });
+
+    const sidebar = within(
+      document.querySelector('[data-slot="sidebar"]') as HTMLElement,
+    );
+    const linksIn = (group: string) =>
+      within(sidebar.getByRole("list", { name: group }))
+        .getAllByRole("link")
+        .map((link) => link.textContent);
+
+    expect(linksIn("Operación")).toEqual([
+      "Inicio",
+      "Personas",
+      "Contratos",
+      "Altas",
+      "Resguardo",
+    ]);
+    expect(linksIn("Empresa")).toEqual(["Miembros", "Conexiones", "Auditoría"]);
+    expect(sidebar.getByRole("button", { name: "Catálogo" })).toBeTruthy();
+    expect(sidebar.queryByText("Expediente")).toBeNull();
+    expect(sidebar.queryByText("Inventario")).toBeNull();
+  });
+
+  it("hides Miembros and Conexiones without access", () => {
+    renderShell();
+
+    const sidebar = within(
+      document.querySelector('[data-slot="sidebar"]') as HTMLElement,
+    );
+    expect(sidebar.queryByRole("link", { name: "Miembros" })).toBeNull();
+    expect(sidebar.queryByRole("link", { name: "Conexiones" })).toBeNull();
+    expect(sidebar.getByRole("link", { name: "Auditoría" })).toBeTruthy();
+  });
+
+  it("shows Plataforma only to platform admins, in the footer", () => {
+    renderShell();
+    expect(screen.queryByRole("link", { name: "Plataforma" })).toBeNull();
+    cleanup();
+
+    renderShell({ isPlatformAdmin: true });
+    const footer = document.querySelector(
+      '[data-slot="sidebar-footer"]',
+    ) as HTMLElement;
+    expect(
+      within(footer)
+        .getByRole("link", { name: "Plataforma" })
+        .getAttribute("href"),
+    ).toBe("/admin");
   });
 
   it("opens Catálogo with four children and marks the child active", () => {

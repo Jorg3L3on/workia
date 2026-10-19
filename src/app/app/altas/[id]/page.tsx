@@ -246,6 +246,11 @@ const AltaPage = async ({ params, searchParams }: AltaPageProps) => {
               .
             </p>
           ) : null}
+          {onboarding.stage === "rh_captura" ? (
+            <p className="text-muted-foreground text-sm">
+              Quien da este visto bueno no puede dar también el de Nóminas.
+            </p>
+          ) : null}
           {sameApprover ? (
             <p className="text-muted-foreground text-sm">
               Tú diste el visto bueno de RH; el de Nóminas lo da otra persona.

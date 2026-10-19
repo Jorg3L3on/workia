@@ -54,6 +54,7 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `action:people/createPersonAction`                  | ✅     | `src/test/idor/people.db.test.ts`                                                                      | `people:create`             |
 | `action:people/deletePersonAction`                  | ✅     | `src/test/idor/people.db.test.ts`                                                                      | `people:delete`             |
 | `action:people/searchManagerOptionsAction`          | ✅     | `src/test/idor/people.db.test.ts`                                                                      | `people:read`               |
+| `action:people/searchPeopleForPaletteAction`        | ✅     | `src/test/idor/people.db.test.ts`                                                                      | `people:read`               |
 | `action:people/setPersonStatusAction`               | ✅     | `src/test/idor/people.db.test.ts`                                                                      | `people:update`             |
 | `action:people/updatePersonAction`                  | ✅     | `src/test/idor/people.db.test.ts`                                                                      | `people:update`             |
 | `action:regions/createRegionAction`                 | ✅     | `src/test/idor/regions.db.test.ts`                                                                     | `sites:create`              |
@@ -227,6 +228,7 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `lib:regions/updateRegion`                    | ✅     | `src/test/idor/regions.db.test.ts`            | —       |
 | `lib:resguardo/assignAsset`                   | ✅     | `src/test/idor/resguardo.db.test.ts`          | —       |
 | `lib:resguardo/countAssignedAssets`           | ✅     | `src/test/idor/resguardo.db.test.ts`          | —       |
+| `lib:resguardo/listAssetsToRecover`           | ✅     | `src/test/idor/resguardo.db.test.ts`          | —       |
 | `lib:resguardo/createAsset`                   | ✅     | `src/test/idor/resguardo.db.test.ts`          | —       |
 | `lib:resguardo/getAssetById`                  | ✅     | `src/test/idor/resguardo.db.test.ts`          | —       |
 | `lib:resguardo/getAssetWithHolder`            | ✅     | `src/test/idor/resguardo.db.test.ts`          | —       |

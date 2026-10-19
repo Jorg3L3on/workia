@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { forbidden } from "next/navigation";
 
+import { CopyConnectorUrlButton } from "@/components/mcp/copy-connector-url-button";
 import { ListPageHeader } from "@/components/list/list-page-header";
 import {
   ConnectionsDataTable,
@@ -95,11 +96,7 @@ const ConexionesPage = async ({ searchParams }: ConexionesPageProps) => {
       <ListPageHeader
         title="Conexiones"
         description={`Asistentes de IA (Grok Bot, ChatGPT, Cursor, Claude) conectados a ${session.membership.companyName}. Cada conexión ve sólo esta empresa y nunca más de lo que permite tu rol.`}
-        descriptionSecondary={
-          <>
-            URL del conector: <code className="font-mono">{mcpUrl}</code>
-          </>
-        }
+        actions={<CopyConnectorUrlButton url={mcpUrl} />}
       />
 
       {!isMcpEnabled() ? (

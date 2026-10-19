@@ -46,7 +46,7 @@ const AltasPage = async ({ searchParams }: AltasPageProps) => {
   return (
     <div className="flex flex-col gap-6">
       <ListPageHeader
-        description="RH captura y aprueba; Nóminas da el segundo visto bueno. La misma persona no puede aprobar las dos etapas."
+        description="RH captura y aprueba; Nóminas da el segundo visto bueno."
         descriptionSecondary="Altas en proceso y completas."
         title="Altas"
       />

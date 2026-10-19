@@ -57,7 +57,7 @@ const ResguardoPage = async ({ searchParams }: ResguardoPageProps) => {
         }
         description="Qué existe, quién lo tiene hoy y el historial de entregas y devoluciones."
         descriptionSecondary="Lista de todos los activos registrados."
-        title="Inventario"
+        title="Resguardo"
       />
 
       {deleted === "1" ? (

@@ -29,6 +29,8 @@ export type CommandItem = {
   keywords?: string[];
   icon?: LucideIcon;
   badge?: ReactNode;
+  /** Already matched elsewhere (a server search): skip the fuzzy filter. */
+  alwaysShow?: boolean;
   onSelect: () => void;
 };
 
@@ -40,6 +42,8 @@ export interface CommandPaletteProps {
   emptyMessage?: string;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  /** Called as the query changes, e.g. to fetch server results. */
+  onQueryChange?: (query: string) => void;
 }
 
 function fuzzyMatch(needle: string, hay: string) {
@@ -70,6 +74,7 @@ export function CommandPalette({
   emptyMessage = "No results found.",
   open: controlledOpen,
   onOpenChange,
+  onQueryChange,
 }: CommandPaletteProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const controlled = controlledOpen !== undefined;
@@ -131,6 +136,7 @@ export function CommandPalette({
   const filtered = useMemo(() => {
     if (!query) return items;
     return items.filter((it) => {
+      if (it.alwaysShow) return true;
       const haystacks = [it.label, it.group ?? "", ...(it.keywords ?? [])];
       return haystacks.some((h) => fuzzyMatch(query, h));
     });
@@ -161,6 +167,12 @@ export function CommandPalette({
 
   // Clearing the query would drop the cursor on its own, but only if it had
   // changed; `moveTo(null)` covers reopening on an already-empty query.
+  const changeQuery = (next: string) => {
+    setQuery(next);
+    onQueryChange?.(next);
+  };
+
+  // The consumer resets its own query-driven state when it opens the palette.
   useOnOpen(open, () => {
     setQuery("");
     moveTo(null);
@@ -265,7 +277,7 @@ export function CommandPalette({
                   <input
                     ref={inputRef}
                     value={query}
-                    onChange={(e) => setQuery(e.target.value)}
+                    onChange={(e) => changeQuery(e.target.value)}
                     placeholder={placeholder}
                     role="combobox"
                     // The field only exists while the palette is open.

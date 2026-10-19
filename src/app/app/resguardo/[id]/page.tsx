@@ -237,8 +237,7 @@ const AssetDetailPage = async ({
               Historial de movimientos
             </h2>
             <p className="text-muted-foreground text-sm">
-              Entregas y devoluciones — registro append-only, nunca se
-              sobrescribe.
+              Cada entrega y devolución queda registrada.
             </p>
           </div>
 

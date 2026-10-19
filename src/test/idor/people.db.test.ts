@@ -26,6 +26,7 @@ import {
   createPersonAction,
   deletePersonAction,
   searchManagerOptionsAction,
+  searchPeopleForPaletteAction,
   setPersonStatusAction,
   updatePersonAction,
 } from "@/lib/people/actions";
@@ -295,6 +296,11 @@ describe("people actions with company B's session", () => {
     noLeak(await searchManagerOptionsAction("Persona"));
   });
 
+  it("action:people/searchPeopleForPaletteAction", async () => {
+    actAs(b.admin);
+    noLeak(await searchPeopleForPaletteAction("Persona"));
+  });
+
   it("refuses a form opened in another company (two tabs)", async () => {
     actAs(b.admin);
     const result = await createPersonAction(
@@ -359,6 +365,7 @@ describe("people permissions", () => {
       email: "nadie@idor.test",
     });
     expect(await searchManagerOptionsAction("Persona")).toEqual([]);
+    expect(await searchPeopleForPaletteAction("Persona")).toEqual([]);
     await expect(deletePersonAction(b.person.id)).rejects.toBeInstanceOf(
       NavigationThrow,
     );

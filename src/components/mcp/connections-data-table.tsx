@@ -22,6 +22,7 @@ import {
   revokeConnectionAction,
   type ConnectionActionState,
 } from "@/lib/mcp/actions";
+import { toolLabel } from "@/lib/mcp/tool-labels";
 import { toneFor } from "@/lib/ui/status-tone";
 
 export type ConnectionRow = {
@@ -233,7 +234,7 @@ const ToolCallResult = ({ row }: { row: ToolCallRow }) => (
   <Badge tone={toneFor("toolCall", row.result)}>{row.resultLabel}</Badge>
 );
 
-/** The last calls of the connector (the raw tool name stays as is until F7). */
+/** The last calls of the connector; tool names in Spanish, the raw one in a tooltip. */
 export const ToolCallsDataTable = ({
   calls,
   showOwner,
@@ -251,8 +252,17 @@ export const ToolCallsDataTable = ({
     {
       id: "tool",
       header: "Herramienta",
-      accessor: (row) => row.tool,
-      cell: (row) => <span className="font-mono text-xs">{row.tool}</span>,
+      accessor: (row) => `${toolLabel(row.tool)} ${row.tool}`,
+      cell: (row) => (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="cursor-default" tabIndex={0}>
+              {toolLabel(row.tool)}
+            </span>
+          </TooltipTrigger>
+          <TooltipContent className="font-mono">{row.tool}</TooltipContent>
+        </Tooltip>
+      ),
     },
     {
       id: "connection",
@@ -301,7 +311,7 @@ export const ToolCallsDataTable = ({
       getRowId={(row) => row.id}
       layout="inset"
       mobileCard={(row) => ({
-        title: row.tool,
+        title: toolLabel(row.tool),
         subtitle: [row.connectionName, `${row.latencyMs} ms`]
           .filter(Boolean)
           .join(" · "),

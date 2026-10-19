@@ -84,7 +84,7 @@ describe("resolveBreadcrumbs", () => {
     expect(resolveBreadcrumbs("/admin")).toEqual([{ label: "Administración" }]);
     expect(resolveBreadcrumbs("/admin/rbac")).toEqual([
       { label: "Administración", href: "/admin" },
-      { label: "RBAC" },
+      { label: "Roles y permisos" },
     ]);
   });
 

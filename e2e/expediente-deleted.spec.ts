@@ -49,8 +49,10 @@ const createAndSoftDeleteDummy = async (
   const expedienteUrl = page.url();
 
   await page.getByRole("button", { name: "Más acciones" }).click();
+  await page.getByRole("menuitem", { name: "Eliminar expediente" }).click();
   await page
-    .getByRole("menuitem", { name: "Borrar expediente (lógico)" })
+    .getByRole("alertdialog")
+    .getByRole("button", { name: "Eliminar" })
     .click();
 
   return { expedienteUrl, fullName };
@@ -79,7 +81,7 @@ test("soft-deleted expediente stays open and appears in borrados", async ({
     ).toBeVisible();
     await page.getByRole("button", { name: "Más acciones" }).click();
     await expect(
-      page.getByRole("menuitem", { name: "Borrar expediente (lógico)" }),
+      page.getByRole("menuitem", { name: "Eliminar expediente" }),
     ).toHaveCount(0);
     await page.keyboard.press("Escape");
     await expect(page.getByRole("link", { name: "Editar" })).toHaveCount(0);
@@ -167,8 +169,10 @@ test("baja and reactivation live in the expediente menu, not the form", async ({
     ).toBeVisible();
 
     await page.getByRole("button", { name: "Más acciones" }).click();
+    await page.getByRole("menuitem", { name: "Eliminar expediente" }).click();
     await page
-      .getByRole("menuitem", { name: "Borrar expediente (lógico)" })
+      .getByRole("alertdialog")
+      .getByRole("button", { name: "Eliminar" })
       .click();
     await expect(
       page.getByRole("status").filter({ hasText: "Expediente borrado" }),
@@ -213,7 +217,7 @@ test("borrados shows the official demo deleted person without e2e residue", asyn
   ).toBeVisible();
   await page.getByRole("button", { name: "Más acciones" }).click();
   await expect(
-    page.getByRole("menuitem", { name: "Borrar expediente (lógico)" }),
+    page.getByRole("menuitem", { name: "Eliminar expediente" }),
   ).toHaveCount(0);
   await page.keyboard.press("Escape");
 });

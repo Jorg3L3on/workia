@@ -1,18 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import {
-  Building2Icon,
-  FileTextIcon,
-  FolderTreeIcon,
-  HomeIcon,
-  LaptopIcon,
-  UserPlusIcon,
-  ScrollTextIcon,
-  PlugIcon,
-  UserCogIcon,
-  UsersIcon,
-} from "lucide-react";
+import { ArrowUpRightIcon } from "lucide-react";
 
 import { WorkiaMark } from "@/components/brand/workia-mark";
 import {
@@ -42,11 +31,14 @@ import {
   SidebarFooter,
   SidebarHeader,
   SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
   SidebarProvider,
   SidebarRail,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { CATALOG_PATHS } from "@/lib/catalog/paths";
+import { PLATFORM_NAV_LINK, visibleNavGroups } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 
 type CompanyOption = { id: string; name: string; roleName: string };
@@ -69,34 +61,6 @@ type AppShellProps = {
   };
 };
 
-const navItems = [
-  { title: "Inicio", href: "/app", icon: HomeIcon, exact: true },
-  { title: "Personas", href: "/app/personas", icon: UsersIcon },
-  { title: "Contratos", href: "/app/contratos", icon: FileTextIcon },
-  { title: "Resguardo", href: "/app/resguardo", icon: LaptopIcon },
-  { title: "Altas", href: "/app/altas", icon: UserPlusIcon },
-  { title: "Catálogo", href: CATALOG_PATHS.index, icon: FolderTreeIcon },
-  { title: "Auditoría", href: "/app/auditoria", icon: ScrollTextIcon },
-] as const;
-
-const membersNavItem = {
-  title: "Miembros",
-  href: "/app/miembros",
-  icon: UserCogIcon,
-} as const;
-
-const connectionsNavItem = {
-  title: "Conexiones",
-  href: "/app/conexiones",
-  icon: PlugIcon,
-} as const;
-
-const platformNavItem = {
-  title: "Plataforma",
-  href: "/admin/empresas",
-  icon: Building2Icon,
-} as const;
-
 export const AppShell = ({
   children,
   user,
@@ -106,12 +70,8 @@ export const AppShell = ({
   canUseConnections = false,
   isPlatformAdmin = false,
 }: AppShellProps) => {
-  const items = [
-    ...navItems,
-    ...(canReadMembers ? [membersNavItem] : []),
-    ...(canUseConnections ? [connectionsNavItem] : []),
-    ...(isPlatformAdmin ? [platformNavItem] : []),
-  ];
+  const access = { canReadMembers, canUseConnections };
+  const groups = visibleNavGroups(access);
   const initials = (user.name ?? "RRHH")
     .split(" ")
     .map((part) => part[0])
@@ -135,7 +95,7 @@ export const AppShell = ({
             )}
           >
             <NavigationProgress />
-            <AppCommandPalette />
+            <AppCommandPalette access={access} />
             <Sidebar
               collapsible="icon"
               className="border-sidebar-border border-r"
@@ -153,9 +113,26 @@ export const AppShell = ({
                 <CompanySwitcher current={company} companies={companies} />
               </SidebarHeader>
               <SidebarContent>
-                <AppSidebarNav items={items} />
+                <AppSidebarNav groups={groups} />
               </SidebarContent>
               <SidebarFooter className="border-sidebar-border border-t">
+                {isPlatformAdmin ? (
+                  <SidebarMenu>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        className="text-muted-foreground"
+                        size="sm"
+                        tooltip={PLATFORM_NAV_LINK.title}
+                      >
+                        <Link href={PLATFORM_NAV_LINK.href}>
+                          <ArrowUpRightIcon aria-hidden />
+                          <span>{PLATFORM_NAV_LINK.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  </SidebarMenu>
+                ) : null}
                 <NavUser
                   user={{
                     name: user.name ?? "Usuario",

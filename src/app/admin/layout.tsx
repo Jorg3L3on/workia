@@ -16,7 +16,7 @@ type AdminLayoutProps = {
 };
 
 export default async function AdminLayout({ children }: AdminLayoutProps) {
-  await requirePlatformAdmin();
+  const session = await requirePlatformAdmin();
 
-  return <AdminShell>{children}</AdminShell>;
+  return <AdminShell user={session.user}>{children}</AdminShell>;
 }

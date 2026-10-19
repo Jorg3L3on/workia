@@ -43,7 +43,7 @@ export const pageTitles = {
   regiones: "Regiones",
   auditoria: "Auditoría",
   administracion: "Administración",
-  rbac: "RBAC",
+  rbac: "Roles y permisos",
   notFound: "Página no encontrada",
   forbidden: "Acceso no permitido",
   empresa: "Elegir empresa",
