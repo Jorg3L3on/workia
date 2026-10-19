@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, count, eq, inArray, isNull } from "drizzle-orm";
 
 import {
   buildChanges,
@@ -718,4 +718,67 @@ export const unassignActivityFromPosition = async (
   }
 
   return { ok: true as const, removed: Boolean(removed) };
+};
+
+const countMap = (rows: Array<{ id: string | null; n: number }>) =>
+  new Map(rows.flatMap((row) => (row.id ? [[row.id, row.n] as const] : [])));
+
+/**
+ * How many live records point at each catalog entry (WRK-I6-5): people per
+ * área, puesto and sucursal; sub-áreas and puestos per área; puestos per
+ * actividad. «Eliminar» shows only at zero and names these counts.
+ */
+export const countCatalogReferences = async (companyId: string) => {
+  const db = tdb(companyId);
+  const [
+    peopleByArea,
+    peopleByPosition,
+    peopleBySite,
+    childAreas,
+    positionsByArea,
+    positionsByActivity,
+  ] = await Promise.all([
+    db
+      .select({ id: people.areaId, n: count() })
+      .from(people)
+      .where(withTenant(people, companyId, isNull(people.deletedAt)))
+      .groupBy(people.areaId),
+    db
+      .select({ id: people.positionId, n: count() })
+      .from(people)
+      .where(withTenant(people, companyId, isNull(people.deletedAt)))
+      .groupBy(people.positionId),
+    db
+      .select({ id: people.siteId, n: count() })
+      .from(people)
+      .where(withTenant(people, companyId, isNull(people.deletedAt)))
+      .groupBy(people.siteId),
+    db
+      .select({ id: areas.parentAreaId, n: count() })
+      .from(areas)
+      .where(withTenant(areas, companyId, isNull(areas.deletedAt)))
+      .groupBy(areas.parentAreaId),
+    db
+      .select({ id: positions.areaId, n: count() })
+      .from(positions)
+      .where(withTenant(positions, companyId, isNull(positions.deletedAt)))
+      .groupBy(positions.areaId),
+    db
+      .select({ id: positionActivities.activityId, n: count() })
+      .from(positionActivities)
+      .innerJoin(positions, eq(positionActivities.positionId, positions.id))
+      .where(
+        withTenant(positionActivities, companyId, isNull(positions.deletedAt)),
+      )
+      .groupBy(positionActivities.activityId),
+  ]);
+
+  return {
+    peopleByArea: countMap(peopleByArea),
+    peopleByPosition: countMap(peopleByPosition),
+    peopleBySite: countMap(peopleBySite),
+    childAreas: countMap(childAreas),
+    positionsByArea: countMap(positionsByArea),
+    positionsByActivity: countMap(positionsByActivity),
+  };
 };

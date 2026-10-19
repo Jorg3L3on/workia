@@ -15,8 +15,8 @@ import {
 } from "@/components/ui/sheet";
 
 type FormSheetProps = {
-  /** The PageHeader primary that opens the sheet. */
-  triggerLabel: string;
+  /** The PageHeader primary that opens the sheet; without it the owner opens it (e.g. edit from a row). */
+  triggerLabel?: string;
   triggerIcon?: LucideIcon;
   title: string;
   description?: ReactNode;
@@ -52,12 +52,14 @@ export const FormSheet = ({
   children,
 }: FormSheetProps) => (
   <Sheet onOpenChange={onOpenChange} open={open}>
-    <SheetTrigger asChild>
-      <Button>
-        {Icon ? <Icon aria-hidden /> : null}
-        {triggerLabel}
-      </Button>
-    </SheetTrigger>
+    {triggerLabel ? (
+      <SheetTrigger asChild>
+        <Button>
+          {Icon ? <Icon aria-hidden /> : null}
+          {triggerLabel}
+        </Button>
+      </SheetTrigger>
+    ) : null}
     <SheetContent className="gap-0 data-[side=right]:w-full data-[side=right]:sm:max-w-md">
       <SheetHeader className="border-b pr-12">
         <SheetTitle>{title}</SheetTitle>

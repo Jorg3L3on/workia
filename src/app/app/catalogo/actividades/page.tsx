@@ -1,20 +1,11 @@
 import type { Metadata } from "next";
 
-import { CatalogActivitiesTable } from "@/components/catalog/catalog-activities-table";
-import { CatalogFormTray } from "@/components/catalog/catalog-form-tray";
-import { pageTitles } from "@/lib/brand/chrome-copy";
+import { ActividadesCatalog } from "@/components/catalog/catalog-entities";
 import { CatalogStatusMessages } from "@/components/catalog/catalog-status-messages";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  createActivityAction,
-  updateActivityAction,
-} from "@/lib/catalog/actions";
+import { pageTitles } from "@/lib/brand/chrome-copy";
+import { countCatalogReferences, listActivities } from "@/lib/catalog";
 import { requireActivitiesRead } from "@/lib/catalog/auth";
-import { getActivityById, listActivities } from "@/lib/catalog";
 import { userHasPermission } from "@/lib/rbac";
-import { CompanyField } from "@/components/tenant/company-context";
 
 export const dynamic = "force-dynamic";
 
@@ -23,130 +14,47 @@ export const metadata: Metadata = {
 };
 
 type ActividadesCatalogPageProps = {
-  searchParams: Promise<{
-    error?: string;
-    saved?: string;
-    deleted?: string;
-    edit?: string;
-  }>;
+  searchParams: Promise<{ error?: string; saved?: string; deleted?: string }>;
 };
 
 const ActividadesCatalogPage = async ({
   searchParams,
 }: ActividadesCatalogPageProps) => {
   const session = await requireActivitiesRead();
-  const { error, saved, deleted, edit } = await searchParams;
+  const { error, saved, deleted } = await searchParams;
 
-  const [
-    activityRows,
-    canCreateActivity,
-    canUpdateActivity,
-    canDeleteActivity,
-  ] = await Promise.all([
-    listActivities(session.companyId),
-    userHasPermission(session.user.id, "positions:create"),
-    userHasPermission(session.user.id, "positions:update"),
-    userHasPermission(session.user.id, "positions:delete"),
-  ]);
-
-  const editingActivity =
-    edit && canUpdateActivity
-      ? await getActivityById(session.companyId, edit)
-      : null;
-  const isEditing = Boolean(editingActivity && !editingActivity.deletedAt);
+  const [activities, references, canCreate, canUpdate, canDelete] =
+    await Promise.all([
+      listActivities(session.companyId),
+      countCatalogReferences(session.companyId),
+      userHasPermission(session.user.id, "positions:create"),
+      userHasPermission(session.user.id, "positions:update"),
+      userHasPermission(session.user.id, "positions:delete"),
+    ]);
 
   return (
-    <div className="flex flex-col gap-6">
-      <CatalogFormTray
-        description="Actividades que se asignan a los puestos."
-        title="Actividades"
-        actions={
-          canCreateActivity && !isEditing
-            ? [
-                {
-                  id: "create",
-                  actionLabel: "Nueva actividad",
-                  formTitle: "Nueva actividad",
-                  children: (
-                    <form action={createActivityAction} className="space-y-3">
-                      <CompanyField />
-                      <div className="space-y-2">
-                        <Label htmlFor="activity-name">Nombre</Label>
-                        <Input
-                          id="activity-name"
-                          name="name"
-                          placeholder="Ej. Atención a solicitudes internas"
-                          required
-                        />
-                      </div>
-                      <label className="flex items-center gap-2 text-sm">
-                        <input
-                          defaultChecked
-                          name="active"
-                          type="checkbox"
-                          value="true"
-                        />
-                        Activa
-                      </label>
-                      <Button type="submit" variant="secondary">
-                        Crear actividad
-                      </Button>
-                    </form>
-                  ),
-                },
-              ]
-            : []
-        }
-      />
+    <ActividadesCatalog
+      canCreate={canCreate}
+      canDelete={canDelete}
+      canUpdate={canUpdate}
+      notice={
+        <CatalogStatusMessages deleted={deleted} error={error} saved={saved} />
+      }
+      rows={activities.map((activity) => {
+        const positionCount =
+          references.positionsByActivity.get(activity.id) ?? 0;
 
-      <CatalogStatusMessages error={error} deleted={deleted} saved={saved} />
-
-      <section className="space-y-4">
-        {isEditing && editingActivity ? (
-          <div className="bg-muted/20 space-y-3 rounded-lg p-4">
-            <p className="text-sm font-medium">Editar actividad</p>
-            <form
-              action={updateActivityAction.bind(null, editingActivity.id)}
-              className="space-y-3"
-            >
-              <CompanyField />
-              <div className="space-y-2">
-                <Label htmlFor="activity-name">Nombre</Label>
-                <Input
-                  defaultValue={editingActivity.name}
-                  id="activity-name"
-                  name="name"
-                  placeholder="Ej. Atención a solicitudes internas"
-                  required
-                />
-              </div>
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  defaultChecked={editingActivity.active}
-                  name="active"
-                  type="checkbox"
-                  value="true"
-                />
-                Activa
-              </label>
-              <Button type="submit" variant="secondary">
-                Guardar cambios
-              </Button>
-            </form>
-          </div>
-        ) : null}
-
-        <CatalogActivitiesTable
-          activities={activityRows.map((activity) => ({
-            id: activity.id,
-            name: activity.name,
-            active: activity.active,
-          }))}
-          canDelete={canDeleteActivity}
-          canUpdate={canUpdateActivity}
-        />
-      </section>
-    </div>
+        return {
+          id: activity.id,
+          name: activity.name,
+          active: activity.active,
+          positionCount,
+          references: [
+            { count: positionCount, one: "puesto", many: "puestos" },
+          ],
+        };
+      })}
+    />
   );
 };
 

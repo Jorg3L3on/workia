@@ -1,19 +1,15 @@
 import type { Metadata } from "next";
 
-import { AreaTreeView } from "@/components/catalog/area-tree-view";
-import { CatalogFormTray } from "@/components/catalog/catalog-form-tray";
-import { pageTitles } from "@/lib/brand/chrome-copy";
+import {
+  AreasCatalog,
+  type AreaCatalogRow,
+} from "@/components/catalog/catalog-entities";
 import { CatalogStatusMessages } from "@/components/catalog/catalog-status-messages";
-import { Button } from "@/components/ui/button";
-import { FormSelect } from "@/components/ui/form-select";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { createAreaAction } from "@/lib/catalog/actions";
+import { pageTitles } from "@/lib/brand/chrome-copy";
+import { countCatalogReferences, listAreas } from "@/lib/catalog";
 import { requireAreasRead } from "@/lib/catalog/auth";
-import { listAreas } from "@/lib/catalog";
-import { buildAreaTree } from "@/lib/catalog/schema";
+import { buildAreaTree, type AreaTreeNode } from "@/lib/catalog/schema";
 import { userHasPermission } from "@/lib/rbac";
-import { CompanyField } from "@/components/tenant/company-context";
 
 export const dynamic = "force-dynamic";
 
@@ -22,93 +18,73 @@ export const metadata: Metadata = {
 };
 
 type AreasCatalogPageProps = {
-  searchParams: Promise<{
-    error?: string;
-    saved?: string;
-    deleted?: string;
-  }>;
+  searchParams: Promise<{ error?: string; saved?: string; deleted?: string }>;
 };
+
+const subtreeIds = (node: AreaTreeNode): string[] => [
+  node.id,
+  ...node.children.flatMap(subtreeIds),
+];
 
 const AreasCatalogPage = async ({ searchParams }: AreasCatalogPageProps) => {
   const session = await requireAreasRead();
   const { error, saved, deleted } = await searchParams;
 
-  const [areas, canCreateArea, canDeleteArea] = await Promise.all([
-    listAreas(session.companyId),
-    userHasPermission(session.user.id, "areas:create"),
-    userHasPermission(session.user.id, "areas:delete"),
-  ]);
+  const [areas, references, canCreate, canUpdate, canDelete] =
+    await Promise.all([
+      listAreas(session.companyId),
+      countCatalogReferences(session.companyId),
+      userHasPermission(session.user.id, "areas:create"),
+      userHasPermission(session.user.id, "areas:update"),
+      userHasPermission(session.user.id, "areas:delete"),
+    ]);
 
-  const areaTree = buildAreaTree(areas);
-  const activeAreas = areas.filter((area) => area.active);
+  // The tree, flattened in order with each area's level.
+  const rows: AreaCatalogRow[] = [];
+  const visit = (nodes: AreaTreeNode[], depth: number) => {
+    for (const node of nodes) {
+      const positionCount = references.positionsByArea.get(node.id) ?? 0;
+
+      rows.push({
+        id: node.id,
+        name: node.name,
+        active: node.active,
+        parentAreaId: node.parentAreaId,
+        depth,
+        subtreeIds: subtreeIds(node),
+        positionCount,
+        references: [
+          {
+            count: references.peopleByArea.get(node.id) ?? 0,
+            one: "persona",
+            many: "personas",
+          },
+          { count: positionCount, one: "puesto", many: "puestos" },
+          {
+            count: references.childAreas.get(node.id) ?? 0,
+            one: "sub-área",
+            many: "sub-áreas",
+          },
+        ],
+      });
+      visit(node.children, depth + 1);
+    }
+  };
+  visit(buildAreaTree(areas), 0);
 
   return (
-    <div className="flex flex-col gap-6">
-      <CatalogFormTray
-        description="Árbol de áreas; un área borrada desaparece de las altas nuevas."
-        title="Áreas"
-        actions={
-          canCreateArea
-            ? [
-                {
-                  id: "create",
-                  actionLabel: "Nueva área",
-                  formTitle: "Nueva área",
-                  children: (
-                    <form action={createAreaAction} className="space-y-3">
-                      <CompanyField />
-                      <div className="space-y-2">
-                        <Label htmlFor="area-name">Nombre</Label>
-                        <Input
-                          id="area-name"
-                          name="name"
-                          placeholder="Ej. Operaciones"
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="area-parent">
-                          Área padre (opcional)
-                        </Label>
-                        <FormSelect
-                          id="area-parent"
-                          name="parentAreaId"
-                          options={[
-                            { value: "", label: "Sin padre" },
-                            ...activeAreas.map((area) => ({
-                              value: area.id,
-                              label: area.name,
-                            })),
-                          ]}
-                          variant="field"
-                        />
-                      </div>
-                      <label className="flex items-center gap-2 text-sm">
-                        <input
-                          defaultChecked
-                          name="active"
-                          type="checkbox"
-                          value="true"
-                        />
-                        Activa
-                      </label>
-                      <Button type="submit" variant="secondary">
-                        Crear área
-                      </Button>
-                    </form>
-                  ),
-                },
-              ]
-            : []
-        }
-      />
-
-      <CatalogStatusMessages error={error} deleted={deleted} saved={saved} />
-
-      <section className="space-y-4">
-        <AreaTreeView canDelete={canDeleteArea} nodes={areaTree} />
-      </section>
-    </div>
+    <AreasCatalog
+      canCreate={canCreate}
+      canDelete={canDelete}
+      canUpdate={canUpdate}
+      notice={
+        <CatalogStatusMessages deleted={deleted} error={error} saved={saved} />
+      }
+      parents={areas
+        .filter((area) => area.active)
+        .map((area) => ({ id: area.id, name: area.name }))}
+      rows={rows}
+    />
   );
 };
 

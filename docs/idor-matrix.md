@@ -31,6 +31,8 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `action:catalog/deletePositionAction`               | ✅     | `src/test/idor/catalog.db.test.ts`                                                                     | `positions:delete`          |
 | `action:catalog/unassignActivityFromPositionAction` | ✅     | `src/test/idor/catalog.db.test.ts`                                                                     | `positions:update`          |
 | `action:catalog/updateActivityAction`               | ✅     | `src/test/idor/catalog.db.test.ts`                                                                     | `positions:update`          |
+| `action:catalog/updateAreaAction`                   | ✅     | `src/test/idor/catalog.db.test.ts`                                                                     | `areas:update`              |
+| `action:catalog/updatePositionAction`               | ✅     | `src/test/idor/catalog.db.test.ts`                                                                     | `positions:update`          |
 | `action:contracts/addOfficialTemplatesAction`       | ✅     | `src/test/idor/official-templates.db.test.ts`                                                          | `contract_templates:create` |
 | `action:contracts/createContractAction`             | ✅     | `src/test/idor/contracts.db.test.ts`                                                                   | `contracts:create`          |
 | `action:contracts/createContractTemplateAction`     | ✅     | `src/test/idor/contracts.db.test.ts`                                                                   | `contract_templates:create` |
@@ -67,6 +69,7 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `action:sites/createSiteAction`                     | ✅     | `src/test/idor/catalog.db.test.ts`                                                                     | `sites:create`              |
 | `action:sites/deleteSiteAction`                     | ✅     | `src/test/idor/catalog.db.test.ts`                                                                     | `sites:delete`              |
 | `action:sites/setSiteRegionAction`                  | ✅     | `src/test/idor/regions.db.test.ts`                                                                     | `sites:update`              |
+| `action:sites/updateSiteAction`                     | ✅     | `src/test/idor/catalog.db.test.ts`                                                                     | `sites:update`              |
 | `action:tenant/addMemberAction`                     | ✅     | `src/test/idor/tenant.db.test.ts`                                                                      | `members:manage`            |
 | `action:tenant/changeMemberRoleAction`              | ✅     | `src/test/idor/tenant.db.test.ts`                                                                      | `members:manage`            |
 | `action:tenant/createCompanyAction`                 | ✅     | `src/test/idor/tenant.db.test.ts`                                                                      | `companies:manage`          |
@@ -110,6 +113,7 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `lib:audit/listAuditActors`                   | ✅     | `src/test/idor/tenant.db.test.ts`             | —       |
 | `lib:audit/listAuditEventsKeyset`             | ✅     | `src/test/idor/mcp-tools.db.test.ts`          | —       |
 | `lib:catalog/assignActivityToPosition`        | ✅     | `src/test/idor/catalog.db.test.ts`            | —       |
+| `lib:catalog/countCatalogReferences`          | ✅     | `src/test/idor/catalog.db.test.ts`            | —       |
 | `lib:catalog/createActivity`                  | ✅     | `src/test/idor/catalog.db.test.ts`            | —       |
 | `lib:catalog/createArea`                      | ✅     | `src/test/idor/catalog.db.test.ts`            | —       |
 | `lib:catalog/createPosition`                  | ✅     | `src/test/idor/catalog.db.test.ts`            | —       |

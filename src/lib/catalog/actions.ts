@@ -8,11 +8,15 @@ import {
   createActivity,
   createArea,
   createPosition,
+  listActivitiesForPosition,
+  listAreas,
   softDeleteActivity,
   softDeleteArea,
   softDeletePosition,
   unassignActivityFromPosition,
   updateActivity,
+  updateArea,
+  updatePosition,
 } from "@/lib/catalog";
 import {
   requireActivitiesCreate,
@@ -20,6 +24,7 @@ import {
   requireActivitiesUpdate,
   requireAreasCreate,
   requireAreasDelete,
+  requireAreasUpdate,
   requirePositionsCreate,
   requirePositionsDelete,
   requirePositionsUpdate,
@@ -106,6 +111,67 @@ const parsePositionActivityForm = (formData: FormData) =>
     activityId: String(formData.get("activityId") ?? ""),
   });
 
+/** The puesto sheet sends its activity chips as `activityId` fields, marked by `syncActivities`. */
+const activityIdsFromForm = (formData: FormData) =>
+  formData.get("syncActivities") === "true"
+    ? [...new Set(formData.getAll("activityId").map(String).filter(Boolean))]
+    : null;
+
+/** Makes a puesto's activities match the sheet's chips; returns the first refusal, if any. */
+const syncPositionActivities = async (
+  companyId: string,
+  positionId: string,
+  wanted: string[],
+  actorUserId: string,
+) => {
+  const current = (await listActivitiesForPosition(companyId, positionId)).map(
+    (activity) => activity.id,
+  );
+
+  for (const activityId of current.filter((id) => !wanted.includes(id))) {
+    await unassignActivityFromPosition(
+      companyId,
+      positionId,
+      activityId,
+      actorUserId,
+    );
+  }
+
+  for (const activityId of wanted.filter((id) => !current.includes(id))) {
+    const result = await assignActivityToPosition(
+      companyId,
+      positionId,
+      activityId,
+      actorUserId,
+    );
+
+    if (!result.ok) return result.reason;
+  }
+
+  return null;
+};
+
+/** True when `parentAreaId` is the area itself or one of its descendants. */
+const wouldCycle = async (
+  companyId: string,
+  areaId: string,
+  parentAreaId: string | undefined,
+) => {
+  if (!parentAreaId) return false;
+
+  const parentOf = new Map(
+    (await listAreas(companyId)).map((area) => [area.id, area.parentAreaId]),
+  );
+  let cursor: string | null | undefined = parentAreaId;
+
+  for (let hops = 0; cursor && hops <= parentOf.size; hops += 1) {
+    if (cursor === areaId) return true;
+    cursor = parentOf.get(cursor);
+  }
+
+  return false;
+};
+
 export const createAreaAction = async (formData: FormData) => {
   let session;
 
@@ -134,6 +200,50 @@ export const createAreaAction = async (formData: FormData) => {
   await createArea(companyId, parsed.data, session.user.id).catch(
     duplicateNameRedirect(CATALOG_PATHS.areas),
   );
+  revalidateCatalog();
+  redirect(catalogHref(CATALOG_PATHS.areas, { saved: "area" }));
+};
+
+export const updateAreaAction = async (areaId: string, formData: FormData) => {
+  let session;
+
+  try {
+    session = await requireAreasUpdate();
+  } catch (error) {
+    if (error instanceof AuthorizationError) {
+      redirect(catalogHref(CATALOG_PATHS.areas, { error: "areas-update" }));
+    }
+
+    redirect("/login");
+  }
+
+  const parsed = parseAreaForm(formData);
+
+  if (!parsed.success) {
+    redirect(catalogHref(CATALOG_PATHS.areas, { error: "area-form" }));
+  }
+
+  const companyId = formCompanyOrRedirect(
+    session,
+    formData,
+    CATALOG_PATHS.areas,
+  );
+
+  if (await wouldCycle(companyId, areaId, parsed.data.parentAreaId)) {
+    redirect(catalogHref(CATALOG_PATHS.areas, { error: "area-cycle" }));
+  }
+
+  const updated = await updateArea(
+    companyId,
+    areaId,
+    parsed.data,
+    session.user.id,
+  ).catch(duplicateNameRedirect(CATALOG_PATHS.areas));
+
+  if (!updated) {
+    redirect(catalogHref(CATALOG_PATHS.areas, { error: "not-found" }));
+  }
+
   revalidateCatalog();
   redirect(catalogHref(CATALOG_PATHS.areas, { saved: "area" }));
 };
@@ -183,11 +293,88 @@ export const createPositionAction = async (formData: FormData) => {
     CATALOG_PATHS.puestos,
   );
 
-  await createPosition(companyId, parsed.data, session.user.id).catch(
-    duplicateNameRedirect(CATALOG_PATHS.puestos),
-  );
+  const created = await createPosition(
+    companyId,
+    parsed.data,
+    session.user.id,
+  ).catch(duplicateNameRedirect(CATALOG_PATHS.puestos));
+  const activityIds = activityIdsFromForm(formData);
+  const refused = activityIds
+    ? await syncPositionActivities(
+        companyId,
+        created.id,
+        activityIds,
+        session.user.id,
+      )
+    : null;
+
   revalidateCatalog();
-  redirect(catalogHref(CATALOG_PATHS.puestos, { saved: "position" }));
+  redirect(
+    catalogHref(
+      CATALOG_PATHS.puestos,
+      refused ? { error: refused } : { saved: "position" },
+    ),
+  );
+};
+
+export const updatePositionAction = async (
+  positionId: string,
+  formData: FormData,
+) => {
+  let session;
+
+  try {
+    session = await requirePositionsUpdate();
+  } catch (error) {
+    if (error instanceof AuthorizationError) {
+      redirect(
+        catalogHref(CATALOG_PATHS.puestos, { error: "positions-update" }),
+      );
+    }
+
+    redirect("/login");
+  }
+
+  const parsed = parsePositionForm(formData);
+
+  if (!parsed.success) {
+    redirect(catalogHref(CATALOG_PATHS.puestos, { error: "position-form" }));
+  }
+
+  const companyId = formCompanyOrRedirect(
+    session,
+    formData,
+    CATALOG_PATHS.puestos,
+  );
+
+  const updated = await updatePosition(
+    companyId,
+    positionId,
+    parsed.data,
+    session.user.id,
+  ).catch(duplicateNameRedirect(CATALOG_PATHS.puestos));
+
+  if (!updated) {
+    redirect(catalogHref(CATALOG_PATHS.puestos, { error: "not-found" }));
+  }
+
+  const activityIds = activityIdsFromForm(formData);
+  const refused = activityIds
+    ? await syncPositionActivities(
+        companyId,
+        positionId,
+        activityIds,
+        session.user.id,
+      )
+    : null;
+
+  revalidateCatalog();
+  redirect(
+    catalogHref(
+      CATALOG_PATHS.puestos,
+      refused ? { error: refused } : { saved: "position" },
+    ),
+  );
 };
 
 export const deletePositionAction = async (positionId: string) => {

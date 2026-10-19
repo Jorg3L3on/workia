@@ -109,6 +109,8 @@ export type DataTableProps<TData> = {
   /** The row opens its record. */
   getRowHref?: (row: TData) => string | undefined;
   getRowAriaLabel?: (row: TData) => string | undefined;
+  /** The row opens in place (an edit sheet) instead of navigating. */
+  onRowOpen?: (row: TData) => void;
   /** At most one action, as a `RowInlineAction`, shown on hover and focus. */
   inlineAction?: (row: TData) => ReactNode;
   /** Every other action, as a `RowMenu`. */
@@ -258,6 +260,7 @@ export const DataTable = <TData,>({
   toolbar,
   getRowHref,
   getRowAriaLabel,
+  onRowOpen,
   inlineAction,
   rowMenu,
   mobileCard,
@@ -390,34 +393,31 @@ export const DataTable = <TData,>({
   const showNoMatches = hasSourceRows && filteredCount === 0;
   const showEmpty = !hasSourceRows;
 
-  const openRow = (href: string | undefined) => {
-    if (href) router.push(href);
-  };
-
-  const rowKeyDown = (
-    event: KeyboardEvent<HTMLElement>,
-    href: string | undefined,
-  ) => {
-    if (href && (event.key === "Enter" || event.key === " ")) {
-      event.preventDefault();
-      router.push(href);
-    }
-  };
-
   const rowLinkProps = (row: TData) => {
     const href = getRowHref?.(row);
+    const open = href
+      ? () => router.push(href)
+      : onRowOpen
+        ? () => onRowOpen(row)
+        : null;
 
-    return href
+    return open
       ? {
           "aria-label": getRowAriaLabel?.(row) ?? `Abrir fila ${getRowId(row)}`,
-          role: "link",
+          role: href ? "link" : "button",
           tabIndex: 0,
-          onClick: () => openRow(href),
-          onKeyDown: (event: KeyboardEvent<HTMLElement>) =>
-            rowKeyDown(event, href),
+          onClick: open,
+          onKeyDown: (event: KeyboardEvent<HTMLElement>) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              open();
+            }
+          },
         }
       : {};
   };
+
+  const isOpenable = (row: TData) => Boolean(getRowHref?.(row) ?? onRowOpen);
 
   const defaultCard = (row: TData): DataTableMobileCard => {
     const [first, second] = table
@@ -470,7 +470,7 @@ export const DataTable = <TData,>({
             <ul className="divide-border/60 divide-y md:hidden">
               {pageRows.map((row) => {
                 const card = (mobileCard ?? defaultCard)(row.original);
-                const href = getRowHref?.(row.original);
+                const openable = isOpenable(row.original);
 
                 return (
                   <li
@@ -480,7 +480,7 @@ export const DataTable = <TData,>({
                     <div
                       className={cn(
                         "group/row flex items-start gap-3 px-4 py-3",
-                        href && "hover:bg-muted/40 cursor-pointer",
+                        openable && "hover:bg-muted/40 cursor-pointer",
                       )}
                       data-slot="data-table-card"
                       {...rowLinkProps(row.original)}
@@ -586,14 +586,14 @@ export const DataTable = <TData,>({
               </TableHeader>
               <TableBody>
                 {pageRows.map((row) => {
-                  const href = getRowHref?.(row.original);
+                  const openable = isOpenable(row.original);
 
                   return (
                     <Fragment key={row.id}>
                       <TableRow
                         className={cn(
                           "group/row border-border/50",
-                          href && "cursor-pointer",
+                          openable && "cursor-pointer",
                         )}
                         data-testid={rowTestId}
                         {...rowLinkProps(row.original)}

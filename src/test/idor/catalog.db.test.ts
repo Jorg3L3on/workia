@@ -6,6 +6,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 
 import {
   assignActivityToPosition,
+  countCatalogReferences,
   createActivity,
   createArea,
   createPosition,
@@ -39,6 +40,8 @@ import {
   deletePositionAction,
   unassignActivityFromPositionAction,
   updateActivityAction,
+  updateAreaAction,
+  updatePositionAction,
 } from "@/lib/catalog/actions";
 import {
   createSite,
@@ -48,7 +51,11 @@ import {
   softDeleteSite,
   updateSite,
 } from "@/lib/sites";
-import { createSiteAction, deleteSiteAction } from "@/lib/sites/actions";
+import {
+  createSiteAction,
+  deleteSiteAction,
+  updateSiteAction,
+} from "@/lib/sites/actions";
 
 import {
   idsIn,
@@ -121,6 +128,10 @@ describe("catalog reads stay inside the company", () => {
       () => listSites(b.companyId, { includeDeleted: true }),
     ],
     ["lib:sites/listActiveSites", () => listActiveSites(b.companyId)],
+    [
+      "lib:catalog/countCatalogReferences",
+      () => countCatalogReferences(b.companyId),
+    ],
   ])("%s", async (_surface, read) => {
     noLeak(await read());
   });
@@ -317,6 +328,39 @@ describe("catalog actions with company B's session", () => {
         ),
     ],
     [
+      "action:catalog/updateAreaAction",
+      () =>
+        updateAreaAction(
+          a.area.id,
+          formData({ name: "Robada", active: "true", companyId: b.companyId }),
+        ),
+    ],
+    [
+      "action:catalog/updatePositionAction",
+      () =>
+        updatePositionAction(
+          a.position.id,
+          formData({
+            name: "Robado",
+            active: "true",
+            syncActivities: "true",
+            companyId: b.companyId,
+          }),
+        ),
+    ],
+    [
+      "action:sites/updateSiteAction",
+      () =>
+        updateSiteAction(
+          a.site.id,
+          formData({
+            name: "Robada",
+            kind: "sucursal",
+            companyId: b.companyId,
+          }),
+        ),
+    ],
+    [
       "action:catalog/unassignActivityFromPositionAction",
       () =>
         unassignActivityFromPositionAction(
@@ -404,6 +448,53 @@ describe("catalog actions with company B's session", () => {
     ).toContain("error=company-changed");
   });
 
+  it("updatePositionAction syncs the sheet's activity chips", async () => {
+    actAs(b.admin);
+    const form = (activityIds: string[]) => {
+      const data = formData({
+        name: b.position.name,
+        active: "true",
+        syncActivities: "true",
+        companyId: b.companyId,
+      });
+      for (const id of activityIds) data.append("activityId", id);
+      return data;
+    };
+
+    expect(
+      await redirectOf(() =>
+        updatePositionAction(b.position.id, form([b.activity.id])),
+      ),
+    ).toContain("saved=position");
+    expect(
+      (await listActivitiesForPosition(b.companyId, b.position.id)).map(
+        (activity) => activity.id,
+      ),
+    ).toContain(b.activity.id);
+
+    await redirectOf(() => updatePositionAction(b.position.id, form([])));
+    expect(await listActivitiesForPosition(b.companyId, b.position.id)).toEqual(
+      [],
+    );
+  });
+
+  it("updateAreaAction refuses an area under itself", async () => {
+    actAs(b.admin);
+    expect(
+      await redirectOf(() =>
+        updateAreaAction(
+          b.area.id,
+          formData({
+            name: b.area.name,
+            parentAreaId: b.area.id,
+            active: "true",
+            companyId: b.companyId,
+          }),
+        ),
+      ),
+    ).toContain("error=area-cycle");
+  });
+
   it("reports a duplicate name in the same company", async () => {
     actAs(b.admin);
     expect(
@@ -447,6 +538,30 @@ describe("catalog permissions", () => {
         updateActivityAction(
           b.activity.id,
           formData({ name: "x", companyId: b.companyId }),
+        ),
+    ],
+    [
+      "rbac:action:catalog/updateAreaAction",
+      () =>
+        updateAreaAction(
+          b.area.id,
+          formData({ name: "x", companyId: b.companyId }),
+        ),
+    ],
+    [
+      "rbac:action:catalog/updatePositionAction",
+      () =>
+        updatePositionAction(
+          b.position.id,
+          formData({ name: "x", companyId: b.companyId }),
+        ),
+    ],
+    [
+      "rbac:action:sites/updateSiteAction",
+      () =>
+        updateSiteAction(
+          b.site.id,
+          formData({ name: "x", kind: "sucursal", companyId: b.companyId }),
         ),
     ],
     [
