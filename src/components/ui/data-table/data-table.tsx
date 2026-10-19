@@ -117,7 +117,7 @@ export type DataTableProps<TData> = {
   renderAfterRow?: (row: TData) => ReactNode;
   /** Below 768px each row is a card; defaults to the first two columns. */
   mobileCard?: (row: TData) => DataTableMobileCard;
-  /** `inset` drops the toolbar wrap when the table already sits in a panel. */
+  /** Kept for callers; the FilterBar wraps the same way in a page or a panel. */
   layout?: "page" | "inset";
   /** Test id on every table row (cards get `<id>-card`). */
   rowTestId?: string;
@@ -264,7 +264,6 @@ export const DataTable = <TData,>({
   rowMenu,
   renderAfterRow,
   mobileCard,
-  layout = "page",
   rowTestId,
   server,
 }: DataTableProps<TData>) => {
