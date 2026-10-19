@@ -592,3 +592,58 @@ export const listAssetsKeyset = async (
     .orderBy(asc(assets.name), asc(assets.id))
     .limit(options.limit + 1);
 };
+
+export type AssetToRecover = {
+  id: string;
+  name: string;
+  identifier: string;
+  holderName: string;
+};
+
+/**
+ * «Equipo pendiente» on Inicio: assets still assigned to someone who is no
+ * longer active (baja or deleted expediente), so HR has to get them back.
+ */
+export const listAssetsToRecover = async (
+  companyId: string,
+  limit = 5,
+): Promise<{ items: AssetToRecover[]; total: number }> => {
+  const where = and(
+    eq(assets.companyId, companyId),
+    eq(assets.status, "asignado"),
+    isNull(assets.deletedAt),
+    or(eq(people.status, "baja"), sql`${people.deletedAt} is not null`),
+  );
+
+  const [rows, [totals]] = await Promise.all([
+    tdb(companyId)
+      .select({
+        id: assets.id,
+        name: assets.name,
+        identifier: assets.identifier,
+        nombres: people.nombres,
+        apellidoPaterno: people.apellidoPaterno,
+        apellidoMaterno: people.apellidoMaterno,
+      })
+      .from(assets)
+      .innerJoin(people, eq(assets.holderId, people.id))
+      .where(where)
+      .orderBy(asc(assets.name), asc(assets.id))
+      .limit(limit),
+    tdb(companyId)
+      .select({ total: count() })
+      .from(assets)
+      .innerJoin(people, eq(assets.holderId, people.id))
+      .where(where),
+  ]);
+
+  return {
+    items: rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      identifier: row.identifier,
+      holderName: formatPersonName(row),
+    })),
+    total: totals?.total ?? 0,
+  };
+};

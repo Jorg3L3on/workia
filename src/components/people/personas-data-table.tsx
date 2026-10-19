@@ -2,19 +2,23 @@
 
 import { useMemo, type ReactNode } from "react";
 
-import { DataTable, type DataTableColumn } from "@/components/list/data-table";
+import { FileTextIcon, PencilIcon } from "lucide-react";
+
 import { useServerListControls } from "@/components/list/use-server-list-controls";
-import { ListRowAction } from "@/components/list/list-row-action";
-import { ListStatusBadge } from "@/components/list/list-status-badge";
+import { Badge } from "@/components/ui/badge";
+import {
+  DataTable,
+  RowMenu,
+  type DataTableColumn,
+} from "@/components/ui/data-table";
 import type { PersonaListRow } from "@/components/people/persona-list-row";
-import { PersonasMobileList } from "@/components/people/personas-mobile-list";
-import { FormSelect } from "@/components/ui/form-select";
 import { formatDateMx } from "@/lib/format/date";
 import {
   personDeletedLabel,
   personStatusLabels,
   type PersonListVisibility,
 } from "@/lib/people/schema";
+import { deletedTone, toneFor } from "@/lib/ui/status-tone";
 
 export type { PersonaListRow } from "@/components/people/persona-list-row";
 
@@ -30,7 +34,21 @@ type PersonasDataTableProps = {
   /** Region filter (WRK-I5-4); hidden when the company has no regions. */
   region?: string;
   regions?: { id: string; name: string }[];
+  /** Row menu: «Editar» and «Constancia de antigüedad». */
+  canUpdate?: boolean;
+  canReadContracts?: boolean;
 };
+
+const PersonStatus = ({ row }: { row: PersonaListRow }) => (
+  <div className="flex flex-wrap items-center gap-1.5">
+    <Badge tone={toneFor("person", row.status)}>
+      {personStatusLabels[row.status]}
+    </Badge>
+    {row.deleted ? (
+      <Badge tone={deletedTone}>{personDeletedLabel}</Badge>
+    ) : null}
+  </div>
+);
 
 export const PersonasDataTable = ({
   people,
@@ -43,20 +61,10 @@ export const PersonasDataTable = ({
   emptyAction,
   region = "",
   regions = [],
+  canUpdate = false,
+  canReadContracts = false,
 }: PersonasDataTableProps) => {
   const controls = useServerListControls();
-
-  const handleRegionChange = (next: string) => {
-    controls.setFilter("region", next || null);
-  };
-
-  const handleStatusChange = (next: string) => {
-    controls.setFilter("status", next || null);
-  };
-
-  const handleVisibilityChange = (next: string) => {
-    controls.setFilter("deleted", next === "deleted" ? "1" : null);
-  };
 
   const columns = useMemo<DataTableColumn<PersonaListRow>[]>(
     () => [
@@ -64,25 +72,20 @@ export const PersonasDataTable = ({
         id: "name",
         header: "Nombre",
         accessor: (row) => row.name,
-        cell: (row) => <span className="font-medium">{row.name}</span>,
+        variant: "primary",
+        truncate: true,
       },
       {
         id: "rfc",
         header: "RFC",
         accessor: (row) => row.rfc ?? "",
-        cell: (row) => (
-          <span className="text-muted-foreground tabular-nums">
-            {row.rfc ?? "—"}
-          </span>
-        ),
+        variant: "muted",
       },
       {
         id: "ingreso",
         header: "Ingreso",
         accessor: (row) => row.fechaIngreso ?? "",
-        cell: (row) => (
-          <span className="tabular-nums">{formatDateMx(row.fechaIngreso)}</span>
-        ),
+        variant: "muted",
       },
       {
         id: "status",
@@ -91,36 +94,7 @@ export const PersonasDataTable = ({
           row.deleted
             ? `${personDeletedLabel} ${personStatusLabels[row.status]}`
             : personStatusLabels[row.status],
-        cell: (row) => (
-          <div className="flex flex-wrap items-center gap-1.5">
-            <ListStatusBadge
-              tone={row.status === "activa" ? "active" : "inactive"}
-            >
-              {personStatusLabels[row.status]}
-            </ListStatusBadge>
-            {row.deleted ? (
-              <ListStatusBadge tone="destructive">
-                {personDeletedLabel}
-              </ListStatusBadge>
-            ) : null}
-          </div>
-        ),
-      },
-      {
-        id: "actions",
-        header: "Expediente",
-        accessor: () => "",
-        enableSorting: false,
-        headerClassName: "text-right",
-        cellClassName: "text-right",
-        cell: (row) => (
-          <ListRowAction
-            aria-label={`Ver expediente de ${row.name}`}
-            href={`/app/personas/${row.id}`}
-          >
-            Ver expediente
-          </ListRowAction>
-        ),
+        cell: (row) => <PersonStatus row={row} />,
       },
     ],
     [],
@@ -160,77 +134,87 @@ export const PersonasDataTable = ({
       noMatchesTitle={
         viewingDeleted ? "No hay expedientes borrados" : "No hay coincidencias"
       }
-      renderMobile={(visiblePeople) => (
-        <PersonasMobileList people={visiblePeople} />
-      )}
+      mobileCard={(row) => ({
+        title: row.name,
+        subtitle: [row.rfc, formatDateMx(row.fechaIngreso)]
+          .filter((value) => value && value !== "—")
+          .join(" · "),
+        badge: <PersonStatus row={row} />,
+      })}
       pageSizes={controls.pageSizes}
-      resultPlural="personas"
-      resultSingular="persona"
+      rowMenu={(row) =>
+        row.deleted || (!canUpdate && !canReadContracts) ? null : (
+          <RowMenu
+            actions={[
+              canUpdate && {
+                label: "Editar",
+                icon: PencilIcon,
+                href: `/app/personas/${row.id}?edit=1`,
+              },
+              canReadContracts && {
+                label: "Constancia de antigüedad",
+                icon: FileTextIcon,
+                href: `/app/personas/${row.id}/constancia`,
+              },
+            ]}
+            label={`Acciones de ${row.name}`}
+          />
+        )
+      }
+      rowTestId="persona-row"
       searchPlaceholder="Buscar por nombre, RFC o CURP..."
       server={{
         total,
         page,
         pageSize,
         query,
-        hasFilters: Boolean(query || status || region),
+        hasFilters: Boolean(query || status || region || viewingDeleted),
         onQueryChange: controls.setQuery,
         onPageChange: controls.setPage,
         onPageSizeChange: controls.setPageSize,
       }}
-      toolbar={
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <div className="sm:w-48">
-            <label className="sr-only" htmlFor="persona-status">
-              Relación
-            </label>
-            <FormSelect
-              aria-label="Relación"
-              id="persona-status"
-              onValueChange={handleStatusChange}
-              options={[
-                { value: "", label: "Todos los estados" },
-                { value: "activa", label: "Activas" },
-                { value: "baja", label: "Bajas" },
-              ]}
-              value={status}
-            />
-          </div>
-          <div className="sm:w-48">
-            <label className="sr-only" htmlFor="persona-visibility">
-              Expediente
-            </label>
-            <FormSelect
-              aria-label="Expediente"
-              id="persona-visibility"
-              onValueChange={handleVisibilityChange}
-              options={[
-                { value: "expediente", label: "En expediente" },
-                { value: "deleted", label: "Borrados" },
-              ]}
-              value={visibility}
-            />
-          </div>
-          {regions.length > 0 ? (
-            <div className="sm:w-48">
-              <label className="sr-only" htmlFor="persona-region">
-                Región
-              </label>
-              <FormSelect
-                aria-label="Región"
-                id="persona-region"
-                onValueChange={handleRegionChange}
-                options={[
-                  { value: "", label: "Todas las regiones" },
-                  ...regions.map((option) => ({
-                    value: option.id,
-                    label: option.name,
-                  })),
-                ]}
-                value={region}
-              />
-            </div>
-          ) : null}
-        </div>
+      filters={[
+        {
+          id: "status",
+          label: "Relación",
+          value: status,
+          onChange: (next) => controls.setFilter("status", next || null),
+          options: [
+            { value: "activa", label: "Activas" },
+            { value: "baja", label: "Bajas" },
+          ],
+        },
+        {
+          id: "deleted",
+          label: "Expediente",
+          value: visibility === "deleted" ? "deleted" : "",
+          onChange: (next) =>
+            controls.setFilter("deleted", next === "deleted" ? "1" : null),
+          options: [{ value: "deleted", label: "Borrados" }],
+        },
+        ...(regions.length > 0
+          ? [
+              {
+                id: "region",
+                label: "Región",
+                value: region,
+                onChange: (next: string) =>
+                  controls.setFilter("region", next || null),
+                options: regions.map((option) => ({
+                  value: option.id,
+                  label: option.name,
+                })),
+              },
+            ]
+          : []),
+      ]}
+      onClearFilters={() =>
+        controls.setFilters({
+          q: null,
+          status: null,
+          deleted: null,
+          region: null,
+        })
       }
     />
   );

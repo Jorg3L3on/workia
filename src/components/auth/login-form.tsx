@@ -6,7 +6,6 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
-import { LoginBadgeStub } from "@/components/auth/login-badge-stub";
 import { WorkiaMark } from "@/components/brand/workia-mark";
 import { PasswordInput } from "@/components/ui/password-input";
 import { cn } from "@/lib/utils";
@@ -106,19 +105,11 @@ export const LoginForm = () => {
   return (
     <div className="login-badge-shadow w-full">
       <div className="login-badge" data-testid="login-badge">
-        <div className="px-[30px] pt-2 pb-1 max-[400px]:px-[22px]">
-          <div className="mb-[22px] flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5">
-              <WorkiaMark />
-              <span className="text-[17px] font-bold tracking-[-0.01em] text-[color:var(--login-ink)]">
-                workia
-              </span>
-            </div>
-            <span
-              className="rounded border border-[color:var(--login-line)] px-2.5 py-1 font-mono text-[11px] tracking-[0.05em] text-[color:var(--login-ink-faint)]"
-              aria-hidden
-            >
-              ID · RRHH
+        <div className="px-[30px] pt-2 pb-7 max-[400px]:px-[22px]">
+          <div className="mb-[22px] flex items-center gap-2.5">
+            <WorkiaMark />
+            <span className="text-[17px] font-bold tracking-[-0.01em] text-[color:var(--login-ink)]">
+              workia
             </span>
           </div>
 
@@ -195,8 +186,6 @@ export const LoginForm = () => {
             </button>
           </form>
         </div>
-
-        <LoginBadgeStub />
       </div>
     </div>
   );

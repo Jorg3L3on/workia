@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { Badge } from "@/components/ui/badge";
+import { PermissionTag } from "@/components/rbac/permission-tag";
+import { Tag } from "@/components/ui/badge";
 import { pageTitles } from "@/lib/brand/chrome-copy";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,6 +19,8 @@ export const metadata: Metadata = {
   title: pageTitles.administracion,
 };
 
+const SHOWN_PERMISSIONS = 6;
+
 export default async function AdminPage() {
   const session = await requirePlatformAdmin();
   const permissions = await getUserPermissions(session.user.id);
@@ -26,10 +29,10 @@ export default async function AdminPage() {
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight">
-          Admin overview
+          Administración
         </h1>
         <p className="text-muted-foreground text-sm">
-          Signed in as {session.user.email}
+          Empresas de la plataforma, sus roles y permisos.
         </p>
       </div>
 
@@ -49,33 +52,31 @@ export default async function AdminPage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>RBAC</CardTitle>
+            <CardTitle>{pageTitles.rbac}</CardTitle>
             <CardDescription>
-              Review roles, permissions, and user assignments.
+              Qué puede hacer cada rol y quién tiene cada rol.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button asChild>
-              <Link href="/admin/rbac">Open RBAC dashboard</Link>
+            <Button asChild variant="secondary">
+              <Link href="/admin/rbac">Ver roles y permisos</Link>
             </Button>
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Your permissions</CardTitle>
+            <CardTitle>Tus permisos</CardTitle>
             <CardDescription>
-              Effective permissions for your account.
+              Lo que tu cuenta puede hacer en la plataforma.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-2">
-              {permissions.slice(0, 6).map((permission) => (
-                <Badge key={permission} variant="secondary">
-                  {permission}
-                </Badge>
+              {permissions.slice(0, SHOWN_PERMISSIONS).map((permission) => (
+                <PermissionTag key={permission} slug={permission} />
               ))}
-              {permissions.length > 6 ? (
-                <Badge variant="outline">+{permissions.length - 6} more</Badge>
+              {permissions.length > SHOWN_PERMISSIONS ? (
+                <Tag>{permissions.length - SHOWN_PERMISSIONS} más</Tag>
               ) : null}
             </div>
           </CardContent>

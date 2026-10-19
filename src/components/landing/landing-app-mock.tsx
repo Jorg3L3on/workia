@@ -1,6 +1,5 @@
 import {
   CalendarClockIcon,
-  CheckCircle2Icon,
   FileTextIcon,
   FolderTreeIcon,
   HomeIcon,
@@ -68,8 +67,7 @@ export const LandingAppMock = () => {
               <h3 className="text-lg font-semibold tracking-tight sm:text-xl">
                 Qué hay que atender hoy
               </h3>
-              <Badge className="shrink-0" variant="secondary">
-                <CheckCircle2Icon className="size-3" aria-hidden />
+              <Badge className="shrink-0" tone="success">
                 Nada urgente hoy
               </Badge>
             </div>
@@ -98,7 +96,7 @@ export const LandingAppMock = () => {
                   />
                   <p className="text-sm font-medium">Contratos por vencer</p>
                 </div>
-                <Badge variant="secondary">0 pendientes</Badge>
+                <Badge tone="success">0 pendientes</Badge>
               </div>
               <div className="workia-empty-state px-3 py-4 text-center">
                 <p className="text-sm font-medium">
@@ -119,7 +117,7 @@ export const LandingAppMock = () => {
                   />
                   <p className="text-sm font-medium">Equipo pendiente</p>
                 </div>
-                <Badge variant="secondary">0 pendientes</Badge>
+                <Badge tone="success">0 pendientes</Badge>
               </div>
               <div className="workia-empty-state px-3 py-4 text-center">
                 <p className="text-sm font-medium">Sin equipo pendiente</p>

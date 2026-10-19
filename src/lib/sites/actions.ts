@@ -13,6 +13,7 @@ import {
   RegionNotFoundError,
   setSiteRegion,
   softDeleteSite,
+  updateSite,
 } from "./index";
 import {
   requireSitesCreate,
@@ -81,6 +82,79 @@ export const createSiteAction = async (formData: FormData) => {
       throw error;
     },
   );
+  revalidateSites();
+  redirect(catalogHref(CATALOG_PATHS.sucursales, { saved: "site" }));
+};
+
+/** Name, kind and region from the sucursal sheet (WRK-I6-5). */
+export const updateSiteAction = async (siteId: string, formData: FormData) => {
+  let session;
+
+  try {
+    session = await requireSitesUpdate();
+  } catch (error) {
+    if (error instanceof AuthorizationError) {
+      redirect(
+        catalogHref(CATALOG_PATHS.sucursales, { error: "sites-update" }),
+      );
+    }
+
+    redirect("/login");
+  }
+
+  let companyId: string;
+
+  try {
+    companyId = writableCompanyIdFromForm(session, formData);
+  } catch {
+    redirect(
+      catalogHref(CATALOG_PATHS.sucursales, { error: "company-changed" }),
+    );
+  }
+
+  const parsed = siteFormSchema.safeParse({
+    name: String(formData.get("name") ?? ""),
+    kind: String(formData.get("kind") ?? "sucursal"),
+    regionId: String(formData.get("regionId") ?? ""),
+  });
+
+  if (!parsed.success) {
+    redirect(catalogHref(CATALOG_PATHS.sucursales, { error: "site-form" }));
+  }
+
+  const onError = (error: unknown): never => {
+    if (error instanceof DuplicateNameError) {
+      redirect(
+        catalogHref(CATALOG_PATHS.sucursales, { error: "duplicate-name" }),
+      );
+    }
+
+    if (error instanceof RegionNotFoundError) {
+      redirect(
+        catalogHref(CATALOG_PATHS.sucursales, { error: "region-not-found" }),
+      );
+    }
+
+    throw error;
+  };
+
+  const updated = await updateSite(
+    companyId,
+    siteId,
+    parsed.data,
+    session.user.id,
+  ).catch(onError);
+
+  if (!updated) {
+    redirect(catalogHref(CATALOG_PATHS.sucursales, { error: "not-found" }));
+  }
+
+  await setSiteRegion(
+    companyId,
+    siteId,
+    parsed.data.regionId || null,
+    session.user.id,
+  ).catch(onError);
   revalidateSites();
   redirect(catalogHref(CATALOG_PATHS.sucursales, { saved: "site" }));
 };

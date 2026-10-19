@@ -1,7 +1,5 @@
 import { expect, test } from "@playwright/test";
 
-import { chooseSelectOption } from "./choose-select-option";
-
 const loginAsDemoRrhh = async (page: import("@playwright/test").Page) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/login");
@@ -22,7 +20,8 @@ test.describe("Actividades de puesto", () => {
 
     await page.goto("/app/personas");
     const expedienteLink = page
-      .getByRole("link", { name: "Ver expediente" })
+      .getByRole("table")
+      .getByRole("link", { name: /^Ver expediente de / })
       .first();
     await expect(expedienteLink).toBeVisible();
     await expedienteLink.click();
@@ -42,64 +41,52 @@ test.describe("Actividades de puesto", () => {
     await expect(
       page.getByRole("heading", { name: "Actividades", exact: true }),
     ).toBeVisible();
-    await expect(page.getByLabel("Nombre")).toHaveCount(0);
 
     await page.getByRole("button", { name: "Nueva actividad" }).click();
-    await page.getByLabel("Nombre").fill(activityName);
-    await page.getByRole("button", { name: "Crear actividad" }).click();
+    const createSheet = page.getByRole("dialog", { name: "Nueva actividad" });
+    await createSheet.getByLabel("Nombre").fill(activityName);
+    await createSheet.getByRole("button", { name: "Crear actividad" }).click();
     await expect(page.getByRole("status")).toContainText("Cambios guardados");
+    await expect(createSheet).toHaveCount(0);
     await expect(
       page.getByRole("cell", { name: activityName, exact: true }),
     ).toBeVisible();
 
-    await page.goto("/app/catalogo/puestos");
-    await expect(
-      page.getByRole("heading", { name: "Puestos", exact: true }),
-    ).toBeVisible();
-    await expect(page.getByLabel("Puesto a asignar")).toHaveCount(0);
+    const openPuesto = async () => {
+      await page.goto("/app/catalogo/puestos");
+      await page
+        .getByRole("table")
+        .getByRole("button", { name: `Editar ${puestoName}`, exact: true })
+        .click();
+      return page.getByRole("dialog", { name: "Editar puesto" });
+    };
 
-    await page
-      .getByRole("button", { name: "Asignar actividad", exact: true })
-      .click();
-    await chooseSelectOption(page.getByLabel("Puesto a asignar"), puestoName);
-    await chooseSelectOption(
-      page.getByLabel("Actividad a asignar"),
-      activityName,
-    );
-    await page
-      .locator("#catalog-form-assign")
-      .getByRole("button", { name: "Asignar actividad", exact: true })
-      .click();
-    await expect(page.getByRole("status")).toContainText(
-      "Actividad asignada al puesto",
-    );
-    await page
-      .getByPlaceholder("Buscar puesto, área o actividad")
-      .fill(activityName);
+    let sheet = await openPuesto();
+    await sheet.getByRole("button", { name: "Agregar" }).click();
+    await page.getByRole("option", { name: activityName, exact: true }).click();
     await expect(
-      page.getByRole("table").getByText(activityName, { exact: true }),
+      sheet
+        .getByRole("list", { name: "Actividades del puesto" })
+        .getByText(activityName, { exact: true }),
     ).toBeVisible();
+    await sheet.getByRole("button", { name: "Guardar cambios" }).click();
+    await expect(page.getByRole("status")).toContainText("Cambios guardados");
 
     await page.goto(expedienteUrl);
-    await expect(page.getByText("Actividades del puesto")).toBeVisible();
-    await expect(page.getByText(activityName, { exact: true })).toBeVisible();
-
-    await page.goto("/app/catalogo/puestos");
-    await page
-      .getByPlaceholder("Buscar puesto, área o actividad")
-      .fill(activityName);
-    await page
-      .getByRole("button", { name: `Quitar ${activityName} de ${puestoName}` })
-      .click();
-    await expect(page.getByRole("status")).toContainText(
-      "Actividad quitada del puesto",
-    );
-    await page
-      .getByPlaceholder("Buscar puesto, área o actividad")
-      .fill(activityName);
+    // The expediente renders its tabs for desktop and phone; check the visible one.
     await expect(
-      page.getByRole("table").getByText(activityName, { exact: true }),
-    ).toHaveCount(0);
+      page.getByText("Actividades del puesto").locator("visible=true"),
+    ).toBeVisible();
+    await expect(
+      page.getByText(activityName, { exact: true }).locator("visible=true"),
+    ).toBeVisible();
+
+    sheet = await openPuesto();
+    await sheet
+      .getByRole("button", { name: `Quitar ${activityName}`, exact: true })
+      .click();
+    await sheet.getByRole("button", { name: "Guardar cambios" }).click();
+    await expect(page.getByRole("status")).toContainText("Cambios guardados");
 
     await page.goto(expedienteUrl);
     await expect(page.getByText(activityName, { exact: true })).toHaveCount(0);

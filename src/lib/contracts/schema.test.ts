@@ -10,6 +10,7 @@ import {
   isContractInRenewalWindow,
   monthlySalary,
   noticeWindowToMonths,
+  renewalStatus,
   templateTokenValues,
 } from "@/lib/contracts/schema";
 
@@ -276,5 +277,24 @@ describe("official template tokens", () => {
     for (const token of CONTRACT_TEMPLATE_TOKENS) {
       expect(contractTemplateTokenLabels[token]).toBeTruthy();
     }
+  });
+});
+
+describe("renewal status", () => {
+  it("reads overdue, soon and in-window contracts", () => {
+    expect(renewalStatus("2026-10-17", "2026-10-18")).toMatchObject({
+      urgency: "vencido",
+      label: "Vencido",
+    });
+    expect(renewalStatus("2026-10-18", "2026-10-18").label).toBe("Vence hoy");
+    expect(renewalStatus("2026-10-19", "2026-10-18").label).toBe("En 1 día");
+    expect(renewalStatus("2026-11-07", "2026-10-18")).toMatchObject({
+      urgency: "proximo",
+      label: "En 20 días",
+    });
+    expect(renewalStatus("2027-03-27", "2026-10-18")).toMatchObject({
+      urgency: "en_ventana",
+      label: "En ventana",
+    });
   });
 });

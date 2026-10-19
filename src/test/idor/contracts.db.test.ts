@@ -28,7 +28,6 @@ import {
   deactivateContractTemplateAction,
   deleteContractTemplateAction,
   noRenewContractAction,
-  renewContractAction,
   updateContractTemplateAction,
 } from "@/lib/contracts/actions";
 
@@ -210,21 +209,6 @@ describe("contract actions with company B's session", () => {
     expect(result.error).toBe("Plantilla no encontrada.");
   });
 
-  it("action:contracts/renewContractAction", async () => {
-    actAs(b.admin);
-    const before = await snapshotTenant(a);
-    const result = await renewContractAction(
-      {},
-      formData({
-        ...contractInput(a.person.id, b.template.id),
-        contractId: a.contract.id,
-        companyId: b.companyId,
-      }),
-    );
-    expect(result.error).toMatch(/no encontrado/);
-    expect(await snapshotTenant(a)).toEqual(before);
-  });
-
   it.each([
     [
       "action:contracts/noRenewContractAction",
@@ -289,14 +273,6 @@ describe("contract permissions", () => {
           formData(contractInput(b.teammate.id, b.template.id)),
         )
       ).error,
-    ).toMatch(/permiso/);
-  });
-
-  it("rbac:action:contracts/renewContractAction", async () => {
-    actAs(b.viewer);
-    expect(
-      (await renewContractAction({}, formData({ contractId: b.contract.id })))
-        .error,
     ).toMatch(/permiso/);
   });
 

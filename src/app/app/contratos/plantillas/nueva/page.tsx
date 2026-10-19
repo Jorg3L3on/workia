@@ -43,9 +43,6 @@ Vigencia: del {{fecha_inicio}} al {{fecha_fin}}.`;
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
       <header className="space-y-1">
-        <p className="text-muted-foreground font-mono text-[10.5px] font-medium tracking-[0.09em] uppercase">
-          Contratos
-        </p>
         <h1 className="text-2xl font-semibold tracking-tight">
           Nueva plantilla
         </h1>

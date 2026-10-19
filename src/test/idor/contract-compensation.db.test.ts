@@ -14,7 +14,7 @@ import {
 } from "@/lib/contracts";
 import {
   createContractAction,
-  renewContractAction,
+  decideContractRenewalAction,
 } from "@/lib/contracts/actions";
 
 import { seedTenant, type Tenant } from "./fixtures";
@@ -157,10 +157,11 @@ describe("contract compensation", () => {
       t.teammate.id,
     );
     await run(() =>
-      renewContractAction(
+      decideContractRenewalAction(
         {},
         formData({
           ...base(t.teammate.id, t.template.id),
+          decision: "renovar_indeterminado",
           contractId: current!.id,
           companyId: t.companyId,
           startDate: "2027-01-01",
@@ -178,10 +179,11 @@ describe("contract compensation", () => {
 
     actAs(t.editor);
     await run(() =>
-      renewContractAction(
+      decideContractRenewalAction(
         {},
         formData({
           ...base(t.teammate.id, t.template.id),
+          decision: "renovar_indeterminado",
           contractId: withSalary!.id,
           companyId: t.companyId,
           startDate: "2028-01-01",

@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { PencilIcon } from "lucide-react";
+import { FileSignatureIcon, PencilIcon } from "lucide-react";
 
 import { pageTitles } from "@/lib/brand/chrome-copy";
 
@@ -10,12 +9,12 @@ import { AuditEventList } from "@/components/audit/audit-event-list";
 import { PersonContractsSection } from "@/components/contracts/person-contracts-section";
 import { PersonAssetsSection } from "@/components/resguardo/person-assets-section";
 import { PersonExpedienteTabs } from "@/components/people/person-expediente-tabs";
-import { DeletePersonButton } from "@/components/people/delete-person-button";
+import { PersonActionsMenu } from "@/components/people/person-actions-menu";
 import { PersonForm } from "@/components/people/person-form";
 import { SectionSkeleton } from "@/components/loading/page-skeletons";
 import { PageBreadcrumbLabel } from "@/components/layout/app-breadcrumbs";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/layout/page-header";
 import { listAuditEvents } from "@/lib/audit";
 import {
   listActiveAreas,
@@ -43,6 +42,11 @@ import { userHasPermission } from "@/lib/rbac";
 import { formatMexicanAddress } from "@/lib/people/schema";
 import { listActiveSites } from "@/lib/sites";
 import { siteKindLabels } from "@/lib/sites/schema";
+import { deletedTone, toneFor } from "@/lib/ui/status-tone";
+import {
+  deletePersonAction,
+  setPersonStatusAction,
+} from "@/lib/people/actions";
 
 export const metadata: Metadata = {
   title: pageTitles.expediente,
@@ -118,6 +122,7 @@ const PersonaDetailPage = async ({
     canReadAudit,
     canReadContracts,
     canCreateContracts,
+    canUpdateContracts,
     canReadAssets,
     canSeeCompensation,
     personContracts,
@@ -132,6 +137,7 @@ const PersonaDetailPage = async ({
     userHasPermission(session.user.id, "audit:read"),
     userHasPermission(session.user.id, "contracts:read"),
     userHasPermission(session.user.id, "contracts:create"),
+    userHasPermission(session.user.id, "contracts:update"),
     userHasPermission(session.user.id, "assets:read"),
     userHasPermission(session.user.id, "compensation:read"),
     listContractsByPerson(session.companyId, id),
@@ -160,7 +166,7 @@ const PersonaDetailPage = async ({
     ]);
 
     return (
-      <div className="mx-auto w-full max-w-3xl">
+      <div className="mx-auto w-full max-w-5xl">
         <PageBreadcrumbLabel label={personName} />
         <PersonForm
           areas={areas}
@@ -187,6 +193,29 @@ const PersonaDetailPage = async ({
     );
   }
 
+  const canEmit = canCreateContracts && canReadContracts && !isDeleted;
+  // «Decidir renovación» needs positions only when there is something to decide.
+  const renewalPositions =
+    canUpdateContracts &&
+    !isDeleted &&
+    personContracts.some((item) => item.status === "vigente" && item.endDate)
+      ? (await listActivePositions(session.companyId)).map((position) => ({
+          id: position.id,
+          name: position.name,
+        }))
+      : [];
+  const emitHref = `/app/personas/${person.id}?emit=1`;
+  const personMeta = [
+    person.position?.name,
+    person.area?.name,
+    person.site?.name,
+    person.fechaIngreso
+      ? `ingresó ${formatDateLabel(person.fechaIngreso)}`
+      : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
   const defaultTab =
     (emit === "1" || contract === "created") && canReadContracts && !isDeleted
       ? "contratos"
@@ -195,31 +224,67 @@ const PersonaDetailPage = async ({
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
       <PageBreadcrumbLabel label={personName} />
-      <div className="workia-pass-card space-y-4 p-5 sm:p-6">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="space-y-1">
-            <p className="text-muted-foreground font-mono text-[10.5px] font-medium tracking-[0.09em] uppercase">
-              Expediente
-            </p>
-            <h1 className="text-2xl font-semibold tracking-tight">
-              {formatPersonName(person)}
-            </h1>
-            <p className="text-muted-foreground text-sm">
-              Datos de empresa, identificadores y relación laboral.
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge
-              variant={person.status === "activa" ? "default" : "secondary"}
-            >
+      <PageHeader
+        menu={
+          <PersonActionsMenu
+            deleteAction={
+              canDelete && !isDeleted
+                ? deletePersonAction.bind(null, person.id)
+                : undefined
+            }
+            emitContractHref={canEmit ? emitHref : undefined}
+            personId={person.id}
+            personName={personName}
+            showConstancia={canReadContracts}
+            showStartAlta={
+              canUpdate && !isDeleted && person.status === "activa"
+            }
+            status={person.status}
+            statusAction={
+              canUpdate && !isDeleted
+                ? setPersonStatusAction.bind(
+                    null,
+                    person.id,
+                    person.status === "baja" ? "activa" : "baja",
+                  )
+                : undefined
+            }
+          />
+        }
+        meta={personMeta || undefined}
+        primary={
+          canUpdate && !isDeleted
+            ? {
+                label: "Editar",
+                icon: PencilIcon,
+                href: `/app/personas/${person.id}?edit=1`,
+              }
+            : null
+        }
+        secondary={
+          canEmit
+            ? {
+                label: "Emitir contrato",
+                icon: FileSignatureIcon,
+                href: emitHref,
+              }
+            : null
+        }
+        status={
+          <>
+            <Badge tone={toneFor("person", person.status)}>
               {personStatusLabels[person.status]}
             </Badge>
             {isDeleted ? (
-              <Badge variant="destructive">{personDeletedLabel}</Badge>
+              <Badge tone={deletedTone}>{personDeletedLabel}</Badge>
             ) : null}
-          </div>
-        </div>
+          </>
+        }
+        title={personName}
+        variant="detail"
+      />
 
+      <div className="space-y-4 empty:hidden">
         {isDeleted ? (
           <p
             className="border-border/70 bg-muted/40 rounded-lg border px-3 py-2 text-sm"
@@ -247,41 +312,6 @@ const PersonaDetailPage = async ({
             Contrato emitido y guardado en el expediente.
           </p>
         ) : null}
-
-        <div className="flex flex-wrap gap-3">
-          {canUpdate && !isDeleted ? (
-            <Button asChild variant="outline">
-              <Link href={`/app/personas/${person.id}?edit=1`}>
-                <PencilIcon className="size-4" aria-hidden />
-                Editar
-              </Link>
-            </Button>
-          ) : null}
-          {canCreateContracts && canReadContracts && !isDeleted ? (
-            <Button asChild variant="outline">
-              <Link href={`/app/personas/${person.id}?emit=1`}>
-                Emitir contrato
-              </Link>
-            </Button>
-          ) : null}
-          {canReadContracts ? (
-            <Button asChild variant="outline">
-              <Link href={`/app/personas/${person.id}/constancia`}>
-                Constancia de antigüedad
-              </Link>
-            </Button>
-          ) : null}
-          {canDelete && !isDeleted ? (
-            <DeletePersonButton personId={person.id} />
-          ) : null}
-          <Button asChild variant="ghost">
-            <Link
-              href={isDeleted ? "/app/personas?deleted=1" : "/app/personas"}
-            >
-              {isDeleted ? "Ver listado de borrados" : "Volver al listado"}
-            </Link>
-          </Button>
-        </div>
       </div>
 
       <PersonExpedienteTabs
@@ -290,6 +320,9 @@ const PersonaDetailPage = async ({
           canReadContracts ? (
             <PersonContractsSection
               canCreate={canCreateContracts}
+              canDecide={canUpdateContracts && !isDeleted}
+              personName={personName}
+              positions={renewalPositions}
               canSeeCompensation={canSeeCompensation}
               contracts={personContracts}
               personContext={{
@@ -461,8 +494,8 @@ const PersonaDetailPage = async ({
         defaultValue={defaultTab}
         historial={
           canReadAudit ? (
-            <div className="workia-pass-card overflow-hidden">
-              <div className="border-b px-5 py-4">
+            <section className="space-y-3">
+              <div>
                 <h2 className="text-base font-semibold">
                   Historial de cambios
                 </h2>
@@ -473,7 +506,7 @@ const PersonaDetailPage = async ({
               <Suspense fallback={<SectionSkeleton rows={3} />}>
                 <PersonHistory companyId={session.companyId} personId={id} />
               </Suspense>
-            </div>
+            </section>
           ) : undefined
         }
         resguardo={

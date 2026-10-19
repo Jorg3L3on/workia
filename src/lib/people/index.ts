@@ -928,6 +928,53 @@ export const updatePerson = async (
   }, companyId);
 };
 
+/** Baja laboral or reactivation alone: the rest of the expediente stays as is. */
+export const setPersonStatus = async (
+  companyId: string,
+  id: string,
+  status: PersonStatus,
+  actorUserId?: string | null,
+) => {
+  return withTransaction(async (tx) => {
+    const existing = await getPersonById(companyId, id, false, tx);
+
+    if (!existing || existing.status === status) {
+      return existing;
+    }
+
+    const before = snapshotPerson(existing);
+    const [updated] = await tx
+      .update(people)
+      .set({ status })
+      .where(withTenant(people, companyId, eq(people.id, id)))
+      .returning();
+
+    if (!updated) {
+      return null;
+    }
+
+    const after = snapshotPerson(updated);
+
+    await recordAuditEvent(
+      {
+        companyId,
+        actorUserId,
+        resourceType: "person",
+        resourceId: id,
+        action: status === "baja" ? "baja" : "reactivate",
+        payload: {
+          before,
+          after,
+          changes: buildChanges(before, after, ["status"]),
+        },
+      },
+      tx,
+    );
+
+    return updated;
+  }, companyId);
+};
+
 export const softDeletePerson = async (
   companyId: string,
   id: string,

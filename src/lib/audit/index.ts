@@ -4,9 +4,10 @@ import {
   readStoredBlocks,
 } from "@/lib/people/schedule-blocks";
 
-import { and, count, desc, eq, gte, lte, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, lte, or, sql } from "drizzle-orm";
 
 import { tdb, type DbExecutor } from "@/lib/db";
+import { escapeLike } from "@/lib/db/like";
 import { auditEvents, users } from "@/lib/db/schema";
 
 import { currentAuditContext, noteAuditEvent } from "./context";
@@ -74,6 +75,20 @@ const buildAuditFilters = (options: ListAuditEventsOptions) => {
 
   if (options.to) {
     filters.push(lte(auditEvents.occurredAt, options.to));
+  }
+
+  const query = options.query?.trim();
+
+  if (query) {
+    const term = `%${escapeLike(query)}%`;
+    // A subquery for the actor, so the count needs no join.
+    filters.push(
+      or(
+        sql`(${auditEvents.payload} -> 'summary')::text ilike ${term}`,
+        sql`(${auditEvents.payload} -> 'changes')::text ilike ${term}`,
+        sql`exists (select 1 from ${users} where ${users.id} = ${auditEvents.actorUserId} and (${users.name} ilike ${term} or ${users.email} ilike ${term}))`,
+      )!,
+    );
   }
 
   return and(...filters);

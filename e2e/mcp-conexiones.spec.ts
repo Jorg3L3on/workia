@@ -47,6 +47,7 @@ test("personal token: create, copy, use and revoke in /app/conexiones", async ({
   await expect(page).toHaveURL(/\/app\/conexiones/, { timeout: 25_000 });
 
   const name = `E2E ${Date.now()}`;
+  await page.getByRole("button", { name: "Nuevo token" }).click();
   await page.getByLabel("Nombre").fill(name);
   await page.getByRole("button", { name: "Crear token" }).click();
 
@@ -66,7 +67,8 @@ test("personal token: create, copy, use and revoke in /app/conexiones", async ({
 
   const row = page.getByTestId("connection-row").filter({ hasText: name });
   await expect(row).toBeVisible();
-  await row.getByRole("button", { name: `Revocar ${name}` }).click();
+  await row.getByRole("button", { name: `Acciones de ${name}` }).click();
+  await page.getByRole("menuitem", { name: "Revocar" }).click();
   await page
     .getByRole("alertdialog")
     .getByRole("button", { name: "Revocar" })

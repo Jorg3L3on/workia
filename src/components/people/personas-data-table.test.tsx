@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const replace = vi.fn();
@@ -9,7 +9,6 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams("q=demo&page=2"),
 }));
 
-import { chooseSelectOption } from "@/test/choose-select-option";
 import { PersonasDataTable } from "@/components/people/personas-data-table";
 import { OFFICIAL_DELETED_DEMO_FULL_NAME } from "@/lib/people/borrados-cleanup";
 
@@ -75,12 +74,43 @@ describe("PersonasDataTable (server paged)", () => {
   it("asks the server for borrados through the URL and resets the page", () => {
     render(<PersonasDataTable {...baseProps} people={demoPeople} />);
 
-    chooseSelectOption("Expediente", "Borrados");
+    fireEvent.click(screen.getByRole("button", { name: "Expediente" }));
+    fireEvent.click(screen.getByRole("option", { name: "Borrados" }));
 
     expect(replace).toHaveBeenCalledTimes(1);
     const url = String(replace.mock.calls[0][0]);
     expect(url).toContain("deleted=1");
     expect(url).toContain("q=demo");
     expect(url).not.toContain("page=");
+  });
+
+  it("shows the active filter on its chip and clears everything in one URL update", () => {
+    render(
+      <PersonasDataTable {...baseProps} people={demoPeople} status="baja" />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Relación: Bajas" }),
+    ).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /^Filtrar$/ })).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Limpiar" }));
+
+    expect(replace).toHaveBeenCalledTimes(1);
+    expect(String(replace.mock.calls[0][0])).toBe("/app/personas");
+  });
+
+  it("removes one filter with the chip's ✕", () => {
+    render(
+      <PersonasDataTable {...baseProps} people={demoPeople} status="baja" />,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Quitar filtro Relación" }),
+    );
+
+    const url = String(replace.mock.calls[0][0]);
+    expect(url).not.toContain("status=");
+    expect(url).toContain("q=demo");
   });
 });

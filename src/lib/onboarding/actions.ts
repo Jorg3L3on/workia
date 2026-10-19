@@ -96,11 +96,15 @@ export const startOnboardingAction = async (formData: FormData) => {
   redirect(`${ALTAS}/${created.id}?started=1`);
 };
 
-/** Saves the checklist and Infonavit/Fonacot: HR, or Payroll in its stage. */
+/**
+ * Saves the checklist and Infonavit/Fonacot: HR, or Payroll in its stage.
+ * The detail autosaves (WRK-I6-4), so success returns instead of redirecting;
+ * failures still go back to the page with the error.
+ */
 export const updateOnboardingAction = async (
   id: string,
   formData: FormData,
-) => {
+): Promise<{ saved: true }> => {
   const path = `${ALTAS}/${id}`;
   let session;
 
@@ -139,7 +143,7 @@ export const updateOnboardingAction = async (
     failWith(path),
   );
   revalidateAltas(id);
-  back(path, { saved: "1" });
+  return { saved: true };
 };
 
 /** HR approves with people:update; Payroll with payroll:approve. */

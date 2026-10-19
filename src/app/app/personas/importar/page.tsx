@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 import { ImportWizard } from "@/components/import/import-wizard";
-import { ListPageHeader } from "@/components/list/list-page-header";
+import { PageHeader } from "@/components/layout/page-header";
 import { pageTitles } from "@/lib/brand/chrome-copy";
 import { getImportJob } from "@/lib/import/jobs";
 import { isUuid } from "@/lib/import/person-rows";
@@ -26,7 +26,7 @@ const ImportarPersonasPage = async ({ searchParams }: Props) => {
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
-      <ListPageHeader
+      <PageHeader
         description="Carga personas, horarios y contratos desde un archivo, con revisión antes de aplicar."
         title="Importar personas"
       />

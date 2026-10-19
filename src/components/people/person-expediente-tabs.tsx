@@ -14,6 +14,9 @@ type PersonExpedienteTabsProps = {
   historial?: ReactNode;
 };
 
+const chipTab =
+  "max-md:border-border max-md:data-active:bg-primary/10! max-md:flex-none max-md:rounded-full max-md:border max-md:px-3 max-md:py-1 max-md:after:hidden max-md:data-active:border-transparent!";
+
 export const PersonExpedienteTabs = ({
   defaultValue,
   datos,
@@ -23,19 +26,28 @@ export const PersonExpedienteTabs = ({
 }: PersonExpedienteTabsProps) => {
   return (
     <Tabs className="gap-4" defaultValue={defaultValue}>
+      {/* Below 768px the tabs are chips that scroll sideways. */}
       <TabsList
-        className="h-9 w-full justify-start bg-transparent p-0"
+        className="h-9 w-full [scrollbar-width:none] justify-start overflow-x-auto bg-transparent p-0 max-md:h-auto max-md:gap-2"
         variant="line"
       >
-        <TabsTrigger value="datos">Datos</TabsTrigger>
+        <TabsTrigger className={chipTab} value="datos">
+          Datos
+        </TabsTrigger>
         {contratos ? (
-          <TabsTrigger value="contratos">Contratos</TabsTrigger>
+          <TabsTrigger className={chipTab} value="contratos">
+            Contratos
+          </TabsTrigger>
         ) : null}
         {resguardo ? (
-          <TabsTrigger value="resguardo">Resguardo</TabsTrigger>
+          <TabsTrigger className={chipTab} value="resguardo">
+            Resguardo
+          </TabsTrigger>
         ) : null}
         {historial ? (
-          <TabsTrigger value="historial">Historial</TabsTrigger>
+          <TabsTrigger className={chipTab} value="historial">
+            Historial
+          </TabsTrigger>
         ) : null}
       </TabsList>
       <TabsContent value="datos">{datos}</TabsContent>

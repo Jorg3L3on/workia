@@ -9,26 +9,28 @@ const ERROR_MESSAGES: Record<string, string> = {
     "El área elegida ya no existe en esta empresa. Elige otra de la lista.",
   "region-not-found":
     "La región elegida no existe en esta empresa o está inactiva. Elige otra.",
+  "area-cycle":
+    "Un área no puede quedar debajo de sí misma ni de una de sus sub-áreas.",
+  "activity-not-assignable":
+    "Una de las actividades ya no está activa. Revisa las actividades del puesto.",
+  "position-missing": "El puesto ya no existe en esta empresa.",
+  "not-found": "El registro ya no existe en esta empresa.",
 };
 
 type CatalogStatusMessagesProps = {
   error?: string;
   saved?: string;
   deleted?: string;
-  assigned?: string;
-  unassigned?: string;
 };
 
 export const CatalogStatusMessages = ({
   error,
   saved,
   deleted,
-  assigned,
-  unassigned,
 }: CatalogStatusMessagesProps) => {
   const errorMessage = error ? ERROR_MESSAGES[error] : undefined;
 
-  if (!saved && !deleted && !assigned && !unassigned && !errorMessage) {
+  if (!saved && !deleted && !errorMessage) {
     return null;
   }
 
@@ -52,23 +54,7 @@ export const CatalogStatusMessages = ({
           className="text-sm font-medium text-[color:var(--workia-accent-blue)]"
           role="status"
         >
-          Registro borrado lógicamente.
-        </p>
-      ) : null}
-      {assigned ? (
-        <p
-          className="text-sm font-medium text-[color:var(--workia-accent-blue)]"
-          role="status"
-        >
-          Actividad asignada al puesto.
-        </p>
-      ) : null}
-      {unassigned ? (
-        <p
-          className="text-sm font-medium text-[color:var(--workia-accent-blue)]"
-          role="status"
-        >
-          Actividad quitada del puesto.
+          Registro eliminado.
         </p>
       ) : null}
     </>

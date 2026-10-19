@@ -1,14 +1,9 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { FileCheckIcon, PlusIcon } from "lucide-react";
 
 import { PlantillasDataTable } from "@/components/contracts/plantillas-data-table";
-import {
-  ListPageHeader,
-  listPrimaryActionClassName,
-} from "@/components/list/list-page-header";
+import { PageHeader } from "@/components/layout/page-header";
 import { pageTitles } from "@/lib/brand/chrome-copy";
-import { Button } from "@/components/ui/button";
 import { listContractTemplates } from "@/lib/contracts";
 import { requireContractTemplatesRead } from "@/lib/contracts/auth";
 import { addOfficialTemplatesAction } from "@/lib/contracts/actions";
@@ -42,43 +37,30 @@ const PlantillasPage = async ({ searchParams }: PlantillasPageProps) => {
 
   return (
     <div className="flex flex-col gap-6">
-      <ListPageHeader
-        actions={
-          <>
-            <Button asChild className="h-10 rounded-full" variant="outline">
-              <Link href="/app/contratos">Volver a Contratos</Link>
-            </Button>
-            {canCreate ? (
-              <form action={addOfficialTemplatesAction}>
-                <CompanyField />
-                <Button
-                  className="h-10 rounded-full"
-                  title="Crea dos plantillas base (determinado con periodo de prueba e indeterminado con anexo de horario). Revísalas con tu asesor legal antes de usarlas."
-                  type="submit"
-                  variant="outline"
-                >
-                  <FileCheckIcon className="size-4" aria-hidden />
-                  Agregar plantillas oficiales
-                </Button>
-              </form>
-            ) : null}
-            {canCreate ? (
-              <Button asChild className={listPrimaryActionClassName}>
-                <Link href="/app/contratos/plantillas/nueva">
-                  <PlusIcon className="size-4" aria-hidden />
-                  Nueva plantilla
-                </Link>
-              </Button>
-            ) : null}
-          </>
-        }
+      <PageHeader
         description={
           <>
             Cuerpo con variables como {"{{nombres}}"}, {"{{puesto}}"} y{" "}
             {"{{sucursal}}"}.
           </>
         }
-        descriptionSecondary="Lista de todas las plantillas registradas."
+        menu={[
+          canCreate && {
+            label: "Agregar plantillas oficiales",
+            icon: FileCheckIcon,
+            action: addOfficialTemplatesAction,
+            fields: <CompanyField />,
+          },
+        ]}
+        primary={
+          canCreate
+            ? {
+                label: "Nueva plantilla",
+                icon: PlusIcon,
+                href: "/app/contratos/plantillas/nueva",
+              }
+            : null
+        }
         title="Plantillas de contrato"
       />
 

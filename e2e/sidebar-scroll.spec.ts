@@ -99,7 +99,7 @@ test.describe("Sidebar stays pinned while content scrolls", () => {
     await expect(page).toHaveURL(/\/(app|admin)/, { timeout: 25_000 });
     await page.goto("/admin/rbac");
     await expect(
-      page.getByRole("heading", { name: "RBAC Administration" }),
+      page.getByRole("heading", { name: "Roles y permisos", level: 1 }),
     ).toBeVisible();
 
     await stretchContentColumn(page);

@@ -53,12 +53,6 @@ export const LoginStage = ({ children, className }: LoginStageProps) => {
 
       <div className="relative z-[2] flex w-full max-w-[420px] flex-col items-center gap-[18px]">
         {children}
-        <p className="font-mono text-[11px] tracking-[0.04em] text-[color:var(--login-ink-faint)]">
-          Hecho para{" "}
-          <strong className="font-semibold text-[color:var(--login-ink-muted)]">
-            RRHH
-          </strong>
-        </p>
       </div>
     </div>
   );
