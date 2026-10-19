@@ -17,7 +17,12 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
+      // PLAYWRIGHT_CHANNEL=chrome uses the installed Chrome when no browser
+      // build was downloaded.
+      use: {
+        ...devices["Desktop Chrome"],
+        channel: process.env.PLAYWRIGHT_CHANNEL || undefined,
+      },
     },
   ],
   webServer: {
