@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { forbidden } from "next/navigation";
 
-import { ListPageHeader } from "@/components/list/list-page-header";
+import { UserPlusIcon } from "lucide-react";
+
+import { PageHeader } from "@/components/layout/page-header";
 import { MembersPanel } from "@/components/tenant/members-panel";
 import { pageTitles } from "@/lib/brand/chrome-copy";
 import { requireCompanyPage } from "@/lib/tenant/context";
@@ -32,9 +34,17 @@ const MiembrosPage = async () => {
 
   return (
     <div className="flex flex-col gap-6">
-      <ListPageHeader
+      <PageHeader
         description={`Quién tiene acceso a ${session.membership.companyName} y con qué rol.`}
-        descriptionSecondary="Si la persona aún no tiene cuenta, se crea con su correo y entra con Google usando ese correo."
+        primary={
+          session.permissions.has("members:manage")
+            ? {
+                label: "Agregar miembro",
+                icon: UserPlusIcon,
+                href: "#agregar-miembro",
+              }
+            : null
+        }
         title="Miembros"
       />
       <section className="workia-pass-card p-5">

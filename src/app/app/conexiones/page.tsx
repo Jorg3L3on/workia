@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { forbidden } from "next/navigation";
 
+import { KeyRoundIcon } from "lucide-react";
+
+import { PageHeader } from "@/components/layout/page-header";
 import { CopyConnectorUrlButton } from "@/components/mcp/copy-connector-url-button";
-import { ListPageHeader } from "@/components/list/list-page-header";
 import {
   ConnectionsDataTable,
   ToolCallsDataTable,
@@ -26,7 +28,6 @@ import { currentRequest } from "@/lib/mcp/request-origin";
 import { grantableScopes, isMcpScope, scopeLabels } from "@/lib/mcp/scopes";
 import { getMcpSettings } from "@/lib/mcp/settings";
 import { requireCompanyPage } from "@/lib/tenant/context";
-import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -93,10 +94,24 @@ const ConexionesPage = async ({ searchParams }: ConexionesPageProps) => {
 
   return (
     <div className="flex flex-col gap-6">
-      <ListPageHeader
+      <PageHeader
+        description={`Asistentes de IA conectados a ${session.membership.companyName}; cada conexión ve sólo esta empresa y nunca más de lo que permite tu rol.`}
+        primary={
+          canCreate
+            ? {
+                label: "Nuevo token",
+                icon: KeyRoundIcon,
+                href: "#nuevo-token-form",
+              }
+            : null
+        }
+        secondary={
+          // Phones read the URL in «Nuevo token personal» below.
+          <div className="hidden md:block">
+            <CopyConnectorUrlButton url={mcpUrl} />
+          </div>
+        }
         title="Conexiones"
-        description={`Asistentes de IA (Grok Bot, ChatGPT, Cursor, Claude) conectados a ${session.membership.companyName}. Cada conexión ve sólo esta empresa y nunca más de lo que permite tu rol.`}
-        actions={<CopyConnectorUrlButton url={mcpUrl} />}
       />
 
       {!isMcpEnabled() ? (
@@ -119,13 +134,18 @@ const ConexionesPage = async ({ searchParams }: ConexionesPageProps) => {
 
       {canCreate ? (
         <section
-          className="workia-pass-card space-y-4 p-5"
+          className="workia-pass-card scroll-mt-20 space-y-4 p-5"
           aria-labelledby="nuevo-token"
+          id="nuevo-token-form"
         >
           <div className="space-y-1">
             <h2 id="nuevo-token" className="text-lg font-semibold">
               Nuevo token personal
             </h2>
+            <p className="text-sm">
+              URL del conector:{" "}
+              <code className="font-mono break-all">{mcpUrl}</code>
+            </p>
             <p className="text-muted-foreground text-sm">
               Para Grok Bot, Cursor o el MCP Inspector. ChatGPT y Claude se
               conectan con OAuth desde su configuración, con la URL de arriba.
@@ -146,36 +166,6 @@ const ConexionesPage = async ({ searchParams }: ConexionesPageProps) => {
           <h2 id="lista-conexiones" className="text-lg font-semibold">
             {showAll ? "Todas las conexiones" : "Mis conexiones"}
           </h2>
-          {canManage ? (
-            <nav className="flex gap-1 text-sm" aria-label="Vista">
-              {[
-                {
-                  href: "/app/conexiones",
-                  label: "Mis conexiones",
-                  on: !showAll,
-                },
-                {
-                  href: "/app/conexiones?vista=todas",
-                  label: "Todas",
-                  on: showAll,
-                },
-              ].map((tab) => (
-                <Link
-                  key={tab.href}
-                  href={tab.href}
-                  aria-current={tab.on ? "page" : undefined}
-                  className={cn(
-                    "rounded-full px-3 py-1.5",
-                    tab.on
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:bg-muted",
-                  )}
-                >
-                  {tab.label}
-                </Link>
-              ))}
-            </nav>
-          ) : null}
         </div>
 
         <ConnectionsDataTable
@@ -209,6 +199,7 @@ const ConexionesPage = async ({ searchParams }: ConexionesPageProps) => {
                 connection.userId === session.userId ? canCreate : canManage,
             };
           })}
+          canSeeAll={canManage}
           showOwner={showAll}
         />
       </section>

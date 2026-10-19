@@ -1,14 +1,18 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import { useServerListControls } from "@/components/list/use-server-list-controls";
 import { Tag } from "@/components/ui/badge";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import type { AuditPayload } from "@/lib/audit/types";
 import {
+  AUDIT_ACTIONS,
+  AUDIT_RESOURCE_TYPES,
+  AUDIT_SOURCES,
   auditActionLabels,
   auditResourceTypeLabels,
+  auditSourceLabels,
   type AuditAction,
   type AuditResourceType,
 } from "@/lib/audit/types";
@@ -73,14 +77,46 @@ type AuditEventListProps = {
   events: AuditEventRow[];
   emptyMessage?: string;
   layout?: "page" | "inset";
-  /** The server already paged the events (Auditoría); the URL owns paging. */
+  /**
+   * The server already paged and filtered the events (Auditoría); the URL
+   * owns paging, the search and every chip.
+   */
   server?: {
     total: number;
     page: number;
     pageSize: number;
-    hasFilters: boolean;
+    filters: AuditFilterValues;
+    actors: { id: string; label: string }[];
   };
 };
+
+/** Auditoría's URL filters, "" when unset. */
+export type AuditFilterValues = {
+  q: string;
+  resourceType: string;
+  resourceId: string;
+  actorUserId: string;
+  action: string;
+  source: string;
+  from: string;
+  to: string;
+};
+
+const AUDIT_FILTER_KEYS = [
+  "q",
+  "resourceType",
+  "resourceId",
+  "actorUserId",
+  "action",
+  "source",
+  "from",
+  "to",
+] as const;
+
+const actionOptions = AUDIT_ACTIONS.map((action) => ({
+  value: action,
+  label: auditActionLabels[action],
+}));
 
 type AuditTableRow = AuditEventRow & {
   occurredLabel: string;
@@ -97,6 +133,9 @@ export const AuditEventList = ({
   server,
 }: AuditEventListProps) => {
   const controls = useServerListControls();
+  // Embedded lists (expediente, activo) filter the loaded events by action.
+  const [localAction, setLocalAction] = useState("");
+  const values = server?.filters;
   const rows = useMemo<AuditTableRow[]>(
     () =>
       events.map((event) => ({
@@ -188,12 +227,107 @@ export const AuditEventList = ({
         subtitle: `${row.occurredLabel} · ${row.actorLabel}`,
       })}
       pageSizes={server ? controls.pageSizes : undefined}
-      searchable={!server}
-      searchPlaceholder="Buscar en los eventos"
+      searchAriaLabel="Buscar en eventos"
+      searchPlaceholder="Buscar en eventos"
+      filterRow={
+        server || !localAction ? undefined : (row) => row.action === localAction
+      }
+      filters={
+        values
+          ? [
+              {
+                id: "resourceType",
+                label: "Recurso",
+                value: values.resourceType,
+                onChange: (next) =>
+                  controls.setFilter("resourceType", next || null),
+                options: AUDIT_RESOURCE_TYPES.map((type) => ({
+                  value: type,
+                  label: auditResourceTypeLabels[type],
+                })),
+              },
+              {
+                id: "action",
+                label: "Acción",
+                value: values.action,
+                onChange: (next) => controls.setFilter("action", next || null),
+                options: actionOptions,
+              },
+              {
+                id: "actor",
+                label: "Actor",
+                value: values.actorUserId,
+                onChange: (next) =>
+                  controls.setFilter("actorUserId", next || null),
+                options: (server?.actors ?? []).map((actor) => ({
+                  value: actor.id,
+                  label: actor.label,
+                })),
+              },
+              {
+                id: "source",
+                label: "Origen",
+                value: values.source,
+                onChange: (next) => controls.setFilter("source", next || null),
+                options: AUDIT_SOURCES.map((source) => ({
+                  value: source,
+                  label: auditSourceLabels[source],
+                })),
+              },
+            ]
+          : [
+              {
+                id: "action",
+                label: "Acción",
+                value: localAction,
+                onChange: setLocalAction,
+                options: actionOptions.filter((option) =>
+                  events.some((event) => event.action === option.value),
+                ),
+              },
+            ]
+      }
+      dateRange={
+        values
+          ? {
+              from: values.from,
+              to: values.to,
+              onChange: ({ from, to }) =>
+                controls.setFilters({ from: from || null, to: to || null }),
+            }
+          : undefined
+      }
+      advancedFilters={
+        values
+          ? [
+              {
+                id: "resourceId",
+                label: "ID de recurso",
+                value: values.resourceId,
+                placeholder: "Pega el identificador del registro",
+                onChange: (next) =>
+                  controls.setFilter("resourceId", next || null),
+              },
+            ]
+          : undefined
+      }
+      onClearFilters={
+        server
+          ? () =>
+              controls.setFilters(
+                Object.fromEntries(AUDIT_FILTER_KEYS.map((key) => [key, null])),
+              )
+          : () => setLocalAction("")
+      }
       server={
         server
           ? {
-              ...server,
+              total: server.total,
+              page: server.page,
+              pageSize: server.pageSize,
+              query: server.filters.q,
+              hasFilters: Object.values(server.filters).some(Boolean),
+              onQueryChange: controls.setQuery,
               onPageChange: controls.setPage,
               onPageSizeChange: controls.setPageSize,
             }

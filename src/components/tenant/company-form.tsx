@@ -45,7 +45,12 @@ export const CompanyForm = ({ company }: CompanyFormProps) => {
   }, [state]);
 
   return (
-    <form action={action} className="grid gap-3 sm:grid-cols-2">
+    <form
+      action={action}
+      className="grid gap-3 sm:grid-cols-2"
+      // Edit: «Guardar cambios» is the page header's primary (form="company-form").
+      id={company ? "company-form" : "new-company-form"}
+    >
       {company ? (
         <input type="hidden" name="targetCompanyId" value={company.id} />
       ) : null}
@@ -85,10 +90,12 @@ export const CompanyForm = ({ company }: CompanyFormProps) => {
           maxLength={13}
         />
       </div>
-      <div className="flex items-center gap-3 sm:col-span-2">
-        <Button type="submit" disabled={pending}>
-          {company ? "Guardar cambios" : "Crear empresa"}
-        </Button>
+      <div className="flex items-center gap-3 empty:hidden sm:col-span-2">
+        {company ? null : (
+          <Button type="submit" disabled={pending} variant="secondary">
+            Crear empresa
+          </Button>
+        )}
         {state.error ? (
           <p role="alert" className="text-destructive text-sm">
             {state.error}

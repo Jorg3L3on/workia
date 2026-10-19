@@ -2,7 +2,14 @@
 
 import Link from "next/link";
 import { MoreHorizontalIcon, type LucideIcon } from "lucide-react";
-import { Fragment, useRef, useState, type ReactNode } from "react";
+import {
+  Fragment,
+  isValidElement,
+  useRef,
+  useState,
+  type ReactElement,
+  type ReactNode,
+} from "react";
 
 import {
   AlertDialog,
@@ -25,7 +32,8 @@ import { IconButton } from "@/components/ui/icon-button";
 
 export type RowMenuAction = {
   label: string;
-  icon: LucideIcon;
+  /** A component, or an element when a server component builds the menu. */
+  icon: LucideIcon | ReactElement;
   /** Navigates. */
   href?: string;
   /** With `href`: a file download, not a page. */
@@ -39,19 +47,29 @@ export type RowMenuAction = {
   destructive?: boolean;
   /** Asks first in an AlertDialog. */
   confirm?: { title: string; description: ReactNode; confirmLabel: string };
+  /** Only below 768px, e.g. a header secondary that folds into the menu. */
+  mobileOnly?: boolean;
 };
 
 type RowMenuProps = {
   /** Accessible name of the ⋯ trigger, e.g. «Acciones de Sofía». */
   label: string;
   actions: (RowMenuAction | false | null | undefined)[];
+  /** Page headers use a bigger, outlined trigger. */
+  size?: "icon-sm" | "icon";
+  variant?: "ghost" | "secondary";
 };
 
 /**
  * The ⋯ menu at the end of a row: every row action but the inline one, with
  * icons, the destructive one last in red behind a confirmation.
  */
-export const RowMenu = ({ label, actions }: RowMenuProps) => {
+export const RowMenu = ({
+  label,
+  actions,
+  size = "icon-sm",
+  variant = "ghost",
+}: RowMenuProps) => {
   const items = actions.filter((item): item is RowMenuAction => Boolean(item));
   const ordered = [
     ...items.filter((item) => !item.destructive),
@@ -95,7 +113,7 @@ export const RowMenu = ({ label, actions }: RowMenuProps) => {
       {/* Not modal, so a dialog opened from an item gets focus cleanly. */}
       <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
-          <IconButton label={label} size="icon-sm">
+          <IconButton label={label} size={size} variant={variant}>
             <MoreHorizontalIcon aria-hidden />
           </IconButton>
         </DropdownMenuTrigger>
@@ -104,18 +122,19 @@ export const RowMenu = ({ label, actions }: RowMenuProps) => {
             const Icon = item.icon;
             const content = (
               <>
-                <Icon aria-hidden />
+                {isValidElement(Icon) ? Icon : <Icon aria-hidden />}
                 {item.label}
               </>
             );
             const firstDestructive =
               item.destructive && index > 0 && !ordered[index - 1].destructive;
+            const itemClassName = item.mobileOnly ? "md:hidden" : undefined;
 
             return (
               <Fragment key={item.label}>
                 {firstDestructive ? <DropdownMenuSeparator /> : null}
                 {item.href ? (
-                  <DropdownMenuItem asChild>
+                  <DropdownMenuItem asChild className={itemClassName}>
                     {item.download ? (
                       <a download href={item.href}>
                         {content}
@@ -126,6 +145,7 @@ export const RowMenu = ({ label, actions }: RowMenuProps) => {
                   </DropdownMenuItem>
                 ) : (
                   <DropdownMenuItem
+                    className={itemClassName}
                     onSelect={() =>
                       item.confirm ? setConfirming(index) : run(index)
                     }

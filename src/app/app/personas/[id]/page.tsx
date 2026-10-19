@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { PencilIcon } from "lucide-react";
+import { FileSignatureIcon, PencilIcon } from "lucide-react";
 
 import { pageTitles } from "@/lib/brand/chrome-copy";
 
@@ -15,7 +14,7 @@ import { PersonForm } from "@/components/people/person-form";
 import { SectionSkeleton } from "@/components/loading/page-skeletons";
 import { PageBreadcrumbLabel } from "@/components/layout/app-breadcrumbs";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/layout/page-header";
 import { listAuditEvents } from "@/lib/audit";
 import {
   listActiveAreas,
@@ -192,6 +191,19 @@ const PersonaDetailPage = async ({
     );
   }
 
+  const canEmit = canCreateContracts && canReadContracts && !isDeleted;
+  const emitHref = `/app/personas/${person.id}?emit=1`;
+  const personMeta = [
+    person.position?.name,
+    person.area?.name,
+    person.site?.name,
+    person.fechaIngreso
+      ? `ingresó ${formatDateLabel(person.fechaIngreso)}`
+      : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
   const defaultTab =
     (emit === "1" || contract === "created") && canReadContracts && !isDeleted
       ? "contratos"
@@ -200,24 +212,67 @@ const PersonaDetailPage = async ({
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
       <PageBreadcrumbLabel label={personName} />
-      <div className="space-y-4">
-        <div className="space-y-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-semibold tracking-tight">
-              {formatPersonName(person)}
-            </h1>
+      <PageHeader
+        menu={
+          <PersonActionsMenu
+            deleteAction={
+              canDelete && !isDeleted
+                ? deletePersonAction.bind(null, person.id)
+                : undefined
+            }
+            emitContractHref={canEmit ? emitHref : undefined}
+            personId={person.id}
+            personName={personName}
+            showConstancia={canReadContracts}
+            showStartAlta={
+              canUpdate && !isDeleted && person.status === "activa"
+            }
+            status={person.status}
+            statusAction={
+              canUpdate && !isDeleted
+                ? setPersonStatusAction.bind(
+                    null,
+                    person.id,
+                    person.status === "baja" ? "activa" : "baja",
+                  )
+                : undefined
+            }
+          />
+        }
+        meta={personMeta || undefined}
+        primary={
+          canUpdate && !isDeleted
+            ? {
+                label: "Editar",
+                icon: PencilIcon,
+                href: `/app/personas/${person.id}?edit=1`,
+              }
+            : null
+        }
+        secondary={
+          canEmit
+            ? {
+                label: "Emitir contrato",
+                icon: FileSignatureIcon,
+                href: emitHref,
+              }
+            : null
+        }
+        status={
+          <>
             <Badge tone={toneFor("person", person.status)}>
               {personStatusLabels[person.status]}
             </Badge>
             {isDeleted ? (
               <Badge tone={deletedTone}>{personDeletedLabel}</Badge>
             ) : null}
-          </div>
-          <p className="text-muted-foreground text-sm">
-            Datos de empresa, identificadores y relación laboral.
-          </p>
-        </div>
+          </>
+        }
+        title={personName}
+        variant="detail"
+      />
 
+      <div className="space-y-4 empty:hidden">
         {isDeleted ? (
           <p
             className="border-border/70 bg-muted/40 rounded-lg border px-3 py-2 text-sm"
@@ -245,51 +300,6 @@ const PersonaDetailPage = async ({
             Contrato emitido y guardado en el expediente.
           </p>
         ) : null}
-
-        <div className="flex flex-wrap gap-2">
-          {canUpdate && !isDeleted ? (
-            <Button asChild>
-              <Link href={`/app/personas/${person.id}?edit=1`}>
-                <PencilIcon className="size-4" aria-hidden />
-                Editar
-              </Link>
-            </Button>
-          ) : null}
-          {canCreateContracts && canReadContracts && !isDeleted ? (
-            <Button asChild variant="secondary">
-              <Link href={`/app/personas/${person.id}?emit=1`}>
-                Emitir contrato
-              </Link>
-            </Button>
-          ) : null}
-          <PersonActionsMenu
-            deleteAction={
-              canDelete && !isDeleted
-                ? deletePersonAction.bind(null, person.id)
-                : undefined
-            }
-            personId={person.id}
-            personName={personName}
-            showConstancia={canReadContracts}
-            status={person.status}
-            statusAction={
-              canUpdate && !isDeleted
-                ? setPersonStatusAction.bind(
-                    null,
-                    person.id,
-                    person.status === "baja" ? "activa" : "baja",
-                  )
-                : undefined
-            }
-          />
-          <Button asChild variant="ghost">
-            <Link
-              href={isDeleted ? "/app/personas?deleted=1" : "/app/personas"}
-            >
-              {isDeleted ? "Ver listado de borrados" : "Volver al listado"}
-            </Link>
-          </Button>
-        </div>
       </div>
 
       <PersonExpedienteTabs

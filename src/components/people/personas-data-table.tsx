@@ -12,7 +12,6 @@ import {
   type DataTableColumn,
 } from "@/components/ui/data-table";
 import type { PersonaListRow } from "@/components/people/persona-list-row";
-import { FormSelect } from "@/components/ui/form-select";
 import { formatDateMx } from "@/lib/format/date";
 import {
   personDeletedLabel,
@@ -66,18 +65,6 @@ export const PersonasDataTable = ({
   canReadContracts = false,
 }: PersonasDataTableProps) => {
   const controls = useServerListControls();
-
-  const handleRegionChange = (next: string) => {
-    controls.setFilter("region", next || null);
-  };
-
-  const handleStatusChange = (next: string) => {
-    controls.setFilter("status", next || null);
-  };
-
-  const handleVisibilityChange = (next: string) => {
-    controls.setFilter("deleted", next === "deleted" ? "1" : null);
-  };
 
   const columns = useMemo<DataTableColumn<PersonaListRow>[]>(
     () => [
@@ -181,65 +168,53 @@ export const PersonasDataTable = ({
         page,
         pageSize,
         query,
-        hasFilters: Boolean(query || status || region),
+        hasFilters: Boolean(query || status || region || viewingDeleted),
         onQueryChange: controls.setQuery,
         onPageChange: controls.setPage,
         onPageSizeChange: controls.setPageSize,
       }}
-      toolbar={
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <div className="sm:w-48">
-            <label className="sr-only" htmlFor="persona-status">
-              Relación
-            </label>
-            <FormSelect
-              aria-label="Relación"
-              id="persona-status"
-              onValueChange={handleStatusChange}
-              options={[
-                { value: "", label: "Todos los estados" },
-                { value: "activa", label: "Activas" },
-                { value: "baja", label: "Bajas" },
-              ]}
-              value={status}
-            />
-          </div>
-          <div className="sm:w-48">
-            <label className="sr-only" htmlFor="persona-visibility">
-              Expediente
-            </label>
-            <FormSelect
-              aria-label="Expediente"
-              id="persona-visibility"
-              onValueChange={handleVisibilityChange}
-              options={[
-                { value: "expediente", label: "En expediente" },
-                { value: "deleted", label: "Borrados" },
-              ]}
-              value={visibility}
-            />
-          </div>
-          {regions.length > 0 ? (
-            <div className="sm:w-48">
-              <label className="sr-only" htmlFor="persona-region">
-                Región
-              </label>
-              <FormSelect
-                aria-label="Región"
-                id="persona-region"
-                onValueChange={handleRegionChange}
-                options={[
-                  { value: "", label: "Todas las regiones" },
-                  ...regions.map((option) => ({
-                    value: option.id,
-                    label: option.name,
-                  })),
-                ]}
-                value={region}
-              />
-            </div>
-          ) : null}
-        </div>
+      filters={[
+        {
+          id: "status",
+          label: "Relación",
+          value: status,
+          onChange: (next) => controls.setFilter("status", next || null),
+          options: [
+            { value: "activa", label: "Activas" },
+            { value: "baja", label: "Bajas" },
+          ],
+        },
+        {
+          id: "deleted",
+          label: "Expediente",
+          value: visibility === "deleted" ? "deleted" : "",
+          onChange: (next) =>
+            controls.setFilter("deleted", next === "deleted" ? "1" : null),
+          options: [{ value: "deleted", label: "Borrados" }],
+        },
+        ...(regions.length > 0
+          ? [
+              {
+                id: "region",
+                label: "Región",
+                value: region,
+                onChange: (next: string) =>
+                  controls.setFilter("region", next || null),
+                options: regions.map((option) => ({
+                  value: option.id,
+                  label: option.name,
+                })),
+              },
+            ]
+          : []),
+      ]}
+      onClearFilters={() =>
+        controls.setFilters({
+          q: null,
+          status: null,
+          deleted: null,
+          region: null,
+        })
       }
     />
   );

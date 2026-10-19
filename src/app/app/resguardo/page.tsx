@@ -1,13 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { PlusIcon, SearchIcon } from "lucide-react";
+import { PlusIcon } from "lucide-react";
 
 import { pageTitles } from "@/lib/brand/chrome-copy";
-import { FormSelect } from "@/components/ui/form-select";
-import { ListPageHeader } from "@/components/list/list-page-header";
+import { PageHeader } from "@/components/layout/page-header";
 import { AssetsDataTable } from "@/components/resguardo/assets-data-table";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { parseListPaging } from "@/lib/list/paging";
 import { listAssetsPage } from "@/lib/resguardo";
 import { assertAssetsListAccess } from "@/lib/resguardo/actions";
@@ -44,19 +42,17 @@ const ResguardoPage = async ({ searchParams }: ResguardoPageProps) => {
 
   return (
     <div className="flex flex-col gap-6">
-      <ListPageHeader
-        actions={
-          canCreate ? (
-            <Button asChild>
-              <Link href="/app/resguardo/nuevo">
-                <PlusIcon className="size-4" aria-hidden />
-                Nuevo activo
-              </Link>
-            </Button>
-          ) : undefined
+      <PageHeader
+        description="Qué existe, quién lo tiene hoy y su historial de entregas."
+        primary={
+          canCreate
+            ? {
+                label: "Nuevo activo",
+                icon: PlusIcon,
+                href: "/app/resguardo/nuevo",
+              }
+            : null
         }
-        description="Qué existe, quién lo tiene hoy y el historial de entregas y devoluciones."
-        descriptionSecondary="Lista de todos los activos registrados."
         title="Resguardo"
       />
 
@@ -75,43 +71,6 @@ const ResguardoPage = async ({ searchParams }: ResguardoPageProps) => {
         </p>
       ) : null}
 
-      <form className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-        <div className="relative min-w-0 flex-1">
-          <SearchIcon
-            className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
-            aria-hidden
-          />
-          <Input
-            aria-label="Buscar activos"
-            className="bg-card h-10 rounded-lg pl-9"
-            defaultValue={q ?? ""}
-            id="q"
-            name="q"
-            placeholder="Buscar activos..."
-          />
-        </div>
-        <div className="sm:w-48">
-          <label className="sr-only" htmlFor="status">
-            Estado
-          </label>
-          <FormSelect
-            aria-label="Estado"
-            defaultValue={status ?? ""}
-            id="status"
-            name="status"
-            options={[
-              { value: "", label: "Todos los estados" },
-              { value: "disponible", label: "En almacén" },
-              { value: "asignado", label: "Asignado" },
-              { value: "baja", label: "Baja" },
-            ]}
-          />
-        </div>
-        <Button type="submit" variant="secondary">
-          Filtrar
-        </Button>
-      </form>
-
       <AssetsDataTable
         assets={items}
         canUpdate={canUpdate}
@@ -128,6 +87,8 @@ const ResguardoPage = async ({ searchParams }: ResguardoPageProps) => {
             : "Cuando existan registros, los verás aquí."
         }
         hasFilters={Boolean(q || status)}
+        query={q?.trim() ?? ""}
+        status={status ?? ""}
         page={page}
         pageSize={pageSize}
         total={total}

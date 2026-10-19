@@ -97,7 +97,8 @@ const AddMemberForm = ({
     <form
       ref={formRef}
       action={action}
-      className="grid gap-3 sm:grid-cols-[1fr_12rem_auto] sm:items-end"
+      className="grid scroll-mt-20 gap-3 sm:grid-cols-[1fr_12rem_auto] sm:items-end"
+      id="agregar-miembro"
     >
       <ScopeFields scope={scope} />
       <div className="space-y-2">
@@ -127,8 +128,8 @@ const AddMemberForm = ({
       <Button
         type="submit"
         disabled={pending}
-        // On /admin/empresas/[id] «Guardar cambios» is the view's primary.
-        variant={scope.kind === "platform" ? "secondary" : "primary"}
+        // The header owns the view's primary («Agregar miembro», «Guardar cambios»).
+        variant="secondary"
       >
         Agregar miembro
       </Button>

@@ -61,6 +61,9 @@ type AssetsDataTableProps = {
   page: number;
   pageSize: number;
   hasFilters: boolean;
+  /** Search and status chip, server-side through ?q= and ?status=. */
+  query: string;
+  status: string;
   canUpdate: boolean;
   emptyAction?: ReactNode;
   emptyDescription: string;
@@ -73,6 +76,8 @@ export const AssetsDataTable = ({
   page,
   pageSize,
   hasFilters,
+  query,
+  status,
   canUpdate,
   emptyAction,
   emptyDescription,
@@ -149,13 +154,30 @@ export const AssetsDataTable = ({
         badge: <AssetStatus row={row} />,
       })}
       pageSizes={controls.pageSizes}
+      filters={[
+        {
+          id: "status",
+          label: "Estado",
+          value: status,
+          onChange: (next) => controls.setFilter("status", next || null),
+          options: [
+            { value: "disponible", label: assetStatusLabels.disponible },
+            { value: "asignado", label: assetStatusLabels.asignado },
+            { value: "baja", label: assetStatusLabels.baja },
+          ],
+        },
+      ]}
+      onClearFilters={() => controls.setFilters({ q: null, status: null })}
       rowTestId="asset-row"
-      searchable={false}
+      searchAriaLabel="Buscar activos"
+      searchPlaceholder="Buscar activos..."
       server={{
         total,
         page,
         pageSize,
         hasFilters,
+        query,
+        onQueryChange: controls.setQuery,
         onPageChange: controls.setPage,
         onPageSizeChange: controls.setPageSize,
       }}

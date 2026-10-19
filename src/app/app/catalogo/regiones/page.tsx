@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import { CatalogFormTray } from "@/components/catalog/catalog-form-tray";
 import { CatalogRegionsTable } from "@/components/catalog/catalog-regions-table";
 import { CatalogStatusMessages } from "@/components/catalog/catalog-status-messages";
-import { ListPageHeader } from "@/components/list/list-page-header";
 import { CompanyField } from "@/components/tenant/company-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,46 +43,42 @@ const RegionesCatalogPage = async ({
 
   return (
     <div className="flex flex-col gap-6">
-      <ListPageHeader
-        description="Agrupan sucursales (p. ej. Norte, Bajío). Cada sucursal pertenece a una región o a ninguna."
-        descriptionSecondary="Personas y la bandeja de renovación se pueden filtrar por región."
+      <CatalogFormTray
+        description="Agrupan sucursales, p. ej. Norte o Bajío."
         title="Regiones"
+        actions={
+          canCreate
+            ? [
+                {
+                  id: "create",
+                  actionLabel: "Nueva región",
+                  formTitle: "Nueva región",
+                  children: (
+                    <form action={createRegionAction} className="space-y-3">
+                      <CompanyField />
+                      <div className="space-y-2 sm:max-w-sm">
+                        <Label htmlFor="region-name">Nombre</Label>
+                        <Input
+                          id="region-name"
+                          name="name"
+                          placeholder="Ej. Región Norte"
+                          required
+                        />
+                      </div>
+                      <Button type="submit" variant="secondary">
+                        Crear región
+                      </Button>
+                    </form>
+                  ),
+                },
+              ]
+            : []
+        }
       />
 
       <CatalogStatusMessages error={error} deleted={deleted} saved={saved} />
 
       <section className="space-y-4">
-        <CatalogFormTray
-          actions={
-            canCreate
-              ? [
-                  {
-                    id: "create",
-                    actionLabel: "Nueva región",
-                    formTitle: "Nueva región",
-                    children: (
-                      <form action={createRegionAction} className="space-y-3">
-                        <CompanyField />
-                        <div className="space-y-2 sm:max-w-sm">
-                          <Label htmlFor="region-name">Nombre</Label>
-                          <Input
-                            id="region-name"
-                            name="name"
-                            placeholder="Ej. Región Norte"
-                            required
-                          />
-                        </div>
-                        <Button type="submit" variant="secondary">
-                          Crear región
-                        </Button>
-                      </form>
-                    ),
-                  },
-                ]
-              : []
-          }
-        />
-
         <CatalogRegionsTable
           canDelete={canDelete}
           canUpdate={canUpdate}

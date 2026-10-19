@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { UserRoundIcon } from "lucide-react";
 import { notFound } from "next/navigation";
 
+import { PageBreadcrumbLabel } from "@/components/layout/app-breadcrumbs";
+import { PageHeader } from "@/components/layout/page-header";
 import { CompanyField } from "@/components/tenant/company-context";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { FormSelect } from "@/components/ui/form-select";
 import { Input } from "@/components/ui/input";
@@ -25,6 +28,7 @@ import {
 import { requirePeopleRead } from "@/lib/people/auth";
 import { formatPersonName } from "@/lib/people/schema";
 import { userHasPermission } from "@/lib/rbac";
+import { toneFor } from "@/lib/ui/status-tone";
 
 export const dynamic = "force-dynamic";
 
@@ -82,17 +86,24 @@ const AltaPage = async ({ params, searchParams }: AltaPageProps) => {
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <p className="text-muted-foreground text-xs tracking-widest uppercase">
-            Alta · {onboardingStageLabels[onboarding.stage]}
-          </p>
-          <h1 className="text-xl font-semibold">{formatPersonName(person)}</h1>
-        </div>
-        <Button asChild variant="ghost">
-          <Link href={`/app/personas/${person.id}`}>Ver expediente</Link>
-        </Button>
-      </div>
+      <PageBreadcrumbLabel label={formatPersonName(person)} />
+      <PageHeader
+        menu={[
+          {
+            label: "Ver expediente",
+            icon: UserRoundIcon,
+            href: `/app/personas/${person.id}`,
+          },
+        ]}
+        meta="Alta RH → Nóminas"
+        status={
+          <Badge tone={toneFor("onboarding", onboarding.stage)}>
+            {onboardingStageLabels[onboarding.stage]}
+          </Badge>
+        }
+        title={formatPersonName(person)}
+        variant="detail"
+      />
 
       {query.error ? (
         <p className="text-destructive text-sm font-medium" role="alert">

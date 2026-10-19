@@ -8,7 +8,9 @@ import {
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  usePathname: () => "/app/contratos",
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 vi.mock("@/lib/contracts/actions", () => ({

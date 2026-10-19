@@ -5,7 +5,6 @@ import { CatalogPositionsTable } from "@/components/catalog/catalog-data-tables"
 import { pageTitles } from "@/lib/brand/chrome-copy";
 import { CatalogStatusMessages } from "@/components/catalog/catalog-status-messages";
 import { PositionActivitiesAssign } from "@/components/catalog/position-activities-assign";
-import { ListPageHeader } from "@/components/list/list-page-header";
 import { Button } from "@/components/ui/button";
 import { FormSelect } from "@/components/ui/form-select";
 import { Input } from "@/components/ui/input";
@@ -70,10 +69,85 @@ const PuestosCatalogPage = async ({
 
   return (
     <div className="flex flex-col gap-6">
-      <ListPageHeader
-        description="Puestos opcionalmente ligados a un área, con actividades asignadas."
-        descriptionSecondary="Lista de todos los puestos registrados."
+      <CatalogFormTray
+        description="Puestos ligados a un área, con sus actividades."
         title="Puestos"
+        actions={[
+          ...(canCreatePosition
+            ? [
+                {
+                  id: "create",
+                  actionLabel: "Nuevo puesto",
+                  formTitle: "Nuevo puesto",
+                  children: (
+                    <form action={createPositionAction} className="space-y-3">
+                      <CompanyField />
+                      <div className="space-y-2">
+                        <Label htmlFor="position-name">Nombre</Label>
+                        <Input
+                          id="position-name"
+                          name="name"
+                          placeholder="Ej. Coordinador"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="position-area">Área (opcional)</Label>
+                        <FormSelect
+                          id="position-area"
+                          name="areaId"
+                          options={[
+                            { value: "", label: "Sin área" },
+                            ...activeAreas.map((area) => ({
+                              value: area.id,
+                              label: area.name,
+                            })),
+                          ]}
+                          variant="field"
+                        />
+                      </div>
+                      <label className="flex items-center gap-2 text-sm">
+                        <input
+                          defaultChecked
+                          name="active"
+                          type="checkbox"
+                          value="true"
+                        />
+                        Activo
+                      </label>
+                      <Button type="submit" variant="secondary">
+                        Crear puesto
+                      </Button>
+                    </form>
+                  ),
+                },
+              ]
+            : []),
+          ...(canShowAssign
+            ? [
+                {
+                  id: "assign",
+                  actionLabel: "Asignar actividad",
+                  formTitle: "Asignar actividad",
+                  children: (
+                    <PositionActivitiesAssign
+                      activities={assignableActivities.map((activity) => ({
+                        id: activity.id,
+                        name: activity.name,
+                      }))}
+                      positions={positions.map((position) => ({
+                        id: position.id,
+                        name: position.name,
+                        assignedActivityIds: (
+                          activitiesByPosition.get(position.id) ?? []
+                        ).map((activity) => activity.id),
+                      }))}
+                    />
+                  ),
+                },
+              ]
+            : []),
+        ]}
       />
 
       <CatalogStatusMessages
@@ -85,85 +159,6 @@ const PuestosCatalogPage = async ({
       />
 
       <section className="space-y-4">
-        <CatalogFormTray
-          actions={[
-            ...(canCreatePosition
-              ? [
-                  {
-                    id: "create",
-                    actionLabel: "Nuevo puesto",
-                    formTitle: "Nuevo puesto",
-                    children: (
-                      <form action={createPositionAction} className="space-y-3">
-                        <CompanyField />
-                        <div className="space-y-2">
-                          <Label htmlFor="position-name">Nombre</Label>
-                          <Input
-                            id="position-name"
-                            name="name"
-                            placeholder="Ej. Coordinador"
-                            required
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="position-area">Área (opcional)</Label>
-                          <FormSelect
-                            id="position-area"
-                            name="areaId"
-                            options={[
-                              { value: "", label: "Sin área" },
-                              ...activeAreas.map((area) => ({
-                                value: area.id,
-                                label: area.name,
-                              })),
-                            ]}
-                            variant="field"
-                          />
-                        </div>
-                        <label className="flex items-center gap-2 text-sm">
-                          <input
-                            defaultChecked
-                            name="active"
-                            type="checkbox"
-                            value="true"
-                          />
-                          Activo
-                        </label>
-                        <Button type="submit" variant="secondary">
-                          Crear puesto
-                        </Button>
-                      </form>
-                    ),
-                  },
-                ]
-              : []),
-            ...(canShowAssign
-              ? [
-                  {
-                    id: "assign",
-                    actionLabel: "Asignar actividad",
-                    formTitle: "Asignar actividad",
-                    children: (
-                      <PositionActivitiesAssign
-                        activities={assignableActivities.map((activity) => ({
-                          id: activity.id,
-                          name: activity.name,
-                        }))}
-                        positions={positions.map((position) => ({
-                          id: position.id,
-                          name: position.name,
-                          assignedActivityIds: (
-                            activitiesByPosition.get(position.id) ?? []
-                          ).map((activity) => activity.id),
-                        }))}
-                      />
-                    ),
-                  },
-                ]
-              : []),
-          ]}
-        />
-
         <CatalogPositionsTable
           canAssign={canAssignActivity}
           canDelete={canDeletePosition}

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { EllipsisIcon } from "lucide-react";
+import { ArchiveXIcon, PackageCheckIcon, PackageOpenIcon } from "lucide-react";
 import { notFound } from "next/navigation";
 
 import { pageTitles } from "@/lib/brand/chrome-copy";
@@ -11,14 +11,7 @@ import { ReturnAssetForm } from "@/components/resguardo/return-asset-form";
 import { PageBreadcrumbLabel } from "@/components/layout/app-breadcrumbs";
 import { AssetMovementsTable } from "@/components/resguardo/assets-data-table";
 import { Badge, Tag } from "@/components/ui/badge";
-import { ActionMenuItem } from "@/components/ui/action-menu-item";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { IconButton } from "@/components/ui/icon-button";
+import { PageHeader } from "@/components/layout/page-header";
 import { listAuditEvents } from "@/lib/audit";
 import { getAssetWithHolder, listAssetMovements } from "@/lib/resguardo";
 import { deleteAssetAction } from "@/lib/resguardo/actions";
@@ -112,23 +105,56 @@ const AssetDetailPage = async ({
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
       <PageBreadcrumbLabel label={asset.name} />
-      <div className="space-y-4">
-        <div className="space-y-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-semibold tracking-tight">
-              {asset.name}
-            </h1>
+      <PageHeader
+        menu={[
+          canDelete &&
+            asset.status !== "asignado" && {
+              label: "Dar de baja",
+              icon: ArchiveXIcon,
+              action: deleteAssetAction.bind(null, asset.id),
+              destructive: true,
+              confirm: {
+                title: `Dar de baja «${asset.name}»`,
+                description:
+                  "El activo deja el inventario activo. Su historial de entregas y devoluciones se conserva.",
+                confirmLabel: "Dar de baja",
+              },
+            },
+        ]}
+        meta={
+          <>
+            <span className="font-mono">{asset.identifier}</span> ·{" "}
+            {assetCategoryLabels[asset.category] ?? asset.category}
+          </>
+        }
+        primary={
+          canAssign && !showAssignForm
+            ? {
+                label: "Entregar",
+                icon: PackageOpenIcon,
+                href: `/app/resguardo/${asset.id}?assign=1`,
+              }
+            : canReturn && !showReturnForm
+              ? {
+                  label: "Devolver",
+                  icon: PackageCheckIcon,
+                  href: `/app/resguardo/${asset.id}?return=1`,
+                }
+              : null
+        }
+        status={
+          <>
             <Badge tone={toneFor("asset", asset.status)}>
               {assetStatusLabels[asset.status]}
             </Badge>
             {!asset.tracksHistory ? <Tag>Sin historial</Tag> : null}
-          </div>
-          <p className="text-muted-foreground text-sm">
-            <span className="font-mono">{asset.identifier}</span> ·{" "}
-            {assetCategoryLabels[asset.category] ?? asset.category}
-          </p>
-        </div>
+          </>
+        }
+        title={asset.name}
+        variant="detail"
+      />
 
+      <div className="space-y-4">
         {created === "1" ? (
           <p
             className="text-sm font-medium text-[color:var(--workia-accent-blue)]"
@@ -183,39 +209,6 @@ const AssetDetailPage = async ({
             <dd className="font-medium">{asset.conditionNote ?? "—"}</dd>
           </div>
         </dl>
-
-        <div className="flex flex-wrap gap-2 pt-1">
-          {canAssign && !showAssignForm ? (
-            <Button asChild>
-              <Link href={`/app/resguardo/${asset.id}?assign=1`}>Entregar</Link>
-            </Button>
-          ) : null}
-          {canReturn && !showReturnForm ? (
-            <Button asChild>
-              <Link href={`/app/resguardo/${asset.id}?return=1`}>Devolver</Link>
-            </Button>
-          ) : null}
-          {canDelete && asset.status !== "asignado" ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <IconButton label="Más acciones" variant="secondary">
-                  <EllipsisIcon aria-hidden />
-                </IconButton>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <ActionMenuItem
-                  action={deleteAssetAction.bind(null, asset.id)}
-                  variant="destructive"
-                >
-                  Dar de baja
-                </ActionMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : null}
-          <Button asChild variant="ghost">
-            <Link href="/app/resguardo">Volver al inventario</Link>
-          </Button>
-        </div>
       </div>
 
       {showAssignForm ? (

@@ -10,6 +10,7 @@ afterEach(() => {
 const renderTray = () =>
   render(
     <CatalogFormTray
+      title="Puestos"
       actions={[
         {
           id: "create",

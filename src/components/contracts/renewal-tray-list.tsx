@@ -4,6 +4,7 @@ import { CalendarCheckIcon, RefreshCwIcon, UserRoundIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { CompensationDefaults } from "@/components/contracts/compensation-fields";
 
+import { useServerListControls } from "@/components/list/use-server-list-controls";
 import { RenewalDecisionDialog } from "@/components/contracts/renewal-decision-dialog";
 import { RenewContractForm } from "@/components/contracts/renew-contract-form";
 import { Badge } from "@/components/ui/badge";
@@ -40,6 +41,9 @@ export type RenewalTrayListProps = {
   canSeeCompensation?: boolean;
   /** Active positions, for a position change with the renewal (WRK-I5-6). */
   positions?: { id: string; name: string }[];
+  /** Region chip (WRK-I5-4), server-side through ?region=; hidden without regions. */
+  regions?: { id: string; name: string }[];
+  region?: string;
 };
 
 type RenewalRow = {
@@ -66,7 +70,10 @@ export const RenewalTrayList = ({
   today,
   canSeeCompensation = false,
   positions = [],
+  regions = [],
+  region = "",
 }: RenewalTrayListProps) => {
+  const controls = useServerListControls();
   const [expandedContractId, setExpandedContractId] = useState<string | null>(
     null,
   );
@@ -205,6 +212,24 @@ export const RenewalTrayList = ({
             label={`Acciones de ${row.personName}`}
           />
         )}
+        filters={
+          regions.length > 0
+            ? [
+                {
+                  id: "region",
+                  label: "Región",
+                  value: region,
+                  onChange: (next) =>
+                    controls.setFilter("region", next || null),
+                  options: regions.map((item) => ({
+                    value: item.id,
+                    label: item.name,
+                  })),
+                },
+              ]
+            : undefined
+        }
+        onClearFilters={() => controls.setFilter("region", null)}
         rowTestId="renewal-row"
         searchPlaceholder="Buscar persona o fecha"
       />

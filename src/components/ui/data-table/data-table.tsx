@@ -11,15 +11,12 @@ import {
   type PaginationState,
   type SortingState,
 } from "@tanstack/react-table";
-import { ArrowDownIcon, ArrowUpIcon, SearchIcon } from "lucide-react";
+import { ArrowDownIcon, ArrowUpIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
   Fragment,
-  useEffect,
-  useId,
   useMemo,
   useState,
-  type ChangeEvent,
   type KeyboardEvent,
   type MouseEvent,
   type ReactNode,
@@ -29,8 +26,13 @@ import {
   ListEmptyState,
   ListTableShell,
 } from "@/components/list/list-table-shell";
+import {
+  FilterBar,
+  type FilterAdvancedField,
+  type FilterChipConfig,
+  type FilterDateRangeConfig,
+} from "@/components/layout/filter-bar";
 import { DataTableFooter } from "@/components/ui/data-table/data-table-footer";
-import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -92,6 +94,17 @@ export type DataTableProps<TData> = {
   noMatchesDescription?: string;
   pageSizes?: readonly number[];
   initialPageSize?: number;
+  /** Chips of the FilterBar above the table; they apply on change. */
+  filters?: FilterChipConfig[];
+  dateRange?: FilterDateRangeConfig;
+  /** Text filters in the «Avanzado» popover. */
+  advancedFilters?: FilterAdvancedField[];
+  /**
+   * «Limpiar»: clears the filters (and, in server mode, `q` in the same URL
+   * update). Without it, «Limpiar» only clears the search.
+   */
+  onClearFilters?: () => void;
+  /** Extra controls after the chips. */
   toolbar?: ReactNode;
   /** The row opens its record. */
   getRowHref?: (row: TData) => string | undefined;
@@ -129,8 +142,6 @@ export type DataTableServerControls = {
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
 };
-
-const SEARCH_DEBOUNCE_MS = 300;
 
 const stringifyValue = (value: unknown) => {
   if (value === null || value === undefined) {
@@ -242,6 +253,10 @@ export const DataTable = <TData,>({
   noMatchesDescription = "Prueba con otros términos o limpia la búsqueda.",
   pageSizes = LIST_PAGE_SIZES,
   initialPageSize,
+  filters,
+  dateRange,
+  advancedFilters,
+  onClearFilters,
   toolbar,
   getRowHref,
   getRowAriaLabel,
@@ -254,7 +269,6 @@ export const DataTable = <TData,>({
   server,
 }: DataTableProps<TData>) => {
   const router = useRouter();
-  const searchId = useId();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState(initialSearch);
   const [localPagination, setPagination] = useState<PaginationState>({
@@ -268,25 +282,9 @@ export const DataTable = <TData,>({
   const pagination: PaginationState = server
     ? { pageIndex: server.page - 1, pageSize: server.pageSize }
     : localPagination;
-  const [serverSearch, setServerSearch] = useState(server?.query ?? "");
-  const serverQuery = server?.query;
   const onServerQueryChange = server?.onQueryChange;
   const showSearch = searchable && (!server || Boolean(onServerQueryChange));
   const hasActions = Boolean(inlineAction || rowMenu);
-
-  // Debounce typing into the URL; skip when the box already matches it.
-  useEffect(() => {
-    if (!onServerQueryChange || serverSearch.trim() === (serverQuery ?? "")) {
-      return;
-    }
-
-    const timer = setTimeout(
-      () => onServerQueryChange(serverSearch.trim()),
-      SEARCH_DEBOUNCE_MS,
-    );
-
-    return () => clearTimeout(timer);
-  }, [serverSearch, serverQuery, onServerQueryChange]);
 
   const scopedData = useMemo(
     () => (filterRow ? data.filter(filterRow) : data),
@@ -355,14 +353,26 @@ export const DataTable = <TData,>({
     },
   });
 
-  const handleSearchChange = (event: ChangeEvent<HTMLInputElement>) => {
+  const handleSearchChange = (next: string) => {
     if (server) {
-      setServerSearch(event.target.value);
+      onServerQueryChange?.(next);
       return;
     }
 
-    setGlobalFilter(event.target.value);
+    setGlobalFilter(next);
     setPagination((current) => ({ ...current, pageIndex: 0 }));
+  };
+
+  const handleClear = () => {
+    if (onClearFilters) {
+      onClearFilters();
+    } else if (server) {
+      onServerQueryChange?.("");
+    }
+
+    if (!server) {
+      handleSearchChange("");
+    }
   };
 
   const handlePageSizeChange = (next: number) => {
@@ -431,33 +441,25 @@ export const DataTable = <TData,>({
 
   return (
     <div className="space-y-3">
-      {showSearch || toolbar ? (
-        <div
-          className={cn(
-            "flex flex-col gap-3",
-            layout === "page" && "sm:flex-row sm:flex-wrap sm:items-center",
-          )}
-        >
-          {showSearch ? (
-            <div className="relative min-w-0 flex-1">
-              <SearchIcon
-                className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
-                aria-hidden
-              />
-              <Input
-                aria-label={searchAriaLabel}
-                className="bg-card h-10 pl-9"
-                id={searchId}
-                onChange={handleSearchChange}
-                placeholder={searchPlaceholder}
-                type="search"
-                value={server ? serverSearch : globalFilter}
-              />
-            </div>
-          ) : null}
-          {toolbar}
-        </div>
-      ) : null}
+      <FilterBar
+        advanced={advancedFilters}
+        dateRange={dateRange}
+        filters={filters}
+        onClear={handleClear}
+        search={
+          showSearch
+            ? {
+                value: server ? (server.query ?? "") : globalFilter,
+                onChange: handleSearchChange,
+                placeholder: searchPlaceholder,
+                ariaLabel: searchAriaLabel,
+                debounceMs: server ? undefined : 0,
+              }
+            : undefined
+        }
+      >
+        {toolbar}
+      </FilterBar>
 
       <ListTableShell>
         {showEmpty || showNoMatches ? (

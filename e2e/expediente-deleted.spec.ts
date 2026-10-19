@@ -4,8 +4,6 @@ import { expect, test } from "@playwright/test";
 
 import { OFFICIAL_DELETED_DEMO_FULL_NAME } from "../src/lib/people/borrados-cleanup";
 
-import { chooseSelectOption } from "./choose-select-option";
-
 test.describe.configure({ mode: "serial" });
 
 const loginAsDemoAdmin = async (page: import("@playwright/test").Page) => {
@@ -100,17 +98,22 @@ test("soft-deleted expediente stays open and appears in borrados", async ({
       page.getByText("Borrado", { exact: true }).first(),
     ).toBeVisible();
 
-    await page.getByRole("link", { name: "Ver listado de borrados" }).click();
-    await expect(page).toHaveURL(/\/app\/personas\?deleted=1/);
-    await expect(page.locator("table").getByText(fullName)).toBeVisible();
+    // No «Volver» links (WRK-I6-2): the borrados list is a filter chip.
+    await page.goto("/app/personas?deleted=1");
+    await expect(
+      page.getByRole("button", { name: "Expediente: Borrados" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: `Ver expediente borrado de ${fullName}` }),
+    ).toBeVisible();
     await expect(
       page.locator("table").getByText("Borrado", { exact: true }).first(),
     ).toBeVisible();
 
-    await chooseSelectOption(
-      page.locator("#persona-visibility"),
-      "En expediente",
-    );
+    await page
+      .getByRole("button", { name: "Quitar filtro Expediente" })
+      .click();
+    await expect(page).not.toHaveURL(/deleted=1/);
     await expect(page.getByText(fullName)).toHaveCount(0);
   } finally {
     hardDeleteBorradosFixture(fullName);

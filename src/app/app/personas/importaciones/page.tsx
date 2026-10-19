@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { UploadIcon } from "lucide-react";
 
 import { ImportacionesDataTable } from "@/components/import/importaciones-data-table";
-import { ListPageHeader } from "@/components/list/list-page-header";
-import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/layout/page-header";
 import { pageTitles } from "@/lib/brand/chrome-copy";
 import { isUndoWindowOpen } from "@/lib/import/undo-window";
 import { listImportJobs } from "@/lib/import/jobs";
@@ -37,13 +36,13 @@ const ImportacionesPage = async () => {
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
-      <ListPageHeader
-        actions={
-          <Button asChild>
-            <Link href="/app/personas/importar">Nueva importación</Link>
-          </Button>
-        }
-        description="Cada importación queda registrada: quién la hizo, qué cambió y si se puede deshacer."
+      <PageHeader
+        description="Quién importó, qué cambió y si se puede deshacer."
+        primary={{
+          label: "Nueva importación",
+          icon: UploadIcon,
+          href: "/app/personas/importar",
+        }}
         title="Historial de importaciones"
       />
 

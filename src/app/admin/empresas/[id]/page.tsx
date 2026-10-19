@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { PageBreadcrumbLabel } from "@/components/layout/app-breadcrumbs";
+import { PageHeader } from "@/components/layout/page-header";
 import {
   CompanyForm,
   CompanyStatusButton,
@@ -51,20 +52,20 @@ const EmpresaPage = async ({ params, searchParams }: EmpresaPageProps) => {
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
       <PageBreadcrumbLabel label={company.name} />
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {company.name}{" "}
-            <Badge tone={toneFor("company", company.status)}>
-              {company.status === "activa" ? "Activa" : "Suspendida"}
-            </Badge>
-          </h1>
-          <p className="text-muted-foreground font-mono text-xs">
-            {company.slug}
-          </p>
-        </div>
-        <CompanyStatusButton companyId={company.id} status={company.status} />
-      </div>
+      <PageHeader
+        menu={
+          <CompanyStatusButton companyId={company.id} status={company.status} />
+        }
+        meta={<span className="font-mono">{company.slug}</span>}
+        primary={{ label: "Guardar cambios", form: "company-form" }}
+        status={
+          <Badge tone={toneFor("company", company.status)}>
+            {company.status === "activa" ? "Activa" : "Suspendida"}
+          </Badge>
+        }
+        title={company.name}
+        variant="detail"
+      />
 
       {created ? (
         <p className="text-sm font-medium" role="status">

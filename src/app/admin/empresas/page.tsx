@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 
+import { PlusIcon } from "lucide-react";
+
+import { PageHeader } from "@/components/layout/page-header";
 import { CompanyForm } from "@/components/tenant/company-form";
 import { CompaniesDataTable } from "@/components/tenant/companies-data-table";
 import {
@@ -24,15 +27,17 @@ const EmpresasPage = async () => {
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Empresas</h1>
-        <p className="text-muted-foreground text-sm">
-          Cada empresa tiene sus propios datos; nadie ve los de otra sin ser
-          miembro de ella.
-        </p>
-      </div>
+      <PageHeader
+        description="Cada empresa tiene sus propios datos; nadie ve los de otra sin ser miembro de ella."
+        primary={{
+          label: "Nueva empresa",
+          icon: PlusIcon,
+          href: "#nueva-empresa",
+        }}
+        title="Empresas"
+      />
 
-      <Card>
+      <Card className="scroll-mt-20" id="nueva-empresa">
         <CardHeader>
           <CardTitle>Nueva empresa</CardTitle>
           <CardDescription>

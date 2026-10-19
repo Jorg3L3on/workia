@@ -1,5 +1,7 @@
 "use client";
 
+import { useServerListControls } from "@/components/list/use-server-list-controls";
+
 import { EyeOffIcon, UnplugIcon } from "lucide-react";
 import { useActionState, useEffect, useRef } from "react";
 import { toast } from "sonner";
@@ -143,11 +145,15 @@ const ConnectionState = ({ row }: { row: ConnectionRow }) => (
 export const ConnectionsDataTable = ({
   connections,
   showOwner,
+  canSeeAll = false,
 }: {
   connections: ConnectionRow[];
   /** «Todas»: who each connection belongs to. */
   showOwner: boolean;
+  /** Admins switch between their own and every connection (?vista=todas). */
+  canSeeAll?: boolean;
 }) => {
+  const controls = useServerListControls();
   const columns: DataTableColumn<ConnectionRow>[] = [
     {
       id: "name",
@@ -224,6 +230,20 @@ export const ConnectionsDataTable = ({
       rowMenu={(row) =>
         row.actionable ? <ConnectionRowMenu row={row} /> : null
       }
+      filters={
+        canSeeAll
+          ? [
+              {
+                id: "vista",
+                label: "Mostrar",
+                value: showOwner ? "todas" : "",
+                onChange: (next) => controls.setFilter("vista", next || null),
+                options: [{ value: "todas", label: "Todas las conexiones" }],
+              },
+            ]
+          : undefined
+      }
+      onClearFilters={() => controls.setFilter("vista", null)}
       rowTestId="connection-row"
       searchPlaceholder="Buscar conexión"
     />

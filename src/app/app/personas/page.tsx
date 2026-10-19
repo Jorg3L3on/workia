@@ -1,10 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { DownloadIcon, PlusIcon, UploadIcon } from "lucide-react";
+import {
+  DownloadIcon,
+  FileDownIcon,
+  HistoryIcon,
+  PlusIcon,
+  SheetIcon,
+  UploadIcon,
+} from "lucide-react";
 
 import { pageTitles } from "@/lib/brand/chrome-copy";
 
-import { ListPageHeader } from "@/components/list/list-page-header";
+import { PageHeader } from "@/components/layout/page-header";
 import { PersonasDataTable } from "@/components/people/personas-data-table";
 import { Button } from "@/components/ui/button";
 import { parseListPaging } from "@/lib/list/paging";
@@ -85,81 +92,51 @@ const PersonasPage = async ({ searchParams }: PersonasPageProps) => {
 
   return (
     <div className="flex flex-col gap-6">
-      <ListPageHeader
-        actions={
-          canCreate || canImport || canExport ? (
-            <>
-              {canImport ? (
-                <>
-                  <Button
-                    asChild
-
-                    variant="secondary"
-                  >
-                    <Link href="/app/personas/importaciones">
-                      Importaciones
-                    </Link>
-                  </Button>
-                  <Button
-                    asChild
-
-                    variant="secondary"
-                  >
-                    <Link href="/app/personas/importar">
-                      <UploadIcon className="size-4" aria-hidden />
-                      Importar
-                    </Link>
-                  </Button>
-                </>
-              ) : null}
-              {canImport ? (
-                <Button asChild variant="secondary">
-                  {/* Plain anchor: this is a file download, not a page. */}
-                  <a href="/app/personas/plantilla" download>
-                    <DownloadIcon className="size-4" aria-hidden />
-                    Descargar plantilla
-                  </a>
-                </Button>
-              ) : null}
-              {canExport ? (
-                <>
-                  <Button
-                    asChild
-
-                    variant="secondary"
-                  >
-                    <a href={`/app/personas/exportar?${exportQuery}`} download>
-                      <DownloadIcon className="size-4" aria-hidden />
-                      Exportar Excel
-                    </a>
-                  </Button>
-                  <Button
-                    asChild
-
-                    variant="secondary"
-                  >
-                    <a
-                      href={`/app/personas/exportar?${new URLSearchParams({ ...Object.fromEntries(exportQuery), format: "csv" })}`}
-                      download
-                    >
-                      CSV
-                    </a>
-                  </Button>
-                </>
-              ) : null}
-              {canCreate ? (
-                <Button asChild>
-                  <Link href="/app/personas/nueva">
-                    <PlusIcon className="size-4" aria-hidden />
-                    Nueva persona
-                  </Link>
-                </Button>
-              ) : null}
-            </>
-          ) : undefined
+      <PageHeader
+        description="Expedientes, relación laboral e identificadores."
+        menu={[
+          canExport && {
+            label: "Exportar a Excel",
+            icon: SheetIcon,
+            href: `/app/personas/exportar?${exportQuery}`,
+            download: true,
+          },
+          canExport && {
+            label: "Exportar a CSV",
+            icon: DownloadIcon,
+            href: `/app/personas/exportar?${new URLSearchParams({ ...Object.fromEntries(exportQuery), format: "csv" })}`,
+            download: true,
+          },
+          canImport && {
+            label: "Descargar plantilla",
+            icon: FileDownIcon,
+            href: "/app/personas/plantilla",
+            download: true,
+          },
+          canImport && {
+            label: "Historial de importaciones",
+            icon: HistoryIcon,
+            href: "/app/personas/importaciones",
+          },
+        ]}
+        primary={
+          canCreate
+            ? {
+                label: "Nueva persona",
+                icon: PlusIcon,
+                href: "/app/personas/nueva",
+              }
+            : null
         }
-        description="Gestiona expedientes, relación laboral e identificadores."
-        descriptionSecondary="Lista de todas las personas registradas."
+        secondary={
+          canImport
+            ? {
+                label: "Importar",
+                icon: UploadIcon,
+                href: "/app/personas/importar",
+              }
+            : null
+        }
         title="Personas"
       />
 

@@ -4,7 +4,6 @@ import { CatalogActivitiesTable } from "@/components/catalog/catalog-activities-
 import { CatalogFormTray } from "@/components/catalog/catalog-form-tray";
 import { pageTitles } from "@/lib/brand/chrome-copy";
 import { CatalogStatusMessages } from "@/components/catalog/catalog-status-messages";
-import { ListPageHeader } from "@/components/list/list-page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -58,10 +57,46 @@ const ActividadesCatalogPage = async ({
 
   return (
     <div className="flex flex-col gap-6">
-      <ListPageHeader
-        description="Catálogo de actividades que se asignan a puestos. No es texto suelto."
-        descriptionSecondary="Lista de todas las actividades registradas."
+      <CatalogFormTray
+        description="Actividades que se asignan a los puestos."
         title="Actividades"
+        actions={
+          canCreateActivity && !isEditing
+            ? [
+                {
+                  id: "create",
+                  actionLabel: "Nueva actividad",
+                  formTitle: "Nueva actividad",
+                  children: (
+                    <form action={createActivityAction} className="space-y-3">
+                      <CompanyField />
+                      <div className="space-y-2">
+                        <Label htmlFor="activity-name">Nombre</Label>
+                        <Input
+                          id="activity-name"
+                          name="name"
+                          placeholder="Ej. Atención a solicitudes internas"
+                          required
+                        />
+                      </div>
+                      <label className="flex items-center gap-2 text-sm">
+                        <input
+                          defaultChecked
+                          name="active"
+                          type="checkbox"
+                          value="true"
+                        />
+                        Activa
+                      </label>
+                      <Button type="submit" variant="secondary">
+                        Crear actividad
+                      </Button>
+                    </form>
+                  ),
+                },
+              ]
+            : []
+        }
       />
 
       <CatalogStatusMessages error={error} deleted={deleted} saved={saved} />
@@ -99,50 +134,7 @@ const ActividadesCatalogPage = async ({
               </Button>
             </form>
           </div>
-        ) : (
-          <CatalogFormTray
-            actions={
-              canCreateActivity
-                ? [
-                    {
-                      id: "create",
-                      actionLabel: "Nueva actividad",
-                      formTitle: "Nueva actividad",
-                      children: (
-                        <form
-                          action={createActivityAction}
-                          className="space-y-3"
-                        >
-                          <CompanyField />
-                          <div className="space-y-2">
-                            <Label htmlFor="activity-name">Nombre</Label>
-                            <Input
-                              id="activity-name"
-                              name="name"
-                              placeholder="Ej. Atención a solicitudes internas"
-                              required
-                            />
-                          </div>
-                          <label className="flex items-center gap-2 text-sm">
-                            <input
-                              defaultChecked
-                              name="active"
-                              type="checkbox"
-                              value="true"
-                            />
-                            Activa
-                          </label>
-                          <Button type="submit" variant="secondary">
-                            Crear actividad
-                          </Button>
-                        </form>
-                      ),
-                    },
-                  ]
-                : []
-            }
-          />
-        )}
+        ) : null}
 
         <CatalogActivitiesTable
           activities={activityRows.map((activity) => ({

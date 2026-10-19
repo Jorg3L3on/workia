@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 
-import { ListPageHeader } from "@/components/list/list-page-header";
+import { PlusIcon } from "lucide-react";
+
+import { PageHeader } from "@/components/layout/page-header";
 import { AltasDataTable } from "@/components/onboarding/altas-data-table";
 import { CompanyField } from "@/components/tenant/company-context";
 import { Button } from "@/components/ui/button";
@@ -25,13 +27,13 @@ export const metadata: Metadata = {
 };
 
 type AltasPageProps = {
-  searchParams: Promise<{ error?: string; message?: string }>;
+  searchParams: Promise<{ error?: string; message?: string; persona?: string }>;
 };
 
 /** Hiring from HR to Payroll with two approvals (WRK-I5-7). */
 const AltasPage = async ({ searchParams }: AltasPageProps) => {
   const session = await requirePeopleRead();
-  const { error, message } = await searchParams;
+  const { error, message, persona } = await searchParams;
   const [rows, canStart] = await Promise.all([
     listOnboardings(session.companyId),
     userHasPermission(session.user.id, "people:update"),
@@ -45,9 +47,13 @@ const AltasPage = async ({ searchParams }: AltasPageProps) => {
 
   return (
     <div className="flex flex-col gap-6">
-      <ListPageHeader
+      <PageHeader
         description="RH captura y aprueba; Nóminas da el segundo visto bueno."
-        descriptionSecondary="Altas en proceso y completas."
+        primary={
+          canStart && candidates.length > 0
+            ? { label: "Iniciar alta", icon: PlusIcon, href: "#iniciar-alta" }
+            : null
+        }
         title="Altas"
       />
 
@@ -62,7 +68,10 @@ const AltasPage = async ({ searchParams }: AltasPageProps) => {
       ) : null}
 
       {canStart ? (
-        <section className="workia-pass-card space-y-3 p-5">
+        <section
+          className="workia-pass-card scroll-mt-20 space-y-3 p-5"
+          id="iniciar-alta"
+        >
           <h2 className="text-sm font-semibold">Iniciar alta</h2>
           {candidates.length === 0 ? (
             <p className="text-muted-foreground text-sm">
@@ -78,6 +87,11 @@ const AltasPage = async ({ searchParams }: AltasPageProps) => {
               <div className="space-y-1 sm:w-80">
                 <Label htmlFor="alta-person">Persona</Label>
                 <FormSelect
+                  defaultValue={
+                    candidates.some((person) => person.id === persona)
+                      ? persona
+                      : undefined
+                  }
                   id="alta-person"
                   name="personId"
                   placeholder="Elige una persona"

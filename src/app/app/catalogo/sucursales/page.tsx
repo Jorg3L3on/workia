@@ -4,7 +4,6 @@ import { CatalogFormTray } from "@/components/catalog/catalog-form-tray";
 import { CatalogSitesTable } from "@/components/catalog/catalog-data-tables";
 import { pageTitles } from "@/lib/brand/chrome-copy";
 import { CatalogStatusMessages } from "@/components/catalog/catalog-status-messages";
-import { ListPageHeader } from "@/components/list/list-page-header";
 import { Button } from "@/components/ui/button";
 import { FormSelect } from "@/components/ui/form-select";
 import { Input } from "@/components/ui/input";
@@ -52,78 +51,74 @@ const SucursalesCatalogPage = async ({
 
   return (
     <div className="flex flex-col gap-6">
-      <ListPageHeader
-        description="Dónde trabaja la gente: corporativo o sucursal. No es un árbol ni un área."
-        descriptionSecondary="Lista de todas las ubicaciones registradas."
+      <CatalogFormTray
+        description="Dónde trabaja la gente: corporativo o sucursal."
         title="Sucursales"
+        actions={
+          canCreateSite
+            ? [
+                {
+                  id: "create",
+                  actionLabel: "Nueva sucursal",
+                  formTitle: "Nueva sucursal",
+                  children: (
+                    <form action={createSiteAction} className="space-y-3">
+                      <CompanyField />
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label htmlFor="site-name">Nombre</Label>
+                          <Input
+                            id="site-name"
+                            name="name"
+                            placeholder="Ej. Sucursal Demo Norte"
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="site-kind">Tipo</Label>
+                          <FormSelect
+                            defaultValue="sucursal"
+                            id="site-kind"
+                            name="kind"
+                            options={SITE_KINDS.map((kind) => ({
+                              value: kind,
+                              label: siteKindLabels[kind],
+                            }))}
+                            required
+                            variant="field"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="site-region">Región</Label>
+                          <FormSelect
+                            defaultValue=""
+                            id="site-region"
+                            name="regionId"
+                            options={[
+                              { value: "", label: "Sin región" },
+                              ...activeRegions.map((region) => ({
+                                value: region.id,
+                                label: region.name,
+                              })),
+                            ]}
+                            variant="field"
+                          />
+                        </div>
+                      </div>
+                      <Button type="submit" variant="secondary">
+                        Crear sucursal
+                      </Button>
+                    </form>
+                  ),
+                },
+              ]
+            : []
+        }
       />
 
       <CatalogStatusMessages error={error} deleted={deleted} saved={saved} />
 
       <section className="space-y-4">
-        <CatalogFormTray
-          actions={
-            canCreateSite
-              ? [
-                  {
-                    id: "create",
-                    actionLabel: "Nueva sucursal",
-                    formTitle: "Nueva sucursal",
-                    children: (
-                      <form action={createSiteAction} className="space-y-3">
-                        <CompanyField />
-                        <div className="grid gap-3 sm:grid-cols-2">
-                          <div className="space-y-2">
-                            <Label htmlFor="site-name">Nombre</Label>
-                            <Input
-                              id="site-name"
-                              name="name"
-                              placeholder="Ej. Sucursal Demo Norte"
-                              required
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="site-kind">Tipo</Label>
-                            <FormSelect
-                              defaultValue="sucursal"
-                              id="site-kind"
-                              name="kind"
-                              options={SITE_KINDS.map((kind) => ({
-                                value: kind,
-                                label: siteKindLabels[kind],
-                              }))}
-                              required
-                              variant="field"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="site-region">Región</Label>
-                            <FormSelect
-                              defaultValue=""
-                              id="site-region"
-                              name="regionId"
-                              options={[
-                                { value: "", label: "Sin región" },
-                                ...activeRegions.map((region) => ({
-                                  value: region.id,
-                                  label: region.name,
-                                })),
-                              ]}
-                              variant="field"
-                            />
-                          </div>
-                        </div>
-                        <Button type="submit" variant="secondary">
-                          Crear sucursal
-                        </Button>
-                      </form>
-                    ),
-                  },
-                ]
-              : []
-          }
-        />
-
         <CatalogSitesTable
           canDelete={canDeleteSite}
           canUpdate={canUpdateSite}

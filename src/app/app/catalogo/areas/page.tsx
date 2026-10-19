@@ -4,7 +4,6 @@ import { AreaTreeView } from "@/components/catalog/area-tree-view";
 import { CatalogFormTray } from "@/components/catalog/catalog-form-tray";
 import { pageTitles } from "@/lib/brand/chrome-copy";
 import { CatalogStatusMessages } from "@/components/catalog/catalog-status-messages";
-import { ListPageHeader } from "@/components/list/list-page-header";
 import { Button } from "@/components/ui/button";
 import { FormSelect } from "@/components/ui/form-select";
 import { Input } from "@/components/ui/input";
@@ -45,72 +44,68 @@ const AreasCatalogPage = async ({ searchParams }: AreasCatalogPageProps) => {
 
   return (
     <div className="flex flex-col gap-6">
-      <ListPageHeader
-        description="Árbol de áreas. Un área borrada desaparece de altas nuevas."
-        descriptionSecondary="Lista de áreas del catálogo."
+      <CatalogFormTray
+        description="Árbol de áreas; un área borrada desaparece de las altas nuevas."
         title="Áreas"
+        actions={
+          canCreateArea
+            ? [
+                {
+                  id: "create",
+                  actionLabel: "Nueva área",
+                  formTitle: "Nueva área",
+                  children: (
+                    <form action={createAreaAction} className="space-y-3">
+                      <CompanyField />
+                      <div className="space-y-2">
+                        <Label htmlFor="area-name">Nombre</Label>
+                        <Input
+                          id="area-name"
+                          name="name"
+                          placeholder="Ej. Operaciones"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="area-parent">
+                          Área padre (opcional)
+                        </Label>
+                        <FormSelect
+                          id="area-parent"
+                          name="parentAreaId"
+                          options={[
+                            { value: "", label: "Sin padre" },
+                            ...activeAreas.map((area) => ({
+                              value: area.id,
+                              label: area.name,
+                            })),
+                          ]}
+                          variant="field"
+                        />
+                      </div>
+                      <label className="flex items-center gap-2 text-sm">
+                        <input
+                          defaultChecked
+                          name="active"
+                          type="checkbox"
+                          value="true"
+                        />
+                        Activa
+                      </label>
+                      <Button type="submit" variant="secondary">
+                        Crear área
+                      </Button>
+                    </form>
+                  ),
+                },
+              ]
+            : []
+        }
       />
 
       <CatalogStatusMessages error={error} deleted={deleted} saved={saved} />
 
       <section className="space-y-4">
-        <CatalogFormTray
-          actions={
-            canCreateArea
-              ? [
-                  {
-                    id: "create",
-                    actionLabel: "Nueva área",
-                    formTitle: "Nueva área",
-                    children: (
-                      <form action={createAreaAction} className="space-y-3">
-                        <CompanyField />
-                        <div className="space-y-2">
-                          <Label htmlFor="area-name">Nombre</Label>
-                          <Input
-                            id="area-name"
-                            name="name"
-                            placeholder="Ej. Operaciones"
-                            required
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="area-parent">
-                            Área padre (opcional)
-                          </Label>
-                          <FormSelect
-                            id="area-parent"
-                            name="parentAreaId"
-                            options={[
-                              { value: "", label: "Sin padre" },
-                              ...activeAreas.map((area) => ({
-                                value: area.id,
-                                label: area.name,
-                              })),
-                            ]}
-                            variant="field"
-                          />
-                        </div>
-                        <label className="flex items-center gap-2 text-sm">
-                          <input
-                            defaultChecked
-                            name="active"
-                            type="checkbox"
-                            value="true"
-                          />
-                          Activa
-                        </label>
-                        <Button type="submit" variant="secondary">
-                          Crear área
-                        </Button>
-                      </form>
-                    ),
-                  },
-                ]
-              : []
-          }
-        />
-
         <AreaTreeView canDelete={canDeleteArea} nodes={areaTree} />
       </section>
     </div>
