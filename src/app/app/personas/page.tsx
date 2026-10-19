@@ -46,20 +46,28 @@ const PersonasPage = async ({ searchParams }: PersonasPageProps) => {
   const regionId = regions.some((region) => region.id === params.region)
     ? params.region
     : undefined;
-  const [{ rows: people, total }, canCreate, canImport, canExport] =
-    await Promise.all([
-      listPeoplePage(session.companyId, {
-        query: q,
-        status,
-        deleted: deleted === "1",
-        regionId,
-        page,
-        pageSize,
-      }),
-      userHasPermission(session.user.id, "people:create"),
-      userHasPermission(session.user.id, "people:import"),
-      userHasPermission(session.user.id, "people:export"),
-    ]);
+  const [
+    { rows: people, total },
+    canCreate,
+    canImport,
+    canExport,
+    canUpdate,
+    canReadContracts,
+  ] = await Promise.all([
+    listPeoplePage(session.companyId, {
+      query: q,
+      status,
+      deleted: deleted === "1",
+      regionId,
+      page,
+      pageSize,
+    }),
+    userHasPermission(session.user.id, "people:create"),
+    userHasPermission(session.user.id, "people:import"),
+    userHasPermission(session.user.id, "people:export"),
+    userHasPermission(session.user.id, "people:update"),
+    userHasPermission(session.user.id, "contracts:read"),
+  ]);
   const exportQuery = new URLSearchParams();
 
   if (q) exportQuery.set("q", q);
@@ -156,6 +164,8 @@ const PersonasPage = async ({ searchParams }: PersonasPageProps) => {
       />
 
       <PersonasDataTable
+        canReadContracts={canReadContracts}
+        canUpdate={canUpdate}
         emptyAction={
           canCreate ? (
             <Button asChild>

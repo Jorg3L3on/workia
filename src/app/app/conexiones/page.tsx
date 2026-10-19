@@ -3,20 +3,13 @@ import Link from "next/link";
 import { forbidden } from "next/navigation";
 
 import { ListPageHeader } from "@/components/list/list-page-header";
-import { ConnectionRowActions } from "@/components/mcp/connection-row-actions";
+import {
+  ConnectionsDataTable,
+  ToolCallsDataTable,
+} from "@/components/mcp/connections-data-table";
 import { CreateTokenForm } from "@/components/mcp/create-token-form";
 import { WritesSwitch } from "@/components/mcp/writes-switch";
-import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { pageTitles } from "@/lib/brand/chrome-copy";
-import { formatDateMx, formatDateTimeMx } from "@/lib/format/date";
 import {
   isMcpEnabled,
   MCP_RESOURCE_PATH,
@@ -33,7 +26,6 @@ import { grantableScopes, isMcpScope, scopeLabels } from "@/lib/mcp/scopes";
 import { getMcpSettings } from "@/lib/mcp/settings";
 import { requireCompanyPage } from "@/lib/tenant/context";
 import { cn } from "@/lib/utils";
-import { toneFor } from "@/lib/ui/status-tone";
 
 export const dynamic = "force-dynamic";
 
@@ -63,8 +55,7 @@ const connectionState = (connection: ConnectionListItem, now: Date) => {
 const scopeList = (scopes: string[]) =>
   scopes
     .filter((scope) => scope !== "offline_access")
-    .map((scope) => (isMcpScope(scope) ? scopeLabels[scope].label : scope))
-    .join(", ");
+    .map((scope) => (isMcpScope(scope) ? scopeLabels[scope].label : scope));
 
 /** The app's own origin, for the snippets (MCP_PUBLIC_URL wins). */
 const currentOrigin = async () => publicOrigin(await currentRequest());
@@ -190,85 +181,39 @@ const ConexionesPage = async ({ searchParams }: ConexionesPageProps) => {
           ) : null}
         </div>
 
-        {connections.length === 0 ? (
-          <p className="workia-empty-state text-muted-foreground p-6 text-center text-sm">
-            Aún no hay conexiones.
-          </p>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Conexión</TableHead>
-                {showAll ? <TableHead>Persona</TableHead> : null}
-                <TableHead>Permisos</TableHead>
-                <TableHead>Vence</TableHead>
-                <TableHead>Último uso</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {connections.map((connection) => {
-                const state = connectionState(connection, now);
-                const actionable =
-                  connection.userId === session.userId ? canCreate : canManage;
+        <ConnectionsDataTable
+          connections={connections.map((connection) => {
+            const state = connectionState(connection, now);
 
-                return (
-                  <TableRow key={connection.id} data-testid="connection-row">
-                    <TableCell>
-                      <div className="font-medium">{connection.name}</div>
-                      <div className="text-muted-foreground text-xs">
-                        {connection.kind === "pat"
-                          ? "Token personal"
-                          : `OAuth · ${connection.clientName}`}
-                        {connection.isChatgpt ? " · sólo lectura" : ""} ·{" "}
-                        <span className="font-mono">
-                          {connection.tokenPrefix}…
-                        </span>
-                      </div>
-                    </TableCell>
-                    {showAll ? (
-                      <TableCell>
-                        <div>{connection.userName}</div>
-                        <div className="text-muted-foreground text-xs">
-                          {connection.userEmail}
-                        </div>
-                      </TableCell>
-                    ) : null}
-                    <TableCell className="max-w-56 text-sm">
-                      {scopeList(connection.scopes)}
-                    </TableCell>
-                    <TableCell>
-                      {formatDateMx(
-                        connection.kind === "oauth"
-                          ? (connection.refreshExpiresAt ??
-                              connection.tokenExpiresAt)
-                          : connection.tokenExpiresAt,
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {formatDateTimeMx(connection.lastUsedAt)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge tone={toneFor("connection", state.status)}>
-                        {state.label}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {actionable ? (
-                        <ConnectionRowActions
-                          connectionId={connection.id}
-                          name={connection.name}
-                          active={state.active}
-                        />
-                      ) : null}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        )}
+            return {
+              id: connection.id,
+              name: connection.name,
+              detail: [
+                connection.kind === "pat"
+                  ? "Token personal"
+                  : `OAuth · ${connection.clientName}`,
+                connection.isChatgpt ? "sólo lectura" : null,
+                `${connection.tokenPrefix}…`,
+              ]
+                .filter(Boolean)
+                .join(" · "),
+              userName: connection.userName,
+              userEmail: connection.userEmail,
+              scopes: scopeList(connection.scopes),
+              expiresAt: (connection.kind === "oauth"
+                ? (connection.refreshExpiresAt ?? connection.tokenExpiresAt)
+                : connection.tokenExpiresAt
+              ).toISOString(),
+              lastUsedAt: connection.lastUsedAt?.toISOString() ?? null,
+              stateLabel: state.label,
+              status: state.status,
+              active: state.active,
+              actionable:
+                connection.userId === session.userId ? canCreate : canManage,
+            };
+          })}
+          showOwner={showAll}
+        />
       </section>
 
       <section
@@ -294,58 +239,25 @@ const ConexionesPage = async ({ searchParams }: ConexionesPageProps) => {
             </p>
           </div>
         </div>
-        {calls.length === 0 ? (
-          <p className="workia-empty-state text-muted-foreground p-6 text-center text-sm">
-            Sin llamadas todavía.
-          </p>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Fecha</TableHead>
-                <TableHead>Herramienta</TableHead>
-                <TableHead>Conexión</TableHead>
-                <TableHead>Resultado</TableHead>
-                <TableHead className="text-right">ms</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {calls.map((call) => (
-                <TableRow key={call.id} data-testid="tool-call-row">
-                  <TableCell>{formatDateTimeMx(call.occurredAt)}</TableCell>
-                  <TableCell className="font-mono text-xs">
-                    {call.tool}
-                  </TableCell>
-                  <TableCell>
-                    <div>{call.connectionName}</div>
-                    {showAll ? (
-                      <div className="text-muted-foreground text-xs">
-                        {call.userName}
-                      </div>
-                    ) : null}
-                  </TableCell>
-                  <TableCell>
-                    <Badge tone={toneFor("toolCall", call.result)}>
-                      {call.result === "success"
-                        ? "Correcto"
-                        : call.result === "denied"
-                          ? `Rechazado · ${call.errorCode}`
-                          : `Error · ${call.errorCode}`}
-                    </Badge>
-                    {call.piiUnmasked ? (
-                      <span className="text-muted-foreground ml-2 text-xs">
-                        datos personales completos
-                      </span>
-                    ) : null}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {call.latencyMs}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
+        <ToolCallsDataTable
+          calls={calls.map((call) => ({
+            id: call.id,
+            occurredAt: call.occurredAt.toISOString(),
+            tool: call.tool,
+            connectionName: call.connectionName,
+            userName: call.userName,
+            result: call.result,
+            resultLabel:
+              call.result === "success"
+                ? "Correcto"
+                : call.result === "denied"
+                  ? `Rechazado · ${call.errorCode}`
+                  : `Error · ${call.errorCode}`,
+            piiUnmasked: call.piiUnmasked,
+            latencyMs: call.latencyMs,
+          }))}
+          showOwner={showAll}
+        />
       </section>
     </div>
   );

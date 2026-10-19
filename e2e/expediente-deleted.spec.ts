@@ -193,7 +193,7 @@ test("borrados shows the official demo deleted person without e2e residue", asyn
 
   await page
     .getByRole("link", {
-      name: `Ver expediente de ${OFFICIAL_DELETED_DEMO_FULL_NAME}`,
+      name: `Ver expediente borrado de ${OFFICIAL_DELETED_DEMO_FULL_NAME}`,
     })
     .click();
 

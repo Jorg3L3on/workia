@@ -9,7 +9,7 @@ import { AuditEventList } from "@/components/audit/audit-event-list";
 import { AssignAssetForm } from "@/components/resguardo/assign-asset-form";
 import { ReturnAssetForm } from "@/components/resguardo/return-asset-form";
 import { PageBreadcrumbLabel } from "@/components/layout/app-breadcrumbs";
-import { ListTableShell } from "@/components/list/list-table-shell";
+import { AssetMovementsTable } from "@/components/resguardo/assets-data-table";
 import { Badge, Tag } from "@/components/ui/badge";
 import { ActionMenuItem } from "@/components/ui/action-menu-item";
 import { Button } from "@/components/ui/button";
@@ -19,14 +19,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { IconButton } from "@/components/ui/icon-button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { listAuditEvents } from "@/lib/audit";
 import { getAssetWithHolder, listAssetMovements } from "@/lib/resguardo";
 import { deleteAssetAction } from "@/lib/resguardo/actions";
@@ -35,7 +27,6 @@ import {
   assetCategoryLabels,
   assetMovementTypeLabels,
   assetStatusLabels,
-  formatAssetDate,
 } from "@/lib/resguardo/schema";
 import { listActivePeopleForSelect } from "@/lib/people";
 import { formatPersonName } from "@/lib/people/schema";
@@ -251,55 +242,18 @@ const AssetDetailPage = async ({
             </p>
           </div>
 
-          {movements.length === 0 ? (
-            <div className="workia-empty-state px-4 py-8 text-center">
-              <p className="text-sm font-medium">Sin movimientos aún</p>
-              <p className="text-muted-foreground mt-1 text-sm">
-                La primera entrega quedará registrada aquí.
-              </p>
-            </div>
-          ) : (
-            <ListTableShell>
-              <Table>
-                <TableHeader>
-                  <TableRow className="hover:bg-transparent">
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Persona</TableHead>
-                    <TableHead>Condición</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {movements.map((movement) => (
-                    <TableRow key={movement.id} className="hover:bg-muted/40">
-                      <TableCell className="text-muted-foreground">
-                        {formatAssetDate(movement.movementDate)}
-                      </TableCell>
-                      <TableCell>
-                        <Tag>{assetMovementTypeLabels[movement.type]}</Tag>
-                      </TableCell>
-                      <TableCell>
-                        <Link
-                          className="text-primary font-medium hover:underline"
-                          href={`/app/personas/${movement.person.id}`}
-                        >
-                          {formatPersonName(movement.person)}
-                        </Link>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {movement.conditionNote}
-                        {movement.notes ? (
-                          <span className="block text-xs">
-                            {movement.notes}
-                          </span>
-                        ) : null}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </ListTableShell>
-          )}
+          <AssetMovementsTable
+            movements={movements.map((movement) => ({
+              id: movement.id,
+              date: movement.movementDate,
+              typeLabel: assetMovementTypeLabels[movement.type],
+              personId: movement.person.id,
+              personName: formatPersonName(movement.person),
+              condition: [movement.conditionNote, movement.notes]
+                .filter(Boolean)
+                .join(" · "),
+            }))}
+          />
         </section>
       ) : null}
 

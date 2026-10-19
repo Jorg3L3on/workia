@@ -1,14 +1,12 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
 import { ListPageHeader } from "@/components/list/list-page-header";
-import { Badge } from "@/components/ui/badge";
+import { AltasDataTable } from "@/components/onboarding/altas-data-table";
 import { CompanyField } from "@/components/tenant/company-context";
 import { Button } from "@/components/ui/button";
 import { FormSelect } from "@/components/ui/form-select";
 import { Label } from "@/components/ui/label";
 import { pageTitles } from "@/lib/brand/chrome-copy";
-import { formatDateMx } from "@/lib/format/date";
 import { listOnboardings } from "@/lib/onboarding";
 import { startOnboardingAction } from "@/lib/onboarding/actions";
 import {
@@ -19,7 +17,6 @@ import { listActivePeopleForSelect } from "@/lib/people";
 import { requirePeopleRead } from "@/lib/people/auth";
 import { formatPersonName } from "@/lib/people/schema";
 import { userHasPermission } from "@/lib/rbac";
-import { toneFor } from "@/lib/ui/status-tone";
 
 export const dynamic = "force-dynamic";
 
@@ -81,9 +78,10 @@ const AltasPage = async ({ searchParams }: AltasPageProps) => {
               <div className="space-y-1 sm:w-80">
                 <Label htmlFor="alta-person">Persona</Label>
                 <FormSelect
-                  defaultValue={candidates[0]?.id}
                   id="alta-person"
                   name="personId"
+                  placeholder="Elige una persona"
+                  required
                   options={candidates.map((person) => ({
                     value: person.id,
                     label: formatPersonName(person),
@@ -99,50 +97,17 @@ const AltasPage = async ({ searchParams }: AltasPageProps) => {
         </section>
       ) : null}
 
-      <section className="workia-pass-card p-5">
-        {rows.length === 0 ? (
-          <p className="text-muted-foreground text-sm">Sin altas todavía.</p>
-        ) : (
-          <table className="w-full text-sm" data-testid="altas-table">
-            <thead className="text-muted-foreground text-left text-xs">
-              <tr>
-                <th className="py-2 font-medium">Persona</th>
-                <th className="py-2 font-medium">Etapa</th>
-                <th className="py-2 font-medium">Checklist</th>
-                <th className="py-2 font-medium">Iniciada</th>
-                <th className="py-2" />
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map(({ onboarding, person }) => (
-                <tr key={onboarding.id} className="border-t">
-                  <td className="py-2 font-medium">
-                    {formatPersonName(person)}
-                  </td>
-                  <td className="py-2">
-                    <Badge tone={toneFor("onboarding", onboarding.stage)}>
-                      {onboardingStageLabels[onboarding.stage]}
-                    </Badge>
-                  </td>
-                  <td className="text-muted-foreground py-2">
-                    {7 - missingChecklist(onboarding.checklist).length}/7
-                  </td>
-                  <td className="text-muted-foreground py-2">
-                    {formatDateMx(
-                      onboarding.createdAt.toISOString().slice(0, 10),
-                    )}
-                  </td>
-                  <td className="py-2 text-right">
-                    <Button asChild size="sm" variant="ghost">
-                      <Link href={`/app/altas/${onboarding.id}`}>Abrir</Link>
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </section>
+      <AltasDataTable
+        altas={rows.map(({ onboarding, person }) => ({
+          id: onboarding.id,
+          personName: formatPersonName(person),
+          stage: onboarding.stage,
+          stageLabel: onboardingStageLabels[onboarding.stage],
+          checklistDone: 7 - missingChecklist(onboarding.checklist).length,
+          checklistTotal: 7,
+          startedOn: onboarding.createdAt.toISOString().slice(0, 10),
+        }))}
+      />
     </div>
   );
 };

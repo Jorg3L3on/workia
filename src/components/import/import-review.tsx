@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { DownloadIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { DataTableFooter } from "@/components/ui/data-table/data-table-footer";
 import {
   IMPORT_COLUMNS,
   SHEET_NAMES,
@@ -277,33 +278,24 @@ export const ImportReview = ({ job, version }: Props) => {
         </table>
       </div>
 
-      <div className="flex items-center justify-between text-sm">
-        <span className="text-muted-foreground" aria-live="polite">
-          {data
-            ? `${data.total.toLocaleString("es-MX")} filas · página ${page} de ${pageCount}`
-            : "Cargando…"}
-        </span>
-        <div className="flex gap-2">
-          <Button
-            disabled={page <= 1}
-            onClick={() => setPage(page - 1)}
-            size="sm"
-            type="button"
-            variant="secondary"
-          >
-            Anterior
-          </Button>
-          <Button
-            disabled={page >= pageCount}
-            onClick={() => setPage(page + 1)}
-            size="sm"
-            type="button"
-            variant="secondary"
-          >
-            Siguiente
-          </Button>
-        </div>
-      </div>
+      {data ? (
+        <DataTableFooter
+          canNext={page < pageCount}
+          canPrevious={page > 1}
+          offset={(page - 1) * data.pageSize}
+          onNext={() => setPage(page + 1)}
+          onPageSizeChange={() => undefined}
+          onPrevious={() => setPage(page - 1)}
+          pageRowCount={data.rows.length}
+          pageSize={data.pageSize}
+          pageSizes={[data.pageSize]}
+          total={data.total}
+        />
+      ) : (
+        <p className="text-muted-foreground text-sm" aria-live="polite">
+          Cargando…
+        </p>
+      )}
     </div>
   );
 };

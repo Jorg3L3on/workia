@@ -1,10 +1,20 @@
 "use client";
 
-import { useMemo } from "react";
+import { MapPinIcon } from "lucide-react";
+import { useMemo, useState } from "react";
 
-import { CatalogRowDeleteButton } from "@/components/catalog/catalog-row-delete-button";
-import { DataTable, type DataTableColumn } from "@/components/list/data-table";
+import {
+  CatalogEditDialog,
+  catalogDeleteAction,
+} from "@/components/catalog/catalog-row-menu";
 import { Badge } from "@/components/ui/badge";
+import {
+  DataTable,
+  EmptyValue,
+  RowMenu,
+  type DataTableColumn,
+} from "@/components/ui/data-table";
+import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import {
   deletePositionAction,
@@ -52,48 +62,6 @@ type CatalogSitesTableProps = {
   canUpdate?: boolean;
 };
 
-/** A site's region, editable in place (WRK-I5-4). */
-const SiteRegionCell = ({
-  row,
-  regions,
-  canUpdate,
-}: {
-  row: CatalogSiteRow;
-  regions: CatalogRegionOption[];
-  canUpdate: boolean;
-}) => {
-  if (!canUpdate) {
-    return (
-      <span className="text-muted-foreground">{row.regionName ?? "—"}</span>
-    );
-  }
-
-  return (
-    <form
-      action={setSiteRegionAction.bind(null, row.id)}
-      className="flex items-center gap-2"
-    >
-      <CompanyField />
-      <FormSelect
-        aria-label={`Región de ${row.name}`}
-        defaultValue={row.regionId ?? ""}
-        name="regionId"
-        options={[
-          { value: "", label: "Sin región" },
-          ...regions.map((region) => ({
-            value: region.id,
-            label: region.name,
-          })),
-        ]}
-        triggerClassName="h-8 min-w-36"
-      />
-      <Button size="sm" type="submit" variant="ghost">
-        Guardar
-      </Button>
-    </form>
-  );
-};
-
 export const CatalogPositionsTable = ({
   positions,
   canDelete,
@@ -105,12 +73,14 @@ export const CatalogPositionsTable = ({
         id: "name",
         header: "Puesto",
         accessor: (row) => row.name,
-        cell: (row) => <span className="font-medium">{row.name}</span>,
+        variant: "primary",
+        truncate: true,
       },
       {
         id: "area",
         header: "Área",
         accessor: (row) => row.areaName,
+        variant: "muted",
       },
       {
         id: "activities",
@@ -119,7 +89,7 @@ export const CatalogPositionsTable = ({
           row.activities.map((activity) => activity.name).join(" "),
         cell: (row) =>
           row.activities.length === 0 ? (
-            <span className="text-muted-foreground">—</span>
+            <EmptyValue />
           ) : (
             <ul className="space-y-1">
               {row.activities.map((activity) => (
@@ -162,27 +132,8 @@ export const CatalogPositionsTable = ({
           </Badge>
         ),
       },
-      ...(canDelete
-        ? [
-            {
-              id: "actions",
-              header: "",
-              accessor: () => "",
-              enableSorting: false,
-              headerClassName: "text-right",
-              cellClassName: "text-right",
-              cell: (row: CatalogPositionRow) => (
-                <CatalogRowDeleteButton
-                  action={deletePositionAction.bind(null, row.id)}
-                  itemLabel="puesto"
-                  itemName={row.name}
-                />
-              ),
-            } satisfies DataTableColumn<CatalogPositionRow>,
-          ]
-        : []),
     ],
-    [canAssign, canDelete],
+    [canAssign],
   );
 
   return (
@@ -197,8 +148,31 @@ export const CatalogPositionsTable = ({
           .join(" ")
       }
       layout="inset"
-      resultPlural="puestos"
-      resultSingular="puesto"
+      mobileCard={(row) => ({
+        title: row.name,
+        subtitle: row.areaName,
+        badge: (
+          <Badge tone={activeTone(row.active)}>
+            {row.active ? "Activo" : "Inactivo"}
+          </Badge>
+        ),
+      })}
+      rowMenu={
+        canDelete
+          ? (row) => (
+              <RowMenu
+                actions={[
+                  catalogDeleteAction(
+                    deletePositionAction.bind(null, row.id),
+                    "puesto",
+                    row.name,
+                  ),
+                ]}
+                label={`Acciones de ${row.name}`}
+              />
+            )
+          : undefined
+      }
       searchPlaceholder="Buscar puesto, área o actividad"
     />
   );
@@ -210,26 +184,29 @@ export const CatalogSitesTable = ({
   regions = [],
   canUpdate = false,
 }: CatalogSitesTableProps) => {
+  const [editingRegion, setEditingRegion] = useState<CatalogSiteRow | null>(
+    null,
+  );
   const columns = useMemo<DataTableColumn<CatalogSiteRow>[]>(
     () => [
       {
         id: "name",
         header: "Nombre",
         accessor: (row) => row.name,
-        cell: (row) => <span className="font-medium">{row.name}</span>,
+        variant: "primary",
+        truncate: true,
       },
       {
         id: "kind",
         header: "Tipo",
         accessor: (row) => row.kindLabel,
+        variant: "muted",
       },
       {
         id: "region",
         header: "Región",
         accessor: (row) => row.regionName ?? "",
-        cell: (row) => (
-          <SiteRegionCell canUpdate={canUpdate} regions={regions} row={row} />
-        ),
+        variant: "muted",
       },
       {
         id: "status",
@@ -237,39 +214,74 @@ export const CatalogSitesTable = ({
         accessor: () => "Activa",
         cell: () => <Badge tone={activeTone(true)}>Activa</Badge>,
       },
-      ...(canDelete
-        ? [
-            {
-              id: "actions",
-              header: "",
-              accessor: () => "",
-              enableSorting: false,
-              headerClassName: "text-right",
-              cellClassName: "text-right",
-              cell: (row: CatalogSiteRow) => (
-                <CatalogRowDeleteButton
-                  action={deleteSiteAction.bind(null, row.id)}
-                  itemLabel="sucursal"
-                  itemName={row.name}
-                />
-              ),
-            } satisfies DataTableColumn<CatalogSiteRow>,
-          ]
-        : []),
     ],
-    [canDelete, canUpdate, regions],
+    [],
   );
 
   return (
-    <DataTable
-      columns={columns}
-      data={sites}
-      emptyTitle="Sin sucursales registradas."
-      getRowId={(row) => row.id}
-      layout="inset"
-      resultPlural="sucursales"
-      resultSingular="sucursal"
-      searchPlaceholder="Buscar sucursal"
-    />
+    <>
+      <DataTable
+        columns={columns}
+        data={sites}
+        emptyTitle="Sin sucursales registradas."
+        getRowId={(row) => row.id}
+        layout="inset"
+        mobileCard={(row) => ({
+          title: row.name,
+          subtitle: [row.kindLabel, row.regionName].filter(Boolean).join(" · "),
+          badge: <Badge tone={activeTone(true)}>Activa</Badge>,
+        })}
+        rowMenu={
+          canUpdate || canDelete
+            ? (row) => (
+                <RowMenu
+                  actions={[
+                    canUpdate && {
+                      label: "Cambiar región",
+                      icon: MapPinIcon,
+                      onSelect: () => setEditingRegion(row),
+                    },
+                    canDelete &&
+                      catalogDeleteAction(
+                        deleteSiteAction.bind(null, row.id),
+                        "sucursal",
+                        row.name,
+                      ),
+                  ]}
+                  label={`Acciones de ${row.name}`}
+                />
+              )
+            : undefined
+        }
+        searchPlaceholder="Buscar sucursal"
+      />
+      {editingRegion ? (
+        <CatalogEditDialog
+          action={setSiteRegionAction.bind(null, editingRegion.id)}
+          description={editingRegion.name}
+          key={editingRegion.id}
+          onClose={() => setEditingRegion(null)}
+          title="Cambiar región"
+        >
+          <CompanyField />
+          <div className="space-y-2">
+            <Label htmlFor="site-region">Región</Label>
+            <FormSelect
+              defaultValue={editingRegion.regionId ?? ""}
+              id="site-region"
+              name="regionId"
+              options={[
+                { value: "", label: "Sin región" },
+                ...regions.map((region) => ({
+                  value: region.id,
+                  label: region.name,
+                })),
+              ]}
+              variant="field"
+            />
+          </div>
+        </CatalogEditDialog>
+      ) : null}
+    </>
   );
 };

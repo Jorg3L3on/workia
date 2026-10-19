@@ -16,7 +16,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { FormSelect } from "@/components/ui/form-select";
 import { Label } from "@/components/ui/label";
@@ -42,6 +41,9 @@ type RenewalDecisionDialogProps = {
   positions: { id: string; name: string }[];
   canSeeCompensation?: boolean;
   compensation?: CompensationDefaults;
+  /** Opened from the tray row (inline action or ⋯ menu). */
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 };
 
 const initialState: ContractActionState = {};
@@ -73,6 +75,8 @@ export const RenewalDecisionDialog = ({
   positions,
   canSeeCompensation = false,
   compensation,
+  open,
+  onOpenChange,
 }: RenewalDecisionDialogProps) => {
   const [state, formAction] = useActionState(
     decideContractRenewalAction,
@@ -85,18 +89,7 @@ export const RenewalDecisionDialog = ({
   const id = (name: string) => `decide-${contractId}-${name}`;
 
   return (
-    <Dialog>
-      <DialogTrigger asChild>
-        <Button
-          aria-label={`Decidir renovación de ${personName}`}
-          className="h-8 px-3 text-xs font-medium"
-          size="sm"
-          type="button"
-          variant="ghost"
-        >
-          Decidir
-        </Button>
-      </DialogTrigger>
+    <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>Decidir renovación</DialogTitle>

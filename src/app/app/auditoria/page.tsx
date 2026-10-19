@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
 import { FormSelect } from "@/components/ui/form-select";
 import { Input } from "@/components/ui/input";
-import { ListPager } from "@/components/list/list-pager";
 import {
   countAuditEvents,
   listAuditActors,
@@ -25,7 +24,7 @@ import {
   type AuditAction,
   type AuditResourceType,
 } from "@/lib/audit/types";
-import { pageCountFor, parseListPaging } from "@/lib/list/paging";
+import { parseListPaging } from "@/lib/list/paging";
 
 export const dynamic = "force-dynamic";
 
@@ -200,21 +199,22 @@ const AuditoriaPage = async ({ searchParams }: AuditoriaPageProps) => {
         </div>
       </ListFilterBar>
 
-      <AuditEventList events={events} pageSize={pageSize} />
-
-      <ListPager
-        page={page}
-        pageCount={pageCountFor(total, pageSize)}
-        params={{
-          resourceType: filters.resourceType,
-          resourceId: filters.resourceId,
-          actorUserId: filters.actorUserId,
-          action: filters.action,
-          source: filters.source,
-          from: filters.from,
-          to: filters.to,
+      <AuditEventList
+        events={events}
+        server={{
+          total,
+          page,
+          pageSize,
+          hasFilters: Boolean(
+            filters.resourceType ||
+            filters.resourceId ||
+            filters.actorUserId ||
+            filters.action ||
+            filters.source ||
+            filters.from ||
+            filters.to,
+          ),
         }}
-        pathname="/app/auditoria"
       />
     </div>
   );

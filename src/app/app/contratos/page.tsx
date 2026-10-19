@@ -17,6 +17,7 @@ import { RegionFilter } from "@/components/list/region-filter";
 import { listRegions } from "@/lib/regions";
 import { listActivePositions } from "@/lib/catalog";
 import { userHasPermission } from "@/lib/rbac";
+import { isoToday } from "@/lib/format/date";
 
 export const dynamic = "force-dynamic";
 
@@ -75,6 +76,7 @@ const RenewalTray = async ({
           name: position.name,
         }))}
         templates={templates}
+        today={isoToday()}
       />
     </>
   );

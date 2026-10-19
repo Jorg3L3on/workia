@@ -2,8 +2,9 @@
 
 import { useMemo } from "react";
 
-import { DataTable, type DataTableColumn } from "@/components/list/data-table";
+import { useServerListControls } from "@/components/list/use-server-list-controls";
 import { Tag } from "@/components/ui/badge";
+import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import type { AuditPayload } from "@/lib/audit/types";
 import {
   auditActionLabels,
@@ -72,8 +73,13 @@ type AuditEventListProps = {
   events: AuditEventRow[];
   emptyMessage?: string;
   layout?: "page" | "inset";
-  /** Rows per page when the server already paged the events. */
-  pageSize?: number;
+  /** The server already paged the events (Auditoría); the URL owns paging. */
+  server?: {
+    total: number;
+    page: number;
+    pageSize: number;
+    hasFilters: boolean;
+  };
 };
 
 type AuditTableRow = AuditEventRow & {
@@ -88,8 +94,9 @@ export const AuditEventList = ({
   events,
   emptyMessage = "Sin eventos de auditoría.",
   layout = "page",
-  pageSize,
+  server,
 }: AuditEventListProps) => {
+  const controls = useServerListControls();
   const rows = useMemo<AuditTableRow[]>(
     () =>
       events.map((event) => ({
@@ -115,11 +122,8 @@ export const AuditEventList = ({
           typeof row.occurredAt === "string"
             ? row.occurredAt
             : row.occurredAt.toISOString(),
-        cell: (row) => (
-          <span className="whitespace-nowrap tabular-nums">
-            {row.occurredLabel}
-          </span>
-        ),
+        variant: "muted",
+        cell: (row) => row.occurredLabel,
       },
       {
         id: "actor",
@@ -127,7 +131,7 @@ export const AuditEventList = ({
         accessor: (row) => row.actorLabel,
         cell: (row) => (
           <div>
-            <div className="flex flex-wrap items-center gap-1.5 font-medium">
+            <div className="text-foreground flex flex-wrap items-center gap-1.5">
               {row.actorLabel}
               {mcpBadgeLabel(row) ? <Tag>{mcpBadgeLabel(row)}</Tag> : null}
             </div>
@@ -154,11 +158,9 @@ export const AuditEventList = ({
         id: "detail",
         header: "Detalle",
         accessor: (row) => row.detail,
-        cell: (row) => (
-          <span className="text-muted-foreground max-w-md text-xs whitespace-normal">
-            {row.detail}
-          </span>
-        ),
+        variant: "muted",
+        truncate: true,
+        cellClassName: "max-w-md",
       },
     ],
     [],
@@ -181,10 +183,22 @@ export const AuditEventList = ({
         ].join(" ")
       }
       layout={layout}
-      pageSizes={pageSize ? [pageSize] : undefined}
-      resultPlural="eventos"
-      resultSingular="evento"
-      searchPlaceholder="Buscar en los eventos cargados"
+      mobileCard={(row) => ({
+        title: `${row.actionLabel} · ${row.resourceLabel}`,
+        subtitle: `${row.occurredLabel} · ${row.actorLabel}`,
+      })}
+      pageSizes={server ? controls.pageSizes : undefined}
+      searchable={!server}
+      searchPlaceholder="Buscar en los eventos"
+      server={
+        server
+          ? {
+              ...server,
+              onPageChange: controls.setPage,
+              onPageSizeChange: controls.setPageSize,
+            }
+          : undefined
+      }
     />
   );
 };

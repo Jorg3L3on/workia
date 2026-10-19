@@ -5,31 +5,13 @@ import { PlusIcon, SearchIcon } from "lucide-react";
 import { pageTitles } from "@/lib/brand/chrome-copy";
 import { FormSelect } from "@/components/ui/form-select";
 import { ListPageHeader } from "@/components/list/list-page-header";
-import { ListRowAction } from "@/components/list/list-row-action";
-import { Badge } from "@/components/ui/badge";
-import {
-  ListEmptyState,
-  ListResultCount,
-  ListTableShell,
-  listTableDensityClassName,
-} from "@/components/list/list-table-shell";
+import { AssetsDataTable } from "@/components/resguardo/assets-data-table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { ListPager } from "@/components/list/list-pager";
-import { pageCountFor, parseListPaging } from "@/lib/list/paging";
+import { parseListPaging } from "@/lib/list/paging";
 import { listAssetsPage } from "@/lib/resguardo";
 import { assertAssetsListAccess } from "@/lib/resguardo/actions";
-import { assetCategoryLabels, assetStatusLabels } from "@/lib/resguardo/schema";
 import { userHasPermission } from "@/lib/rbac";
-import { toneFor } from "@/lib/ui/status-tone";
 
 export const dynamic = "force-dynamic";
 
@@ -54,9 +36,10 @@ const ResguardoPage = async ({ searchParams }: ResguardoPageProps) => {
   const { q, status, deleted, error } = params;
   const { page, pageSize } = parseListPaging(params);
 
-  const [{ items, total }, canCreate] = await Promise.all([
+  const [{ items, total }, canCreate, canUpdate] = await Promise.all([
     listAssetsPage(session.companyId, { query: q, status, page, pageSize }),
     userHasPermission(session.user.id, "assets:create"),
+    userHasPermission(session.user.id, "assets:update"),
   ]);
 
   return (
@@ -127,86 +110,27 @@ const ResguardoPage = async ({ searchParams }: ResguardoPageProps) => {
         <Button type="submit" variant="secondary">
           Filtrar
         </Button>
-        <ListResultCount count={total} plural="activos" singular="activo" />
       </form>
 
-      <ListTableShell>
-        {items.length === 0 ? (
-          <ListEmptyState
-            action={
-              canCreate && !q && !status ? (
-                <Button asChild>
-                  <Link href="/app/resguardo/nuevo">
-                    Registrar primer activo
-                  </Link>
-                </Button>
-              ) : undefined
-            }
-            description={
-              canCreate
-                ? "Registra el primer activo para empezar el inventario."
-                : "Cuando existan registros, los verás aquí."
-            }
-            title={
-              q || status
-                ? "No hay coincidencias"
-                : "Aún no hay activos registrados"
-            }
-          />
-        ) : (
-          <Table className={listTableDensityClassName}>
-            <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead>Activo</TableHead>
-                <TableHead>Categoría</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead>Resguardante</TableHead>
-                <TableHead className="text-right">Detalle</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {items.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell>
-                    <div>
-                      <p className="font-medium">{item.name}</p>
-                      <p className="text-muted-foreground text-xs">
-                        {item.identifier}
-                        {!item.tracksHistory ? " · sin historial" : ""}
-                      </p>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {assetCategoryLabels[item.category] ?? item.category}
-                  </TableCell>
-                  <TableCell>
-                    <Badge tone={toneFor("asset", item.status)}>
-                      {assetStatusLabels[item.status]}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {item.holderName ?? "—"}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <ListRowAction
-                      aria-label={`Ver detalle de ${item.name}`}
-                      href={`/app/resguardo/${item.id}`}
-                    >
-                      Ver detalle
-                    </ListRowAction>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </ListTableShell>
-
-      <ListPager
+      <AssetsDataTable
+        assets={items}
+        canUpdate={canUpdate}
+        emptyAction={
+          canCreate && !q && !status ? (
+            <Button asChild>
+              <Link href="/app/resguardo/nuevo">Registrar primer activo</Link>
+            </Button>
+          ) : undefined
+        }
+        emptyDescription={
+          canCreate
+            ? "Registra el primer activo para empezar el inventario."
+            : "Cuando existan registros, los verás aquí."
+        }
+        hasFilters={Boolean(q || status)}
         page={page}
-        pageCount={pageCountFor(total, pageSize)}
-        params={{ q, status }}
-        pathname="/app/resguardo"
+        pageSize={pageSize}
+        total={total}
       />
     </div>
   );

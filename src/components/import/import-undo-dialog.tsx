@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -11,36 +11,51 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 
 import { getUndoPreview, runUndo, type UndoPreview } from "./import-api";
 
-type Props = { jobId: string; fileName: string };
+type Props = {
+  jobId: string;
+  fileName: string;
+  /** Opened from the row menu of the import history. */
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+};
 
 /** Asks the server whether the import can be undone, shows blockers, then undoes it. */
-export const ImportUndoButton = ({ jobId, fileName }: Props) => {
+export const ImportUndoDialog = ({
+  jobId,
+  fileName,
+  open,
+  onOpenChange: setOpen,
+}: Props) => {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
   const [preview, setPreview] = useState<UndoPreview | null>(null);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const onOpenChange = async (next: boolean) => {
-    if (busy) return;
+  useEffect(() => {
+    if (!open) return;
 
-    setOpen(next);
-    setError(null);
-    setPreview(null);
+    // The history mounts the dialog per job, so state starts fresh.
+    let cancelled = false;
+    getUndoPreview(jobId)
+      .then((next) => {
+        if (!cancelled) setPreview(next);
+      })
+      .catch((cause: Error) => {
+        if (!cancelled) setError(cause.message);
+      });
 
-    if (next) {
-      try {
-        setPreview(await getUndoPreview(jobId));
-      } catch (cause) {
-        setError((cause as Error).message);
-      }
-    }
+    return () => {
+      cancelled = true;
+    };
+  }, [jobId, open]);
+
+  const onOpenChange = (next: boolean) => {
+    if (!busy) setOpen(next);
   };
 
   const undo = async () => {
@@ -62,12 +77,7 @@ export const ImportUndoButton = ({ jobId, fileName }: Props) => {
   };
 
   return (
-    <Dialog onOpenChange={(next) => void onOpenChange(next)} open={open}>
-      <DialogTrigger asChild>
-        <Button size="sm" type="button" variant="secondary">
-          Deshacer
-        </Button>
-      </DialogTrigger>
+    <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Deshacer importación</DialogTitle>
@@ -122,7 +132,7 @@ export const ImportUndoButton = ({ jobId, fileName }: Props) => {
         <DialogFooter>
           <Button
             disabled={busy}
-            onClick={() => void onOpenChange(false)}
+            onClick={() => onOpenChange(false)}
             type="button"
             variant="secondary"
           >

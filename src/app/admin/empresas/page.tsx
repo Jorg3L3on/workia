@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
 import { CompanyForm } from "@/components/tenant/company-form";
-import { Badge } from "@/components/ui/badge";
+import { CompaniesDataTable } from "@/components/tenant/companies-data-table";
 import {
   Card,
   CardContent,
@@ -10,17 +9,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { pageTitles } from "@/lib/brand/chrome-copy";
 import { listCompaniesWithCounts } from "@/lib/tenant/companies";
-import { toneFor } from "@/lib/ui/status-tone";
 
 export const dynamic = "force-dynamic";
 
@@ -54,48 +44,16 @@ const EmpresasPage = async () => {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardContent className="pt-6">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Empresa</TableHead>
-                <TableHead>Identificador</TableHead>
-                <TableHead>Miembros</TableHead>
-                <TableHead>Estado</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {companies.map((company) => (
-                <TableRow key={company.id} data-testid="company-row">
-                  <TableCell>
-                    <Link
-                      href={`/admin/empresas/${company.id}`}
-                      className="font-medium underline-offset-4 hover:underline"
-                    >
-                      {company.name}
-                    </Link>
-                    {company.legalName ? (
-                      <div className="text-muted-foreground text-xs">
-                        {company.legalName}
-                      </div>
-                    ) : null}
-                  </TableCell>
-                  <TableCell className="font-mono text-xs">
-                    {company.slug}
-                  </TableCell>
-                  <TableCell>{company.members}</TableCell>
-                  <TableCell>
-                    <Badge tone={toneFor("company", company.status)}>
-                      {company.status === "activa" ? "Activa" : "Suspendida"}
-                    </Badge>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      <CompaniesDataTable
+        companies={companies.map((company) => ({
+          id: company.id,
+          name: company.name,
+          legalName: company.legalName,
+          slug: company.slug,
+          members: company.members,
+          status: company.status,
+        }))}
+      />
     </div>
   );
 };

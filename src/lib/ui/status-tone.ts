@@ -17,6 +17,7 @@ export const statusTone = {
     no_renovado: "neutral",
     vencido: "danger",
   },
+  renewal: { vencido: "danger", proximo: "warning", en_ventana: "neutral" },
   company: { activa: "success", suspendida: "danger" },
   membership: { activa: "success", revocada: "neutral" },
   onboarding: {

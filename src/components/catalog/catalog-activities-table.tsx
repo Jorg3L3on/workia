@@ -1,12 +1,15 @@
 "use client";
 
+import { PencilIcon } from "lucide-react";
 import { useMemo } from "react";
-import Link from "next/link";
 
-import { CatalogRowDeleteButton } from "@/components/catalog/catalog-row-delete-button";
-import { DataTable, type DataTableColumn } from "@/components/list/data-table";
+import { catalogDeleteAction } from "@/components/catalog/catalog-row-menu";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import {
+  DataTable,
+  RowMenu,
+  type DataTableColumn,
+} from "@/components/ui/data-table";
 import { deleteActivityAction } from "@/lib/catalog/actions";
 import { CATALOG_PATHS, catalogHref } from "@/lib/catalog/paths";
 import { activeTone } from "@/lib/ui/status-tone";
@@ -34,7 +37,8 @@ export const CatalogActivitiesTable = ({
         id: "name",
         header: "Actividad",
         accessor: (row) => row.name,
-        cell: (row) => <span className="font-medium">{row.name}</span>,
+        variant: "primary",
+        truncate: true,
       },
       {
         id: "status",
@@ -46,43 +50,8 @@ export const CatalogActivitiesTable = ({
           </Badge>
         ),
       },
-      ...(canUpdate || canDelete
-        ? [
-            {
-              id: "actions",
-              header: "",
-              accessor: () => "",
-              enableSorting: false,
-              headerClassName: "text-right",
-              cellClassName: "text-right",
-              cell: (row: CatalogActivityRow) => (
-                <div className="flex justify-end gap-1">
-                  {canUpdate ? (
-                    <Button asChild size="sm" variant="ghost">
-                      <Link
-                        aria-label={`Editar actividad ${row.name}`}
-                        href={catalogHref(CATALOG_PATHS.actividades, {
-                          edit: row.id,
-                        })}
-                      >
-                        Editar
-                      </Link>
-                    </Button>
-                  ) : null}
-                  {canDelete ? (
-                    <CatalogRowDeleteButton
-                      action={deleteActivityAction.bind(null, row.id)}
-                      itemLabel="actividad"
-                      itemName={row.name}
-                    />
-                  ) : null}
-                </div>
-              ),
-            } satisfies DataTableColumn<CatalogActivityRow>,
-          ]
-        : []),
     ],
-    [canDelete, canUpdate],
+    [],
   );
 
   return (
@@ -92,8 +61,30 @@ export const CatalogActivitiesTable = ({
       emptyTitle="Sin actividades registradas."
       getRowId={(row) => row.id}
       layout="inset"
-      resultPlural="actividades"
-      resultSingular="actividad"
+      rowMenu={
+        canUpdate || canDelete
+          ? (row) => (
+              <RowMenu
+                actions={[
+                  canUpdate && {
+                    label: "Editar",
+                    icon: PencilIcon,
+                    href: catalogHref(CATALOG_PATHS.actividades, {
+                      edit: row.id,
+                    }),
+                  },
+                  canDelete &&
+                    catalogDeleteAction(
+                      deleteActivityAction.bind(null, row.id),
+                      "actividad",
+                      row.name,
+                    ),
+                ]}
+                label={`Acciones de ${row.name}`}
+              />
+            )
+          : undefined
+      }
       searchPlaceholder="Buscar actividad"
     />
   );

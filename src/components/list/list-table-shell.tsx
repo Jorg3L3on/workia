@@ -11,10 +11,6 @@ import {
 } from "@/components/ui/empty";
 import { cn } from "@/lib/utils";
 
-/** Dense product list table styling (Zigzag tickets/clients aligned). */
-export const listTableDensityClassName =
-  "[&_td]:py-3.5 [&_td]:align-middle [&_th]:h-11 [&_th]:bg-muted/50 [&_th]:px-4 [&_th]:text-sm [&_th]:font-medium [&_th]:text-muted-foreground [&_th]:py-2.5 [&_th]:align-middle [&_tr]:border-border/50 [&_td]:px-4";
-
 type ListTableShellProps = {
   children: ReactNode;
   className?: string;
@@ -62,36 +58,3 @@ export const ListEmptyState = ({
     {action ? <EmptyContent>{action}</EmptyContent> : null}
   </Empty>
 );
-
-type ListResultCountProps = {
-  count: number;
-  singular: string;
-  plural: string;
-  total?: number;
-  className?: string;
-};
-
-export const ListResultCount = ({
-  count,
-  singular,
-  plural,
-  total,
-  className,
-}: ListResultCountProps) => {
-  const showingPartial = total != null && total !== count;
-  const label = !showingPartial && count === 1 ? singular : plural;
-  const text = showingPartial
-    ? `${count} de ${total} ${label}`
-    : `${count} ${label}`;
-
-  return (
-    <p
-      className={cn(
-        "text-muted-foreground text-sm tabular-nums sm:ml-auto",
-        className,
-      )}
-    >
-      {text}
-    </p>
-  );
-};
