@@ -1,7 +1,7 @@
 "use client";
 
-import { useReducedMotion } from "motion/react";
 import { useEffect, useState } from "react";
+import { useHydratedReducedMotion } from "@/hooks/use-hydrated-reduced-motion";
 
 type CountUpProps = {
   value: number;
@@ -9,7 +9,7 @@ type CountUpProps = {
 };
 
 export const CountUp = ({ value, className }: CountUpProps) => {
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useHydratedReducedMotion();
   const [shown, setShown] = useState(0);
 
   useEffect(() => {
