@@ -47,6 +47,7 @@ test("personal token: create, copy, use and revoke in /app/conexiones", async ({
   await expect(page).toHaveURL(/\/app\/conexiones/, { timeout: 25_000 });
 
   const name = `E2E ${Date.now()}`;
+  await page.getByRole("button", { name: "Nuevo token" }).click();
   await page.getByLabel("Nombre").fill(name);
   await page.getByRole("button", { name: "Crear token" }).click();
 

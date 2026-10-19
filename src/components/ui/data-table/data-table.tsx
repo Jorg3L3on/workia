@@ -113,8 +113,6 @@ export type DataTableProps<TData> = {
   inlineAction?: (row: TData) => ReactNode;
   /** Every other action, as a `RowMenu`. */
   rowMenu?: (row: TData) => ReactNode;
-  /** Content shown under a row (spans the table), e.g. an open panel. */
-  renderAfterRow?: (row: TData) => ReactNode;
   /** Below 768px each row is a card; defaults to the first two columns. */
   mobileCard?: (row: TData) => DataTableMobileCard;
   /** Kept for callers; the FilterBar wraps the same way in a page or a panel. */
@@ -262,7 +260,6 @@ export const DataTable = <TData,>({
   getRowAriaLabel,
   inlineAction,
   rowMenu,
-  renderAfterRow,
   mobileCard,
   rowTestId,
   server,
@@ -392,7 +389,6 @@ export const DataTable = <TData,>({
     : data.length > 0;
   const showNoMatches = hasSourceRows && filteredCount === 0;
   const showEmpty = !hasSourceRows;
-  const columnCount = columns.length + (hasActions ? 1 : 0);
 
   const openRow = (href: string | undefined) => {
     if (href) router.push(href);
@@ -475,7 +471,6 @@ export const DataTable = <TData,>({
               {pageRows.map((row) => {
                 const card = (mobileCard ?? defaultCard)(row.original);
                 const href = getRowHref?.(row.original);
-                const after = renderAfterRow?.(row.original);
 
                 return (
                   <li
@@ -509,7 +504,6 @@ export const DataTable = <TData,>({
                         />
                       ) : null}
                     </div>
-                    {after ? <div className="px-4 pb-4">{after}</div> : null}
                   </li>
                 );
               })}
@@ -593,7 +587,6 @@ export const DataTable = <TData,>({
               <TableBody>
                 {pageRows.map((row) => {
                   const href = getRowHref?.(row.original);
-                  const after = renderAfterRow?.(row.original);
 
                   return (
                     <Fragment key={row.id}>
@@ -638,16 +631,6 @@ export const DataTable = <TData,>({
                           </TableCell>
                         ) : null}
                       </TableRow>
-                      {after ? (
-                        <TableRow className="hover:bg-transparent">
-                          <TableCell
-                            className="bg-muted/20 px-4 py-4 whitespace-normal"
-                            colSpan={columnCount}
-                          >
-                            {after}
-                          </TableCell>
-                        </TableRow>
-                      ) : null}
                     </Fragment>
                   );
                 })}

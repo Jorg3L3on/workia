@@ -1,16 +1,10 @@
 import type { Metadata } from "next";
 
-import { PlusIcon } from "lucide-react";
-
 import { PageHeader } from "@/components/layout/page-header";
 import { AltasDataTable } from "@/components/onboarding/altas-data-table";
-import { CompanyField } from "@/components/tenant/company-context";
-import { Button } from "@/components/ui/button";
-import { FormSelect } from "@/components/ui/form-select";
-import { Label } from "@/components/ui/label";
+import { StartAltaSheet } from "@/components/onboarding/start-alta-sheet";
 import { pageTitles } from "@/lib/brand/chrome-copy";
 import { listOnboardings } from "@/lib/onboarding";
-import { startOnboardingAction } from "@/lib/onboarding/actions";
 import {
   missingChecklist,
   onboardingStageLabels,
@@ -50,9 +44,19 @@ const AltasPage = async ({ searchParams }: AltasPageProps) => {
       <PageHeader
         description="RH captura y aprueba; Nóminas da el segundo visto bueno."
         primary={
-          canStart && candidates.length > 0
-            ? { label: "Iniciar alta", icon: PlusIcon, href: "#iniciar-alta" }
-            : null
+          canStart && candidates.length > 0 ? (
+            <StartAltaSheet
+              candidates={candidates.map((person) => ({
+                id: person.id,
+                name: formatPersonName(person),
+              }))}
+              initialPersonId={
+                candidates.some((person) => person.id === persona)
+                  ? persona
+                  : undefined
+              }
+            />
+          ) : null
         }
         title="Altas"
       />
@@ -65,50 +69,6 @@ const AltasPage = async ({ searchParams }: AltasPageProps) => {
               ? "No tienes permiso para esta acción."
               : "No se pudo completar la acción."}
         </p>
-      ) : null}
-
-      {canStart ? (
-        <section
-          className="workia-pass-card scroll-mt-20 space-y-3 p-5"
-          id="iniciar-alta"
-        >
-          <h2 className="text-sm font-semibold">Iniciar alta</h2>
-          {candidates.length === 0 ? (
-            <p className="text-muted-foreground text-sm">
-              Todas las personas activas ya tienen alta. Da de alta el
-              expediente en Personas primero.
-            </p>
-          ) : (
-            <form
-              action={startOnboardingAction}
-              className="flex flex-col gap-3 sm:flex-row sm:items-end"
-            >
-              <CompanyField />
-              <div className="space-y-1 sm:w-80">
-                <Label htmlFor="alta-person">Persona</Label>
-                <FormSelect
-                  defaultValue={
-                    candidates.some((person) => person.id === persona)
-                      ? persona
-                      : undefined
-                  }
-                  id="alta-person"
-                  name="personId"
-                  placeholder="Elige una persona"
-                  required
-                  options={candidates.map((person) => ({
-                    value: person.id,
-                    label: formatPersonName(person),
-                  }))}
-                  variant="field"
-                />
-              </div>
-              <Button type="submit" variant="secondary">
-                Iniciar alta
-              </Button>
-            </form>
-          )}
-        </section>
       ) : null}
 
       <AltasDataTable

@@ -14,7 +14,6 @@ vi.mock("next/navigation", () => ({
 }));
 
 vi.mock("@/lib/contracts/actions", () => ({
-  renewContractAction: async () => ({}),
   noRenewContractAction: async () => undefined,
   decideContractRenewalAction: async () => ({}),
 }));
@@ -136,23 +135,21 @@ describe("RenewalTrayList", () => {
     ).toBeTruthy();
   });
 
-  it("keeps the Renovar panel behind the menu and opens one row at a time", () => {
+  it("offers only Decidir renovación in the menu, and the dialog cancels", () => {
     renderTray();
 
-    expect(screen.queryByLabelText("Nuevo tipo")).toBeNull();
-
     openMenu("Ana Demo");
-    fireEvent.click(screen.getByRole("menuitem", { name: "Renovar contrato" }));
-
-    expect(screen.getAllByLabelText("Nuevo tipo").length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByRole("menuitem").map((item) => item.textContent),
+    ).toEqual(["Decidir renovación", "Ver expediente"]);
 
     fireEvent.click(
-      screen.getAllByRole("button", {
-        name: "Cerrar formulario de renovación de Ana Demo",
-      })[0],
+      screen.getByRole("menuitem", { name: "Decidir renovación" }),
     );
+    const dialog = screen.getByRole("dialog", { name: "Decidir renovación" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Cancelar" }));
 
-    expect(screen.queryByLabelText("Nuevo tipo")).toBeNull();
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   it("offers only Ver expediente without update permission", () => {

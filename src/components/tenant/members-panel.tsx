@@ -1,9 +1,10 @@
 "use client";
 
-import { UserCogIcon, UserXIcon } from "lucide-react";
+import { UserCogIcon, UserPlusIcon, UserXIcon } from "lucide-react";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { FormSheet } from "@/components/layout/form-sheet";
 import { CompanyField } from "@/components/tenant/company-context";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -80,65 +81,69 @@ const useResultToast = (state: AdminActionState, success: string) => {
   }, [state, success]);
 };
 
-const AddMemberForm = ({
+/** «Agregar miembro»: the header's primary, opening a Sheet. */
+export const AddMemberSheet = ({
   roles,
   scope,
 }: Pick<MembersPanelProps, "roles" | "scope">) => {
-  const [state, action, pending] = useActionState(addMemberAction, {});
-  const formRef = useRef<HTMLFormElement>(null);
+  const [open, setOpen] = useState(false);
+  const [state, action, pending] = useActionState(
+    async (prev: AdminActionState, formData: FormData) => {
+      const next = await addMemberAction(prev, formData);
+      if (next.ok) setOpen(false);
+      return next;
+    },
+    {},
+  );
 
   useResultToast(state, "Miembro agregado.");
 
-  useEffect(() => {
-    if (state.ok) formRef.current?.reset();
-  }, [state]);
-
   return (
-    <form
-      ref={formRef}
-      action={action}
-      className="grid scroll-mt-20 gap-3 sm:grid-cols-[1fr_12rem_auto] sm:items-end"
-      id="agregar-miembro"
+    <FormSheet
+      description="Si aún no tiene cuenta, se crea con su correo y entra con Google."
+      formId="agregar-miembro"
+      onOpenChange={setOpen}
+      open={open}
+      pending={pending}
+      submitLabel="Agregar"
+      title="Agregar miembro"
+      triggerIcon={UserPlusIcon}
+      triggerLabel="Agregar miembro"
     >
-      <ScopeFields scope={scope} />
-      <div className="space-y-2">
-        <Label htmlFor="member-email">Correo de la cuenta</Label>
-        <Input
-          id="member-email"
-          name="email"
-          type="email"
-          placeholder="nombre@empresa.com"
-          required
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="member-role">Rol</Label>
-        <FormSelect
-          id="member-role"
-          name="roleSlug"
-          defaultValue="viewer"
-          options={roles.map((role) => ({
-            value: role.slug,
-            label: role.name,
-          }))}
-          required
-          variant="field"
-        />
-      </div>
-      <Button
-        type="submit"
-        disabled={pending}
-        // The header owns the view's primary («Agregar miembro», «Guardar cambios»).
-        variant="secondary"
-      >
-        Agregar miembro
-      </Button>
-      {state.error ? (
-        <p role="alert" className="text-destructive text-sm sm:col-span-3">
-          {state.error}
-        </p>
-      ) : null}
-    </form>
+      <form action={action} className="space-y-4" id="agregar-miembro">
+        <ScopeFields scope={scope} />
+        <div className="space-y-2">
+          <Label htmlFor="member-email">Correo</Label>
+          <Input
+            autoFocus
+            id="member-email"
+            name="email"
+            type="email"
+            placeholder="nombre@empresa.com"
+            required
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="member-role">Rol</Label>
+          <FormSelect
+            id="member-role"
+            name="roleSlug"
+            defaultValue="viewer"
+            options={roles.map((role) => ({
+              value: role.slug,
+              label: role.name,
+            }))}
+            required
+            variant="field"
+          />
+        </div>
+        {state.error ? (
+          <p role="alert" className="text-destructive text-sm">
+            {state.error}
+          </p>
+        ) : null}
+      </form>
+    </FormSheet>
   );
 };
 
@@ -195,7 +200,7 @@ const ChangeRoleDialog = ({
             <Button
               onClick={() => onOpenChange(false)}
               type="button"
-              variant="secondary"
+              variant="ghost"
             >
               Cancelar
             </Button>
@@ -328,36 +333,32 @@ export const MembersPanel = ({
   ];
 
   return (
-    <div className="flex flex-col gap-4">
-      {canManage ? <AddMemberForm roles={roles} scope={scope} /> : null}
-
-      <DataTable
-        columns={columns}
-        data={members}
-        emptyTitle="Sin miembros todavía"
-        getRowId={(member) => member.id}
-        layout="inset"
-        mobileCard={(member) => ({
-          title: (
-            <MemberName
-              isSelf={member.userId === currentUserId}
-              member={member}
-            />
-          ),
-          subtitle: member.roleName,
-          badge: <MemberStatus member={member} />,
-        })}
-        rowMenu={
-          canManage
-            ? (member) =>
-                editable(member) ? (
-                  <MemberRowMenu member={member} roles={roles} scope={scope} />
-                ) : null
-            : undefined
-        }
-        rowTestId="member-row"
-        searchPlaceholder="Buscar por nombre o correo"
-      />
-    </div>
+    <DataTable
+      columns={columns}
+      data={members}
+      emptyTitle="Sin miembros todavía"
+      getRowId={(member) => member.id}
+      layout="inset"
+      mobileCard={(member) => ({
+        title: (
+          <MemberName
+            isSelf={member.userId === currentUserId}
+            member={member}
+          />
+        ),
+        subtitle: member.roleName,
+        badge: <MemberStatus member={member} />,
+      })}
+      rowMenu={
+        canManage
+          ? (member) =>
+              editable(member) ? (
+                <MemberRowMenu member={member} roles={roles} scope={scope} />
+              ) : null
+          : undefined
+      }
+      rowTestId="member-row"
+      searchPlaceholder="Buscar por nombre o correo"
+    />
   );
 };

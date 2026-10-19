@@ -14,6 +14,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -105,7 +106,7 @@ export const RenewalDecisionDialog = ({
           <input name="decision" type="hidden" value={decision} />
 
           <fieldset className="space-y-2">
-            <legend className="text-sm font-medium">Decisión</legend>
+            <legend className="mb-2 text-sm font-semibold">Decisión</legend>
             {RENEWAL_DECISIONS.map((option) => (
               <label key={option} className="flex items-center gap-2 text-sm">
                 <input
@@ -208,9 +209,16 @@ export const RenewalDecisionDialog = ({
             </div>
           )}
 
-          <div className="flex justify-end">
+          <DialogFooter>
+            <Button
+              onClick={() => onOpenChange(false)}
+              type="button"
+              variant="ghost"
+            >
+              Cancelar
+            </Button>
             <SubmitButton decision={decision} />
-          </div>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

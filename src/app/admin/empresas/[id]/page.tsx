@@ -5,17 +5,14 @@ import { PageBreadcrumbLabel } from "@/components/layout/app-breadcrumbs";
 import { PageHeader } from "@/components/layout/page-header";
 import {
   CompanyForm,
-  CompanyStatusButton,
+  CompanyStatusMenu,
 } from "@/components/tenant/company-form";
-import { MembersPanel } from "@/components/tenant/members-panel";
-import { Badge } from "@/components/ui/badge";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  AddMemberSheet,
+  MembersPanel,
+} from "@/components/tenant/members-panel";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { pageTitles } from "@/lib/brand/chrome-copy";
 import { requireAuth } from "@/lib/auth/session";
 import { getCompanyById } from "@/lib/tenant/companies";
@@ -54,10 +51,19 @@ const EmpresaPage = async ({ params, searchParams }: EmpresaPageProps) => {
       <PageBreadcrumbLabel label={company.name} />
       <PageHeader
         menu={
-          <CompanyStatusButton companyId={company.id} status={company.status} />
+          <CompanyStatusMenu
+            companyId={company.id}
+            companyName={company.name}
+            status={company.status}
+          />
         }
         meta={<span className="font-mono">{company.slug}</span>}
-        primary={{ label: "Guardar cambios", form: "company-form" }}
+        primary={
+          <AddMemberSheet
+            roles={roles}
+            scope={{ kind: "platform", targetCompanyId: company.id }}
+          />
+        }
         status={
           <Badge tone={toneFor("company", company.status)}>
             {company.status === "activa" ? "Activa" : "Suspendida"}
@@ -90,24 +96,18 @@ const EmpresaPage = async ({ params, searchParams }: EmpresaPageProps) => {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Miembros</CardTitle>
-          <CardDescription>
-            Si la persona aún no tiene cuenta, se crea con su correo y entra con
-            Google usando ese correo.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <MembersPanel
-            members={members}
-            roles={roles}
-            canManage
-            currentUserId={session.user.id}
-            scope={{ kind: "platform", targetCompanyId: company.id }}
-          />
-        </CardContent>
-      </Card>
+      <section aria-labelledby="miembros-heading" className="space-y-3">
+        <h2 className="text-base font-semibold" id="miembros-heading">
+          Miembros
+        </h2>
+        <MembersPanel
+          members={members}
+          roles={roles}
+          canManage
+          currentUserId={session.user.id}
+          scope={{ kind: "platform", targetCompanyId: company.id }}
+        />
+      </section>
     </div>
   );
 };

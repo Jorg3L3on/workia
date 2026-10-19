@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { formatMoney } from "@/components/contracts/compensation-fields";
 import { ContractForm } from "@/components/contracts/contract-form";
+import { RenewalDecisionButton } from "@/components/contracts/renewal-decision-button";
 import { Badge } from "@/components/ui/badge";
 import type { Contract, ContractTemplate } from "@/lib/db/schema";
 import {
@@ -33,6 +34,10 @@ type PersonContractsSectionProps = {
   showEmitForm?: boolean;
   /** compensation:read: shows salaries; without it only whether one was captured. */
   canSeeCompensation?: boolean;
+  /** contracts:update: a fixed-term vigente contract offers «Decidir renovación». */
+  canDecide?: boolean;
+  personName?: string;
+  positions?: { id: string; name: string }[];
 };
 
 export const PersonContractsSection = ({
@@ -43,8 +48,13 @@ export const PersonContractsSection = ({
   templates,
   showEmitForm = false,
   canSeeCompensation = false,
+  canDecide = false,
+  personName = "",
+  positions = [],
 }: PersonContractsSectionProps) => {
   const vigente = contracts.find((contract) => contract.status === "vigente");
+  const decidable =
+    canDecide && templates.length > 0 && vigente?.endDate ? vigente : null;
 
   return (
     <section className="space-y-3">
@@ -76,9 +86,31 @@ export const PersonContractsSection = ({
                   {contractNoticeWindowLabels[vigente.noticeWindow]}
                 </p>
               </div>
-              <Badge tone={toneFor("contract", vigente.status)}>
-                {contractStatusLabels[vigente.status]}
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Badge tone={toneFor("contract", vigente.status)}>
+                  {contractStatusLabels[vigente.status]}
+                </Badge>
+                {decidable?.endDate ? (
+                  <RenewalDecisionButton
+                    canSeeCompensation={canSeeCompensation}
+                    compensation={
+                      canSeeCompensation
+                        ? {
+                            salarioDiario: decidable.salarioDiario,
+                            formaPago: decidable.formaPago,
+                            periodicidadPago: decidable.periodicidadPago,
+                            diaPago: decidable.diaPago,
+                          }
+                        : undefined
+                    }
+                    contractId={decidable.id}
+                    endDate={decidable.endDate}
+                    personName={personName}
+                    positions={positions}
+                    templates={templates}
+                  />
+                ) : null}
+              </div>
             </div>
             <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
               <div className="sm:col-span-2">

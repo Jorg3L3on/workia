@@ -1,8 +1,9 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { CheckIcon, CopyIcon } from "lucide-react";
+import { CheckIcon, CopyIcon, KeyRoundIcon } from "lucide-react";
 
+import { FormSheet } from "@/components/layout/form-sheet";
 import { CompanyField } from "@/components/tenant/company-context";
 import { Button } from "@/components/ui/button";
 import {
@@ -116,12 +117,22 @@ const TokenOnceDialog = ({
   );
 };
 
-export const CreateTokenForm = ({
+/**
+ * «Nuevo token» (WRK-I6-4): the header's primary opens this Sheet; the token
+ * is shown once, in a dialog, after the sheet closes.
+ */
+export const CreateTokenSheet = ({
   grantable,
   mcpUrl,
 }: CreateTokenFormProps) => {
+  const [open, setOpen] = useState(false);
   const [state, action, pending] = useActionState<CreateTokenState, FormData>(
-    createPersonalTokenAction,
+    async (prev, formData) => {
+      const next = await createPersonalTokenAction(prev, formData);
+      // The token is shown once, in its dialog, after the sheet closes.
+      if (next.token) setOpen(false);
+      return next;
+    },
     {},
   );
   const [preset, setPreset] = useState<TokenPreset>("solo_lectura");
@@ -131,89 +142,107 @@ export const CreateTokenForm = ({
   );
 
   return (
-    <form
-      action={action}
-      className="flex flex-col gap-4"
-      data-testid="create-token-form"
-    >
-      <CompanyField />
-      <div className="grid gap-3 sm:grid-cols-[1fr_14rem_10rem]">
-        <div className="space-y-2">
-          <Label htmlFor="token-name">Nombre</Label>
-          <Input
-            id="token-name"
-            name="name"
-            placeholder="Grok Bot de RRHH"
-            maxLength={80}
-            required
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="token-preset">Permisos</Label>
-          <FormSelect
-            id="token-preset"
-            name="preset"
-            value={preset}
-            onValueChange={(value) => setPreset(value as TokenPreset)}
-            options={TOKEN_PRESETS.map((value) => ({
-              value,
-              label: tokenPresetLabels[value].label,
-            }))}
-            variant="field"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="token-expiry">Vence en</Label>
-          <FormSelect
-            id="token-expiry"
-            name="expiresInDays"
-            defaultValue="30"
-            options={[
-              { value: "7", label: "7 días" },
-              { value: "30", label: "30 días" },
-              { value: "90", label: "90 días" },
-            ]}
-            variant="field"
-          />
-        </div>
-      </div>
-      <p className="text-muted-foreground text-sm">
-        {tokenPresetLabels[preset].hint}
-      </p>
-      {preset === "personalizado" ? (
-        <fieldset className="grid gap-2 sm:grid-cols-2">
-          <legend className="sr-only">Permisos personalizados</legend>
-          {customChoices.map((scope) => (
-            <label
-              key={scope}
-              className="flex items-start gap-2 rounded-md border p-3 text-sm"
-            >
-              <input
-                type="checkbox"
-                name="scopes"
-                value={scope}
-                className="accent-primary mt-0.5 size-4"
+    <>
+      <FormSheet
+        description={
+          <>
+            Para Grok Bot, Cursor o el MCP Inspector. ChatGPT y Claude se
+            conectan con OAuth desde su configuración con la URL{" "}
+            <code className="font-mono break-all">{mcpUrl}</code>.
+          </>
+        }
+        formId="create-token-form"
+        onOpenChange={setOpen}
+        open={open}
+        pending={pending}
+        submitLabel="Crear token"
+        title="Nuevo token personal"
+        triggerIcon={KeyRoundIcon}
+        triggerLabel="Nuevo token"
+      >
+        <form
+          action={action}
+          className="flex flex-col gap-4"
+          data-testid="create-token-form"
+          id="create-token-form"
+        >
+          <CompanyField />
+          <div className="space-y-2">
+            <Label htmlFor="token-name">Nombre</Label>
+            <Input
+              id="token-name"
+              name="name"
+              placeholder="Grok Bot de RRHH"
+              maxLength={80}
+              required
+            />
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="token-preset">Permisos</Label>
+              <FormSelect
+                id="token-preset"
+                name="preset"
+                value={preset}
+                onValueChange={(value) => setPreset(value as TokenPreset)}
+                options={TOKEN_PRESETS.map((value) => ({
+                  value,
+                  label: tokenPresetLabels[value].label,
+                }))}
+                variant="field"
               />
-              <span className="grid gap-0.5">
-                <span className="font-medium">{scopeLabels[scope].label}</span>
-                <span className="text-muted-foreground text-xs">
-                  {scopeLabels[scope].hint}
-                </span>
-              </span>
-            </label>
-          ))}
-        </fieldset>
-      ) : null}
-      {state.error ? (
-        <p role="alert" className="text-destructive text-sm">
-          {state.error}
-        </p>
-      ) : null}
-      <div>
-        <Button type="submit" disabled={pending}>
-          Crear token
-        </Button>
-      </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="token-expiry">Vence en</Label>
+              <FormSelect
+                id="token-expiry"
+                name="expiresInDays"
+                defaultValue="30"
+                options={[
+                  { value: "7", label: "7 días" },
+                  { value: "30", label: "30 días" },
+                  { value: "90", label: "90 días" },
+                ]}
+                variant="field"
+              />
+            </div>
+          </div>
+          <p className="text-muted-foreground text-sm">
+            {tokenPresetLabels[preset].hint}
+          </p>
+          {preset === "personalizado" ? (
+            <fieldset className="grid gap-2">
+              <legend className="sr-only">Permisos personalizados</legend>
+              {customChoices.map((scope) => (
+                <label
+                  key={scope}
+                  className="flex items-start gap-2 rounded-md border p-3 text-sm"
+                >
+                  <input
+                    type="checkbox"
+                    name="scopes"
+                    value={scope}
+                    className="accent-primary mt-0.5 size-4"
+                  />
+                  <span className="grid gap-0.5">
+                    <span className="font-medium">
+                      {scopeLabels[scope].label}
+                    </span>
+                    <span className="text-muted-foreground text-xs">
+                      {scopeLabels[scope].hint}
+                    </span>
+                  </span>
+                </label>
+              ))}
+            </fieldset>
+          ) : null}
+          {state.error ? (
+            <p role="alert" className="text-destructive text-sm">
+              {state.error}
+            </p>
+          ) : null}
+        </form>
+      </FormSheet>
       {state.token && dismissed !== state.token ? (
         <TokenOnceDialog
           state={state}
@@ -221,6 +250,6 @@ export const CreateTokenForm = ({
           onClose={() => setDismissed(state.token ?? null)}
         />
       ) : null}
-    </form>
+    </>
   );
 };

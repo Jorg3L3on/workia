@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { UserRoundIcon } from "lucide-react";
+import { CheckIcon, UserRoundIcon } from "lucide-react";
 import { notFound } from "next/navigation";
 
 import { PageBreadcrumbLabel } from "@/components/layout/app-breadcrumbs";
@@ -7,21 +7,13 @@ import { PageHeader } from "@/components/layout/page-header";
 import { CompanyField } from "@/components/tenant/company-context";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { FormSelect } from "@/components/ui/form-select";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { AltaCaptureForm } from "@/components/onboarding/alta-capture-form";
+import { RejectAltaDialog } from "@/components/onboarding/reject-alta-dialog";
+import { formatDateMx } from "@/lib/format/date";
 import { getOnboardingById } from "@/lib/onboarding";
+import { approveOnboardingAction } from "@/lib/onboarding/actions";
 import {
-  approveOnboardingAction,
-  rejectOnboardingAction,
-  updateOnboardingAction,
-} from "@/lib/onboarding/actions";
-import {
-  INFONAVIT_DISCOUNT_TYPES,
-  infonavitDiscountLabels,
   missingChecklist,
-  ONBOARDING_CHECKLIST,
   onboardingChecklistLabels,
   onboardingStageLabels,
 } from "@/lib/onboarding/schema";
@@ -29,6 +21,7 @@ import { requirePeopleRead } from "@/lib/people/auth";
 import { formatPersonName } from "@/lib/people/schema";
 import { userHasPermission } from "@/lib/rbac";
 import { toneFor } from "@/lib/ui/status-tone";
+import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -41,7 +34,6 @@ type AltaPageProps = {
   searchParams: Promise<{
     error?: string;
     message?: string;
-    saved?: string;
     approved?: string;
     rejected?: string;
     started?: string;
@@ -49,11 +41,53 @@ type AltaPageProps = {
 };
 
 const STATUS: Record<string, string> = {
-  saved: "Captura guardada.",
   approved: "Visto bueno registrado.",
   rejected: "Alta rechazada.",
   started: "Alta iniciada. Captura el checklist y apruébala.",
 };
+
+const AltaStep = ({
+  n,
+  label,
+  detail,
+  done,
+  current,
+  failed = false,
+}: {
+  n: number;
+  label: string;
+  detail?: string;
+  done: boolean;
+  current: boolean;
+  failed?: boolean;
+}) => (
+  <li
+    aria-current={current ? "step" : undefined}
+    className="flex items-center gap-2"
+  >
+    <span
+      className={cn(
+        "flex size-6 shrink-0 items-center justify-center rounded-full border text-xs font-medium tabular-nums",
+        done && "bg-primary text-primary-foreground border-transparent",
+        current && "border-primary text-primary",
+        failed && "border-destructive text-destructive",
+      )}
+    >
+      {done ? <CheckIcon aria-hidden className="size-3.5" /> : n}
+    </span>
+    <span
+      className={cn(current || done ? "font-medium" : "text-muted-foreground")}
+    >
+      {label}
+    </span>
+    {detail ? (
+      <span className="text-muted-foreground text-xs tabular-nums">
+        {detail}
+      </span>
+    ) : null}
+    {done ? <span className="sr-only">(aprobado)</span> : null}
+  </li>
+);
 
 /** One alta: checklist, Infonavit/Fonacot and the two approvals (WRK-I5-7). */
 const AltaPage = async ({ params, searchParams }: AltaPageProps) => {
@@ -80,6 +114,15 @@ const AltaPage = async ({ params, searchParams }: AltaPageProps) => {
     onboarding.stage === "pendiente_nominas" &&
     onboarding.rhApprovedBy === session.user.id;
   const missing = missingChecklist(onboarding.checklist);
+  const canDecide = canEdit && !sameApprover;
+  const blockedByChecklist =
+    onboarding.stage === "rh_captura" && missing.length > 0;
+  // The two-person rule and the permissions decide; the footer only says why.
+  const cannotDecideReason = sameApprover
+    ? "Tú diste el visto bueno de RH; el de Nóminas lo da otra persona."
+    : onboarding.stage === "rh_captura"
+      ? "Esperando el visto bueno de RH."
+      : "Esperando el visto bueno de Nóminas.";
   const status = Object.keys(STATUS).find(
     (key) => query[key as keyof typeof query],
   );
@@ -124,178 +167,91 @@ const AltaPage = async ({ params, searchParams }: AltaPageProps) => {
       ) : null}
 
       <ol
-        className="grid gap-2 text-sm sm:grid-cols-2"
+        aria-label="Etapas del alta"
+        className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm"
         data-testid="alta-stages"
       >
-        <li className="workia-pass-card p-3">
-          <p className="font-medium">1. Visto bueno de RH</p>
-          <p className="text-muted-foreground text-xs">
-            {onboarding.rhApprovedAt
-              ? `Aprobado el ${onboarding.rhApprovedAt.toLocaleDateString("es-MX")}`
-              : "Pendiente"}
-          </p>
-        </li>
-        <li className="workia-pass-card p-3">
-          <p className="font-medium">2. Visto bueno de Nóminas</p>
-          <p className="text-muted-foreground text-xs">
-            {onboarding.payrollApprovedAt
-              ? `Aprobado el ${onboarding.payrollApprovedAt.toLocaleDateString("es-MX")}`
+        <AltaStep
+          current={onboarding.stage === "rh_captura"}
+          detail={
+            onboarding.rhApprovedAt
+              ? formatDateMx(onboarding.rhApprovedAt)
+              : undefined
+          }
+          done={Boolean(onboarding.rhApprovedAt)}
+          label="RH"
+          n={1}
+        />
+        <li aria-hidden className="bg-border h-px w-8 sm:w-12" />
+        <AltaStep
+          current={onboarding.stage === "pendiente_nominas"}
+          detail={
+            onboarding.payrollApprovedAt
+              ? formatDateMx(onboarding.payrollApprovedAt)
               : onboarding.stage === "rechazado"
-                ? `Rechazado: ${onboarding.rejectedReason}`
-                : "Pendiente"}
-          </p>
-        </li>
+                ? "Rechazada"
+                : undefined
+          }
+          done={Boolean(onboarding.payrollApprovedAt)}
+          failed={onboarding.stage === "rechazado"}
+          label="Nóminas"
+          n={2}
+        />
       </ol>
+      {onboarding.stage === "rechazado" && onboarding.rejectedReason ? (
+        <p className="text-muted-foreground -mt-3 text-sm">
+          Motivo del rechazo: {onboarding.rejectedReason}
+        </p>
+      ) : null}
 
-      <form
-        action={updateOnboardingAction.bind(null, onboarding.id)}
-        className="workia-pass-card space-y-5 p-5"
-      >
-        <CompanyField />
-        <fieldset className="space-y-2" disabled={!canEdit}>
-          <legend className="text-sm font-semibold">Checklist</legend>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {ONBOARDING_CHECKLIST.map((item) => (
-              <label key={item} className="flex items-center gap-2 text-sm">
-                <input
-                  defaultChecked={Boolean(onboarding.checklist[item])}
-                  name={`checklist_${item}`}
-                  type="checkbox"
-                />
-                {onboardingChecklistLabels[item]}
-              </label>
-            ))}
-          </div>
-        </fieldset>
-
-        <fieldset className="grid gap-3 sm:grid-cols-3" disabled={!canEdit}>
-          <legend className="text-sm font-semibold sm:col-span-3">
-            Infonavit
-          </legend>
-          <div className="space-y-1">
-            <Label htmlFor="infonavitCredito">Número de crédito</Label>
-            <Input
-              defaultValue={onboarding.infonavitCredito ?? ""}
-              id="infonavitCredito"
-              name="infonavitCredito"
-            />
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="infonavitTipoDescuento">Tipo de descuento</Label>
-            <FormSelect
-              defaultValue={onboarding.infonavitTipoDescuento ?? ""}
-              id="infonavitTipoDescuento"
-              name="infonavitTipoDescuento"
-              options={[
-                { value: "", label: "Sin crédito" },
-                ...INFONAVIT_DISCOUNT_TYPES.map((value) => ({
-                  value,
-                  label: infonavitDiscountLabels[value],
-                })),
-              ]}
-              variant="field"
-            />
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="infonavitFactor">Factor de descuento</Label>
-            <Input
-              defaultValue={onboarding.infonavitFactor ?? ""}
-              id="infonavitFactor"
-              inputMode="decimal"
-              name="infonavitFactor"
-              step="0.0001"
-              type="number"
-            />
-          </div>
-        </fieldset>
-
-        <fieldset className="grid gap-3 sm:grid-cols-3" disabled={!canEdit}>
-          <legend className="text-sm font-semibold sm:col-span-3">
-            Fonacot
-          </legend>
-          <div className="space-y-1">
-            <Label htmlFor="fonacotCredito">Número de crédito</Label>
-            <Input
-              defaultValue={onboarding.fonacotCredito ?? ""}
-              id="fonacotCredito"
-              name="fonacotCredito"
-            />
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="fonacotDescuento">Descuento ($)</Label>
-            <Input
-              defaultValue={onboarding.fonacotDescuento ?? ""}
-              id="fonacotDescuento"
-              inputMode="decimal"
-              name="fonacotDescuento"
-              step="0.01"
-              type="number"
-            />
-          </div>
-        </fieldset>
-
-        {canEdit ? (
-          <Button type="submit" variant="secondary">
-            Guardar captura
-          </Button>
-        ) : null}
-      </form>
+      <AltaCaptureForm
+        canEdit={canEdit}
+        onboardingId={onboarding.id}
+        values={{
+          checklist: onboarding.checklist,
+          infonavitCredito: onboarding.infonavitCredito ?? "",
+          infonavitTipoDescuento: onboarding.infonavitTipoDescuento ?? "",
+          infonavitFactor: onboarding.infonavitFactor ?? "",
+          fonacotCredito: onboarding.fonacotCredito ?? "",
+          fonacotDescuento: onboarding.fonacotDescuento ?? "",
+        }}
+      />
 
       {open ? (
-        <section className="workia-pass-card space-y-3 p-5">
-          <h2 className="text-sm font-semibold">
-            {onboarding.stage === "rh_captura"
-              ? "Visto bueno de RH"
-              : "Visto bueno de Nóminas"}
-          </h2>
-          {onboarding.stage === "rh_captura" && missing.length > 0 ? (
-            <p className="text-muted-foreground text-sm">
-              Falta en el checklist:{" "}
-              {missing
-                .map((item) => onboardingChecklistLabels[item])
-                .join(", ")}
-              .
+        <div
+          className="bg-background/95 supports-backdrop-filter:bg-background/80 sticky -bottom-4 z-10 -mb-4 flex flex-wrap items-center justify-end gap-x-3 gap-y-2 border-t py-3 backdrop-blur md:-bottom-6 md:-mb-6"
+          data-testid="alta-decision"
+        >
+          {canDecide ? (
+            <>
+              <p className="text-muted-foreground mr-auto text-sm">
+                {blockedByChecklist
+                  ? `Falta en el checklist: ${missing
+                      .map((item) => onboardingChecklistLabels[item])
+                      .join(", ")}.`
+                  : onboarding.stage === "rh_captura"
+                    ? "Pasa a Nóminas; el segundo visto bueno lo da otra persona."
+                    : "Segundo visto bueno: el alta queda aprobada."}
+              </p>
+              {onboarding.stage === "pendiente_nominas" ? (
+                <RejectAltaDialog
+                  onboardingId={onboarding.id}
+                  personName={formatPersonName(person)}
+                />
+              ) : null}
+              <form action={approveOnboardingAction.bind(null, onboarding.id)}>
+                <CompanyField />
+                <Button disabled={blockedByChecklist} type="submit">
+                  Aprobar alta
+                </Button>
+              </form>
+            </>
+          ) : (
+            <p className="text-muted-foreground mr-auto text-sm">
+              {cannotDecideReason}
             </p>
-          ) : null}
-          {onboarding.stage === "rh_captura" ? (
-            <p className="text-muted-foreground text-sm">
-              Quien da este visto bueno no puede dar también el de Nóminas.
-            </p>
-          ) : null}
-          {sameApprover ? (
-            <p className="text-muted-foreground text-sm">
-              Tú diste el visto bueno de RH; el de Nóminas lo da otra persona.
-            </p>
-          ) : null}
-          {canEdit && !sameApprover ? (
-            <form action={approveOnboardingAction.bind(null, onboarding.id)}>
-              <CompanyField />
-              <Button
-                disabled={
-                  onboarding.stage === "rh_captura" && missing.length > 0
-                }
-                type="submit"
-              >
-                {onboarding.stage === "rh_captura"
-                  ? "Aprobar y enviar a Nóminas"
-                  : "Aprobar alta"}
-              </Button>
-            </form>
-          ) : null}
-          {onboarding.stage === "pendiente_nominas" && canPayroll ? (
-            <form
-              action={rejectOnboardingAction.bind(null, onboarding.id)}
-              className="space-y-2 border-t pt-3"
-            >
-              <CompanyField />
-              <Label htmlFor="motivo">Rechazar con motivo</Label>
-              <Textarea id="motivo" maxLength={500} name="motivo" required />
-              <Button type="submit" variant="ghost">
-                Rechazar alta
-              </Button>
-            </form>
-          ) : null}
-        </section>
+          )}
+        </div>
       ) : null}
     </div>
   );

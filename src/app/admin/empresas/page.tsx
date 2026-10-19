@@ -1,17 +1,8 @@
 import type { Metadata } from "next";
 
-import { PlusIcon } from "lucide-react";
-
 import { PageHeader } from "@/components/layout/page-header";
-import { CompanyForm } from "@/components/tenant/company-form";
+import { NewCompanySheet } from "@/components/tenant/company-form";
 import { CompaniesDataTable } from "@/components/tenant/companies-data-table";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { pageTitles } from "@/lib/brand/chrome-copy";
 import { listCompaniesWithCounts } from "@/lib/tenant/companies";
 
@@ -29,25 +20,9 @@ const EmpresasPage = async () => {
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
       <PageHeader
         description="Cada empresa tiene sus propios datos; nadie ve los de otra sin ser miembro de ella."
-        primary={{
-          label: "Nueva empresa",
-          icon: PlusIcon,
-          href: "#nueva-empresa",
-        }}
+        primary={<NewCompanySheet />}
         title="Empresas"
       />
-
-      <Card className="scroll-mt-20" id="nueva-empresa">
-        <CardHeader>
-          <CardTitle>Nueva empresa</CardTitle>
-          <CardDescription>
-            Después de crearla, agrega a su primera persona administradora.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <CompanyForm />
-        </CardContent>
-      </Card>
 
       <CompaniesDataTable
         companies={companies.map((company) => ({

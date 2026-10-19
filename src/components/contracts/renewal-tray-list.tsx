@@ -1,14 +1,12 @@
 "use client";
 
-import { CalendarCheckIcon, RefreshCwIcon, UserRoundIcon } from "lucide-react";
+import { CalendarCheckIcon, UserRoundIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { CompensationDefaults } from "@/components/contracts/compensation-fields";
 
 import { useServerListControls } from "@/components/list/use-server-list-controls";
 import { RenewalDecisionDialog } from "@/components/contracts/renewal-decision-dialog";
-import { RenewContractForm } from "@/components/contracts/renew-contract-form";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   DataTable,
   RowInlineAction,
@@ -74,12 +72,7 @@ export const RenewalTrayList = ({
   region = "",
 }: RenewalTrayListProps) => {
   const controls = useServerListControls();
-  const [expandedContractId, setExpandedContractId] = useState<string | null>(
-    null,
-  );
   const [decidingId, setDecidingId] = useState<string | null>(null);
-  // The inline «Renovar» panel stays reachable from the menu until F4 drops it.
-  const canRenew = canUpdate && templates.length > 0;
 
   const rows = useMemo<RenewalRow[]>(
     () =>
@@ -158,35 +151,6 @@ export const RenewalTrayList = ({
           subtitle: `Vence ${formatContractDate(row.endDate)} · aviso ${row.noticeLabel.toLowerCase()}`,
           badge: <RenewalStatusBadge row={row} />,
         })}
-        renderAfterRow={
-          canRenew
-            ? (row) =>
-                expandedContractId === row.id ? (
-                  <div className="space-y-3" id={`renewal-form-${row.id}`}>
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="text-sm font-medium">Renovar contrato</p>
-                      <Button
-                        aria-label={`Cerrar formulario de renovación de ${row.personName}`}
-                        onClick={() => setExpandedContractId(null)}
-                        size="sm"
-                        type="button"
-                        variant="ghost"
-                      >
-                        Cerrar
-                      </Button>
-                    </div>
-                    <RenewContractForm
-                      canSeeCompensation={canSeeCompensation}
-                      compensation={row.compensation}
-                      contractId={row.id}
-                      endDate={row.endDate}
-                      personName={row.personName}
-                      templates={templates}
-                    />
-                  </div>
-                ) : null
-            : undefined
-        }
         rowMenu={(row) => (
           <RowMenu
             actions={[
@@ -194,14 +158,6 @@ export const RenewalTrayList = ({
                 label: "Decidir renovación",
                 icon: CalendarCheckIcon,
                 onSelect: () => setDecidingId(row.id),
-              },
-              canRenew && {
-                label: "Renovar contrato",
-                icon: RefreshCwIcon,
-                onSelect: () =>
-                  setExpandedContractId((current) =>
-                    current === row.id ? null : row.id,
-                  ),
               },
               {
                 label: "Ver expediente",

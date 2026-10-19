@@ -72,7 +72,12 @@ export const FormSelect = ({
         disabled={disabled}
         onValueChange={handleValueChange}
         required={required}
-        value={toSelectValue(current)}
+        // Empty with no «none» option: "" shows the placeholder.
+        value={
+          current === "" && !options.some((option) => option.value === "")
+            ? ""
+            : toSelectValue(current)
+        }
       >
         <SelectTrigger
           aria-label={ariaLabel}

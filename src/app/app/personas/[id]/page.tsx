@@ -122,6 +122,7 @@ const PersonaDetailPage = async ({
     canReadAudit,
     canReadContracts,
     canCreateContracts,
+    canUpdateContracts,
     canReadAssets,
     canSeeCompensation,
     personContracts,
@@ -136,6 +137,7 @@ const PersonaDetailPage = async ({
     userHasPermission(session.user.id, "audit:read"),
     userHasPermission(session.user.id, "contracts:read"),
     userHasPermission(session.user.id, "contracts:create"),
+    userHasPermission(session.user.id, "contracts:update"),
     userHasPermission(session.user.id, "assets:read"),
     userHasPermission(session.user.id, "compensation:read"),
     listContractsByPerson(session.companyId, id),
@@ -192,6 +194,16 @@ const PersonaDetailPage = async ({
   }
 
   const canEmit = canCreateContracts && canReadContracts && !isDeleted;
+  // «Decidir renovación» needs positions only when there is something to decide.
+  const renewalPositions =
+    canUpdateContracts &&
+    !isDeleted &&
+    personContracts.some((item) => item.status === "vigente" && item.endDate)
+      ? (await listActivePositions(session.companyId)).map((position) => ({
+          id: position.id,
+          name: position.name,
+        }))
+      : [];
   const emitHref = `/app/personas/${person.id}?emit=1`;
   const personMeta = [
     person.position?.name,
@@ -308,6 +320,9 @@ const PersonaDetailPage = async ({
           canReadContracts ? (
             <PersonContractsSection
               canCreate={canCreateContracts}
+              canDecide={canUpdateContracts && !isDeleted}
+              personName={personName}
+              positions={renewalPositions}
               canSeeCompensation={canSeeCompensation}
               contracts={personContracts}
               personContext={{

@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import { forbidden } from "next/navigation";
 
-import { UserPlusIcon } from "lucide-react";
-
 import { PageHeader } from "@/components/layout/page-header";
-import { MembersPanel } from "@/components/tenant/members-panel";
+import {
+  AddMemberSheet,
+  MembersPanel,
+} from "@/components/tenant/members-panel";
 import { pageTitles } from "@/lib/brand/chrome-copy";
 import { requireCompanyPage } from "@/lib/tenant/context";
 import {
@@ -27,32 +28,29 @@ const MiembrosPage = async () => {
     forbidden();
   }
 
-  const [members, roles] = await Promise.all([
+  const [members, allRoles] = await Promise.all([
     listCompanyMembers(session.companyId),
     listRoles(),
   ]);
+  const roles = allRoles.filter((role) =>
+    (COMPANY_ASSIGNABLE_ROLES as readonly string[]).includes(role.slug),
+  );
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
         description={`Quién tiene acceso a ${session.membership.companyName} y con qué rol.`}
         primary={
-          session.permissions.has("members:manage")
-            ? {
-                label: "Agregar miembro",
-                icon: UserPlusIcon,
-                href: "#agregar-miembro",
-              }
-            : null
+          session.permissions.has("members:manage") ? (
+            <AddMemberSheet roles={roles} scope={{ kind: "company" }} />
+          ) : null
         }
         title="Miembros"
       />
       <section className="workia-pass-card p-5">
         <MembersPanel
           members={members}
-          roles={roles.filter((role) =>
-            (COMPANY_ASSIGNABLE_ROLES as readonly string[]).includes(role.slug),
-          )}
+          roles={roles}
           canManage={session.permissions.has("members:manage")}
           currentUserId={session.userId}
           scope={{ kind: "company" }}

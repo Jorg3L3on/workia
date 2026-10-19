@@ -38,7 +38,6 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `action:contracts/decideContractRenewalAction`      | ✅     | `src/test/idor/renewal-decision.db.test.ts`                                                            | `contracts:update`          |
 | `action:contracts/deleteContractTemplateAction`     | ✅     | `src/test/idor/contracts.db.test.ts`                                                                   | `contract_templates:delete` |
 | `action:contracts/noRenewContractAction`            | ✅     | `src/test/idor/contracts.db.test.ts`                                                                   | `contracts:update`          |
-| `action:contracts/renewContractAction`              | ✅     | `src/test/idor/contracts.db.test.ts`                                                                   | `contracts:update`          |
 | `action:contracts/updateContractTemplateAction`     | ✅     | `src/test/idor/contracts.db.test.ts`                                                                   | `contract_templates:update` |
 | `action:mcp/approveConsentAction`                   | ✅     | `src/test/idor/mcp.db.test.ts`                                                                         | `mcp_connections:create`    |
 | `action:mcp/createPersonalTokenAction`              | ✅     | `src/test/idor/mcp.db.test.ts`                                                                         | `mcp_connections:create`    |

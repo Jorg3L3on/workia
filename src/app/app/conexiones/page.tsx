@@ -2,16 +2,15 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { forbidden } from "next/navigation";
 
-import { KeyRoundIcon } from "lucide-react";
-
 import { PageHeader } from "@/components/layout/page-header";
 import { CopyConnectorUrlButton } from "@/components/mcp/copy-connector-url-button";
 import {
   ConnectionsDataTable,
   ToolCallsDataTable,
 } from "@/components/mcp/connections-data-table";
-import { CreateTokenForm } from "@/components/mcp/create-token-form";
+import { CreateTokenSheet } from "@/components/mcp/create-token-sheet";
 import { WritesSwitch } from "@/components/mcp/writes-switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { pageTitles } from "@/lib/brand/chrome-copy";
 import {
   isMcpEnabled,
@@ -94,25 +93,32 @@ const ConexionesPage = async ({ searchParams }: ConexionesPageProps) => {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader
-        description={`Asistentes de IA conectados a ${session.membership.companyName}; cada conexión ve sólo esta empresa y nunca más de lo que permite tu rol.`}
-        primary={
-          canCreate
-            ? {
-                label: "Nuevo token",
-                icon: KeyRoundIcon,
-                href: "#nuevo-token-form",
-              }
-            : null
-        }
-        secondary={
-          // Phones read the URL in «Nuevo token personal» below.
-          <div className="hidden md:block">
-            <CopyConnectorUrlButton url={mcpUrl} />
-          </div>
-        }
-        title="Conexiones"
-      />
+      <div className="flex flex-col gap-4">
+        <PageHeader
+          description={`Asistentes de IA conectados a ${session.membership.companyName}; cada conexión ve sólo esta empresa y nunca más de lo que permite tu rol.`}
+          primary={
+            canCreate ? (
+              <CreateTokenSheet
+                grantable={grantableScopes(session.permissions)}
+                mcpUrl={mcpUrl}
+              />
+            ) : null
+          }
+          secondary={
+            // Phones read the URL in the «Nuevo token» sheet.
+            <div className="hidden md:block">
+              <CopyConnectorUrlButton url={mcpUrl} />
+            </div>
+          }
+          title="Conexiones"
+        />
+        {canManage ? (
+          <WritesSwitch
+            enabled={settings.writesEnabled}
+            canToggle={session.membership.roleSlug === "super_admin"}
+          />
+        ) : null}
+      </div>
 
       {!isMcpEnabled() ? (
         <p
@@ -123,130 +129,88 @@ const ConexionesPage = async ({ searchParams }: ConexionesPageProps) => {
         </p>
       ) : null}
 
-      {canManage ? (
-        <section className="workia-pass-card p-5">
-          <WritesSwitch
-            enabled={settings.writesEnabled}
-            canToggle={session.membership.roleSlug === "super_admin"}
-          />
-        </section>
-      ) : null}
-
-      {canCreate ? (
-        <section
-          className="workia-pass-card scroll-mt-20 space-y-4 p-5"
-          aria-labelledby="nuevo-token"
-          id="nuevo-token-form"
+      <Tabs className="gap-4" defaultValue="conexiones">
+        <TabsList
+          className="h-9 w-full justify-start bg-transparent p-0"
+          variant="line"
         >
-          <div className="space-y-1">
-            <h2 id="nuevo-token" className="text-lg font-semibold">
-              Nuevo token personal
-            </h2>
-            <p className="text-sm">
-              URL del conector:{" "}
-              <code className="font-mono break-all">{mcpUrl}</code>
-            </p>
-            <p className="text-muted-foreground text-sm">
-              Para Grok Bot, Cursor o el MCP Inspector. ChatGPT y Claude se
-              conectan con OAuth desde su configuración, con la URL de arriba.
-            </p>
-          </div>
-          <CreateTokenForm
-            grantable={grantableScopes(session.permissions)}
-            mcpUrl={mcpUrl}
+          <TabsTrigger className="flex-none px-3" value="conexiones">
+            Conexiones
+          </TabsTrigger>
+          <TabsTrigger className="flex-none px-3" value="actividad">
+            Actividad
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="conexiones">
+          <ConnectionsDataTable
+            connections={connections.map((connection) => {
+              const state = connectionState(connection, now);
+
+              return {
+                id: connection.id,
+                name: connection.name,
+                detail: [
+                  connection.kind === "pat"
+                    ? "Token personal"
+                    : `OAuth · ${connection.clientName}`,
+                  connection.isChatgpt ? "sólo lectura" : null,
+                  `${connection.tokenPrefix}…`,
+                ]
+                  .filter(Boolean)
+                  .join(" · "),
+                userName: connection.userName,
+                userEmail: connection.userEmail,
+                scopes: scopeList(connection.scopes),
+                expiresAt: (connection.kind === "oauth"
+                  ? (connection.refreshExpiresAt ?? connection.tokenExpiresAt)
+                  : connection.tokenExpiresAt
+                ).toISOString(),
+                lastUsedAt: connection.lastUsedAt?.toISOString() ?? null,
+                stateLabel: state.label,
+                status: state.status,
+                active: state.active,
+                actionable:
+                  connection.userId === session.userId ? canCreate : canManage,
+              };
+            })}
+            canSeeAll={canManage}
+            showOwner={showAll}
           />
-        </section>
-      ) : null}
-
-      <section
-        className="workia-pass-card space-y-4 p-5"
-        aria-labelledby="lista-conexiones"
-      >
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 id="lista-conexiones" className="text-lg font-semibold">
-            {showAll ? "Todas las conexiones" : "Mis conexiones"}
-          </h2>
-        </div>
-
-        <ConnectionsDataTable
-          connections={connections.map((connection) => {
-            const state = connectionState(connection, now);
-
-            return {
-              id: connection.id,
-              name: connection.name,
-              detail: [
-                connection.kind === "pat"
-                  ? "Token personal"
-                  : `OAuth · ${connection.clientName}`,
-                connection.isChatgpt ? "sólo lectura" : null,
-                `${connection.tokenPrefix}…`,
-              ]
-                .filter(Boolean)
-                .join(" · "),
-              userName: connection.userName,
-              userEmail: connection.userEmail,
-              scopes: scopeList(connection.scopes),
-              expiresAt: (connection.kind === "oauth"
-                ? (connection.refreshExpiresAt ?? connection.tokenExpiresAt)
-                : connection.tokenExpiresAt
-              ).toISOString(),
-              lastUsedAt: connection.lastUsedAt?.toISOString() ?? null,
-              stateLabel: state.label,
-              status: state.status,
-              active: state.active,
-              actionable:
-                connection.userId === session.userId ? canCreate : canManage,
-            };
-          })}
-          canSeeAll={canManage}
-          showOwner={showAll}
-        />
-      </section>
-
-      <section
-        className="workia-pass-card space-y-4 p-5"
-        aria-labelledby="actividad"
-      >
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="space-y-1">
-            <h2 id="actividad" className="text-lg font-semibold">
-              Actividad
-            </h2>
-            <p className="text-muted-foreground text-sm">
-              Últimas 50 llamadas · {errors24h}{" "}
-              {errors24h === 1 ? "error o rechazo" : "errores o rechazos"} en 24
-              h. Los cambios que hagan los asistentes quedan en la{" "}
-              <Link
-                href="/app/auditoria"
-                className="underline underline-offset-2"
-              >
-                auditoría
-              </Link>
-              .
-            </p>
-          </div>
-        </div>
-        <ToolCallsDataTable
-          calls={calls.map((call) => ({
-            id: call.id,
-            occurredAt: call.occurredAt.toISOString(),
-            tool: call.tool,
-            connectionName: call.connectionName,
-            userName: call.userName,
-            result: call.result,
-            resultLabel:
-              call.result === "success"
-                ? "Correcto"
-                : call.result === "denied"
-                  ? `Rechazado · ${call.errorCode}`
-                  : `Error · ${call.errorCode}`,
-            piiUnmasked: call.piiUnmasked,
-            latencyMs: call.latencyMs,
-          }))}
-          showOwner={showAll}
-        />
-      </section>
+        </TabsContent>
+        <TabsContent className="space-y-4" value="actividad">
+          <p className="text-muted-foreground text-sm">
+            Últimas 50 llamadas · {errors24h}{" "}
+            {errors24h === 1 ? "error o rechazo" : "errores o rechazos"} en 24
+            h. Los cambios que hagan los asistentes quedan en la{" "}
+            <Link
+              href="/app/auditoria"
+              className="underline underline-offset-2"
+            >
+              auditoría
+            </Link>
+            .
+          </p>
+          <ToolCallsDataTable
+            calls={calls.map((call) => ({
+              id: call.id,
+              occurredAt: call.occurredAt.toISOString(),
+              tool: call.tool,
+              connectionName: call.connectionName,
+              userName: call.userName,
+              result: call.result,
+              resultLabel:
+                call.result === "success"
+                  ? "Correcto"
+                  : call.result === "denied"
+                    ? `Rechazado · ${call.errorCode}`
+                    : `Error · ${call.errorCode}`,
+              piiUnmasked: call.piiUnmasked,
+              latencyMs: call.latencyMs,
+            }))}
+            showOwner={showAll}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

@@ -64,7 +64,7 @@ test.describe("Authenticated list tables", () => {
     await expect(page).toHaveURL(/\/app\/contratos\/plantillas\/[0-9a-f-]{36}/);
   });
 
-  test("contratos: status column, Decidir inline, Renovar behind the menu", async ({
+  test("contratos: status column and one flow, «Decidir renovación»", async ({
     page,
   }) => {
     await loginAsDemoRrhh(page);
@@ -100,14 +100,20 @@ test.describe("Authenticated list tables", () => {
     });
     await expect(decidir).toBeVisible();
     await decidir.click();
-    await expect(
-      page.getByRole("dialog", { name: "Decidir renovación" }),
-    ).toBeVisible();
-    await page.keyboard.press("Escape");
+    const dialog = page.getByRole("dialog", { name: "Decidir renovación" });
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole("button", { name: "Cancelar" }).click();
+    await expect(dialog).toHaveCount(0);
     await expect(page).toHaveURL(/\/app\/contratos/);
 
+    // The menu offers the same dialog; there is no inline «Renovar» panel.
     await first.getByRole("button", { name: /^Acciones de / }).click();
-    await page.getByRole("menuitem", { name: "Renovar contrato" }).click();
-    await expect(page.getByLabel("Nuevo tipo")).toHaveCount(1);
+    await expect(page.getByRole("menuitem")).toHaveText([
+      "Decidir renovación",
+      "Ver expediente",
+    ]);
+    await page.getByRole("menuitem", { name: "Decidir renovación" }).click();
+    await expect(dialog).toBeVisible();
+    await expect(page.getByLabel("Nuevo tipo")).toHaveCount(0);
   });
 });
