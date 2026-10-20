@@ -167,7 +167,7 @@ export const ConnectionsDataTable = ({
           </div>
         </div>
       ),
-      cellClassName: "max-w-64",
+      fill: true,
     },
     ...(showOwner
       ? [
@@ -183,7 +183,7 @@ export const ConnectionsDataTable = ({
                 </div>
               </div>
             ),
-            cellClassName: "max-w-48",
+            truncate: true,
           } satisfies DataTableColumn<ConnectionRow>,
         ]
       : []),
