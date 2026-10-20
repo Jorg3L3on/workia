@@ -167,6 +167,28 @@ describe("AppShell", () => {
     ).toBeTruthy();
   });
 
+  it("scrolls the whole inset and centers the content in an inner column", () => {
+    renderShell();
+
+    const inset = document.querySelector('[data-slot="sidebar-inset"]');
+    const mainScroll = inset?.querySelector('[data-slot="shell-main-scroll"]');
+    expect(mainScroll?.parentElement).toBe(inset);
+    expect(mainScroll?.className).toContain("w-full");
+    expect(mainScroll?.className).toContain("p-4");
+    expect(mainScroll?.className).not.toContain("max-w-6xl");
+    expect(mainScroll?.className).not.toContain("mx-auto");
+
+    const column = mainScroll?.querySelector(
+      '[data-slot="shell-content-column"]',
+    );
+    expect(column?.parentElement).toBe(mainScroll);
+    expect(column?.className).toContain("max-w-6xl");
+    expect(column?.className).toContain("mx-auto");
+    expect(column?.className).toContain("w-full");
+    expect(column?.className).toContain("gap-4");
+    expect(column?.textContent).toContain("Contenido");
+  });
+
   it("shows a Spanish breadcrumb for Inicio in the sticky header", () => {
     renderShell();
 

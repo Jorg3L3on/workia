@@ -115,10 +115,35 @@ describe("AdminShell", () => {
     );
     expect(mainScroll?.className).toContain("min-h-0");
     expect(mainScroll?.className).toContain("overflow-y-auto");
-    expect(mainScroll?.className).toContain("flex-col");
 
     expect(document.querySelector('[data-slot="sidebar-header"]')).toBeTruthy();
     expect(document.querySelector('[data-slot="sidebar-footer"]')).toBeTruthy();
+  });
+
+  it("scrolls the whole inset and centers the content in an inner column", () => {
+    render(
+      <AdminShell>
+        <p>Admin</p>
+      </AdminShell>,
+    );
+
+    const inset = document.querySelector('[data-slot="sidebar-inset"]');
+    const mainScroll = inset?.querySelector('[data-slot="shell-main-scroll"]');
+    expect(mainScroll?.parentElement).toBe(inset);
+    expect(mainScroll?.className).toContain("w-full");
+    expect(mainScroll?.className).toContain("p-4");
+    expect(mainScroll?.className).not.toContain("max-w-6xl");
+    expect(mainScroll?.className).not.toContain("mx-auto");
+
+    const column = mainScroll?.querySelector(
+      '[data-slot="shell-content-column"]',
+    );
+    expect(column?.parentElement).toBe(mainScroll);
+    expect(column?.className).toContain("max-w-6xl");
+    expect(column?.className).toContain("mx-auto");
+    expect(column?.className).toContain("flex-col");
+    expect(column?.className).toContain("gap-4");
+    expect(column?.textContent).toContain("Admin");
   });
 
   it("shows Spanish breadcrumbs in the sticky header", () => {

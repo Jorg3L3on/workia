@@ -16,6 +16,7 @@ import {
 } from "@/components/layout/app-breadcrumbs";
 import { NavigationProgress } from "@/components/layout/navigation-progress";
 import {
+  SHELL_CONTENT_COLUMN_CLASS_NAME,
   SHELL_INSET_CLASS_NAME,
   SHELL_MAIN_SCROLL_CLASS_NAME,
   SHELL_TOP_NAV_CLASS_NAME,
@@ -177,13 +178,15 @@ export const AdminShell = ({ children, user }: AdminShellProps) => {
               </div>
             </header>
             <div
-              className={cn(
-                "mx-auto flex w-full max-w-6xl flex-col gap-4 p-4 md:p-6",
-                SHELL_MAIN_SCROLL_CLASS_NAME,
-              )}
+              className={cn("w-full p-4 md:p-6", SHELL_MAIN_SCROLL_CLASS_NAME)}
               data-slot="shell-main-scroll"
             >
-              {children}
+              <div
+                className={SHELL_CONTENT_COLUMN_CLASS_NAME}
+                data-slot="shell-content-column"
+              >
+                {children}
+              </div>
             </div>
           </SidebarInset>
         </SidebarProvider>
