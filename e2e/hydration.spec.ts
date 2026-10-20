@@ -80,11 +80,13 @@ const discover = async (page: Page, details: [string, RegExp, string[]][]) => {
   const routes: string[] = [];
   for (const [list, pattern, suffixes] of details) {
     await page.goto(list, { waitUntil: "networkidle" });
-    const hrefs = await page
-      .locator("a[href]")
-      .evaluateAll((links) => links.map((a) => a.getAttribute("href") ?? ""));
-    const hit = hrefs.find((href) => pattern.test(href));
-    expect(hit, `no detail link on ${list}`).toBeTruthy();
+    // DataTable rows open their detail with router.push (role="link", no
+    // href), so the first openable row is clicked and the URL read back.
+    const row = page.locator('tbody tr[role="link"]').first();
+    await expect(row, `no openable row on ${list}`).toBeVisible();
+    await row.click();
+    await page.waitForURL((url) => pattern.test(url.pathname));
+    const hit = new URL(page.url()).pathname;
     for (const suffix of suffixes) routes.push(`${hit}${suffix}`);
   }
   return routes;
