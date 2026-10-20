@@ -25,13 +25,16 @@
     "check:migrations": "tsx scripts/check-migration-safety.ts",
     "test:db": "vitest run -c vitest.db.config.ts",
     "db:report-duplicates": "tsx scripts/report-duplicates.ts",
+    "db:sync-permissions": "tsx scripts/sync-permissions.ts",
     "check:idor": "tsx scripts/check-idor-coverage.ts",
     "test:db:rls": "TEST_RLS=1 vitest run -c vitest.db.config.ts",
-    "db:cutover": "tsx scripts/cutover/run.ts"
+    "db:cutover": "tsx scripts/cutover/run.ts",
+    "docs:mcp": "tsx scripts/mcp-docs.ts"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.3",
     "@hookform/resolvers": "^5.9.1",
+    "@modelcontextprotocol/server": "2.3.1",
     "@neondatabase/serverless": "^1.1.0",
     "@t3-oss/env-nextjs": "^0.13.11",
     "@tanstack/react-table": "^8.21.3",
@@ -44,6 +47,7 @@
     "drizzle-orm": "^0.45.2",
     "exceljs": "^4.4.0",
     "lucide-react": "^1.34.0",
+    "mcp-handler": "2.3.0",
     "motion": "^13.1.1",
     "next": "16.3.3",
     "next-auth": "^5.0.0-beta.32",

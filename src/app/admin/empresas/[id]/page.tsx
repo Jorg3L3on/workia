@@ -2,23 +2,22 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { PageBreadcrumbLabel } from "@/components/layout/app-breadcrumbs";
+import { PageHeader } from "@/components/layout/page-header";
 import {
   CompanyForm,
-  CompanyStatusButton,
+  CompanyStatusMenu,
 } from "@/components/tenant/company-form";
-import { MembersPanel } from "@/components/tenant/members-panel";
-import { Badge } from "@/components/ui/badge";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  AddMemberSheet,
+  MembersPanel,
+} from "@/components/tenant/members-panel";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { pageTitles } from "@/lib/brand/chrome-copy";
 import { requireAuth } from "@/lib/auth/session";
 import { getCompanyById } from "@/lib/tenant/companies";
 import { listCompanyMembers, listRoles } from "@/lib/tenant/members";
+import { toneFor } from "@/lib/ui/status-tone";
 
 export const dynamic = "force-dynamic";
 
@@ -50,22 +49,29 @@ const EmpresaPage = async ({ params, searchParams }: EmpresaPageProps) => {
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
       <PageBreadcrumbLabel label={company.name} />
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {company.name}{" "}
-            <Badge
-              variant={company.status === "activa" ? "secondary" : "outline"}
-            >
-              {company.status === "activa" ? "Activa" : "Suspendida"}
-            </Badge>
-          </h1>
-          <p className="text-muted-foreground font-mono text-xs">
-            {company.slug}
-          </p>
-        </div>
-        <CompanyStatusButton companyId={company.id} status={company.status} />
-      </div>
+      <PageHeader
+        menu={
+          <CompanyStatusMenu
+            companyId={company.id}
+            companyName={company.name}
+            status={company.status}
+          />
+        }
+        meta={<span className="font-mono">{company.slug}</span>}
+        primary={
+          <AddMemberSheet
+            roles={roles}
+            scope={{ kind: "platform", targetCompanyId: company.id }}
+          />
+        }
+        status={
+          <Badge tone={toneFor("company", company.status)}>
+            {company.status === "activa" ? "Activa" : "Suspendida"}
+          </Badge>
+        }
+        title={company.name}
+        variant="detail"
+      />
 
       {created ? (
         <p className="text-sm font-medium" role="status">
@@ -90,24 +96,18 @@ const EmpresaPage = async ({ params, searchParams }: EmpresaPageProps) => {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Miembros</CardTitle>
-          <CardDescription>
-            Si la persona aún no tiene cuenta, se crea con su correo y entra con
-            Google usando ese correo.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <MembersPanel
-            members={members}
-            roles={roles}
-            canManage
-            currentUserId={session.user.id}
-            scope={{ kind: "platform", targetCompanyId: company.id }}
-          />
-        </CardContent>
-      </Card>
+      <section aria-labelledby="miembros-heading" className="space-y-3">
+        <h2 className="text-base font-semibold" id="miembros-heading">
+          Miembros
+        </h2>
+        <MembersPanel
+          members={members}
+          roles={roles}
+          canManage
+          currentUserId={session.user.id}
+          scope={{ kind: "platform", targetCompanyId: company.id }}
+        />
+      </section>
     </div>
   );
 };

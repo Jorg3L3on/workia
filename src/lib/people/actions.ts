@@ -14,7 +14,9 @@ import { DuplicateIdentityError } from "./identity";
 import {
   createPerson,
   getPersonById,
+  listPeoplePage,
   searchActivePeopleForSelect,
+  setPersonStatus,
   softDeletePerson,
   updatePerson,
 } from "./index";
@@ -27,7 +29,9 @@ import {
 import {
   formatPersonName,
   personFormSchema,
+  personStatusLabels,
   type PersonFormValues,
+  type PersonStatusValue,
 } from "./schema";
 
 export type PersonActionState = {
@@ -61,7 +65,79 @@ const formDataToValues = (formData: FormData): PersonFormValues => ({
   status: String(
     formData.get("status") ?? "activa",
   ) as PersonFormValues["status"],
+  ...mexicoValuesFromForm(formData),
+  ...scheduleBlocksFromForm(formData),
 });
+
+/**
+ * The schedule-by-blocks editor posts its value as JSON (WRK-I5-3). Absent
+ * when the form did not render it: then the simple fields are the source.
+ */
+const scheduleBlocksFromForm = (
+  formData: FormData,
+): Pick<PersonFormValues, "horarioBloques"> => {
+  const raw = formData.get("horarioBloques");
+
+  if (raw === null) {
+    return {};
+  }
+
+  try {
+    return { horarioBloques: JSON.parse(String(raw)) };
+  } catch {
+    // Fails validation with the schema's message.
+    return { horarioBloques: { bloques: "inválido" } as never };
+  }
+};
+
+const MEXICO_TEXT_FIELDS = [
+  "domicilioCalle",
+  "domicilioNumeroExterior",
+  "domicilioNumeroInterior",
+  "domicilioColonia",
+  "domicilioMunicipio",
+  "domicilioEstado",
+  "domicilioCodigoPostal",
+  "estadoCivil",
+  "sexo",
+  "lugarNacimiento",
+  "nacionalidad",
+  "ineClaveElector",
+] as const;
+
+/**
+ * Expediente México fields of the form. A field the form did not render stays
+ * undefined (kept as stored); beneficiaries come as parallel lists and are only
+ * read when the form says it rendered the editor.
+ */
+const mexicoValuesFromForm = (formData: FormData) => {
+  const values: Partial<PersonFormValues> = {};
+
+  for (const field of MEXICO_TEXT_FIELDS) {
+    const value = formData.get(field);
+    if (value !== null) {
+      (values as Record<string, unknown>)[field] = String(value);
+    }
+  }
+
+  if (formData.get("beneficiariosEditor") === "1") {
+    const nombres = formData.getAll("beneficiarioNombre").map(String);
+    const parentescos = formData.getAll("beneficiarioParentesco").map(String);
+    const porcentajes = formData.getAll("beneficiarioPorcentaje").map(String);
+
+    values.beneficiarios = nombres
+      .map((nombre, index) => ({
+        nombre,
+        parentesco: parentescos[index] ?? "",
+        porcentaje: Number(porcentajes[index] ?? 0),
+      }))
+      .filter(
+        (row) => row.nombre.trim() || row.parentesco.trim() || row.porcentaje,
+      );
+  }
+
+  return values;
+};
 
 const parsePersonForm = (
   formData: FormData,
@@ -208,7 +284,13 @@ export const updatePersonAction = async (
   }
 
   try {
-    await updatePerson(companyId, personId, parsed, session.user.id);
+    // The form never changes the status: baja and reactivation are their own action.
+    await updatePerson(
+      companyId,
+      personId,
+      { ...parsed, status: existing.status },
+      session.user.id,
+    );
   } catch (error) {
     if (error instanceof DuplicateIdentityError) {
       return duplicateIdentityState(error);
@@ -223,6 +305,38 @@ export const updatePersonAction = async (
 
   revalidatePersonPaths(personId);
   redirect(`/app/personas/${personId}?saved=1`);
+};
+
+/** «Dar de baja» / «Reactivar» from the expediente's actions menu. */
+export const setPersonStatusAction = async (
+  personId: string,
+  status: PersonStatusValue,
+): Promise<void> => {
+  let session;
+
+  try {
+    session = await requirePeopleUpdate();
+  } catch (error) {
+    if (error instanceof AuthorizationError) {
+      redirect(`/app/personas/${personId}?error=status-forbidden`);
+    }
+
+    redirect("/login");
+  }
+
+  const updated = await setPersonStatus(
+    session.companyId,
+    personId,
+    status,
+    session.user.id,
+  );
+
+  if (!updated) {
+    redirect("/app/personas?error=not-found");
+  }
+
+  revalidatePersonPaths(personId);
+  redirect(`/app/personas/${personId}`);
 };
 
 export const deletePersonAction = async (personId: string): Promise<void> => {
@@ -274,4 +388,47 @@ export const searchManagerOptionsAction = async (
   );
 
   return rows.map((row) => ({ id: row.id, label: formatPersonName(row) }));
+};
+
+export type PersonSearchResult = {
+  id: string;
+  label: string;
+  /** «RFC · Estado», shown beside the name. */
+  detail: string;
+};
+
+/**
+ * Server action behind the ⌘K «Personas» group: the Personas list search
+ * (name, RFC, CURP, email), first page only. Without people:read it finds no one.
+ */
+export const searchPeopleForPaletteAction = async (
+  query: string,
+): Promise<PersonSearchResult[]> => {
+  const trimmed = query.trim().slice(0, 80);
+
+  if (trimmed.length < 2) {
+    return [];
+  }
+
+  let session;
+
+  try {
+    session = await requirePeopleRead();
+  } catch {
+    return [];
+  }
+
+  const { rows } = await listPeoplePage(session.companyId, {
+    query: trimmed,
+    page: 1,
+    pageSize: 6,
+  });
+
+  return rows.map((row) => ({
+    id: row.id,
+    label: formatPersonName(row),
+    detail: [row.rfc, personStatusLabels[row.status]]
+      .filter(Boolean)
+      .join(" · "),
+  }));
 };

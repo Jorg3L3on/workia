@@ -11,20 +11,35 @@ const loginAsDemoRrhh = async (page: import("@playwright/test").Page) => {
   await expect(page).toHaveURL(/\/app/, { timeout: 25_000 });
 };
 
+type Times = {
+  entrada: string;
+  salidaComer: string;
+  regresoComer: string;
+  salida: string;
+};
+
+/** One Monday–Friday block in the schedule-by-blocks editor (WRK-I5-3). */
 const fillSchedule = async (
   page: import("@playwright/test").Page,
-  times: {
-    entrada: string;
-    salidaComer: string;
-    regresoComer: string;
-    salida: string;
-  },
+  times: Times,
 ) => {
-  await page.getByLabel("Entrada", { exact: true }).fill(times.entrada);
-  await page.getByLabel("Salida a comer").fill(times.salidaComer);
-  await page.getByLabel("Regreso de comer").fill(times.regresoComer);
-  await page.getByLabel("Salida", { exact: true }).fill(times.salida);
+  // A new person starts without blocks; an edit already shows the first one.
+  await expect(page.getByTestId("schedule-blocks-editor")).toBeVisible();
+  if ((await page.locator("#bloque-0-entrada").count()) === 0) {
+    await page
+      .getByTestId("schedule-blocks-editor")
+      .getByRole("button", { name: "Agregar bloque" })
+      .click();
+  }
+
+  await page.locator("#bloque-0-entrada").fill(times.entrada);
+  await page.locator("#bloque-0-comidaInicio").fill(times.salidaComer);
+  await page.locator("#bloque-0-comidaFin").fill(times.regresoComer);
+  await page.locator("#bloque-0-salida").fill(times.salida);
 };
+
+const scheduleText = (times: Times) =>
+  `L–V ${times.entrada}–${times.salida} (comida ${times.salidaComer}–${times.regresoComer})`;
 
 const datosPanel = (page: import("@playwright/test").Page) =>
   page.getByRole("tabpanel", { name: "Datos" });
@@ -32,35 +47,18 @@ const datosPanel = (page: import("@playwright/test").Page) =>
 const contractCard = (page: import("@playwright/test").Page) =>
   page
     .getByRole("heading", { name: "Contratos" })
-    .locator("xpath=ancestor::div[contains(@class,'workia-pass-card')]");
+    .locator("xpath=ancestor::section[1]");
 
 const expectScheduleOnFicha = async (
   root: import("@playwright/test").Locator,
-  times: {
-    entrada: string;
-    salidaComer: string;
-    regresoComer: string;
-    salida: string;
-  },
+  times: Times,
+  label: RegExp = /^Horario$/,
 ) => {
-  const entrada = root.locator("dt").filter({ hasText: /^Entrada$/ });
-  await expect(entrada).toBeVisible();
-  await expect(entrada.locator("..").locator("dd")).toHaveText(times.entrada);
-
-  const salidaComer = root
-    .locator("dt")
-    .filter({ hasText: /^Salida a comer$/ });
-  await expect(salidaComer.locator("..").locator("dd")).toHaveText(
-    times.salidaComer,
+  const term = root.locator("dt").filter({ hasText: label });
+  await expect(term).toBeVisible();
+  await expect(term.locator("..").locator("dd")).toHaveText(
+    scheduleText(times),
   );
-
-  const regreso = root.locator("dt").filter({ hasText: /^Regreso de comer$/ });
-  await expect(regreso.locator("..").locator("dd")).toHaveText(
-    times.regresoComer,
-  );
-
-  const salida = root.locator("dt").filter({ hasText: /^Salida$/ });
-  await expect(salida.locator("..").locator("dd")).toHaveText(times.salida);
 };
 
 test.describe("Horario por persona", () => {
@@ -101,7 +99,7 @@ test.describe("Horario por persona", () => {
       "Sucursal Centro Demo (Sucursal)",
     );
     await fillSchedule(page, scheduleA);
-    await page.getByRole("button", { name: "Dar de alta" }).click();
+    await page.getByRole("button", { name: "Guardar persona" }).click();
     await expect(page).toHaveURL(/\/app\/personas\/[0-9a-f-]{36}/);
     await expect(
       page.getByRole("heading", { name: nameA, exact: true }),
@@ -119,7 +117,7 @@ test.describe("Horario por persona", () => {
       "Sucursal Centro Demo (Sucursal)",
     );
     await fillSchedule(page, scheduleB);
-    await page.getByRole("button", { name: "Dar de alta" }).click();
+    await page.getByRole("button", { name: "Guardar persona" }).click();
     await expect(page).toHaveURL(/\/app\/personas\/[0-9a-f-]{36}/);
     await expect(
       page.getByRole("heading", { name: nameB, exact: true }),
@@ -162,23 +160,33 @@ test.describe("Horario por persona", () => {
     ).toBeVisible();
 
     const contractSection = contractCard(page);
-    await expectScheduleOnFicha(contractSection, scheduleA);
+    await expectScheduleOnFicha(
+      contractSection,
+      scheduleA,
+      /^Horario al emitir$/,
+    );
     await contractSection.getByText("Ver texto generado").click();
-    await expect(contractSection.locator("pre")).toContainText("entrada 08:00");
+    await expect(contractSection.locator("pre")).toContainText(
+      scheduleText(scheduleA),
+    );
     await expect(contractSection.locator("pre")).not.toContainText("10:00");
 
     await page.getByRole("link", { name: "Editar" }).click();
     await fillSchedule(page, laterSchedule);
-    await page.getByRole("button", { name: "Guardar cambios" }).click();
+    await page.getByRole("button", { name: "Guardar persona" }).click();
     await expect(page).toHaveURL(/saved=1/);
     await expectScheduleOnFicha(datosPanel(page), laterSchedule);
 
     await page.getByRole("tab", { name: "Contratos" }).click();
     const contractAfterEdit = contractCard(page);
-    await expectScheduleOnFicha(contractAfterEdit, scheduleA);
+    await expectScheduleOnFicha(
+      contractAfterEdit,
+      scheduleA,
+      /^Horario al emitir$/,
+    );
     await contractAfterEdit.getByText("Ver texto generado").click();
     await expect(contractAfterEdit.locator("pre")).toContainText(
-      "entrada 08:00",
+      scheduleText(scheduleA),
     );
     await expect(contractAfterEdit.locator("pre")).not.toContainText("10:00");
     await expect(contractAfterEdit.getByText("10:00")).toHaveCount(0);

@@ -72,14 +72,19 @@ export const FormSelect = ({
         disabled={disabled}
         onValueChange={handleValueChange}
         required={required}
-        value={toSelectValue(current)}
+        // Empty with no «none» option: "" shows the placeholder.
+        value={
+          current === "" && !options.some((option) => option.value === "")
+            ? ""
+            : toSelectValue(current)
+        }
       >
         <SelectTrigger
           aria-label={ariaLabel}
           className={cn(
             "bg-card w-full",
             variant === "filter"
-              ? "h-10 rounded-xl data-[size=default]:h-10"
+              ? "h-10 rounded-lg data-[size=default]:h-10"
               : "h-8 rounded-lg data-[size=default]:h-8 data-[size=sm]:h-8",
             triggerClassName,
           )}

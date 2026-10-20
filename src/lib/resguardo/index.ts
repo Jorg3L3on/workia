@@ -7,6 +7,7 @@ import {
   ilike,
   isNull,
   or,
+  sql,
   type SQL,
 } from "drizzle-orm";
 
@@ -528,4 +529,121 @@ export const countAssignedAssets = async (companyId: string) => {
     );
 
   return rows.length;
+};
+
+/**
+ * Assets in a stable order (name, id) for cursor paging, with the current
+ * holder and since when they hold it. Read only; used by the MCP list_assets.
+ */
+export const listAssetsKeyset = async (
+  companyId: string,
+  options: {
+    query?: string;
+    status?: (typeof assets.$inferSelect)["status"];
+    category?: string;
+    holderId?: string;
+    after?: { key: string; id: string } | null;
+    limit: number;
+  },
+) => {
+  const filters: (SQL | undefined)[] = [
+    eq(assets.companyId, companyId),
+    isNull(assets.deletedAt),
+    options.status ? eq(assets.status, options.status) : undefined,
+    options.category
+      ? ilike(assets.category, escapeLike(options.category.trim()))
+      : undefined,
+    options.holderId ? eq(assets.holderId, options.holderId) : undefined,
+    options.after
+      ? sql`(${assets.name}, ${assets.id}) > (${options.after.key}, ${options.after.id}::uuid)`
+      : undefined,
+  ];
+
+  if (options.query?.trim()) {
+    const term = `%${escapeLike(options.query.trim())}%`;
+    filters.push(
+      or(
+        ilike(assets.name, term),
+        ilike(assets.identifier, term),
+        ilike(assets.category, term),
+      ),
+    );
+  }
+
+  return tdb(companyId)
+    .select({
+      id: assets.id,
+      name: assets.name,
+      identifier: assets.identifier,
+      category: assets.category,
+      status: assets.status,
+      conditionNote: assets.conditionNote,
+      holderId: assets.holderId,
+      holderNombres: people.nombres,
+      holderApellidoPaterno: people.apellidoPaterno,
+      holderApellidoMaterno: people.apellidoMaterno,
+      since: sql<
+        string | null
+      >`(select max(m.movement_date)::text from ${assetMovements} m where m.asset_id = ${assets.id} and m.company_id = ${assets.companyId} and m.type = 'entrega' and m.person_id = ${assets.holderId})`,
+    })
+    .from(assets)
+    .leftJoin(people, eq(assets.holderId, people.id))
+    .where(and(...filters))
+    .orderBy(asc(assets.name), asc(assets.id))
+    .limit(options.limit + 1);
+};
+
+export type AssetToRecover = {
+  id: string;
+  name: string;
+  identifier: string;
+  holderName: string;
+};
+
+/**
+ * «Equipo pendiente» on Inicio: assets still assigned to someone who is no
+ * longer active (baja or deleted expediente), so HR has to get them back.
+ */
+export const listAssetsToRecover = async (
+  companyId: string,
+  limit = 5,
+): Promise<{ items: AssetToRecover[]; total: number }> => {
+  const where = and(
+    eq(assets.companyId, companyId),
+    eq(assets.status, "asignado"),
+    isNull(assets.deletedAt),
+    or(eq(people.status, "baja"), sql`${people.deletedAt} is not null`),
+  );
+
+  const [rows, [totals]] = await Promise.all([
+    tdb(companyId)
+      .select({
+        id: assets.id,
+        name: assets.name,
+        identifier: assets.identifier,
+        nombres: people.nombres,
+        apellidoPaterno: people.apellidoPaterno,
+        apellidoMaterno: people.apellidoMaterno,
+      })
+      .from(assets)
+      .innerJoin(people, eq(assets.holderId, people.id))
+      .where(where)
+      .orderBy(asc(assets.name), asc(assets.id))
+      .limit(limit),
+    tdb(companyId)
+      .select({ total: count() })
+      .from(assets)
+      .innerJoin(people, eq(assets.holderId, people.id))
+      .where(where),
+  ]);
+
+  return {
+    items: rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      identifier: row.identifier,
+      holderName: formatPersonName(row),
+    })),
+    total: totals?.total ?? 0,
+  };
 };

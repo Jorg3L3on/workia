@@ -44,6 +44,11 @@ export const useServerListControls = () => {
       (key: string, value: string | null) => update({ [key]: value }),
       [update],
     ),
+    /** Several filters in one URL update (a date range, «Limpiar»). */
+    setFilters: useCallback(
+      (changes: Record<string, string | null>) => update(changes),
+      [update],
+    ),
     setPage: useCallback(
       (page: number) =>
         update({ page: page > 1 ? String(page) : null }, { keepPage: true }),

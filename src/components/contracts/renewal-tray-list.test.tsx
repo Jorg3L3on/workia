@@ -1,13 +1,21 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  usePathname: () => "/app/contratos",
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 vi.mock("@/lib/contracts/actions", () => ({
-  renewContractAction: async () => ({}),
   noRenewContractAction: async () => undefined,
+  decideContractRenewalAction: async () => ({}),
 }));
 
 import { RenewalTrayList } from "@/components/contracts/renewal-tray-list";
@@ -28,7 +36,15 @@ const buildContract = (id: string, personId: string): Contract => ({
   scheduleSalidaComer: null,
   scheduleRegresoComer: null,
   scheduleSalida: null,
+  scheduleBlocks: null,
+  scheduleRestDay: null,
+  noRenewReason: null,
   status: "vigente",
+  salarioDiario: null,
+  salarioMensual: null,
+  formaPago: null,
+  periodicidadPago: null,
+  diaPago: null,
   previousContractId: null,
   deletedAt: null,
   createdAt: new Date("2026-01-01"),
@@ -65,86 +81,88 @@ const items = [
   },
 ];
 
+const openMenu = (name: string) => {
+  fireEvent.pointerDown(
+    within(screen.getByRole("table")).getByRole("button", {
+      name: `Acciones de ${name}`,
+    }),
+    { button: 0, ctrlKey: false },
+  );
+};
+
+const renderTray = (canUpdate = true) =>
+  render(
+    <RenewalTrayList
+      canUpdate={canUpdate}
+      items={items}
+      templates={templates}
+      today="2026-09-10"
+    />,
+  );
+
 describe("RenewalTrayList", () => {
   afterEach(() => {
     cleanup();
   });
 
-  it("keeps the renewal form collapsed on every row by default", () => {
-    render(<RenewalTrayList canUpdate items={items} templates={templates} />);
+  it("shows a status per contract and one inline action: Decidir renovación", () => {
+    renderTray();
+    const table = within(screen.getByRole("table"));
 
-    expect(screen.getByText("Ana Demo")).toBeTruthy();
-    expect(screen.getByText("Luis Demo")).toBeTruthy();
-    expect(screen.getByText("2 contratos")).toBeTruthy();
-    expect(screen.queryByLabelText("Nuevo tipo")).toBeNull();
-    expect(screen.queryByLabelText("Plantilla")).toBeNull();
+    expect(table.getByText("Ana Demo")).toBeTruthy();
+    expect(table.getByText("En 5 días")).toBeTruthy();
+    expect(table.getByText("En 21 días")).toBeTruthy();
+    expect(screen.getByText("1–2 de 2")).toBeTruthy();
     expect(
-      screen.getByRole("button", { name: "Renovar contrato de Ana Demo" }),
-    ).toHaveAttribute("aria-expanded", "false");
+      table.getAllByRole("button", { name: /^Decidir renovación de / }),
+    ).toHaveLength(2);
+    // No text actions left in the row.
+    expect(table.queryByRole("button", { name: /^Renovar/ })).toBeNull();
+    expect(table.queryByRole("link", { name: "Ver expediente" })).toBeNull();
   });
 
-  it("opens only the chosen row when renovar is selected", () => {
-    render(<RenewalTrayList canUpdate items={items} templates={templates} />);
+  it("opens the Decidir dialog from the inline action", () => {
+    renderTray();
 
     fireEvent.click(
-      screen.getByRole("button", { name: "Renovar contrato de Ana Demo" }),
-    );
-
-    expect(screen.getByLabelText("Nuevo tipo")).toBeTruthy();
-    expect(screen.getByLabelText("Plantilla")).toBeTruthy();
-    expect(
-      screen.getByRole("button", { name: "Renovar contrato de Ana Demo" }),
-    ).toHaveAttribute("aria-expanded", "true");
-    expect(
-      screen.getByRole("button", { name: "Renovar contrato de Luis Demo" }),
-    ).toHaveAttribute("aria-expanded", "false");
-
-    fireEvent.click(
-      screen.getByRole("button", { name: "Renovar contrato de Luis Demo" }),
-    );
-
-    expect(screen.getAllByLabelText("Nuevo tipo")).toHaveLength(1);
-    expect(
-      screen.getByRole("button", { name: "Renovar contrato de Luis Demo" }),
-    ).toHaveAttribute("aria-expanded", "true");
-    expect(
-      screen.getByRole("button", { name: "Renovar contrato de Ana Demo" }),
-    ).toHaveAttribute("aria-expanded", "false");
-  });
-
-  it("closes the form from the tray and keeps no-renovar as a row action", () => {
-    render(<RenewalTrayList canUpdate items={items} templates={templates} />);
-
-    fireEvent.click(
-      screen.getByRole("button", { name: "Renovar contrato de Ana Demo" }),
-    );
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "Cerrar formulario de renovación de Ana Demo",
+      within(screen.getByRole("table")).getByRole("button", {
+        name: "Decidir renovación de Ana Demo",
       }),
     );
 
-    expect(screen.queryByLabelText("Nuevo tipo")).toBeNull();
-    expect(screen.getAllByRole("button", { name: "No renovar" })).toHaveLength(
-      2,
-    );
     expect(
-      screen.getByRole("link", { name: "Ver expediente de Ana Demo" }),
+      screen.getByRole("dialog", { name: "Decidir renovación" }),
     ).toBeTruthy();
   });
 
-  it("does not offer renew or no-renew actions without update permission", () => {
-    render(
-      <RenewalTrayList canUpdate={false} items={items} templates={templates} />,
+  it("offers only Decidir renovación in the menu, and the dialog cancels", () => {
+    renderTray();
+
+    openMenu("Ana Demo");
+    expect(
+      screen.getAllByRole("menuitem").map((item) => item.textContent),
+    ).toEqual(["Decidir renovación", "Ver expediente"]);
+
+    fireEvent.click(
+      screen.getByRole("menuitem", { name: "Decidir renovación" }),
     );
+    const dialog = screen.getByRole("dialog", { name: "Decidir renovación" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Cancelar" }));
+
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("offers only Ver expediente without update permission", () => {
+    renderTray(false);
 
     expect(
-      screen.queryByRole("button", { name: /Renovar contrato de/ }),
+      screen.queryByRole("button", { name: /Decidir renovación de/ }),
     ).toBeNull();
-    expect(screen.queryByRole("button", { name: "No renovar" })).toBeNull();
-    expect(screen.queryByLabelText("Nuevo tipo")).toBeNull();
+
+    openMenu("Ana Demo");
+
     expect(
-      screen.getByRole("link", { name: "Ver expediente de Ana Demo" }),
-    ).toBeTruthy();
+      screen.getAllByRole("menuitem").map((item) => item.textContent),
+    ).toEqual(["Ver expediente"]);
   });
 });

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ChevronRightIcon, type LucideIcon } from "lucide-react";
+import { ChevronRightIcon } from "lucide-react";
 
 import {
   Collapsible,
@@ -21,162 +21,125 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { SharedLayoutBg } from "@/components/motion/shared-layout-bg";
-import { CATALOG_NAV_CHILDREN, CATALOG_PATHS } from "@/lib/catalog/paths";
-
-type NavItem = {
-  title: string;
-  href: string;
-  icon: LucideIcon;
-  exact?: boolean;
-};
+import { isNavLinkActive, type NavGroup, type NavLink } from "@/lib/navigation";
 
 type AppSidebarNavProps = {
-  items: readonly NavItem[];
+  groups: readonly NavGroup[];
 };
 
-const isItemActive = (pathname: string, item: NavItem) => {
-  if (item.exact) {
-    return pathname === item.href;
-  }
-
-  return pathname === item.href || pathname.startsWith(`${item.href}/`);
-};
-
-const isCatalogRoute = (pathname: string) =>
-  pathname === CATALOG_PATHS.index ||
-  pathname.startsWith(`${CATALOG_PATHS.index}/`);
-
-export const AppSidebarNav = ({ items }: AppSidebarNavProps) => {
+const NavCollapsible = ({ item }: { item: NavLink }) => {
   const pathname = usePathname();
   const router = useRouter();
   const { state, isMobile } = useSidebar();
-  const catalogActive = isCatalogRoute(pathname);
-  const [catalogManualOpen, setCatalogManualOpen] = useState(false);
-  const catalogOpen = catalogActive || catalogManualOpen;
+  const active = isNavLinkActive(pathname, item);
+  const [manualOpen, setManualOpen] = useState(false);
+  const open = active || manualOpen;
 
-  const handleCatalogOpenChange = (nextOpen: boolean) => {
-    if (catalogActive && !nextOpen) {
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (active && !nextOpen) {
       return;
     }
 
-    setCatalogManualOpen(nextOpen);
+    setManualOpen(nextOpen);
   };
 
-  const handleCatalogParentClick = () => {
+  // Collapsed to icons there is no room for the sub-list: go to the index.
+  const handleParentClick = () => {
     if (state === "collapsed" && !isMobile) {
-      router.push(CATALOG_PATHS.index);
+      router.push(item.href);
     }
   };
 
-  const catalogItem = items.find((item) => item.href === CATALOG_PATHS.index);
-  const leadingItems = items.filter(
-    (item) =>
-      item.href !== CATALOG_PATHS.index && item.href !== "/app/auditoria",
-  );
-  const trailingItems = items.filter((item) => item.href === "/app/auditoria");
-
   return (
-    <SidebarGroup>
-      <SidebarGroupLabel className="font-mono text-[10px] tracking-[0.08em] uppercase">
-        Expediente
-      </SidebarGroupLabel>
-      <SidebarGroupContent>
-        <SharedLayoutBg
-          as="ul"
-          className="flex w-full min-w-0 flex-col gap-0"
-          data-sidebar="menu"
-          data-slot="sidebar-menu"
-          enableLayoutRoot={false}
-          inset={0}
-          pillClassName="rounded-md bg-sidebar-accent"
+    <Collapsible
+      className="group/collapsible"
+      onOpenChange={handleOpenChange}
+      open={open}
+    >
+      <CollapsibleTrigger asChild>
+        <SidebarMenuButton
+          className="hover:bg-transparent"
+          isActive={false}
+          tooltip={item.title}
+          type="button"
+          onClick={handleParentClick}
         >
-          {leadingItems.map((item) => (
-            <li
-              className="group/menu-item relative"
-              data-sidebar="menu-item"
-              data-slot="sidebar-menu-item"
-              key={item.href}
-            >
-              <SidebarMenuButton
-                asChild
-                className="hover:bg-transparent"
-                isActive={isItemActive(pathname, item)}
-                tooltip={item.title}
-              >
-                <Link href={item.href}>
-                  <item.icon />
-                  <span>{item.title}</span>
+          <item.icon />
+          <span>{item.title}</span>
+          <ChevronRightIcon className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+        </SidebarMenuButton>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <SidebarMenuSub>
+          {item.children?.map((child) => (
+            <SidebarMenuSubItem key={child.href}>
+              <SidebarMenuSubButton asChild isActive={pathname === child.href}>
+                <Link href={child.href}>
+                  <span>{child.title}</span>
                 </Link>
-              </SidebarMenuButton>
-            </li>
+              </SidebarMenuSubButton>
+            </SidebarMenuSubItem>
           ))}
-
-          {catalogItem ? (
-            <li
-              className="group/menu-item relative"
-              data-sidebar="menu-item"
-              data-slot="sidebar-menu-item"
-            >
-              <Collapsible
-                className="group/collapsible"
-                onOpenChange={handleCatalogOpenChange}
-                open={catalogOpen}
-              >
-                <CollapsibleTrigger asChild>
-                  <SidebarMenuButton
-                    className="hover:bg-transparent"
-                    isActive={false}
-                    tooltip={catalogItem.title}
-                    type="button"
-                    onClick={handleCatalogParentClick}
-                  >
-                    <catalogItem.icon />
-                    <span>{catalogItem.title}</span>
-                    <ChevronRightIcon className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-                  </SidebarMenuButton>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <SidebarMenuSub>
-                    {CATALOG_NAV_CHILDREN.map((child) => (
-                      <SidebarMenuSubItem key={child.href}>
-                        <SidebarMenuSubButton
-                          asChild
-                          isActive={pathname === child.href}
-                        >
-                          <Link href={child.href}>
-                            <span>{child.title}</span>
-                          </Link>
-                        </SidebarMenuSubButton>
-                      </SidebarMenuSubItem>
-                    ))}
-                  </SidebarMenuSub>
-                </CollapsibleContent>
-              </Collapsible>
-            </li>
-          ) : null}
-
-          {trailingItems.map((item) => (
-            <li
-              className="group/menu-item relative"
-              data-sidebar="menu-item"
-              data-slot="sidebar-menu-item"
-              key={item.href}
-            >
-              <SidebarMenuButton
-                asChild
-                className="hover:bg-transparent"
-                isActive={isItemActive(pathname, item)}
-                tooltip={item.title}
-              >
-                <Link href={item.href}>
-                  <item.icon />
-                  <span>{item.title}</span>
-                </Link>
-              </SidebarMenuButton>
-            </li>
-          ))}
-        </SharedLayoutBg>
-      </SidebarGroupContent>
-    </SidebarGroup>
+        </SidebarMenuSub>
+      </CollapsibleContent>
+    </Collapsible>
   );
+};
+
+/** The /app sidebar, one SidebarGroup per group of the navigation config. */
+export const AppSidebarNav = ({ groups }: AppSidebarNavProps) => {
+  const pathname = usePathname();
+
+  return groups.map((group) => {
+    // A group that is a single collapsible of the same name (Catálogo) needs
+    // no label above it.
+    const showLabel = !(
+      group.items.length === 1 && group.items[0]?.title === group.label
+    );
+
+    return (
+      <SidebarGroup className="py-1" key={group.label}>
+        {showLabel ? (
+          <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+        ) : null}
+        <SidebarGroupContent>
+          <SharedLayoutBg
+            aria-label={group.label}
+            as="ul"
+            className="flex w-full min-w-0 flex-col gap-0"
+            data-sidebar="menu"
+            data-slot="sidebar-menu"
+            enableLayoutRoot={false}
+            inset={0}
+            pillClassName="rounded-md bg-sidebar-accent"
+          >
+            {group.items.map((item) => (
+              <li
+                className="group/menu-item relative"
+                data-sidebar="menu-item"
+                data-slot="sidebar-menu-item"
+                key={item.href}
+              >
+                {item.children ? (
+                  <NavCollapsible item={item} />
+                ) : (
+                  <SidebarMenuButton
+                    asChild
+                    className="hover:bg-transparent"
+                    isActive={isNavLinkActive(pathname, item)}
+                    tooltip={item.title}
+                  >
+                    <Link href={item.href}>
+                      <item.icon />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                )}
+              </li>
+            ))}
+          </SharedLayoutBg>
+        </SidebarGroupContent>
+      </SidebarGroup>
+    );
+  });
 };

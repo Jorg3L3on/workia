@@ -22,7 +22,7 @@ const NuevaPersonaPage = async () => {
   ]);
 
   return (
-    <div className="mx-auto w-full max-w-3xl">
+    <div className="mx-auto w-full max-w-5xl">
       <PersonForm
         areas={areas}
         mode="create"

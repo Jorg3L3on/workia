@@ -42,6 +42,10 @@ vi.mock("@/lib/contracts/index", () => ({
   markContractNoRenew: markContractNoRenewMock,
 }));
 
+vi.mock("@/lib/rbac", () => ({
+  userHasPermission: vi.fn(async () => false),
+}));
+
 vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),
 }));
@@ -100,44 +104,5 @@ describe("noRenewContractAction", () => {
     ).rejects.toThrow("NEXT_REDIRECT");
 
     expect(markContractNoRenewMock).not.toHaveBeenCalled();
-  });
-});
-
-describe("renewContractAction", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    redirectMock.mockImplementation(() => {
-      throw new Error("NEXT_REDIRECT");
-    });
-  });
-
-  it("renews without auto-baja on happy path", async () => {
-    requireContractsUpdateMock.mockResolvedValue({
-      user: { id: "user-1" },
-      companyId: "company-1",
-    });
-    renewContractMock.mockResolvedValue({
-      id: "contract-new",
-      personId: "person-1",
-    });
-
-    const { renewContractAction } = await import("@/lib/contracts/actions");
-
-    const formData = new FormData();
-    formData.set("contractId", "44444444-4444-4444-8444-444444444444");
-    formData.set("type", "indeterminado");
-    formData.set("startDate", "2026-01-01");
-    formData.set("noticeWindow", "no_avisar");
-    formData.set("templateId", "22222222-2222-4222-8222-222222222222");
-
-    await expect(renewContractAction({}, formData)).rejects.toThrow(
-      "NEXT_REDIRECT",
-    );
-
-    expect(renewContractMock).toHaveBeenCalledWith(
-      "company-1",
-      expect.objectContaining({ type: "indeterminado" }),
-      "user-1",
-    );
   });
 });

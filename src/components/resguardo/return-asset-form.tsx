@@ -76,7 +76,7 @@ export const ReturnAssetForm = ({
         </div>
       </div>
 
-      <Button disabled={pending} type="submit" variant="outline">
+      <Button disabled={pending} type="submit" variant="secondary">
         {pending ? "Registrando…" : "Registrar devolución"}
       </Button>
     </form>

@@ -1,9 +1,17 @@
 import { describe, expect, it } from "vitest";
 
+import { OFFICIAL_TEMPLATES } from "@/lib/contracts/official-templates";
 import {
+  compensationValues,
+  CONTRACT_TEMPLATE_TOKENS,
+  contractFormSchema,
+  contractTemplateTokenLabels,
   fillContractTemplate,
   isContractInRenewalWindow,
+  monthlySalary,
   noticeWindowToMonths,
+  renewalStatus,
+  templateTokenValues,
 } from "@/lib/contracts/schema";
 
 describe("contract template tokens", () => {
@@ -148,5 +156,145 @@ describe("demo seed safety", () => {
     expect(DEMO_RRHH_FALLBACK.email).toContain(".local");
     expect(DEMO_RRHH_FALLBACK.name).toMatch(/Demo/);
     expect(DEMO_RRHH_FALLBACK.nombres).toBe("Elena");
+  });
+});
+
+describe("contract compensation", () => {
+  const base = {
+    personId: "00000000-0000-4000-8000-000000000001",
+    templateId: "00000000-0000-4000-8000-000000000002",
+    type: "indeterminado",
+    startDate: "2026-09-01",
+    endDate: "",
+    noticeWindow: "no_avisar",
+  };
+
+  it("needs payment method and frequency with a salary", () => {
+    const parsed = contractFormSchema.safeParse({
+      ...base,
+      salarioDiario: "500",
+    });
+    expect(parsed.success).toBe(false);
+    expect(parsed.error?.issues.map((issue) => issue.path[0])).toEqual([
+      "formaPago",
+      "periodicidadPago",
+    ]);
+  });
+
+  it("accepts a contract without compensation", () => {
+    expect(contractFormSchema.safeParse(base).success).toBe(true);
+    expect(
+      contractFormSchema.safeParse({ ...base, salarioDiario: "" }).success,
+    ).toBe(true);
+  });
+
+  it("rejects a salary that is not positive", () => {
+    const parsed = contractFormSchema.safeParse({
+      ...base,
+      salarioDiario: "0",
+      formaPago: "efectivo",
+      periodicidadPago: "semanal",
+    });
+    expect(parsed.success).toBe(false);
+  });
+
+  it("derives the monthly salary with 30.4 days", () => {
+    expect(monthlySalary(278.8)).toBe(8475.52);
+    expect(
+      compensationValues({
+        salarioDiario: 500,
+        formaPago: "transferencia",
+        periodicidadPago: "quincenal",
+        diaPago: "  ",
+      }),
+    ).toEqual({
+      salarioDiario: "500.00",
+      salarioMensual: "15200.00",
+      formaPago: "transferencia",
+      periodicidadPago: "quincenal",
+      diaPago: null,
+    });
+    expect(compensationValues({ salarioDiario: "" }).salarioDiario).toBeNull();
+  });
+});
+
+describe("official template tokens", () => {
+  const context = {
+    nombres: "Ana",
+    apellidoPaterno: "Demo",
+    fechaInicio: "2026-09-01",
+    curp: "DEMA900101MCSRNN09",
+    ine: "DMANNA90010107M100",
+    domicilio: "Calle 5, Col. Centro, Tuxtla Gutiérrez, Chiapas, C.P. 29000",
+    estadoCivil: "Soltera",
+    salarioDiario: "500.00",
+    salarioMensual: "15200.00",
+    formaPago: "transferencia",
+    periodicidad: "quincenal",
+    fechaIngreso: "2023-03-15",
+    empresa: "Ferretera",
+    empresaRazonSocial: "Ferretera SA de CV",
+    empresaRfc: "FER010101AB1",
+  };
+
+  it("fills the new tokens", () => {
+    const filled = fillContractTemplate(
+      "{{curp}} {{ine}} | {{domicilio}} | {{estado_civil}} | {{salario_diario}} / {{salario_mensual}} | {{forma_pago}} {{periodicidad}} | {{fecha_ingreso}} | {{antiguedad}} | {{empresa}} {{empresa_razon_social}} {{empresa_rfc}}",
+      context,
+    );
+
+    expect(filled).toBe(
+      "DEMA900101MCSRNN09 DMANNA90010107M100 | Calle 5, Col. Centro, Tuxtla Gutiérrez, Chiapas, C.P. 29000 | Soltera | $500.00 / $15,200.00 | transferencia quincenal | 15/03/2023 | 3 años, 5 meses | Ferretera Ferretera SA de CV FER010101AB1",
+    );
+  });
+
+  it("reports the tokens without a value as null", () => {
+    const values = templateTokenValues({
+      nombres: "Ana",
+      apellidoPaterno: "Demo",
+      fechaInicio: "2026-09-01",
+      horario: "—",
+    });
+    expect(values.horario).toBeNull();
+    expect(values.salario_diario).toBeNull();
+    expect(values.antiguedad).toBeNull();
+    expect(values.nombres).toBe("Ana");
+  });
+
+  it("official templates only use tokens Workia fills, and every token has a label", () => {
+    for (const template of OFFICIAL_TEMPLATES) {
+      const used = [...template.body.matchAll(/\{\{(\w+)\}\}/g)].map(
+        (match) => match[1],
+      );
+      expect(
+        used.filter(
+          (token) =>
+            !(CONTRACT_TEMPLATE_TOKENS as readonly string[]).includes(token),
+        ),
+        template.name,
+      ).toEqual([]);
+    }
+    for (const token of CONTRACT_TEMPLATE_TOKENS) {
+      expect(contractTemplateTokenLabels[token]).toBeTruthy();
+    }
+  });
+});
+
+describe("renewal status", () => {
+  it("reads overdue, soon and in-window contracts", () => {
+    expect(renewalStatus("2026-10-17", "2026-10-18")).toMatchObject({
+      urgency: "vencido",
+      label: "Vencido",
+    });
+    expect(renewalStatus("2026-10-18", "2026-10-18").label).toBe("Vence hoy");
+    expect(renewalStatus("2026-10-19", "2026-10-18").label).toBe("En 1 día");
+    expect(renewalStatus("2026-11-07", "2026-10-18")).toMatchObject({
+      urgency: "proximo",
+      label: "En 20 días",
+    });
+    expect(renewalStatus("2027-03-27", "2026-10-18")).toMatchObject({
+      urgency: "en_ventana",
+      label: "En ventana",
+    });
   });
 });

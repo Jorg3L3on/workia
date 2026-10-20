@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { CircleSlashIcon, Trash2Icon } from "lucide-react";
 import { notFound } from "next/navigation";
 
-import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/layout/page-header";
+import { Badge } from "@/components/ui/badge";
+import { activeTone } from "@/lib/ui/status-tone";
 import { pageTitles } from "@/lib/brand/chrome-copy";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,7 +16,7 @@ import {
 } from "@/lib/contracts/actions";
 import { getContractTemplateById } from "@/lib/contracts";
 import { requireContractTemplatesRead } from "@/lib/contracts/auth";
-import { CONTRACT_TEMPLATE_TOKENS } from "@/lib/contracts/schema";
+import { TemplateTokensHelp } from "@/components/contracts/template-tokens-help";
 import { userHasPermission } from "@/lib/rbac";
 import { CompanyField } from "@/components/tenant/company-context";
 
@@ -54,14 +56,43 @@ const PlantillaDetailPage = async ({
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
       <PageBreadcrumbLabel label={template.name} />
-      <header className="space-y-1">
-        <p className="text-muted-foreground font-mono text-[10.5px] font-medium tracking-[0.09em] uppercase">
-          Contratos
-        </p>
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {template.name}
-        </h1>
-      </header>
+      <PageHeader
+        menu={
+          canDelete
+            ? [
+                template.active && {
+                  label: "Desactivar",
+                  icon: CircleSlashIcon,
+                  action: deactivateAction,
+                },
+                {
+                  label: "Eliminar plantilla",
+                  icon: Trash2Icon,
+                  action: deleteAction,
+                  destructive: true,
+                  confirm: {
+                    title: `Eliminar «${template.name}»`,
+                    description:
+                      "La plantilla deja de estar disponible para emitir contratos. Los contratos ya emitidos no cambian.",
+                    confirmLabel: "Eliminar plantilla",
+                  },
+                },
+              ]
+            : null
+        }
+        primary={
+          canUpdate
+            ? { label: "Guardar cambios", form: "plantilla-form" }
+            : null
+        }
+        status={
+          <Badge tone={activeTone(template.active)}>
+            {template.active ? "Activa" : "Inactiva"}
+          </Badge>
+        }
+        title={template.name}
+        variant="detail"
+      />
 
       {saved === "1" ? (
         <p
@@ -79,7 +110,11 @@ const PlantillaDetailPage = async ({
       ) : null}
 
       {canUpdate ? (
-        <form action={updateAction} className="workia-pass-card space-y-4 p-5">
+        <form
+          action={updateAction}
+          className="workia-pass-card space-y-4 p-5"
+          id="plantilla-form"
+        >
           <CompanyField />
           <div className="space-y-2">
             <Label htmlFor="name">Nombre</Label>
@@ -100,12 +135,7 @@ const PlantillaDetailPage = async ({
               name="body"
               required
             />
-            <p className="text-muted-foreground text-xs">
-              Variables:{" "}
-              {CONTRACT_TEMPLATE_TOKENS.map((token) => `{{${token}}}`).join(
-                ", ",
-              )}
-            </p>
+            <TemplateTokensHelp />
           </div>
 
           <label className="flex items-center gap-2 text-sm">
@@ -117,36 +147,12 @@ const PlantillaDetailPage = async ({
             />
             Plantilla activa
           </label>
-
-          <div className="flex flex-wrap gap-2">
-            <Button type="submit">Guardar cambios</Button>
-            <Button asChild variant="ghost">
-              <Link href="/app/contratos/plantillas">Volver</Link>
-            </Button>
-          </div>
         </form>
       ) : (
         <div className="workia-pass-card p-5">
           <pre className="text-sm whitespace-pre-wrap">{template.body}</pre>
         </div>
       )}
-
-      {canDelete ? (
-        <div className="flex flex-wrap gap-2">
-          {template.active ? (
-            <form action={deactivateAction}>
-              <Button type="submit" variant="outline">
-                Desactivar
-              </Button>
-            </form>
-          ) : null}
-          <form action={deleteAction}>
-            <Button type="submit" variant="ghost">
-              Eliminar plantilla
-            </Button>
-          </form>
-        </div>
-      ) : null}
     </div>
   );
 };

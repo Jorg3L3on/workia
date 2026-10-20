@@ -119,6 +119,8 @@ export const seedTenant = async (label: string) => {
 
   const admin = await user("admin");
   const viewer = await user("viewer");
+  // Can emit contracts but has no compensation:read.
+  const editor = await user("editor");
 
   const [area] = await db
     .insert(areas)
@@ -265,6 +267,7 @@ export const seedTenant = async (label: string) => {
     company,
     admin,
     viewer,
+    editor,
     area,
     position,
     activity,

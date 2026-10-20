@@ -19,6 +19,10 @@ const PLATFORM_TABLES = new Set([
   "user_roles",
   "companies",
   "company_memberships",
+  // MCP (WRK-I1): the OAuth client registry is shared by the installation, and
+  // rate-limit counters are keyed by a connection that already has a company.
+  "mcp_clients",
+  "rate_limits",
 ]);
 
 /** Why a business table is not tenant-scoped; empty when it is. */

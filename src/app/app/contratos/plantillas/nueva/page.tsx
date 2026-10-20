@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createContractTemplateAction } from "@/lib/contracts/actions";
 import { requireContractTemplatesCreate } from "@/lib/contracts/auth";
-import { CONTRACT_TEMPLATE_TOKENS } from "@/lib/contracts/schema";
+import { TemplateTokensHelp } from "@/components/contracts/template-tokens-help";
 import { redirect } from "next/navigation";
 import { CompanyField } from "@/components/tenant/company-context";
 
@@ -43,9 +43,6 @@ Vigencia: del {{fecha_inicio}} al {{fecha_fin}}.`;
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
       <header className="space-y-1">
-        <p className="text-muted-foreground font-mono text-[10.5px] font-medium tracking-[0.09em] uppercase">
-          Contratos
-        </p>
         <h1 className="text-2xl font-semibold tracking-tight">
           Nueva plantilla
         </h1>
@@ -81,10 +78,7 @@ Vigencia: del {{fecha_inicio}} al {{fecha_fin}}.`;
             name="body"
             required
           />
-          <p className="text-muted-foreground text-xs">
-            Variables disponibles:{" "}
-            {CONTRACT_TEMPLATE_TOKENS.map((token) => `{{${token}}}`).join(", ")}
-          </p>
+          <TemplateTokensHelp />
         </div>
 
         <label className="flex items-center gap-2 text-sm">

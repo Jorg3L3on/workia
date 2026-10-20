@@ -1,7 +1,7 @@
 "use client";
 // beui.dev/components/motion/file-tree
 
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import { ChevronRight, File, Folder, FolderOpen } from "lucide-react";
 import {
   Children,
@@ -15,6 +15,7 @@ import {
   type ReactNode,
 } from "react";
 import { SharedLayoutBg } from "@/components/motion/shared-layout-bg";
+import { useHydratedReducedMotion } from "@/hooks/use-hydrated-reduced-motion";
 import { EASE_OUT, SPRING_LAYOUT, SPRING_SWAP } from "@/lib/ease";
 import { cn } from "@/lib/utils";
 
@@ -210,7 +211,7 @@ export function FileTree({
   className,
   classNames,
 }: FileTreeProps) {
-  const reduce = useReducedMotion() ?? false;
+  const reduce = useHydratedReducedMotion();
   const [internalValue, setInternalValue] = useState(defaultValue);
   const [internalExpandedIds, setInternalExpandedIds] =
     useState(defaultExpandedIds);

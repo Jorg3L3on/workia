@@ -83,6 +83,17 @@ export const resolveBreadcrumbs = (
     ];
   }
 
+  if (path === "/app/altas") {
+    return [{ label: "Altas" }];
+  }
+
+  if (path.startsWith("/app/altas/")) {
+    return [
+      { label: "Altas", href: "/app/altas" },
+      { label: labels.current ?? "Alta" },
+    ];
+  }
+
   if (path === "/app/resguardo") {
     return [{ label: "Resguardo" }];
   }
@@ -129,12 +140,23 @@ export const resolveBreadcrumbs = (
     ];
   }
 
+  if (path === CATALOG_PATHS.regiones) {
+    return [
+      { label: "Catálogo", href: CATALOG_PATHS.index },
+      { label: "Regiones" },
+    ];
+  }
+
   if (path === "/app/auditoria") {
     return [{ label: "Auditoría" }];
   }
 
   if (path === "/app/miembros") {
     return [{ label: "Miembros" }];
+  }
+
+  if (path === "/app/conexiones") {
+    return [{ label: "Conexiones" }];
   }
 
   if (path === "/admin") {
@@ -154,7 +176,10 @@ export const resolveBreadcrumbs = (
   }
 
   if (path === "/admin/rbac") {
-    return [{ label: "Administración", href: "/admin" }, { label: "RBAC" }];
+    return [
+      { label: "Administración", href: "/admin" },
+      { label: "Roles y permisos" },
+    ];
   }
 
   if (path.startsWith("/admin/")) {

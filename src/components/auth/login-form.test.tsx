@@ -99,3 +99,18 @@ describe("LoginForm", () => {
     expect(assign).not.toHaveBeenCalled();
   });
 });
+
+describe("safeCallbackPath", () => {
+  it("returns to a same-site path (the OAuth consent) and nowhere else", async () => {
+    const { safeCallbackPath } = await import("./login-form");
+
+    expect(safeCallbackPath("/oauth/consent?client_id=x")).toBe(
+      "/oauth/consent?client_id=x",
+    );
+    expect(safeCallbackPath("/app/personas")).toBe("/app/personas");
+    expect(safeCallbackPath("https://evil.example")).toBe("/app");
+    expect(safeCallbackPath("//evil.example")).toBe("/app");
+    expect(safeCallbackPath("/\\evil.example")).toBe("/app");
+    expect(safeCallbackPath(null)).toBe("/app");
+  });
+});

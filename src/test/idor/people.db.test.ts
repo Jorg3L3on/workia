@@ -17,6 +17,7 @@ import {
   listPeople,
   listPeoplePage,
   searchActivePeopleForSelect,
+  setPersonStatus,
   softDeletePerson,
   updatePerson,
   upsertPersonSchedule,
@@ -25,6 +26,8 @@ import {
   createPersonAction,
   deletePersonAction,
   searchManagerOptionsAction,
+  searchPeopleForPaletteAction,
+  setPersonStatusAction,
   updatePersonAction,
 } from "@/lib/people/actions";
 import type { PersonFormValues } from "@/lib/people/schema";
@@ -211,6 +214,15 @@ describe("people writes cannot reach another company", () => {
     ).toBeNull();
   });
 
+  it("lib:people/setPersonStatus", async () => {
+    expect(
+      await setPersonStatus(b.companyId, a.person.id, "baja", b.admin.id),
+    ).toBeNull();
+    expect((await getPersonById(a.companyId, a.person.id))?.status).toBe(
+      "activa",
+    );
+  });
+
   it("lib:people/upsertPersonSchedule", async () => {
     const before = await snapshotTenant(a);
     // B's company id on A's person: the schedule lookup finds nothing of A to change,
@@ -235,7 +247,7 @@ describe("people actions with company B's session", () => {
       formData({
         ...form({ managerId: a.person.id }),
         companyId: b.companyId,
-      } as Record<string, string>),
+      } as unknown as Record<string, string>),
     );
     expect(result.fieldErrors?.managerId).toBeTruthy();
   });
@@ -246,7 +258,10 @@ describe("people actions with company B's session", () => {
     const result = await updatePersonAction(
       a.person.id,
       {},
-      formData({ ...form(), companyId: b.companyId } as Record<string, string>),
+      formData({ ...form(), companyId: b.companyId } as unknown as Record<
+        string,
+        string
+      >),
     );
     expect(result.error).toBe("No encontramos a esta persona.");
     expect(await snapshotTenant(a)).toEqual(before);
@@ -263,16 +278,37 @@ describe("people actions with company B's session", () => {
     ).toBeNull();
   });
 
+  it("action:people/setPersonStatusAction", async () => {
+    actAs(b.admin);
+    await expect(
+      setPersonStatusAction(a.person.id, "baja"),
+    ).rejects.toMatchObject({
+      kind: "redirect",
+      url: "/app/personas?error=not-found",
+    });
+    expect((await getPersonById(a.companyId, a.person.id))?.status).toBe(
+      "activa",
+    );
+  });
+
   it("action:people/searchManagerOptionsAction", async () => {
     actAs(b.admin);
     noLeak(await searchManagerOptionsAction("Persona"));
+  });
+
+  it("action:people/searchPeopleForPaletteAction", async () => {
+    actAs(b.admin);
+    noLeak(await searchPeopleForPaletteAction("Persona"));
   });
 
   it("refuses a form opened in another company (two tabs)", async () => {
     actAs(b.admin);
     const result = await createPersonAction(
       {},
-      formData({ ...form(), companyId: a.companyId } as Record<string, string>),
+      formData({ ...form(), companyId: a.companyId } as unknown as Record<
+        string,
+        string
+      >),
     );
     expect(result.error).toBe("La empresa activa cambió. Recarga la página.");
   });
@@ -311,14 +347,112 @@ describe("people permissions", () => {
     });
   });
 
+  it("rbac:action:people/setPersonStatusAction", async () => {
+    actAs(b.viewer);
+    await expect(
+      setPersonStatusAction(b.person.id, "baja"),
+    ).rejects.toMatchObject({
+      url: `/app/personas/${b.person.id}?error=status-forbidden`,
+    });
+    expect((await getPersonById(b.companyId, b.person.id))?.status).toBe(
+      "activa",
+    );
+  });
+
   it("a user without membership gets no company and nothing", async () => {
     actAs({
       id: "00000000-0000-0000-0000-00000000dead",
       email: "nadie@idor.test",
     });
     expect(await searchManagerOptionsAction("Persona")).toEqual([]);
+    expect(await searchPeopleForPaletteAction("Persona")).toEqual([]);
     await expect(deletePersonAction(b.person.id)).rejects.toBeInstanceOf(
       NavigationThrow,
     );
+  });
+});
+
+describe("expediente México (WRK-I5-1)", () => {
+  it("stores the México data and beneficiaries, and keeps them when an update does not send them", async () => {
+    const { listPersonBeneficiaries } = await import("@/lib/people");
+    const created = await createPerson(
+      a.companyId,
+      form({
+        nombres: "México",
+        apellidoPaterno: "Datos",
+        domicilioCalle: "Av. Central",
+        domicilioCodigoPostal: "29000",
+        domicilioEstado: "Chiapas",
+        estadoCivil: "casado",
+        ineClaveElector: "LPRZAN80010107M100",
+        beneficiarios: [
+          { nombre: "Hija", parentesco: "Hija", porcentaje: 70 },
+          { nombre: "Hijo", parentesco: "Hijo", porcentaje: 30 },
+        ],
+      }),
+      a.admin.id,
+    );
+
+    expect(created).toMatchObject({
+      domicilioCalle: "Av. Central",
+      estadoCivil: "casado",
+    });
+    expect(
+      await listPersonBeneficiaries(a.companyId, created.id),
+    ).toMatchObject([
+      { nombre: "Hija", porcentaje: 70 },
+      { nombre: "Hijo", porcentaje: 30 },
+    ]);
+
+    // An update without the México fields (import, MCP) keeps them.
+    const updated = await updatePerson(
+      a.companyId,
+      created.id,
+      form({ nombres: "México", apellidoPaterno: "Editado" }),
+      a.admin.id,
+    );
+    expect(updated).toMatchObject({
+      domicilioCalle: "Av. Central",
+      ineClaveElector: "LPRZAN80010107M100",
+    });
+    expect(await listPersonBeneficiaries(a.companyId, created.id)).toHaveLength(
+      2,
+    );
+
+    // An explicit empty list removes them.
+    await updatePerson(
+      a.companyId,
+      created.id,
+      form({
+        nombres: "México",
+        apellidoPaterno: "Editado",
+        beneficiarios: [],
+      }),
+      a.admin.id,
+    );
+    expect(await listPersonBeneficiaries(a.companyId, created.id)).toHaveLength(
+      0,
+    );
+  });
+
+  it("lib:people/listPersonBeneficiaries", async () => {
+    const { listPersonBeneficiaries } = await import("@/lib/people");
+    await updatePerson(
+      a.companyId,
+      a.person.id,
+      form({
+        nombres: a.person.nombres,
+        apellidoPaterno: a.person.apellidoPaterno,
+        beneficiarios: [
+          { nombre: "Beneficiaria A", parentesco: "Madre", porcentaje: 100 },
+        ],
+      }),
+      a.admin.id,
+    );
+
+    expect(await listPersonBeneficiaries(b.companyId, a.person.id)).toEqual([]);
+    expect(
+      await listPersonBeneficiaries(a.companyId, a.person.id),
+    ).toHaveLength(1);
   });
 });

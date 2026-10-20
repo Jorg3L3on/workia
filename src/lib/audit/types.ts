@@ -5,6 +5,7 @@ export const AUDIT_RESOURCE_TYPES = [
   "activity",
   "position_activity",
   "site",
+  "region",
   "contract",
   "contract_template",
   "asset",
@@ -13,6 +14,9 @@ export const AUDIT_RESOURCE_TYPES = [
   "people_export",
   "company",
   "membership",
+  "mcp_connection",
+  "mcp_settings",
+  "onboarding",
 ] as const;
 
 export type AuditResourceType = (typeof AUDIT_RESOURCE_TYPES)[number];
@@ -35,6 +39,9 @@ export const AUDIT_ACTIONS = [
   "export",
   "undo",
   "switch",
+  "revoke",
+  "approve",
+  "reject",
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
@@ -57,6 +64,9 @@ export const auditActionLabels: Record<AuditAction, string> = {
   export: "Exportación",
   undo: "Deshacer importación",
   switch: "Cambio de empresa",
+  revoke: "Revocación",
+  approve: "Aprobación",
+  reject: "Rechazo",
 };
 
 export const auditResourceTypeLabels: Record<AuditResourceType, string> = {
@@ -66,6 +76,7 @@ export const auditResourceTypeLabels: Record<AuditResourceType, string> = {
   activity: "Actividad",
   position_activity: "Actividad de puesto",
   site: "Ubicación",
+  region: "Región",
   contract: "Contrato",
   contract_template: "Plantilla de contrato",
   asset: "Activo",
@@ -74,7 +85,27 @@ export const auditResourceTypeLabels: Record<AuditResourceType, string> = {
   people_export: "Exportación de personas",
   company: "Empresa",
   membership: "Miembro",
+  mcp_connection: "Conexión de asistente (MCP)",
+  mcp_settings: "Escrituras del conector (MCP)",
+  onboarding: "Alta (RH → Nóminas)",
 };
+
+export const AUDIT_SOURCES = [
+  "app",
+  "import",
+  "mcp",
+  "seed",
+  "system",
+] as const;
+
+export const auditSourceLabels: Record<(typeof AUDIT_SOURCES)[number], string> =
+  {
+    app: "App",
+    import: "Importación",
+    mcp: "Asistente (MCP)",
+    seed: "Datos iniciales",
+    system: "Sistema",
+  };
 
 export type AuditPayload = {
   before?: Record<string, unknown> | null;
@@ -86,6 +117,12 @@ export type AuditPayload = {
 export type AuditRequestMeta = {
   path?: string;
   method?: string;
+  /** MCP calls: the client and connection that acted. */
+  client?: string;
+  connection_id?: string;
+  tool?: string;
+  request_id?: string;
+  idempotency_key?: string;
 };
 
 export type RecordAuditEventInput = {
@@ -108,8 +145,12 @@ export type ListAuditEventsOptions = {
   resourceId?: string;
   actorUserId?: string;
   action?: AuditAction;
+  /** Where the change came from (app, seed, system, import, mcp). */
+  source?: NonNullable<RecordAuditEventInput["source"]>;
   from?: Date;
   to?: Date;
+  /** Free text over the event's summary, changes and actor name or email. */
+  query?: string;
   limit?: number;
   offset?: number;
 };

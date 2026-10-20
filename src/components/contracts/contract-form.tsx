@@ -19,6 +19,7 @@ import {
 } from "@/lib/contracts/schema";
 import { isoToday } from "@/lib/format/date";
 import { CompanyField } from "@/components/tenant/company-context";
+import { CompensationFields } from "@/components/contracts/compensation-fields";
 
 type ContractFormProps = {
   personId: string;
@@ -33,6 +34,8 @@ type ContractFormProps = {
     horario?: string | null;
   };
   templates: ContractTemplate[];
+  /** compensation:read: shows the salary fields. */
+  canSeeCompensation?: boolean;
 };
 
 const initialState: ContractActionState = {};
@@ -51,6 +54,7 @@ export const ContractForm = ({
   personId,
   personContext,
   templates,
+  canSeeCompensation = false,
 }: ContractFormProps) => {
   const [state, formAction] = useActionState(
     createContractAction,
@@ -125,6 +129,8 @@ export const ContractForm = ({
           />
         </div>
       </div>
+
+      {canSeeCompensation ? <CompensationFields /> : null}
 
       <ContractPreview templates={templates} personContext={personContext} />
 
