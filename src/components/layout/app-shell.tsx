@@ -14,6 +14,7 @@ import {
 } from "@/components/layout/app-command-palette";
 import { AppSidebarNav } from "@/components/layout/app-sidebar-nav";
 import { NavigationProgress } from "@/components/layout/navigation-progress";
+import { SidebarWheelForward } from "@/components/layout/sidebar-wheel-forward";
 import {
   SHELL_CONTENT_COLUMN_CLASS_NAME,
   SHELL_INSET_CLASS_NAME,
@@ -96,6 +97,7 @@ export const AppShell = ({
             )}
           >
             <NavigationProgress />
+            <SidebarWheelForward />
             <AppCommandPalette access={access} />
             <Sidebar
               collapsible="icon"

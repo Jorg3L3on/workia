@@ -15,6 +15,7 @@ import {
   BreadcrumbLabelsProvider,
 } from "@/components/layout/app-breadcrumbs";
 import { NavigationProgress } from "@/components/layout/navigation-progress";
+import { SidebarWheelForward } from "@/components/layout/sidebar-wheel-forward";
 import {
   SHELL_CONTENT_COLUMN_CLASS_NAME,
   SHELL_INSET_CLASS_NAME,
@@ -81,6 +82,7 @@ export const AdminShell = ({ children, user }: AdminShellProps) => {
           className={cn("relative z-10 flex w-full", SHELL_VIEWPORT_CLASS_NAME)}
         >
           <NavigationProgress />
+          <SidebarWheelForward />
           <Sidebar
             collapsible="icon"
             className="border-sidebar-border border-r"

@@ -340,6 +340,128 @@ describe("AppShell", () => {
   });
 });
 
+const makeScrollable = (
+  element: Element | null,
+  size: { scrollHeight: number; clientHeight: number },
+) => {
+  if (!element) {
+    throw new Error("missing scroll element");
+  }
+  let top = 0;
+  const maxTop = size.scrollHeight - size.clientHeight;
+  Object.defineProperty(element, "scrollHeight", {
+    configurable: true,
+    value: size.scrollHeight,
+  });
+  Object.defineProperty(element, "clientHeight", {
+    configurable: true,
+    value: size.clientHeight,
+  });
+  Object.defineProperty(element, "scrollTop", {
+    configurable: true,
+    get: () => top,
+    set: (value: number) => {
+      top = Math.max(0, Math.min(value, maxTop));
+    },
+  });
+  return element as HTMLElement;
+};
+
+const withViewportWidth = (width: number, run: () => void) => {
+  const original = window.innerWidth;
+  Object.defineProperty(window, "innerWidth", {
+    configurable: true,
+    writable: true,
+    value: width,
+  });
+  try {
+    run();
+  } finally {
+    Object.defineProperty(window, "innerWidth", {
+      configurable: true,
+      writable: true,
+      value: original,
+    });
+  }
+};
+
+describe("AppShell sidebar wheel forwarding", () => {
+  const slot = (name: string) =>
+    document.querySelector(`[data-slot="${name}"]`);
+
+  it("forwards the wheel over the sidebar to the shell scroller, in pixels", () => {
+    renderShell();
+    const mainScroll = makeScrollable(slot("shell-main-scroll"), {
+      scrollHeight: 3000,
+      clientHeight: 800,
+    });
+    makeScrollable(slot("sidebar-content"), {
+      scrollHeight: 400,
+      clientHeight: 400,
+    });
+
+    fireEvent.wheel(slot("sidebar-container") as Element, { deltaY: 120 });
+    expect(mainScroll.scrollTop).toBe(120);
+
+    fireEvent.wheel(slot("sidebar-header") as Element, {
+      deltaY: 3,
+      deltaMode: WheelEvent.DOM_DELTA_LINE,
+    });
+    expect(mainScroll.scrollTop).toBe(120 + 3 * 16);
+
+    fireEvent.wheel(slot("sidebar-footer") as Element, {
+      deltaY: 1,
+      deltaMode: WheelEvent.DOM_DELTA_PAGE,
+    });
+    expect(mainScroll.scrollTop).toBe(120 + 48 + 800);
+
+    fireEvent.wheel(slot("sidebar-content") as Element, { deltaY: -968 });
+    expect(mainScroll.scrollTop).toBe(0);
+  });
+
+  it("lets a scrollable sidebar-content consume the wheel before the content", () => {
+    renderShell();
+    const mainScroll = makeScrollable(slot("shell-main-scroll"), {
+      scrollHeight: 3000,
+      clientHeight: 800,
+    });
+    const content = makeScrollable(slot("sidebar-content"), {
+      scrollHeight: 1000,
+      clientHeight: 400,
+    });
+
+    fireEvent.wheel(content, { deltaY: 100 });
+    expect(mainScroll.scrollTop).toBe(0);
+
+    content.scrollTop = 600;
+    fireEvent.wheel(content, { deltaY: 100 });
+    expect(mainScroll.scrollTop).toBe(100);
+
+    fireEvent.wheel(content, { deltaY: -100 });
+    expect(mainScroll.scrollTop).toBe(100);
+
+    content.scrollTop = 0;
+    fireEvent.wheel(content, { deltaY: -100 });
+    expect(mainScroll.scrollTop).toBe(0);
+  });
+
+  it("leaves the wheel alone below 768px and over the content column", () => {
+    renderShell();
+    const mainScroll = makeScrollable(slot("shell-main-scroll"), {
+      scrollHeight: 3000,
+      clientHeight: 800,
+    });
+
+    withViewportWidth(500, () => {
+      fireEvent.wheel(slot("sidebar-container") as Element, { deltaY: 120 });
+    });
+    expect(mainScroll.scrollTop).toBe(0);
+
+    fireEvent.wheel(slot("shell-content-column") as Element, { deltaY: 120 });
+    expect(mainScroll.scrollTop).toBe(0);
+  });
+});
+
 const headersContainBreadcrumb = () => {
   const header = document.querySelector('[data-slot="shell-top-nav"]');
   return Boolean(header?.querySelector('[data-slot="breadcrumb"]'));
