@@ -2,6 +2,9 @@ import { defineConfig, devices } from "@playwright/test";
 
 // PLAYWRIGHT_PORT lets a second checkout run e2e next to another dev server.
 const port = Number(process.env.PLAYWRIGHT_PORT ?? 3000);
+// PLAYWRIGHT_CHANNEL=chrome runs on the installed Google Chrome when the
+// Playwright browser build is not downloaded (CI installs chromium).
+const channel = process.env.PLAYWRIGHT_CHANNEL;
 
 export default defineConfig({
   testDir: "./e2e",
@@ -17,7 +20,7 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
+      use: { ...devices["Desktop Chrome"], ...(channel ? { channel } : {}) },
     },
   ],
   webServer: {

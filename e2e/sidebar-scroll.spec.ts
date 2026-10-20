@@ -1,58 +1,11 @@
 import { expect, test } from "@playwright/test";
 
-const loginAsDemoRrhh = async (page: import("@playwright/test").Page) => {
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto("/login");
-  await page.getByLabel("Correo electrónico").fill("rrhh@workia.local");
-  await page.getByRole("textbox", { name: "Contraseña" }).fill("Workia123!");
-  await page.getByRole("button", { name: "Iniciar sesión" }).click();
-  await expect(page).toHaveURL(/\/app/, { timeout: 25_000 });
-};
-
-const stretchContentColumn = async (page: import("@playwright/test").Page) => {
-  await expect(page.locator('[data-slot="shell-main-scroll"]')).toBeVisible();
-  await page.addStyleTag({
-    content: `
-      [data-slot="shell-main-scroll"] {
-        max-height: calc(100dvh - 3.5rem) !important;
-        overflow-y: auto !important;
-      }
-      [data-slot="shell-main-scroll"]::after {
-        content: "";
-        display: block;
-        height: 2200px;
-        flex-shrink: 0;
-      }
-    `,
-  });
-
-  await expect
-    .poll(async () =>
-      page.locator('[data-slot="shell-main-scroll"]').evaluate((node) => {
-        const el = node as HTMLElement;
-        return el.scrollHeight - el.clientHeight;
-      }),
-    )
-    .toBeGreaterThan(1000);
-};
-
-const readShellMetrics = async (page: import("@playwright/test").Page) =>
-  page.evaluate(() => {
-    const sidebar = document.querySelector('[data-slot="sidebar-inner"]');
-    const header = document.querySelector('[data-slot="sidebar-header"]');
-    const footer = document.querySelector('[data-slot="sidebar-footer"]');
-    const scroller = document.querySelector('[data-slot="shell-main-scroll"]');
-    const topNav = document.querySelector('[data-slot="shell-top-nav"]');
-
-    return {
-      documentScroll: window.scrollY,
-      mainScroll: scroller instanceof HTMLElement ? scroller.scrollTop : -1,
-      sidebar: sidebar?.getBoundingClientRect().toJSON() ?? null,
-      header: header?.getBoundingClientRect().toJSON() ?? null,
-      footer: footer?.getBoundingClientRect().toJSON() ?? null,
-      topNav: topNav?.getBoundingClientRect().toJSON() ?? null,
-    };
-  });
+import {
+  loginAsDemoAdmin,
+  loginAsDemoRrhh,
+  readShellMetrics,
+  stretchContentColumn,
+} from "./shell-scroll";
 
 test.describe("Sidebar stays pinned while content scrolls", () => {
   test("keeps logo and user menu in view on Catálogo", async ({ page }) => {
@@ -91,12 +44,7 @@ test.describe("Sidebar stays pinned while content scrolls", () => {
 
   test("keeps admin chrome pinned on a tall page", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
-    await page.emulateMedia({ reducedMotion: "reduce" });
-    await page.goto("/login");
-    await page.getByLabel("Correo electrónico").fill("admin@workia.local");
-    await page.getByRole("textbox", { name: "Contraseña" }).fill("Workia123!");
-    await page.getByRole("button", { name: "Iniciar sesión" }).click();
-    await expect(page).toHaveURL(/\/(app|admin)/, { timeout: 25_000 });
+    await loginAsDemoAdmin(page);
     await page.goto("/admin/rbac");
     await expect(
       page.getByRole("heading", { name: "Roles y permisos", level: 1 }),
