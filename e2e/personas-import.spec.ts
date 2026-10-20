@@ -125,7 +125,8 @@ test("imports, exports, re-imports unchanged and undoes", async ({ page }) => {
 
   const row = page.getByRole("row", { name: new RegExp(fileName) });
 
-  await row.getByRole("button", { name: "Deshacer" }).click();
+  await row.getByRole("button", { name: `Acciones de ${fileName}` }).click();
+  await page.getByRole("menuitem", { name: "Deshacer importación" }).click();
   await expect(page.getByText(/Se revertirán \d+ filas/)).toBeVisible({
     timeout: 30_000,
   });

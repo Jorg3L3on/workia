@@ -149,6 +149,8 @@ export type ListAuditEventsOptions = {
   source?: NonNullable<RecordAuditEventInput["source"]>;
   from?: Date;
   to?: Date;
+  /** Free text over the event's summary, changes and actor name or email. */
+  query?: string;
   limit?: number;
   offset?: number;
 };

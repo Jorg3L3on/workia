@@ -4,8 +4,8 @@ import { useActionState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 
 import { CompanyField } from "@/components/tenant/company-context";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   setWritesEnabledAction,
   type ConnectionActionState,
@@ -16,13 +16,14 @@ type WritesSwitchProps = {
   canToggle: boolean;
 };
 
-/** «Apagar escrituras» (spec §7): every MCP write answers WRITES_DISABLED at once. */
+/** The writes setting row (spec §7): off, every MCP write answers WRITES_DISABLED at once. */
 export const WritesSwitch = ({ enabled, canToggle }: WritesSwitchProps) => {
   const [state, action, pending] = useActionState<
     ConnectionActionState,
     FormData
   >(setWritesEnabledAction, {});
   const last = useRef<ConnectionActionState | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     if (state === last.current) return;
@@ -31,40 +32,31 @@ export const WritesSwitch = ({ enabled, canToggle }: WritesSwitchProps) => {
   }, [state]);
 
   return (
-    <div
-      className="flex flex-wrap items-center justify-between gap-3"
+    <form
+      action={action}
+      className="flex items-center justify-between gap-4 border-y py-3"
       data-testid="writes-switch"
+      ref={formRef}
     >
-      <div className="space-y-1">
-        <div className="flex items-center gap-2">
-          <h2 className="text-lg font-semibold">Escrituras por asistente</h2>
-          <Badge variant={enabled ? "secondary" : "outline"}>
-            {enabled ? "Encendidas" : "Apagadas"}
-          </Badge>
-        </div>
+      <CompanyField />
+      <input type="hidden" name="enabled" value={enabled ? "false" : "true"} />
+      <div className="min-w-0 space-y-0.5">
+        <Label className="text-sm font-medium" htmlFor="writes-enabled">
+          Escrituras por asistente
+        </Label>
         <p className="text-muted-foreground text-sm">
           {enabled
-            ? "Los asistentes con permiso de escritura pueden hacer cambios. Cada cambio pide vista previa y confirmación, y queda en la auditoría como «MCP»."
-            : "Ningún asistente puede hacer cambios en esta empresa; sólo consultar. ChatGPT nunca escribe."}
+            ? "Los asistentes con permiso pueden hacer cambios, con vista previa, confirmación y registro en la auditoría."
+            : "Los asistentes sólo consultan; ninguno puede hacer cambios en esta empresa."}
+          {canToggle ? null : " Sólo un superadministrador puede cambiarlo."}
         </p>
       </div>
-      {canToggle ? (
-        <form action={action}>
-          <CompanyField />
-          <input
-            type="hidden"
-            name="enabled"
-            value={enabled ? "false" : "true"}
-          />
-          <Button
-            type="submit"
-            variant={enabled ? "destructive" : "outline"}
-            disabled={pending}
-          >
-            {enabled ? "Apagar escrituras" : "Encender escrituras"}
-          </Button>
-        </form>
-      ) : null}
-    </div>
+      <Switch
+        checked={enabled}
+        disabled={!canToggle || pending}
+        id="writes-enabled"
+        onCheckedChange={() => formRef.current?.requestSubmit()}
+      />
+    </form>
   );
 };

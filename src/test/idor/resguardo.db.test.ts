@@ -13,6 +13,7 @@ import {
   listAssetMovements,
   listAssetsByPerson,
   listAssetsPage,
+  listAssetsToRecover,
   returnAsset,
   softDeleteAsset,
 } from "@/lib/resguardo";
@@ -92,6 +93,10 @@ describe("resguardo reads stay inside the company", () => {
 
   it("lib:resguardo/countAssignedAssets", async () => {
     expect(await countAssignedAssets(b.companyId)).toBe(1);
+  });
+
+  it("lib:resguardo/listAssetsToRecover", async () => {
+    noLeak(await listAssetsToRecover(b.companyId));
   });
 });
 

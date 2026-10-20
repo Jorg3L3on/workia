@@ -9,119 +9,99 @@ const loginAsDemoRrhh = async (page: import("@playwright/test").Page) => {
   await expect(page).toHaveURL(/\/app/, { timeout: 25_000 });
 };
 
-test.describe("Catálogo forms collapsed", () => {
-  test("puestos keeps create and assign collapsed until the action is chosen", async ({
+const pages = [
+  {
+    path: "/app/catalogo/areas",
+    title: "Áreas",
+    create: "Nueva área",
+    submit: "Crear área",
+    extra: "Área padre (opcional)",
+  },
+  {
+    path: "/app/catalogo/puestos",
+    title: "Puestos",
+    create: "Nuevo puesto",
+    submit: "Crear puesto",
+    extra: "Área (opcional)",
+  },
+  {
+    path: "/app/catalogo/actividades",
+    title: "Actividades",
+    create: "Nueva actividad",
+    submit: "Crear actividad",
+    extra: "Activa",
+  },
+  {
+    path: "/app/catalogo/sucursales",
+    title: "Sucursales",
+    create: "Nueva sucursal",
+    submit: "Crear sucursal",
+    extra: "Región (opcional)",
+  },
+  {
+    path: "/app/catalogo/regiones",
+    title: "Regiones",
+    create: "Nueva región",
+    submit: "Crear región",
+    extra: "Activa",
+  },
+];
+
+test.describe("Catálogo template", () => {
+  test("every catálogo page creates in a side sheet, with nothing editable in rows", async ({
+    page,
+  }) => {
+    await loginAsDemoRrhh(page);
+
+    for (const entry of pages) {
+      await page.goto(entry.path);
+      await expect(
+        page.getByRole("heading", { name: entry.title, exact: true }),
+      ).toBeVisible();
+
+      const table = page.getByRole("table");
+      await expect(table.getByRole("textbox")).toHaveCount(0);
+      await expect(table.getByRole("combobox")).toHaveCount(0);
+      await expect(page.getByLabel("Nombre")).toHaveCount(0);
+
+      await page
+        .getByRole("button", { name: entry.create, exact: true })
+        .click();
+      const sheet = page.getByRole("dialog", { name: entry.create });
+      await expect(sheet.getByLabel("Nombre")).toBeVisible();
+      await expect(sheet.getByText(entry.extra, { exact: true })).toBeVisible();
+      await expect(
+        sheet.getByRole("button", { name: entry.submit }),
+      ).toBeVisible();
+
+      await sheet.getByRole("button", { name: "Cancelar" }).click();
+      await expect(sheet).toHaveCount(0);
+    }
+  });
+
+  test("puestos edits activities as chips in the sheet; no Asignar or Quitar in the table", async ({
     page,
   }) => {
     await loginAsDemoRrhh(page);
     await page.goto("/app/catalogo/puestos");
 
     await expect(
-      page.getByRole("heading", { name: "Puestos", exact: true }),
-    ).toBeVisible();
+      page.getByRole("button", { name: "Asignar actividad" }),
+    ).toHaveCount(0);
     await expect(
-      page.getByRole("columnheader", { name: "Puesto" }),
-    ).toBeVisible();
+      page.getByRole("table").getByRole("button", { name: /^Quitar / }),
+    ).toHaveCount(0);
 
-    const createAction = page.getByRole("button", {
-      name: "Nuevo puesto",
-      exact: true,
-    });
-    const assignAction = page
-      .getByRole("button", { name: "Asignar actividad", exact: true })
-      .and(page.locator("[aria-expanded]"));
-
-    await expect(createAction).toHaveAttribute("aria-expanded", "false");
-    await expect(assignAction).toHaveAttribute("aria-expanded", "false");
-    await expect(page.getByLabel("Nombre")).toHaveCount(0);
-    await expect(page.getByLabel("Puesto a asignar")).toHaveCount(0);
-
-    await createAction.click();
-
-    await expect(createAction).toHaveAttribute("aria-expanded", "true");
-    await expect(page.getByLabel("Nombre")).toBeVisible();
-    await expect(page.getByLabel("Área (opcional)")).toBeVisible();
+    await page
+      .getByRole("table")
+      .getByRole("button", { name: /^Editar / })
+      .first()
+      .click();
+    const sheet = page.getByRole("dialog", { name: "Editar puesto" });
+    await expect(sheet.getByText("Actividades", { exact: true })).toBeVisible();
+    await expect(sheet.getByRole("button", { name: "Agregar" })).toBeVisible();
     await expect(
-      page.getByRole("button", { name: "Crear puesto" }),
-    ).toBeVisible();
-    await expect(page.getByLabel("Puesto a asignar")).toHaveCount(0);
-
-    await assignAction.click();
-
-    await expect(assignAction).toHaveAttribute("aria-expanded", "true");
-    await expect(createAction).toHaveAttribute("aria-expanded", "false");
-    await expect(page.getByLabel("Puesto a asignar")).toBeVisible();
-    await expect(page.getByLabel("Actividad a asignar")).toBeVisible();
-    await expect(page.getByLabel("Nombre")).toHaveCount(0);
-  });
-
-  test("actividades, áreas and sucursales keep create collapsed until chosen", async ({
-    page,
-  }) => {
-    await loginAsDemoRrhh(page);
-
-    await page.goto("/app/catalogo/actividades");
-    await expect(
-      page.getByRole("heading", { name: "Actividades", exact: true }),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("columnheader", { name: "Actividad" }),
-    ).toBeVisible();
-
-    const newActivity = page.getByRole("button", {
-      name: "Nueva actividad",
-      exact: true,
-    });
-    await expect(newActivity).toHaveAttribute("aria-expanded", "false");
-    await expect(page.getByLabel("Nombre")).toHaveCount(0);
-
-    await newActivity.click();
-    await expect(newActivity).toHaveAttribute("aria-expanded", "true");
-    await expect(page.getByLabel("Nombre")).toBeVisible();
-    await expect(
-      page.getByRole("button", { name: "Crear actividad" }),
-    ).toBeVisible();
-
-    await page.goto("/app/catalogo/areas");
-    await expect(
-      page.getByRole("heading", { name: "Áreas", exact: true }),
-    ).toBeVisible();
-
-    const newArea = page.getByRole("button", {
-      name: "Nueva área",
-      exact: true,
-    });
-    await expect(newArea).toHaveAttribute("aria-expanded", "false");
-    await expect(page.getByLabel("Nombre")).toHaveCount(0);
-
-    await newArea.click();
-    await expect(page.getByLabel("Nombre")).toBeVisible();
-    await expect(page.getByLabel("Área padre (opcional)")).toBeVisible();
-    await expect(
-      page.getByRole("button", { name: "Crear área" }),
-    ).toBeVisible();
-
-    await page.goto("/app/catalogo/sucursales");
-    await expect(
-      page.getByRole("heading", { name: "Sucursales", exact: true }),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("columnheader", { name: "Tipo" }),
-    ).toBeVisible();
-
-    const newSite = page.getByRole("button", {
-      name: "Nueva sucursal",
-      exact: true,
-    });
-    await expect(newSite).toHaveAttribute("aria-expanded", "false");
-    await expect(page.getByLabel("Nombre")).toHaveCount(0);
-    await expect(page.getByLabel("Tipo")).toHaveCount(0);
-
-    await newSite.click();
-    await expect(page.getByLabel("Nombre")).toBeVisible();
-    await expect(page.getByLabel("Tipo")).toBeVisible();
-    await expect(
-      page.getByRole("button", { name: "Crear sucursal" }),
+      sheet.getByRole("button", { name: "Guardar cambios" }),
     ).toBeVisible();
   });
 });

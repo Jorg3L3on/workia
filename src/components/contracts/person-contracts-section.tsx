@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { formatMoney } from "@/components/contracts/compensation-fields";
 import { ContractForm } from "@/components/contracts/contract-form";
+import { RenewalDecisionButton } from "@/components/contracts/renewal-decision-button";
 import { Badge } from "@/components/ui/badge";
 import type { Contract, ContractTemplate } from "@/lib/db/schema";
 import {
@@ -13,6 +14,7 @@ import {
   paymentMethodLabels,
   contractScheduleText,
 } from "@/lib/contracts/schema";
+import { toneFor } from "@/lib/ui/status-tone";
 
 type PersonContractsSectionProps = {
   personId: string;
@@ -32,6 +34,10 @@ type PersonContractsSectionProps = {
   showEmitForm?: boolean;
   /** compensation:read: shows salaries; without it only whether one was captured. */
   canSeeCompensation?: boolean;
+  /** contracts:update: a fixed-term vigente contract offers «Decidir renovación». */
+  canDecide?: boolean;
+  personName?: string;
+  positions?: { id: string; name: string }[];
 };
 
 export const PersonContractsSection = ({
@@ -42,12 +48,17 @@ export const PersonContractsSection = ({
   templates,
   showEmitForm = false,
   canSeeCompensation = false,
+  canDecide = false,
+  personName = "",
+  positions = [],
 }: PersonContractsSectionProps) => {
   const vigente = contracts.find((contract) => contract.status === "vigente");
+  const decidable =
+    canDecide && templates.length > 0 && vigente?.endDate ? vigente : null;
 
   return (
-    <div className="workia-pass-card overflow-hidden">
-      <div className="border-b px-5 py-4">
+    <section className="space-y-3">
+      <div>
         <h2 className="text-base font-semibold">Contratos</h2>
         <p className="text-muted-foreground text-sm">
           Historial de contratos en el expediente — cada emisión conserva su
@@ -55,12 +66,12 @@ export const PersonContractsSection = ({
         </p>
       </div>
 
-      <div className="space-y-4 p-5">
+      <div className="space-y-4">
         {vigente ? (
-          <div className="rounded-lg border p-4">
+          <div className="workia-pass-card p-4">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
-                <p className="text-muted-foreground font-mono text-[10px] tracking-[0.08em] uppercase">
+                <p className="text-muted-foreground text-xs font-medium">
                   Contrato vigente
                 </p>
                 <p className="font-medium">
@@ -75,7 +86,31 @@ export const PersonContractsSection = ({
                   {contractNoticeWindowLabels[vigente.noticeWindow]}
                 </p>
               </div>
-              <Badge>{contractStatusLabels[vigente.status]}</Badge>
+              <div className="flex items-center gap-2">
+                <Badge tone={toneFor("contract", vigente.status)}>
+                  {contractStatusLabels[vigente.status]}
+                </Badge>
+                {decidable?.endDate ? (
+                  <RenewalDecisionButton
+                    canSeeCompensation={canSeeCompensation}
+                    compensation={
+                      canSeeCompensation
+                        ? {
+                            salarioDiario: decidable.salarioDiario,
+                            formaPago: decidable.formaPago,
+                            periodicidadPago: decidable.periodicidadPago,
+                            diaPago: decidable.diaPago,
+                          }
+                        : undefined
+                    }
+                    contractId={decidable.id}
+                    endDate={decidable.endDate}
+                    personName={personName}
+                    positions={positions}
+                    templates={templates}
+                  />
+                ) : null}
+              </div>
             </div>
             <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
               <div className="sm:col-span-2">
@@ -130,7 +165,7 @@ export const PersonContractsSection = ({
         )}
 
         {canCreate && showEmitForm && !vigente && templates.length > 0 ? (
-          <div className="rounded-lg border p-4">
+          <div className="workia-pass-card p-4">
             <h3 className="mb-3 text-sm font-semibold">Emitir contrato</h3>
             <ContractForm
               canSeeCompensation={canSeeCompensation}
@@ -156,7 +191,7 @@ export const PersonContractsSection = ({
         {contracts.length > 0 ? (
           <div className="space-y-2">
             <h3 className="text-sm font-semibold">Historial</h3>
-            <ul className="divide-y rounded-lg border">
+            <ul className="workia-pass-card divide-y">
               {contracts.map((contract) => (
                 <li
                   key={contract.id}
@@ -172,7 +207,7 @@ export const PersonContractsSection = ({
                       {contractStatusLabels[contract.status]}
                     </p>
                   </div>
-                  <Badge variant="secondary">
+                  <Badge tone={toneFor("contract", contract.status)}>
                     {contractStatusLabels[contract.status]}
                   </Badge>
                 </li>
@@ -181,6 +216,6 @@ export const PersonContractsSection = ({
           </div>
         ) : null}
       </div>
-    </div>
+    </section>
   );
 };

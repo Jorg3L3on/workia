@@ -1,15 +1,10 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { UploadIcon } from "lucide-react";
 
-import { ImportUndoButton } from "@/components/import/import-undo-button";
-import {
-  ListPageHeader,
-  listPrimaryActionClassName,
-} from "@/components/list/list-page-header";
-import { Button } from "@/components/ui/button";
+import { ImportacionesDataTable } from "@/components/import/importaciones-data-table";
+import { PageHeader } from "@/components/layout/page-header";
 import { pageTitles } from "@/lib/brand/chrome-copy";
 import { isUndoWindowOpen } from "@/lib/import/undo-window";
-import { formatDateTimeMx } from "@/lib/format/date";
 import { listImportJobs } from "@/lib/import/jobs";
 import { requirePeopleImport } from "@/lib/people/auth";
 import { userHasPermission } from "@/lib/rbac";
@@ -41,110 +36,40 @@ const ImportacionesPage = async () => {
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
-      <ListPageHeader
-        actions={
-          <Button asChild className={listPrimaryActionClassName}>
-            <Link href="/app/personas/importar">Nueva importación</Link>
-          </Button>
-        }
-        description="Cada importación queda registrada: quién la hizo, qué cambió y si se puede deshacer."
+      <PageHeader
+        description="Quién importó, qué cambió y si se puede deshacer."
+        primary={{
+          label: "Nueva importación",
+          icon: UploadIcon,
+          href: "/app/personas/importar",
+        }}
         title="Historial de importaciones"
       />
 
-      {jobs.length === 0 ? (
-        <p className="text-muted-foreground text-sm">
-          Todavía no hay importaciones.
-        </p>
-      ) : (
-        <div className="bg-card ring-foreground/10 overflow-x-auto rounded-xl ring-1">
-          <table className="w-full text-sm">
-            <caption className="sr-only">Importaciones de personas</caption>
-            <thead>
-              <tr className="text-muted-foreground border-b text-left">
-                <th className="px-3 py-2 font-medium" scope="col">
-                  Archivo
-                </th>
-                <th className="px-3 py-2 font-medium" scope="col">
-                  Fecha
-                </th>
-                <th className="px-3 py-2 font-medium" scope="col">
-                  Hecha por
-                </th>
-                <th className="px-3 py-2 font-medium" scope="col">
-                  Estado
-                </th>
-                <th className="px-3 py-2 font-medium" scope="col">
-                  Filas
-                </th>
-                <th className="px-3 py-2 font-medium" scope="col">
-                  Acciones
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {jobs.map(({ job, actorName, actorEmail }) => {
-                const errors = job.counts.error ?? 0;
-                const undoable =
-                  canUndo &&
-                  job.status === "applied" &&
-                  isUndoWindowOpen(job.appliedAt);
+      <ImportacionesDataTable
+        jobs={jobs.map(({ job, actorName, actorEmail }) => {
+          const errors = job.counts.error ?? 0;
 
-                return (
-                  <tr className="border-b align-top last:border-0" key={job.id}>
-                    <td className="px-3 py-2 font-medium">{job.fileName}</td>
-                    <td className="px-3 py-2 whitespace-nowrap">
-                      {formatDateTimeMx(job.createdAt)}
-                    </td>
-                    <td className="px-3 py-2">
-                      {actorName ?? actorEmail ?? "—"}
-                    </td>
-                    <td className="px-3 py-2 whitespace-nowrap">
-                      {STATUS_LABELS[job.status]}
-                    </td>
-                    <td className="px-3 py-2">
-                      {(job.counts.total ?? 0).toLocaleString("es-MX")} filas
-                      <span className="text-muted-foreground block text-xs">
-                        {(job.counts.create ?? 0).toLocaleString("es-MX")}{" "}
-                        nuevas ·{" "}
-                        {(job.counts.update ?? 0).toLocaleString("es-MX")}{" "}
-                        actualizadas · {errors.toLocaleString("es-MX")} con
-                        errores
-                      </span>
-                    </td>
-                    <td className="px-3 py-2">
-                      <div className="flex flex-wrap gap-2">
-                        {RESUMABLE.includes(job.status) ? (
-                          <Button asChild size="sm" variant="outline">
-                            <Link href={`/app/personas/importar?job=${job.id}`}>
-                              Continuar
-                            </Link>
-                          </Button>
-                        ) : null}
-                        {errors > 0 && job.status !== "uploading" ? (
-                          <Button asChild size="sm" variant="outline">
-                            <a
-                              download
-                              href={`/api/import/personas/${job.id}/errors`}
-                            >
-                              Descargar errores
-                            </a>
-                          </Button>
-                        ) : null}
-                        {undoable ? (
-                          <ImportUndoButton
-                            fileName={job.fileName}
-                            jobId={job.id}
-                          />
-                        ) : null}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+          return {
+            id: job.id,
+            fileName: job.fileName,
+            createdAt: job.createdAt,
+            actor: actorName ?? actorEmail ?? null,
+            status: job.status,
+            statusLabel: STATUS_LABELS[job.status],
+            total: job.counts.total ?? 0,
+            created: job.counts.create ?? 0,
+            updated: job.counts.update ?? 0,
+            errors,
+            resumable: RESUMABLE.includes(job.status),
+            hasErrorsFile: errors > 0 && job.status !== "uploading",
+            undoable:
+              canUndo &&
+              job.status === "applied" &&
+              isUndoWindowOpen(job.appliedAt),
+          };
+        })}
+      />
     </div>
   );
 };

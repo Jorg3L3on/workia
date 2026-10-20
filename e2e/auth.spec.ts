@@ -48,7 +48,8 @@ test("login page renders credential form", async ({ page }) => {
   await expect(
     page.getByRole("heading", { name: "Bienvenido a workia" }),
   ).toBeVisible();
-  await expect(page.getByText("ID · RRHH")).toBeVisible();
+  await expect(page.getByText("ID · RRHH")).toHaveCount(0);
+  await expect(page.getByText(/Nómina|Talento|Hecho para/)).toHaveCount(0);
   await expect(page.getByLabel("Correo electrónico")).toBeVisible();
   await expect(page.getByRole("textbox", { name: "Contraseña" })).toBeVisible();
   await expect(page.locator(".login-badge-slot")).toHaveCount(0);

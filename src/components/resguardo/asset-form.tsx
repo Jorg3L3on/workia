@@ -26,9 +26,6 @@ export const AssetForm = () => {
     <form action={formAction} className="workia-pass-card space-y-4 p-5 sm:p-6">
       <CompanyField />
       <div className="space-y-1">
-        <p className="text-muted-foreground font-mono text-[10.5px] font-medium tracking-[0.09em] uppercase">
-          Resguardo
-        </p>
         <h1 className="text-2xl font-semibold tracking-tight">Nuevo activo</h1>
         <p className="text-muted-foreground text-sm">
           Registra un activo identificable. Los de valor (moto, laptop) llevan

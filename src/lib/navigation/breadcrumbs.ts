@@ -176,7 +176,10 @@ export const resolveBreadcrumbs = (
   }
 
   if (path === "/admin/rbac") {
-    return [{ label: "Administración", href: "/admin" }, { label: "RBAC" }];
+    return [
+      { label: "Administración", href: "/admin" },
+      { label: "Roles y permisos" },
+    ];
   }
 
   if (path.startsWith("/admin/")) {

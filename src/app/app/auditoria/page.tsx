@@ -2,13 +2,7 @@ import type { Metadata } from "next";
 
 import { AuditEventList } from "@/components/audit/audit-event-list";
 import { pageTitles } from "@/lib/brand/chrome-copy";
-import { ListFilterBar } from "@/components/list/list-filter-bar";
-import { ListPageHeader } from "@/components/list/list-page-header";
-import { Button } from "@/components/ui/button";
-import { DateInput } from "@/components/ui/date-input";
-import { FormSelect } from "@/components/ui/form-select";
-import { Input } from "@/components/ui/input";
-import { ListPager } from "@/components/list/list-pager";
+import { PageHeader } from "@/components/layout/page-header";
 import {
   countAuditEvents,
   listAuditActors,
@@ -19,13 +13,10 @@ import {
   AUDIT_ACTIONS,
   AUDIT_RESOURCE_TYPES,
   AUDIT_SOURCES,
-  auditActionLabels,
-  auditResourceTypeLabels,
-  auditSourceLabels,
   type AuditAction,
   type AuditResourceType,
 } from "@/lib/audit/types";
-import { pageCountFor, parseListPaging } from "@/lib/list/paging";
+import { parseListPaging } from "@/lib/list/paging";
 
 export const dynamic = "force-dynamic";
 
@@ -42,10 +33,14 @@ type AuditoriaPageProps = {
     source?: string;
     from?: string;
     to?: string;
+    q?: string;
     page?: string;
     pageSize?: string;
   }>;
 };
+
+const isoDate = (value?: string) =>
+  value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : "";
 
 const AuditoriaPage = async ({ searchParams }: AuditoriaPageProps) => {
   const session = await requireAuditRead();
@@ -54,15 +49,24 @@ const AuditoriaPage = async ({ searchParams }: AuditoriaPageProps) => {
   const { page, pageSize } = parseListPaging(filters);
   const auditFilters = {
     companyId: session.companyId,
-    resourceType: filters.resourceType,
+    resourceType: (AUDIT_RESOURCE_TYPES as readonly string[]).includes(
+      filters.resourceType ?? "",
+    )
+      ? filters.resourceType
+      : undefined,
     resourceId: filters.resourceId,
     actorUserId: filters.actorUserId,
-    action: filters.action,
+    action: (AUDIT_ACTIONS as readonly string[]).includes(filters.action ?? "")
+      ? filters.action
+      : undefined,
     source: (AUDIT_SOURCES as readonly string[]).includes(filters.source ?? "")
       ? (filters.source as (typeof AUDIT_SOURCES)[number])
       : undefined,
-    from: filters.from ? new Date(`${filters.from}T00:00:00`) : undefined,
-    to: filters.to ? new Date(`${filters.to}T23:59:59`) : undefined,
+    from: isoDate(filters.from)
+      ? new Date(`${filters.from}T00:00:00`)
+      : undefined,
+    to: isoDate(filters.to) ? new Date(`${filters.to}T23:59:59`) : undefined,
+    query: filters.q,
   };
 
   const [events, total, actorOptions] = await Promise.all([
@@ -77,133 +81,32 @@ const AuditoriaPage = async ({ searchParams }: AuditoriaPageProps) => {
 
   return (
     <div className="flex flex-col gap-6">
-      <ListPageHeader
+      <PageHeader
         description="Quién cambió qué, cuándo y sobre qué recurso."
-        descriptionSecondary="Lista de eventos de auditoría registrados."
         title="Auditoría"
       />
 
-      <ListFilterBar className="md:grid md:grid-cols-2 xl:grid-cols-3">
-        <div className="space-y-2">
-          <label className="text-sm font-medium" htmlFor="resourceType">
-            Tipo de recurso
-          </label>
-          <FormSelect
-            defaultValue={filters.resourceType ?? ""}
-            id="resourceType"
-            name="resourceType"
-            options={[
-              { value: "", label: "Todos" },
-              ...AUDIT_RESOURCE_TYPES.map((type) => ({
-                value: type,
-                label: auditResourceTypeLabels[type],
-              })),
-            ]}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-sm font-medium" htmlFor="resourceId">
-            ID de recurso
-          </label>
-          <Input
-            defaultValue={filters.resourceId ?? ""}
-            id="resourceId"
-            name="resourceId"
-            placeholder="UUID del recurso"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-sm font-medium" htmlFor="actorUserId">
-            Actor
-          </label>
-          <FormSelect
-            defaultValue={filters.actorUserId ?? ""}
-            id="actorUserId"
-            name="actorUserId"
-            options={[
-              { value: "", label: "Todos" },
-              ...actorOptions.map((actor) => ({
-                value: actor.id,
-                label: `${actor.name} (${actor.email})`,
-              })),
-            ]}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-sm font-medium" htmlFor="action">
-            Acción
-          </label>
-          <FormSelect
-            defaultValue={filters.action ?? ""}
-            id="action"
-            name="action"
-            options={[
-              { value: "", label: "Todas" },
-              ...AUDIT_ACTIONS.map((action) => ({
-                value: action,
-                label: auditActionLabels[action],
-              })),
-            ]}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-sm font-medium" htmlFor="source">
-            Origen
-          </label>
-          <FormSelect
-            defaultValue={filters.source ?? ""}
-            id="source"
-            name="source"
-            options={[
-              { value: "", label: "Todos" },
-              ...AUDIT_SOURCES.map((source) => ({
-                value: source,
-                label: auditSourceLabels[source],
-              })),
-            ]}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-sm font-medium" htmlFor="from">
-            Desde
-          </label>
-          <DateInput defaultValue={filters.from ?? ""} id="from" name="from" />
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-sm font-medium" htmlFor="to">
-            Hasta
-          </label>
-          <DateInput defaultValue={filters.to ?? ""} id="to" name="to" />
-        </div>
-
-        <div className="flex items-end md:col-span-2 xl:col-span-3">
-          <Button className="h-10 rounded-full" type="submit" variant="outline">
-            Filtrar
-          </Button>
-        </div>
-      </ListFilterBar>
-
-      <AuditEventList events={events} pageSize={pageSize} />
-
-      <ListPager
-        page={page}
-        pageCount={pageCountFor(total, pageSize)}
-        params={{
-          resourceType: filters.resourceType,
-          resourceId: filters.resourceId,
-          actorUserId: filters.actorUserId,
-          action: filters.action,
-          source: filters.source,
-          from: filters.from,
-          to: filters.to,
+      <AuditEventList
+        events={events}
+        server={{
+          total,
+          page,
+          pageSize,
+          actors: actorOptions.map((actor) => ({
+            id: actor.id,
+            label: actor.name ?? actor.email,
+          })),
+          filters: {
+            q: filters.q?.trim() ?? "",
+            resourceType: auditFilters.resourceType ?? "",
+            resourceId: auditFilters.resourceId ?? "",
+            actorUserId: auditFilters.actorUserId ?? "",
+            action: auditFilters.action ?? "",
+            source: auditFilters.source ?? "",
+            from: isoDate(filters.from),
+            to: isoDate(filters.to),
+          },
         }}
-        pathname="/app/auditoria"
       />
     </div>
   );

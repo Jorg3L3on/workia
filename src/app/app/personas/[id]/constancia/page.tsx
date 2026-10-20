@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { PrintButton } from "@/components/people/print-button";
-import { Button } from "@/components/ui/button";
 import { getSeniorityCertificate } from "@/lib/contracts";
 import {
   contractStatusLabels,
@@ -50,10 +48,7 @@ const ConstanciaPage = async ({ params }: ConstanciaPageProps) => {
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6 print:max-w-none">
-      <div className="flex flex-wrap items-center justify-between gap-2 print:hidden">
-        <Button asChild variant="ghost">
-          <Link href={`/app/personas/${person.id}`}>Volver al expediente</Link>
-        </Button>
+      <div className="flex flex-wrap items-center justify-end gap-2 print:hidden">
         <PrintButton />
       </div>
 

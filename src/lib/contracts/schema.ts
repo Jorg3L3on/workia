@@ -568,3 +568,34 @@ export const fillContractTemplate = (
     return match;
   });
 };
+
+/** A tray contract ending within this many days reads «En N días» (warning). */
+export const RENEWAL_SOON_DAYS = 30;
+
+export type RenewalUrgency = "vencido" | "proximo" | "en_ventana";
+
+/**
+ * Where a contract in the renewal tray stands against `today` (both ISO
+ * dates): «Vencido», «Vence hoy», «En 20 días» or «En ventana».
+ */
+export const renewalStatus = (endDate: string, today: string) => {
+  const days = Math.round(
+    (Date.parse(`${endDate}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) /
+      86_400_000,
+  );
+
+  if (days < 0) {
+    return { urgency: "vencido" as const, label: "Vencido", days };
+  }
+
+  if (days <= RENEWAL_SOON_DAYS) {
+    return {
+      urgency: "proximo" as const,
+      label:
+        days === 0 ? "Vence hoy" : days === 1 ? "En 1 día" : `En ${days} días`,
+      days,
+    };
+  }
+
+  return { urgency: "en_ventana" as const, label: "En ventana", days };
+};

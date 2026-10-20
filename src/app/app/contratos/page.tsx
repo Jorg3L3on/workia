@@ -5,18 +5,17 @@ import { FileTextIcon } from "lucide-react";
 
 import { RenewalTrayList } from "@/components/contracts/renewal-tray-list";
 import { SectionSkeleton } from "@/components/loading/page-skeletons";
-import { ListPageHeader } from "@/components/list/list-page-header";
+import { PageHeader } from "@/components/layout/page-header";
 import { pageTitles } from "@/lib/brand/chrome-copy";
-import { Button } from "@/components/ui/button";
 import {
   listActiveContractTemplates,
   listRenewalTrayItems,
 } from "@/lib/contracts";
 import { requireContractsRead } from "@/lib/contracts/auth";
-import { RegionFilter } from "@/components/list/region-filter";
 import { listRegions } from "@/lib/regions";
 import { listActivePositions } from "@/lib/catalog";
 import { userHasPermission } from "@/lib/rbac";
+import { isoToday } from "@/lib/format/date";
 
 export const dynamic = "force-dynamic";
 
@@ -61,20 +60,18 @@ const RenewalTray = async ({
 
   return (
     <>
-      <RegionFilter
-        id="renewal-region"
-        regions={regions.map((item) => ({ id: item.id, name: item.name }))}
-        value={regionId ?? ""}
-      />
       <RenewalTrayList
         canSeeCompensation={canSeeCompensation}
         canUpdate={canUpdate}
         items={renewalItems}
+        region={regionId ?? ""}
+        regions={regions.map((item) => ({ id: item.id, name: item.name }))}
         positions={positions.map((position) => ({
           id: position.id,
           name: position.name,
         }))}
         templates={templates}
+        today={isoToday()}
       />
     </>
   );
@@ -104,19 +101,15 @@ const ContratosPage = async ({ searchParams }: ContratosPageProps) => {
 
   return (
     <div className="flex flex-col gap-6">
-      <ListPageHeader
-        actions={
-          canManageTemplates ? (
-            <Button asChild className="h-10 rounded-full" variant="outline">
-              <Link href="/app/contratos/plantillas">
-                <FileTextIcon className="size-4" aria-hidden />
-                Plantillas
-              </Link>
-            </Button>
-          ) : undefined
-        }
-        description="Bandeja de renovaciones según la ventana de aviso de cada contrato."
-        descriptionSecondary="Lista de contratos en seguimiento."
+      <PageHeader
+        description="Renovaciones dentro de la ventana de aviso."
+        menu={[
+          canManageTemplates && {
+            label: "Plantillas",
+            icon: FileTextIcon,
+            href: "/app/contratos/plantillas",
+          },
+        ]}
         title="Contratos"
       />
 
@@ -155,23 +148,14 @@ const ContratosPage = async ({ searchParams }: ContratosPageProps) => {
         </p>
       ) : null}
 
-      <div className="space-y-3">
-        <div>
-          <h2 className="text-base font-semibold">Renovaciones pendientes</h2>
-          <p className="text-muted-foreground text-sm">
-            Contratos en ventana de aviso
-          </p>
-        </div>
-
-        <Suspense fallback={<SectionSkeleton />}>
-          <RenewalTray
-            canSeeCompensation={canSeeCompensation}
-            canUpdate={canUpdate}
-            companyId={session.companyId}
-            region={region}
-          />
-        </Suspense>
-      </div>
+      <Suspense fallback={<SectionSkeleton />}>
+        <RenewalTray
+          canSeeCompensation={canSeeCompensation}
+          canUpdate={canUpdate}
+          companyId={session.companyId}
+          region={region}
+        />
+      </Suspense>
     </div>
   );
 };

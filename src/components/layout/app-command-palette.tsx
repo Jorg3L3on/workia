@@ -1,38 +1,91 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Building2Icon,
-  FileTextIcon,
   FolderTreeIcon,
-  HomeIcon,
-  LaptopIcon,
-  ScrollTextIcon,
-  UsersIcon,
+  SearchIcon,
+  UserIcon,
 } from "lucide-react";
 
 import {
   CommandPalette,
   type CommandItem,
 } from "@/components/motion/command-palette";
-import { CATALOG_NAV_CHILDREN, CATALOG_PATHS } from "@/lib/catalog/paths";
+import { Button } from "@/components/ui/button";
+import {
+  NAV_ACTIONS,
+  NAV_EXTRA_PAGES,
+  visibleNavGroups,
+  type NavAccess,
+  type NavLink,
+} from "@/lib/navigation";
+import {
+  searchPeopleForPaletteAction,
+  type PersonSearchResult,
+} from "@/lib/people/actions";
 
 const OPEN_EVENT = "workia:open-command-palette";
+
+/** Wait this long after the last key before searching people. */
+const PEOPLE_SEARCH_DELAY_MS = 200;
 
 export const openAppCommandPalette = () => {
   window.dispatchEvent(new Event(OPEN_EVENT));
 };
 
-export const AppCommandPalette = () => {
+type AppCommandPaletteProps = {
+  access: NavAccess;
+};
+
+/** ⌘K: people as you type, then the main actions, then every page. */
+export const AppCommandPalette = ({ access }: AppCommandPaletteProps) => {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [people, setPeople] = useState<PersonSearchResult[]>([]);
+  const searchSeq = useRef(0);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleOpenChange = (next: boolean) => {
+    if (next) {
+      setPeople([]);
+    }
+    setOpen(next);
+  };
 
   useEffect(() => {
-    const handleOpen = () => setOpen(true);
+    const handleOpen = () => {
+      setPeople([]);
+      setOpen(true);
+    };
     window.addEventListener(OPEN_EVENT, handleOpen);
     return () => window.removeEventListener(OPEN_EVENT, handleOpen);
   }, []);
+
+  useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current);
+    },
+    [],
+  );
+
+  const handleQueryChange = (query: string) => {
+    if (timer.current) clearTimeout(timer.current);
+    const seq = ++searchSeq.current;
+
+    if (query.trim().length < 2) {
+      setPeople([]);
+      return;
+    }
+
+    timer.current = setTimeout(() => {
+      void searchPeopleForPaletteAction(query).then((rows) => {
+        // Only the latest query may write its results.
+        if (seq === searchSeq.current) setPeople(rows);
+      });
+    }, PEOPLE_SEARCH_DELAY_MS);
+  };
 
   const go =
     (href: string): CommandItem["onSelect"] =>
@@ -40,76 +93,41 @@ export const AppCommandPalette = () => {
       router.push(href);
     };
 
+  const toItem = (link: NavLink, group: string): CommandItem => ({
+    id: `${group}-${link.href}`,
+    label: link.title,
+    group,
+    keywords: link.keywords,
+    icon: link.icon,
+    onSelect: go(link.href),
+  });
+
+  const pages = visibleNavGroups(access).flatMap((group) =>
+    group.items.flatMap((link) => [
+      toItem(link, "Ir a"),
+      ...(link.children ?? []).map((child) =>
+        toItem({ ...child, icon: FolderTreeIcon }, link.title),
+      ),
+    ]),
+  );
+
   const items: CommandItem[] = [
-    {
-      id: "inicio",
-      label: "Inicio",
-      group: "Ir a",
-      keywords: ["home", "hoy", "dashboard"],
-      icon: HomeIcon,
-      onSelect: go("/app"),
-    },
-    {
-      id: "personas",
-      label: "Personas",
-      group: "Ir a",
-      keywords: ["expediente", "empleados"],
-      icon: UsersIcon,
-      onSelect: go("/app/personas"),
-    },
-    {
-      id: "personas-nueva",
-      label: "Nueva persona",
-      group: "Acciones",
-      keywords: ["alta", "crear"],
-      icon: UsersIcon,
-      onSelect: go("/app/personas/nueva"),
-    },
-    {
-      id: "contratos",
-      label: "Contratos",
-      group: "Ir a",
-      keywords: ["renovar", "vencimiento"],
-      icon: FileTextIcon,
-      onSelect: go("/app/contratos"),
-    },
-    {
-      id: "plantillas",
-      label: "Plantillas de contrato",
-      group: "Ir a",
-      icon: FileTextIcon,
-      onSelect: go("/app/contratos/plantillas"),
-    },
-    {
-      id: "resguardo",
-      label: "Inventario",
-      group: "Ir a",
-      keywords: ["activos", "resguardo"],
-      icon: LaptopIcon,
-      onSelect: go("/app/resguardo"),
-    },
-    {
-      id: "catalogo",
-      label: "Catálogo",
-      group: "Ir a",
-      icon: FolderTreeIcon,
-      onSelect: go(CATALOG_PATHS.index),
-    },
-    ...CATALOG_NAV_CHILDREN.map((child) => ({
-      id: `catalogo-${child.href}`,
-      label: child.title,
-      group: "Catálogo",
-      icon: FolderTreeIcon,
-      onSelect: go(child.href),
+    ...people.map((person) => ({
+      id: `persona-${person.id}`,
+      label: person.label,
+      group: "Personas",
+      badge: person.detail ? (
+        <span className="text-muted-foreground text-xs tabular-nums">
+          {person.detail}
+        </span>
+      ) : undefined,
+      icon: UserIcon,
+      alwaysShow: true,
+      onSelect: go(`/app/personas/${person.id}`),
     })),
-    {
-      id: "auditoria",
-      label: "Auditoría",
-      group: "Ir a",
-      keywords: ["historial", "eventos"],
-      icon: ScrollTextIcon,
-      onSelect: go("/app/auditoria"),
-    },
+    ...NAV_ACTIONS.map((link) => toItem(link, "Acciones")),
+    ...pages,
+    ...NAV_EXTRA_PAGES.map((link) => toItem(link, "Ir a")),
     {
       id: "cambiar-empresa",
       label: "Cambiar de empresa",
@@ -124,20 +142,27 @@ export const AppCommandPalette = () => {
     <CommandPalette
       emptyMessage="Sin coincidencias."
       items={items}
-      onOpenChange={setOpen}
+      onOpenChange={handleOpenChange}
+      onQueryChange={handleQueryChange}
       open={open}
-      placeholder="Buscar páginas y acciones…"
+      placeholder="Buscar personas, páginas y acciones…"
     />
   );
 };
 
 export const AppCommandPaletteHint = () => (
-  <button
+  <Button
+    aria-keyshortcuts="Meta+K"
     aria-label="Buscar en Workia"
-    className="text-muted-foreground hover:bg-muted hidden rounded-md px-2 py-1 font-mono text-xs transition-colors sm:block"
+    className="text-muted-foreground hidden w-48 justify-start sm:inline-flex"
     onClick={openAppCommandPalette}
     type="button"
+    variant="secondary"
   >
-    ⌘K
-  </button>
+    <SearchIcon aria-hidden />
+    Buscar
+    <kbd className="bg-muted ml-auto rounded px-1.5 font-sans text-[11px] font-medium">
+      ⌘K
+    </kbd>
+  </Button>
 );

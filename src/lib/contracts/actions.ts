@@ -10,7 +10,6 @@ import {
   decideContractRenewal,
   deactivateContractTemplate,
   markContractNoRenew,
-  renewContract,
   softDeleteContractTemplate,
   updateContractTemplate,
 } from "@/lib/contracts";
@@ -25,7 +24,6 @@ import {
   contractFormSchema,
   contractTemplateFormSchema,
   renewalDecisionSchema,
-  renewContractFormSchema,
 } from "@/lib/contracts/schema";
 import { userHasPermission } from "@/lib/rbac";
 import { AuthorizationError } from "@/lib/rbac/errors";
@@ -72,17 +70,6 @@ const compensationFromForm = (formData: FormData, allowed: boolean) => {
 const parseContractForm = (formData: FormData, compensation: boolean) =>
   contractFormSchema.safeParse({
     personId: String(formData.get("personId") ?? ""),
-    type: String(formData.get("type") ?? ""),
-    startDate: String(formData.get("startDate") ?? ""),
-    endDate: String(formData.get("endDate") ?? ""),
-    noticeWindow: String(formData.get("noticeWindow") ?? ""),
-    templateId: String(formData.get("templateId") ?? ""),
-    ...compensationFromForm(formData, compensation),
-  });
-
-const parseRenewForm = (formData: FormData, compensation: boolean) =>
-  renewContractFormSchema.safeParse({
-    contractId: String(formData.get("contractId") ?? ""),
     type: String(formData.get("type") ?? ""),
     startDate: String(formData.get("startDate") ?? ""),
     endDate: String(formData.get("endDate") ?? ""),
@@ -158,54 +145,6 @@ export const createContractAction = async (
 
   revalidateContracts(created.personId);
   redirect(`/app/personas/${created.personId}?contract=created`);
-};
-
-export const renewContractAction = async (
-  _prev: ContractActionState,
-  formData: FormData,
-): Promise<ContractActionState> => {
-  let session;
-
-  try {
-    session = await requireContractsUpdate();
-  } catch (error) {
-    if (error instanceof AuthorizationError) {
-      return { error: "No tienes permiso para renovar contratos." };
-    }
-
-    redirect("/login");
-  }
-
-  const parsed = parseRenewForm(
-    formData,
-    await userHasPermission(session.user.id, "compensation:read"),
-  );
-
-  if (!parsed.success) {
-    return {
-      error:
-        parsed.error.issues[0]?.message ?? "Revisa los datos de renovación.",
-    };
-  }
-
-  let companyId: string;
-
-  try {
-    companyId = writableCompanyIdFromForm(session, formData);
-  } catch {
-    return { error: STALE_COMPANY_MESSAGE };
-  }
-
-  let renewed;
-
-  try {
-    renewed = await renewContract(companyId, parsed.data, session.user.id);
-  } catch (error) {
-    return { error: (error as Error).message };
-  }
-
-  revalidateContracts(renewed.personId);
-  redirect(`/app/contratos?renewed=1`);
 };
 
 export const noRenewContractAction = async (contractId: string) => {

@@ -12,7 +12,7 @@ import {
 import { LandingEnterButton } from "@/components/landing/landing-enter-button";
 import { LandingAppMock } from "@/components/landing/landing-app-mock";
 import { WorkiaMark } from "@/components/brand/workia-mark";
-import { Badge } from "@/components/ui/badge";
+import { Tag } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 type LandingStep = {
@@ -99,7 +99,7 @@ const LandingCta = ({
   className?: string;
   size?: "default" | "lg";
 }) => (
-  <Button asChild className={className} size={size} variant="default">
+  <Button asChild className={className} size={size} variant="primary">
     <Link href="/login">
       Entrar
       <ArrowRightIcon aria-hidden />
@@ -147,12 +147,9 @@ export const LandingPage = () => {
       <main className="relative z-10 mx-auto flex w-full max-w-6xl flex-col gap-20 px-5 pb-20 sm:px-8 sm:pb-28">
         {/* Hero */}
         <section className="flex flex-col items-center gap-8 pt-4 text-center sm:pt-8">
-          <Badge
-            className="border-0 bg-[color-mix(in_srgb,var(--workia-badge-a)_90%,transparent)] px-3 py-1 font-mono text-[10px] tracking-[0.08em] uppercase"
-            variant="secondary"
-          >
+          <Tag className="h-auto border-0 bg-[color-mix(in_srgb,var(--workia-badge-a)_90%,transparent)] px-3 py-1 font-mono text-[10px] tracking-[0.08em] uppercase">
             RRHH · México
-          </Badge>
+          </Tag>
           <div className="max-w-3xl space-y-4">
             <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl md:text-5xl">
               RRHH deja de cazar fechas en{" "}

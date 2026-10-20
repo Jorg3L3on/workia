@@ -41,13 +41,18 @@ export const CompensationFields = ({
   const amount = Number(daily);
 
   return (
-    <fieldset
-      className="space-y-3 rounded-lg border p-3"
+    <section
+      aria-labelledby={`${idPrefix}compensation-heading`}
+      className="space-y-3 border-t pt-4"
       data-testid="compensation-fields"
     >
-      <legend className="px-1 text-sm font-semibold">
-        Compensación (opcional)
-      </legend>
+      <h3
+        className="text-sm font-semibold"
+        id={`${idPrefix}compensation-heading`}
+      >
+        Compensación{" "}
+        <span className="text-muted-foreground font-normal">(opcional)</span>
+      </h3>
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor={`${idPrefix}salarioDiario`}>
@@ -111,7 +116,7 @@ export const CompensationFields = ({
           />
         </div>
       </div>
-    </fieldset>
+    </section>
   );
 };
 

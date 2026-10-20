@@ -1,13 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { DownloadIcon, PlusIcon, UploadIcon } from "lucide-react";
+import {
+  DownloadIcon,
+  FileDownIcon,
+  HistoryIcon,
+  PlusIcon,
+  SheetIcon,
+  UploadIcon,
+} from "lucide-react";
 
 import { pageTitles } from "@/lib/brand/chrome-copy";
 
-import {
-  ListPageHeader,
-  listPrimaryActionClassName,
-} from "@/components/list/list-page-header";
+import { PageHeader } from "@/components/layout/page-header";
 import { PersonasDataTable } from "@/components/people/personas-data-table";
 import { Button } from "@/components/ui/button";
 import { parseListPaging } from "@/lib/list/paging";
@@ -49,20 +53,28 @@ const PersonasPage = async ({ searchParams }: PersonasPageProps) => {
   const regionId = regions.some((region) => region.id === params.region)
     ? params.region
     : undefined;
-  const [{ rows: people, total }, canCreate, canImport, canExport] =
-    await Promise.all([
-      listPeoplePage(session.companyId, {
-        query: q,
-        status,
-        deleted: deleted === "1",
-        regionId,
-        page,
-        pageSize,
-      }),
-      userHasPermission(session.user.id, "people:create"),
-      userHasPermission(session.user.id, "people:import"),
-      userHasPermission(session.user.id, "people:export"),
-    ]);
+  const [
+    { rows: people, total },
+    canCreate,
+    canImport,
+    canExport,
+    canUpdate,
+    canReadContracts,
+  ] = await Promise.all([
+    listPeoplePage(session.companyId, {
+      query: q,
+      status,
+      deleted: deleted === "1",
+      regionId,
+      page,
+      pageSize,
+    }),
+    userHasPermission(session.user.id, "people:create"),
+    userHasPermission(session.user.id, "people:import"),
+    userHasPermission(session.user.id, "people:export"),
+    userHasPermission(session.user.id, "people:update"),
+    userHasPermission(session.user.id, "contracts:read"),
+  ]);
   const exportQuery = new URLSearchParams();
 
   if (q) exportQuery.set("q", q);
@@ -80,88 +92,60 @@ const PersonasPage = async ({ searchParams }: PersonasPageProps) => {
 
   return (
     <div className="flex flex-col gap-6">
-      <ListPageHeader
-        actions={
-          canCreate || canImport || canExport ? (
-            <>
-              {canImport ? (
-                <>
-                  <Button
-                    asChild
-                    className="h-10 rounded-full"
-                    variant="outline"
-                  >
-                    <Link href="/app/personas/importaciones">
-                      Importaciones
-                    </Link>
-                  </Button>
-                  <Button
-                    asChild
-                    className="h-10 rounded-full"
-                    variant="outline"
-                  >
-                    <Link href="/app/personas/importar">
-                      <UploadIcon className="size-4" aria-hidden />
-                      Importar
-                    </Link>
-                  </Button>
-                </>
-              ) : null}
-              {canImport ? (
-                <Button asChild className="h-10 rounded-full" variant="outline">
-                  {/* Plain anchor: this is a file download, not a page. */}
-                  <a href="/app/personas/plantilla" download>
-                    <DownloadIcon className="size-4" aria-hidden />
-                    Descargar plantilla
-                  </a>
-                </Button>
-              ) : null}
-              {canExport ? (
-                <>
-                  <Button
-                    asChild
-                    className="h-10 rounded-full"
-                    variant="outline"
-                  >
-                    <a href={`/app/personas/exportar?${exportQuery}`} download>
-                      <DownloadIcon className="size-4" aria-hidden />
-                      Exportar Excel
-                    </a>
-                  </Button>
-                  <Button
-                    asChild
-                    className="h-10 rounded-full"
-                    variant="outline"
-                  >
-                    <a
-                      href={`/app/personas/exportar?${new URLSearchParams({ ...Object.fromEntries(exportQuery), format: "csv" })}`}
-                      download
-                    >
-                      CSV
-                    </a>
-                  </Button>
-                </>
-              ) : null}
-              {canCreate ? (
-                <Button asChild className={listPrimaryActionClassName}>
-                  <Link href="/app/personas/nueva">
-                    <PlusIcon className="size-4" aria-hidden />
-                    Nueva persona
-                  </Link>
-                </Button>
-              ) : null}
-            </>
-          ) : undefined
+      <PageHeader
+        description="Expedientes, relación laboral e identificadores."
+        menu={[
+          canExport && {
+            label: "Exportar a Excel",
+            icon: SheetIcon,
+            href: `/app/personas/exportar?${exportQuery}`,
+            download: true,
+          },
+          canExport && {
+            label: "Exportar a CSV",
+            icon: DownloadIcon,
+            href: `/app/personas/exportar?${new URLSearchParams({ ...Object.fromEntries(exportQuery), format: "csv" })}`,
+            download: true,
+          },
+          canImport && {
+            label: "Descargar plantilla",
+            icon: FileDownIcon,
+            href: "/app/personas/plantilla",
+            download: true,
+          },
+          canImport && {
+            label: "Historial de importaciones",
+            icon: HistoryIcon,
+            href: "/app/personas/importaciones",
+          },
+        ]}
+        primary={
+          canCreate
+            ? {
+                label: "Nueva persona",
+                icon: PlusIcon,
+                href: "/app/personas/nueva",
+              }
+            : null
         }
-        description="Gestiona expedientes, relación laboral e identificadores."
-        descriptionSecondary="Lista de todas las personas registradas."
+        secondary={
+          canImport
+            ? {
+                label: "Importar",
+                icon: UploadIcon,
+                href: "/app/personas/importar",
+              }
+            : null
+        }
         title="Personas"
       />
 
       <PersonasDataTable
+        canReadContracts={canReadContracts}
+        canUpdate={canUpdate}
         emptyAction={
           canCreate ? (
-            <Button asChild className={listPrimaryActionClassName}>
+            <Button asChild>
               <Link href="/app/personas/nueva">
                 Dar de alta a la primera persona
               </Link>
