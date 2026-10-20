@@ -262,6 +262,53 @@ describe("DataTable", () => {
     expect(push).not.toHaveBeenCalled();
   });
 
+  it("lets one column take the slack and the other truncating ones shrink", () => {
+    renderTable({
+      columns: [
+        columns[0],
+        columns[1],
+        { ...columns[2], truncate: true },
+        columns[3],
+      ],
+    });
+
+    const cells = table().getAllByRole("cell").slice(0, 4);
+
+    // Nombre is the first truncating column, so it fills; Estado scales.
+    expect(cells[0]).toHaveClass("w-3/5", "max-w-0", "min-w-32");
+    expect(cells[1]).not.toHaveClass("max-w-0");
+    expect(cells[2]).toHaveClass("w-1/5", "max-w-0", "min-w-28");
+    expect(cells[2]).not.toHaveClass("w-3/5");
+    expect(within(cells[0]).getByText("Zulu item")).toHaveClass("truncate");
+
+    const headers = table().getAllByRole("columnheader");
+    expect(headers[0]).toHaveClass("w-3/5");
+    expect(headers[2]).toHaveClass("w-1/5");
+
+    // jsdom has no layout, so this only guards against a cell that scrolls;
+    // the classes are what keep a real browser from scrolling the table.
+    for (const cell of table().getAllByRole("cell")) {
+      expect(cell.scrollWidth).toBeLessThanOrEqual(cell.clientWidth);
+    }
+  });
+
+  it("fills the column marked fill instead of the first truncating one", () => {
+    renderTable({
+      columns: [
+        columns[0],
+        { ...columns[1], fill: true },
+        columns[2],
+        columns[3],
+      ],
+    });
+
+    const cells = table().getAllByRole("cell").slice(0, 4);
+
+    expect(cells[0]).toHaveClass("w-1/5", "max-w-0");
+    expect(cells[0]).not.toHaveClass("w-3/5");
+    expect(cells[1]).toHaveClass("w-3/5", "max-w-0", "min-w-32");
+  });
+
   it("renders the same rows as cards with title, subtitle and badge", () => {
     renderTable({
       mobileCard: (row) => ({

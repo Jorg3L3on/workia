@@ -62,8 +62,20 @@ export type DataTableColumn<TData> = {
    * numeric: muted, tabular-nums and right-aligned.
    */
   variant?: "primary" | "muted" | "numeric";
-  /** Truncates to one line; the full text shows as a tooltip. */
+  /**
+   * Truncates to one line (the default cell shows the full text as a
+   * tooltip). The column shrinks with the table instead of taking its
+   * content width, so the table fits its card; the first truncating column
+   * takes the width the other columns leave (see `fill`).
+   */
   truncate?: boolean;
+  /**
+   * Takes the width the other columns leave and truncates within it, so a
+   * long name never pushes the table sideways. At most one per table;
+   * defaults to the first `truncate` column. Custom cells truncate on their
+   * own (`min-w-0` and `truncate` on their text).
+   */
+  fill?: boolean;
   headerClassName?: string;
   cellClassName?: string;
 };
@@ -419,6 +431,22 @@ export const DataTable = <TData,>({
 
   const isOpenable = (row: TData) => Boolean(getRowHref?.(row) ?? onRowOpen);
 
+  // One column absorbs most of the slack (60%) and truncates; the other
+  // truncating columns scale with the table (20% each) instead of sitting at
+  // their content width, so the table fits its card down to 1024px with the
+  // sidebar open. A 100% fill would pin the others to their floor instead.
+  const fillId =
+    columns.find((column) => column.fill)?.id ??
+    columns.find((column) => column.truncate)?.id;
+  const widthClassName = (column: DataTableColumn<TData>) =>
+    column.id === fillId ? "w-3/5" : column.truncate ? "w-1/5" : undefined;
+  const cellWidthClassName = (column: DataTableColumn<TData>) =>
+    column.id === fillId
+      ? "w-3/5 max-w-0 min-w-32"
+      : column.truncate
+        ? "w-1/5 max-w-0 min-w-28"
+        : undefined;
+
   const defaultCard = (row: TData): DataTableMobileCard => {
     const [first, second] = table
       .getRowModel()
@@ -537,6 +565,7 @@ export const DataTable = <TData,>({
                           className={cn(
                             "text-muted-foreground h-10 px-4 text-xs font-medium",
                             numeric && "text-right",
+                            widthClassName(column),
                             column.headerClassName,
                           )}
                         >
@@ -607,7 +636,7 @@ export const DataTable = <TData,>({
                             <TableCell
                               className={cn(
                                 "h-12 min-w-0 px-4 py-2",
-                                column.truncate && "max-w-64",
+                                cellWidthClassName(column),
                                 column.variant
                                   ? variantClassName[column.variant]
                                   : undefined,
