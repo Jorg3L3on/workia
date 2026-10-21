@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   foreignKey,
   index,
@@ -7,11 +8,12 @@ import {
   pgTable,
   text,
   timestamp,
-  unique,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 
 import { companies } from "./companies";
+import { employmentPeriods } from "./employment";
 import { people } from "./people";
 import { users } from "./rbac";
 
@@ -33,6 +35,8 @@ export const onboardings = pgTable(
       .notNull()
       .references(() => companies.id, { onDelete: "restrict" }),
     personId: uuid("person_id").notNull(),
+    /** The employment period this alta is for (migration 0025); one alta per period. */
+    employmentPeriodId: uuid("employment_period_id"),
     stage: onboardingStageEnum("stage").notNull().default("rh_captura"),
     checklist: jsonb("checklist")
       .$type<OnboardingChecklist>()
@@ -68,15 +72,25 @@ export const onboardings = pgTable(
       .$onUpdate(() => new Date()),
   },
   (table) => [
-    unique("onboardings_company_person_unique").on(
-      table.companyId,
-      table.personId,
-    ),
+    // One alta per employment period, so a rehired person can get a new one;
+    // and never two in progress for the same person.
+    uniqueIndex("onboardings_company_period_unique")
+      .on(table.companyId, table.employmentPeriodId)
+      .where(sql`${table.employmentPeriodId} is not null`),
+    uniqueIndex("onboardings_company_person_in_progress_unique")
+      .on(table.companyId, table.personId)
+      .where(sql`${table.stage} in ('rh_captura', 'pendiente_nominas')`),
+    index("onboardings_company_person_idx").on(table.companyId, table.personId),
     foreignKey({
       name: "onboardings_company_person_fk",
       columns: [table.companyId, table.personId],
       foreignColumns: [people.companyId, people.id],
     }).onDelete("cascade"),
+    foreignKey({
+      name: "onboardings_company_period_fk",
+      columns: [table.companyId, table.employmentPeriodId],
+      foreignColumns: [employmentPeriods.companyId, employmentPeriods.id],
+    }),
     index("onboardings_company_stage_idx").on(table.companyId, table.stage),
   ],
 );
