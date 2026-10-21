@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNull, ne, or, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 
 import { tdb, type DbExecutor } from "@/lib/db";
 import {
@@ -243,39 +243,23 @@ const loadFileKeys = async (
 };
 
 /**
- * File-wide duplicate pass, once per validation run: rows repeating an ID,
- * CURP, RFC or NSS of an earlier row are saved as errors before the first
- * chunk, so later chunks never need the whole file again.
+ * File-wide duplicate pass, once per validation run (before its first chunk):
+ * rows repeating an ID, CURP, RFC or NSS of an earlier row are saved as
+ * errors, so later chunks never need the whole file again. Returns the ids of
+ * the rejected rows.
  */
 const rejectFileDuplicates = async (companyId: string, jobId: string) => {
-  const [started] = await tdb(companyId)
-    .select({ id: importRows.id })
-    .from(importRows)
-    .where(
-      and(
-        eq(importRows.companyId, companyId),
-        eq(importRows.jobId, jobId),
-        eq(importRows.sheet, "personas"),
-        ne(importRows.action, "pending"),
-      ),
-    )
-    .limit(1);
-
-  if (started) {
-    return;
-  }
-
   const keys = await loadFileKeys(companyId, jobId);
   const duplicates = findFileDuplicates(keys);
+  const updates = keys.flatMap((key) => {
+    const dup = duplicates.get(key.rowNumber);
 
-  await saveOutcomes(
-    companyId,
-    keys.flatMap((key) => {
-      const dup = duplicates.get(key.rowNumber);
+    return dup ? [{ id: key.id, outcome: errorOutcome([dup]) }] : [];
+  });
 
-      return dup ? [{ id: key.id, outcome: errorOutcome([dup]) }] : [];
-    }),
-  );
+  await saveOutcomes(companyId, updates);
+
+  return new Set(updates.map((update) => update.id));
 };
 
 /** Active people of the company already holding one of these NSS: nss -> person id. */
@@ -467,13 +451,17 @@ export const validatePersonasChunk = async (
     throw new Error("La importación no está en validación.");
   }
 
-  await rejectFileDuplicates(companyId, jobId);
-
-  const pending = await tdb(companyId)
+  const chunk = await tdb(companyId)
     .select({
       id: importRows.id,
       rowNumber: importRows.rowNumber,
       raw: importRows.raw,
+      // No Personas row classified yet: this is the run's first chunk.
+      started: sql<boolean>`exists (
+        select 1 from import_rows done
+        where done.company_id = ${companyId} and done.job_id = ${jobId}
+          and done.sheet = 'personas' and done.action <> 'pending'
+      )`,
     })
     .from(importRows)
     .where(
@@ -487,9 +475,14 @@ export const validatePersonasChunk = async (
     .orderBy(asc(importRows.rowNumber))
     .limit(limit);
 
-  if (pending.length === 0) {
+  if (chunk.length === 0) {
     return { processed: 0, remaining: await countPending(companyId, jobId) };
   }
+
+  const rejected = chunk[0].started
+    ? new Set<string>()
+    : await rejectFileDuplicates(companyId, jobId);
+  const pending = chunk.filter((row) => !rejected.has(row.id));
 
   const catalogs = await loadCatalogIndex(companyId);
   const chunkKeys = pending.map((row) =>
@@ -582,7 +575,7 @@ export const validatePersonasChunk = async (
   await saveOutcomes(companyId, updates);
 
   return {
-    processed: pending.length,
+    processed: chunk.length,
     remaining: await countPending(companyId, jobId),
   };
 };
