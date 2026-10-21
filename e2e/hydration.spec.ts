@@ -1,3 +1,5 @@
+import { execFileSync } from "node:child_process";
+
 import { expect, test, type Page } from "@playwright/test";
 
 // Every /app and /admin page must hydrate without a mismatch. Reduced motion
@@ -45,6 +47,14 @@ const APP_DETAILS: [string, RegExp, string[]][] = [
 const ADMIN_DETAILS: [string, RegExp, string[]][] = [
   ["/admin/empresas", new RegExp(`^/admin/empresas/${UUID}$`), [""]],
 ];
+
+/** The seed has no altas: a dummy's alta, so /app/altas has a row to open. */
+const altaFixture = (...args: string[]) =>
+  execFileSync("npx", ["tsx", "e2e/fixtures/alta.ts", ...args], {
+    cwd: process.cwd(),
+    encoding: "utf8",
+    timeout: 60_000,
+  });
 
 const login = async (page: Page, email: string) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
@@ -109,8 +119,17 @@ test.describe("hydration", () => {
 
   test("every /app page hydrates without a mismatch", async ({ page }) => {
     test.setTimeout(300_000);
-    await login(page, "rrhh@workia.local");
-    await checkRoutes(page, APP_ROUTES, APP_DETAILS);
+    const personId = altaFixture("start", Date.now().toString().slice(-6))
+      .match(new RegExp(UUID, "g"))
+      ?.at(-1);
+    expect(personId, "the alta fixture prints the person id").toBeTruthy();
+
+    try {
+      await login(page, "rrhh@workia.local");
+      await checkRoutes(page, APP_ROUTES, APP_DETAILS);
+    } finally {
+      altaFixture("delete", personId!);
+    }
   });
 
   test("every /admin page hydrates without a mismatch", async ({ page }) => {
