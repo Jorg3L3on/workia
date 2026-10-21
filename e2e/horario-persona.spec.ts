@@ -41,13 +41,12 @@ const fillSchedule = async (
 const scheduleText = (times: Times) =>
   `L–V ${times.entrada}–${times.salida} (comida ${times.salidaComer}–${times.regresoComer})`;
 
+// The expediente has no tabs: the schedule is in the Laboral card.
 const datosPanel = (page: import("@playwright/test").Page) =>
-  page.getByRole("tabpanel", { name: "Datos" });
+  page.getByRole("region", { name: "Laboral", exact: true });
 
 const contractCard = (page: import("@playwright/test").Page) =>
-  page
-    .getByRole("heading", { name: "Contratos" })
-    .locator("xpath=ancestor::section[1]");
+  page.getByRole("region", { name: "Contrato", exact: true });
 
 const expectScheduleOnFicha = async (
   root: import("@playwright/test").Locator,
@@ -147,9 +146,11 @@ test.describe("Horario por persona", () => {
     await expectScheduleOnFicha(datosPanel(page), scheduleA);
     await expect(page.getByText("09:00")).toHaveCount(0);
 
-    await page.getByRole("link", { name: "Emitir contrato" }).click();
+    await page
+      .getByRole("link", { name: "Emitir contrato", exact: true })
+      .first()
+      .click();
     await expect(page).toHaveURL(/emit=1/);
-    await page.getByRole("tab", { name: "Contratos" }).click();
     await expect(page.locator("#startDate")).toBeVisible();
     await page.locator("#startDate").fill("2026-01-15");
     await page.locator("#endDate").fill("2026-12-15");
@@ -171,13 +172,12 @@ test.describe("Horario por persona", () => {
     );
     await expect(contractSection.locator("pre")).not.toContainText("10:00");
 
-    await page.getByRole("link", { name: "Editar" }).click();
+    await page.getByRole("link", { name: "Editar", exact: true }).click();
     await fillSchedule(page, laterSchedule);
     await page.getByRole("button", { name: "Guardar persona" }).click();
     await expect(page).toHaveURL(/saved=1/);
     await expectScheduleOnFicha(datosPanel(page), laterSchedule);
 
-    await page.getByRole("tab", { name: "Contratos" }).click();
     const contractAfterEdit = contractCard(page);
     await expectScheduleOnFicha(
       contractAfterEdit,
