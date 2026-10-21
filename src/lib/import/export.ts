@@ -356,8 +356,6 @@ export const writeExport = async (
 };
 
 /** Header and values of «Exportar (N)»: Nombre plus the visible columns. */
-const DATE_COLUMNS = new Set<PeopleColumnId>(["ingreso", "finContrato"]);
-
 /**
  * «Exportar (N)»: the people of the filter with the columns the list shows,
  * in one sheet (XLSX) or one CSV. Same WHERE and same rows as the list.
@@ -427,7 +425,7 @@ const writeColumnsExport = async (
           .join(" "),
         ...columns.map((id) => {
           const value = peopleColumnValue(person, id) ?? "";
-          return DATE_COLUMNS.has(id) ? formatExportDate(value) : value;
+          return PEOPLE_COLUMNS[id].date ? formatExportDate(value) : value;
         }),
       ]);
     }

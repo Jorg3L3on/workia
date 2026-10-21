@@ -483,6 +483,9 @@ describe("«Exportar (N)» with the baja columns", () => {
     );
     expect(text).toContain("12345.67");
     expect(text).toContain("Despido");
+    // Every date column, baja and antigüedad included, is written DD/MM/AAAA.
+    expect(text).not.toMatch(/\d{4}-\d{2}-\d{2}/);
+    expect(text).toMatch(/\d{2}\/\d{2}\/\d{4}/);
   });
 
   it("drops the finiquito column without compensation:read", async () => {
