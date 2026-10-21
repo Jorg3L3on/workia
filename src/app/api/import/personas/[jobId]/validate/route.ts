@@ -7,6 +7,7 @@ import { restartValidation, validateJobStep } from "@/lib/import/validate";
 import { requirePeopleImport } from "@/lib/people/auth";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 type Context = { params: Promise<{ jobId: string }> };
 
