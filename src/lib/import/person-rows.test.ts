@@ -132,6 +132,49 @@ describe("normalizePersonRow", () => {
     ).toContain("varias áreas");
   });
 
+  it("lists the areas of an ambiguous position so the row can pick one", () => {
+    const named: CatalogIndex = {
+      ...catalogs,
+      positions: new Map([
+        [
+          "gerente",
+          [
+            {
+              id: "b2222222-2222-4222-8222-222222222222",
+              areaId: "a1",
+              areaName: "Ventas",
+            },
+            {
+              id: "b3333333-3333-4333-8333-333333333333",
+              areaId: "a2",
+              areaName: "Almacén",
+            },
+          ],
+        ],
+      ]),
+    };
+
+    expect(
+      normalizePersonRow({ ...base, puesto: "Gerente" }, named, none).errors[0]
+        .message,
+    ).toContain("Ventas, Almacén");
+  });
+
+  it("says how to fix an identifier, not only that it is wrong", () => {
+    const { errors } = normalizePersonRow(
+      { ...base, nss: "1234" },
+      catalogs,
+      none,
+    );
+
+    expect(errors[0]).toMatchObject({
+      field: "nss",
+      message: expect.stringContaining(
+        "Escribe el NSS como texto: 11 dígitos, con ceros al inicio",
+      ),
+    });
+  });
+
   it("uses the form's schema for required fields, formats and identifiers", () => {
     const { errors } = normalizePersonRow(
       {

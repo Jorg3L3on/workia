@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { finalizeImportUpload } from "@/lib/import/jobs";
+import { finalizeImportUpload, sheetLimitMessage } from "@/lib/import/jobs";
 import { importApiError, loadUploadingJob } from "@/lib/import/route-helpers";
 import { requirePeopleImport } from "@/lib/people/auth";
 
@@ -29,11 +29,18 @@ export const POST = async (request: Request, { params }: Context) => {
   }
 
   const expected = loaded.job.counts.total ?? 0;
-  const { job, staged, total } = await finalizeImportUpload(
+  const { job, staged, total, overLimit } = await finalizeImportUpload(
     session.companyId,
     jobId,
     expected,
   );
+
+  if (overLimit) {
+    return NextResponse.json(
+      { error: sheetLimitMessage(overLimit), code: "too_many_rows" },
+      { status: 413 },
+    );
+  }
 
   // Fewer rows than announced means a chunk never arrived: retry the upload.
   if (!job || total < expected) {

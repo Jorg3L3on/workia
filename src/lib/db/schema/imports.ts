@@ -55,6 +55,8 @@ export type ImportJobOptions = {
   createMissingCatalogs?: boolean;
   /** "all_or_nothing" aborts on any error; "valid_only" applies valid rows. */
   mode?: "all_or_nothing" | "valid_only";
+  /** "all_or_nothing" apply asked for a fresh validation, run in client steps. */
+  revalidating?: boolean;
   columnMapping?: Record<string, Record<string, string>>;
 };
 

@@ -50,12 +50,17 @@ export const normalizeContractRow = (
   if (!personKey.idWorkia && !personKey.curp) {
     errors.push({
       field: "curp",
-      message: "Indica el ID Workia o la CURP de la persona.",
+      message:
+        "Indica el ID Workia o la CURP de la persona. Cópialos de la hoja Personas.",
     });
   }
 
   if (personKey.idWorkia && !isUuid(personKey.idWorkia)) {
-    errors.push({ field: "idWorkia", message: "ID Workia inválido." });
+    errors.push({
+      field: "idWorkia",
+      message:
+        "ID Workia inválido. Cópialo tal cual de una exportación o usa la CURP.",
+    });
   }
 
   const type = parseContractType(text(cells, "tipo"));
@@ -63,7 +68,8 @@ export const normalizeContractRow = (
   if (!type) {
     errors.push({
       field: "tipo",
-      message: 'Tipo debe ser "Determinado" o "Indeterminado".',
+      message:
+        'Tipo debe ser "Determinado" o "Indeterminado". Elígelo de la lista.',
     });
   }
 
@@ -73,15 +79,19 @@ export const normalizeContractRow = (
     errors.push({
       field: "fechaInicio",
       message: startDate
-        ? "Fecha de inicio inválida."
-        : "La fecha de inicio es obligatoria.",
+        ? "Fecha de inicio inválida. Escríbela como AAAA-MM-DD o DD/MM/AAAA (día primero)."
+        : "La fecha de inicio es obligatoria. Escríbela como AAAA-MM-DD o DD/MM/AAAA.",
     });
   }
 
   const endText = text(cells, "fechaFin");
 
   if (endText && !ISO_DATE.test(endText)) {
-    errors.push({ field: "fechaFin", message: "Fecha de fin inválida." });
+    errors.push({
+      field: "fechaFin",
+      message:
+        "Fecha de fin inválida. Escríbela como AAAA-MM-DD o DD/MM/AAAA (día primero).",
+    });
   }
 
   // An indeterminate contract has no end date, whatever the file says.
@@ -90,7 +100,8 @@ export const normalizeContractRow = (
   if (type === "determinado" && !endText) {
     errors.push({
       field: "fechaFin",
-      message: "Un contrato determinado requiere fecha de fin.",
+      message:
+        "Un contrato determinado requiere fecha de fin. Escríbela o cambia el Tipo a Indeterminado.",
     });
   }
 
@@ -102,7 +113,8 @@ export const normalizeContractRow = (
   ) {
     errors.push({
       field: "fechaFin",
-      message: "La fecha de fin es anterior a la de inicio.",
+      message:
+        "La fecha de fin es anterior a la de inicio. Revisa que no estén invertidas.",
     });
   }
 
@@ -112,7 +124,7 @@ export const normalizeContractRow = (
   if (!noticeWindow) {
     errors.push({
       field: "aviso",
-      message: 'Aviso debe ser 1, 2, 3, 6 o "No avisar".',
+      message: 'Aviso debe ser 1, 2, 3, 6 o "No avisar". Elígelo de la lista.',
     });
   }
 
@@ -123,7 +135,7 @@ export const normalizeContractRow = (
     errors.push({
       field: "estatus",
       message:
-        'Estatus debe ser "Vigente", "Renovado", "No renovado" o "Vencido".',
+        'Estatus debe ser "Vigente", "Renovado", "No renovado" o "Vencido". Elígelo de la lista o déjalo vacío para deducirlo de las fechas.',
     });
   }
 
@@ -170,7 +182,7 @@ export const normalizeContractRow = (
     errors.push({
       field: "estatus",
       message:
-        "El contrato está marcado Vencido pero su fecha de fin aún no llega.",
+        "El contrato está marcado Vencido pero su fecha de fin aún no llega. Corrige la fecha de fin o deja el Estatus vacío.",
     });
 
     return { normalized: null, errors };
@@ -245,7 +257,7 @@ export const findContractFileConflicts = (rows: ContractFileRow[]) => {
       } else {
         conflicts.set(row.rowNumber, {
           field: "fechaInicio",
-          message: `La persona ya tiene un contrato con esta fecha de inicio en la fila ${first}.`,
+          message: `La persona ya tiene un contrato con esta fecha de inicio en la fila ${first}. Deja una sola fila por contrato.`,
         });
         continue;
       }
@@ -259,7 +271,7 @@ export const findContractFileConflicts = (rows: ContractFileRow[]) => {
       } else {
         conflicts.set(row.rowNumber, {
           field: "estatus",
-          message: `La persona ya tiene un contrato vigente en la fila ${first}.`,
+          message: `La persona ya tiene un contrato vigente en la fila ${first}. Solo uno puede ser Vigente: marca el anterior como Renovado o Vencido.`,
         });
       }
     }

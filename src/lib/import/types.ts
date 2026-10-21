@@ -44,7 +44,10 @@ export type RowOutcome = {
 export type CatalogIndex = {
   areas: Map<string, string>;
   /** name key -> candidates (the same position name can exist in two areas). */
-  positions: Map<string, { id: string; areaId: string | null }[]>;
+  positions: Map<
+    string,
+    { id: string; areaId: string | null; areaName?: string | null }[]
+  >;
   sites: Map<string, string>;
 };
 

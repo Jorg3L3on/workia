@@ -43,7 +43,8 @@ describe("export rows", () => {
     const values = orderedValues("personas", personExportRow(person));
 
     expect(values).toHaveLength(IMPORT_COLUMNS.personas.length);
-    expect(values[0]).toBe(person.id);
+    // ID Workia is the last column, so new rows can leave it empty.
+    expect(values.at(-1)).toBe(person.id);
     expect(mapHeaders("personas", exportHeaders("personas")).unknown).toEqual(
       [],
     );

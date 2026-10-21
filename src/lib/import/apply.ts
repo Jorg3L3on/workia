@@ -43,9 +43,18 @@ import { loadLookups, restartValidation, validateJobStep } from "./validate";
 
 export const APPLY_BATCH_SIZE = 200;
 
-/** Phases run in this order; each is resumable because rows carry their mark. */
+/**
+ * Phases run in this order; each is resumable because rows carry their mark.
+ * "validating" is the fresh validation that "all or nothing" runs first.
+ */
 export type ApplyPhase =
-  "personas" | "managers" | "horarios" | "contratos" | "chain" | "done";
+  | "validating"
+  | "personas"
+  | "managers"
+  | "horarios"
+  | "contratos"
+  | "chain"
+  | "done";
 
 export class ImportBlockedError extends Error {
   constructor(
@@ -97,9 +106,29 @@ const PERSON_FIELDS = [
   "status",
 ] as const;
 
-/** Moves the job to `applying`; at most one job can be applying at a time. */
+const forgetRevalidation = (job: ImportJob) =>
+  tdb(job.companyId)
+    .update(importJobs)
+    .set({ options: sql`${importJobs.options} - 'revalidating'` })
+    .where(
+      and(eq(importJobs.companyId, job.companyId), eq(importJobs.id, job.id)),
+    );
+
+/**
+ * Moves the job to `applying`; at most one job can be applying at a time.
+ * "All or nothing" first validates the whole file again from scratch, so
+ * nothing is applied unless it is all valid now. That validation runs in the
+ * same bounded steps as the review's, one per request: this returns the job
+ * still `validating` until it ends.
+ */
 const beginApply = async (job: ImportJob) => {
   if (job.status === "applying") {
+    return job;
+  }
+
+  const allOrNothing = job.options.mode === "all_or_nothing";
+
+  if (allOrNothing && job.status === "validating" && job.options.revalidating) {
     return job;
   }
 
@@ -110,16 +139,17 @@ const beginApply = async (job: ImportJob) => {
     );
   }
 
-  if (job.options.mode === "all_or_nothing" && job.status === "in_review") {
-    // Validate again from scratch: nothing is applied unless it is all valid.
-    await restartValidation(job.companyId, job.id, {});
-    let step;
+  if (allOrNothing && job.status === "in_review") {
+    if (!job.options.revalidating) {
+      await restartValidation(job.companyId, job.id, { revalidating: true });
 
-    do {
-      step = await validateJobStep(job.companyId, job.id);
-    } while (!step.done);
+      return { ...job, status: "validating" as const };
+    }
 
-    const errors = step.counts?.error ?? 0;
+    // The fresh validation is over; the next apply validates again.
+    await forgetRevalidation(job);
+
+    const errors = job.counts.error ?? 0;
 
     if (errors > 0) {
       throw new ImportBlockedError(
@@ -1348,6 +1378,17 @@ export const applyJobStep = async (
   }
 
   const job = await beginApply(loaded);
+
+  if (job.status === "validating") {
+    const step = await validateJobStep(companyId, jobId);
+
+    return {
+      phase: "validating",
+      done: false,
+      applied: 0,
+      remaining: step.remaining,
+    };
+  }
 
   try {
     if ((await countRemaining(companyId, jobId, "personas")) > 0) {

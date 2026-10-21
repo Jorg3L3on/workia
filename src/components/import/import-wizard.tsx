@@ -155,14 +155,29 @@ export const ImportWizard = ({ initialJob }: Props) => {
       setBusy("Aplicando cambios…");
       abort.current = new AbortController();
 
+      let validationTotal = 0;
+
       try {
         await runApply(
           jobId,
-          (stepInfo) =>
+          (stepInfo) => {
+            // "Todo o nada" validates the whole file again before applying.
+            if (stepInfo.phase === "validating") {
+              validationTotal = Math.max(validationTotal, stepInfo.remaining);
+              setBusy("Validando de nuevo antes de aplicar…");
+              setProgress({
+                done: validationTotal - stepInfo.remaining,
+                total: validationTotal,
+              });
+              return;
+            }
+
+            setBusy("Aplicando cambios…");
             setProgress({
               done: stepInfo.applied,
               total: Math.max(expected, stepInfo.applied),
-            }),
+            });
+          },
           abort.current.signal,
         );
         await refreshJob(jobId);
@@ -342,7 +357,7 @@ export const ImportWizard = ({ initialJob }: Props) => {
           </h2>
           <p className="text-muted-foreground max-w-prose text-sm">
             Usa la plantilla de Workia (.xlsx) o un .csv con la hoja Personas.
-            Máximo {IMPORT_LIMITS.maxRows.toLocaleString("es-MX")} filas y{" "}
+            Máximo {IMPORT_LIMITS.maxRows.toLocaleString("es-MX")} personas y{" "}
             {IMPORT_LIMITS.maxFileBytes / (1024 * 1024)} MB. Antes de aplicar
             nada verás una revisión fila por fila.
           </p>
