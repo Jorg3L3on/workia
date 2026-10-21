@@ -1,5 +1,6 @@
 import { parseCsv } from "./csv";
 import {
+  EXAMPLE_SHEET_NAME,
   IMPORT_COLUMNS,
   IMPORT_LIMITS,
   IMPORT_SHEETS,
@@ -114,8 +115,13 @@ const matchSheets = (sheets: RawSheet[], isCsv: boolean) => {
     }
   }
 
-  // A single-sheet workbook with another name is read as Personas.
-  if (!matched.has("personas") && sheets.length === 1) {
+  // A single-sheet workbook with another name is read as Personas, unless it
+  // is the template's sample sheet: its fictional rows are never imported.
+  if (
+    !matched.has("personas") &&
+    sheets.length === 1 &&
+    normalizeHeader(sheets[0].name) !== normalizeHeader(EXAMPLE_SHEET_NAME)
+  ) {
     matched.set("personas", sheets[0]);
   }
 
@@ -272,8 +278,19 @@ export const parseImportFile = async (
   if (personas.rows.length > IMPORT_LIMITS.maxRows) {
     throw new ImportFileError(
       "too_many_rows",
-      `El archivo tiene ${personas.rows.length.toLocaleString("es-MX")} personas; el máximo es ${IMPORT_LIMITS.maxRows.toLocaleString("es-MX")}.`,
+      `El archivo tiene ${personas.rows.length.toLocaleString("es-MX")} personas; el máximo es ${IMPORT_LIMITS.maxRows.toLocaleString("es-MX")}. Divídelo en varios archivos.`,
     );
+  }
+
+  for (const sheet of sheets) {
+    const max = IMPORT_LIMITS.maxRowsPerSheet[sheet.sheet];
+
+    if (sheet.sheet !== "personas" && sheet.rows.length > max) {
+      throw new ImportFileError(
+        "too_many_rows",
+        `La hoja ${SHEET_NAMES[sheet.sheet]} tiene ${sheet.rows.length.toLocaleString("es-MX")} filas; el máximo es ${max.toLocaleString("es-MX")}. Divídela en varios archivos.`,
+      );
+    }
   }
 
   return {

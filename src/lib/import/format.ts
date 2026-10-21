@@ -17,12 +17,24 @@ export const SHEET_NAMES: Record<ImportSheetKey, string> = {
 
 export const INSTRUCTIONS_SHEET_NAME = "Instrucciones";
 export const CATALOGS_SHEET_NAME = "Catálogos";
+/** Filled-in sample rows; never read by the importer. */
+export const EXAMPLE_SHEET_NAME = "Ejemplo";
 
 export const IMPORT_LIMITS = {
+  /** People per file (Personas rows). */
   maxRows: 5000,
+  /** Rows per sheet, enforced by the browser and on the rows the server stored. */
+  maxRowsPerSheet: { personas: 5000, horarios: 5000, contratos: 10_000 },
+  /** Last row of an Excel sheet; a row number past it cannot come from a file. */
+  maxRowNumber: 1_048_576,
   maxFileBytes: 10 * 1024 * 1024,
   chunkRows: 500,
 } as const;
+
+/** Sum of the per-sheet limits: the most rows one file can stage. */
+export const MAX_ROWS_PER_FILE = Object.values(
+  IMPORT_LIMITS.maxRowsPerSheet,
+).reduce((sum, n) => sum + n, 0);
 
 export type ColumnKind = "text" | "date" | "time" | "list";
 
@@ -54,14 +66,6 @@ export const CONTRACT_STATUS_OPTIONS = [
 
 export const IMPORT_COLUMNS: Record<ImportSheetKey, ImportColumn[]> = {
   personas: [
-    {
-      key: "idWorkia",
-      label: "ID Workia",
-      aliases: ["id", "id_workia", "workia id"],
-      kind: "text",
-      help: "Identificador de Workia. Déjalo vacío para personas nuevas; viene lleno en una exportación.",
-      width: 38,
-    },
     {
       key: "nombres",
       label: "Nombres",
@@ -101,7 +105,7 @@ export const IMPORT_COLUMNS: Record<ImportSheetKey, ImportColumn[]> = {
       label: "Teléfono",
       aliases: ["tel", "celular", "phone"],
       kind: "text",
-      help: "Opcional.",
+      help: "Opcional. Se guarda como texto, así no se pierden ceros ni la lada.",
       width: 16,
     },
     {
@@ -109,7 +113,7 @@ export const IMPORT_COLUMNS: Record<ImportSheetKey, ImportColumn[]> = {
       label: "Fecha de nacimiento",
       aliases: ["fecha_nacimiento", "nacimiento", "birth date"],
       kind: "date",
-      help: "AAAA-MM-DD, DD/MM/AAAA o fecha de Excel.",
+      help: "AAAA-MM-DD, DD/MM/AAAA (día primero) o fecha de Excel.",
       width: 20,
     },
     {
@@ -117,7 +121,7 @@ export const IMPORT_COLUMNS: Record<ImportSheetKey, ImportColumn[]> = {
       label: "Fecha de ingreso",
       aliases: ["fecha_ingreso", "ingreso", "alta"],
       kind: "date",
-      help: "AAAA-MM-DD, DD/MM/AAAA o fecha de Excel.",
+      help: "AAAA-MM-DD, DD/MM/AAAA (día primero) o fecha de Excel.",
       width: 18,
     },
     {
@@ -135,7 +139,7 @@ export const IMPORT_COLUMNS: Record<ImportSheetKey, ImportColumn[]> = {
       aliases: ["position", "posicion", "posición", "cargo"],
       kind: "list",
       catalog: "positions",
-      help: "Nombre exacto de un puesto del catálogo.",
+      help: "Nombre exacto de un puesto del catálogo. La lista muestra los puestos del Área de la fila.",
       width: 24,
     },
     {
@@ -149,17 +153,18 @@ export const IMPORT_COLUMNS: Record<ImportSheetKey, ImportColumn[]> = {
     },
     {
       key: "jefeDirecto",
-      label: "Jefe directo (CURP)",
+      label: "Jefe directo (nombre, CURP o ID Workia)",
       aliases: [
         "jefe_directo",
         "jefe directo",
         "jefe",
         "manager",
+        "jefe directo (curp)",
         "jefe directo (curp o id workia)",
       ],
       kind: "text",
-      help: "CURP o ID Workia de otra fila del archivo o de una persona existente.",
-      width: 24,
+      help: "Nombre completo, CURP o ID Workia del jefe: otra fila del archivo o una persona que ya está en Workia. Si hay dos personas con el mismo nombre, usa su CURP o ID Workia.",
+      width: 32,
     },
     {
       key: "rfc",
@@ -182,7 +187,7 @@ export const IMPORT_COLUMNS: Record<ImportSheetKey, ImportColumn[]> = {
       label: "NSS",
       aliases: ["numero seguro social", "imss"],
       kind: "text",
-      help: "11 dígitos.",
+      help: "11 dígitos, escritos como texto para conservar los ceros al inicio.",
       width: 16,
     },
     {
@@ -194,16 +199,16 @@ export const IMPORT_COLUMNS: Record<ImportSheetKey, ImportColumn[]> = {
       help: "Activa o Baja. Vacío equivale a Activa.",
       width: 12,
     },
-  ],
-  horarios: [
     {
       key: "idWorkia",
       label: "ID Workia",
       aliases: ["id", "id_workia", "workia id"],
       kind: "text",
-      help: "Persona a la que pertenece el horario (ID Workia o CURP; al menos uno).",
+      help: "Déjalo vacío en altas nuevas. Viene lleno en una exportación y sirve para actualizar a esa persona.",
       width: 38,
     },
+  ],
+  horarios: [
     {
       key: "curp",
       label: "CURP",
@@ -244,16 +249,16 @@ export const IMPORT_COLUMNS: Record<ImportSheetKey, ImportColumn[]> = {
       help: "HH:MM, 24 horas.",
       width: 12,
     },
-  ],
-  contratos: [
     {
       key: "idWorkia",
       label: "ID Workia",
       aliases: ["id", "id_workia", "workia id"],
       kind: "text",
-      help: "Persona del contrato (ID Workia o CURP; al menos uno).",
+      help: "Persona a la que pertenece el horario (ID Workia o CURP; al menos uno).",
       width: 38,
     },
+  ],
+  contratos: [
     {
       key: "curp",
       label: "CURP",
@@ -315,6 +320,14 @@ export const IMPORT_COLUMNS: Record<ImportSheetKey, ImportColumn[]> = {
       catalog: "templates",
       help: "Opcional. Si falta, se guarda como contrato importado.",
       width: 24,
+    },
+    {
+      key: "idWorkia",
+      label: "ID Workia",
+      aliases: ["id", "id_workia", "workia id"],
+      kind: "text",
+      help: "Persona del contrato (ID Workia o CURP; al menos uno).",
+      width: 38,
     },
   ],
 };
