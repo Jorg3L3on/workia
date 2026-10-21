@@ -38,6 +38,8 @@ type PersonContractsSectionProps = {
   canDecide?: boolean;
   personName?: string;
   positions?: { id: string; name: string }[];
+  /** Inside the expediente's Contrato card, which carries the heading. */
+  showHeading?: boolean;
 };
 
 export const PersonContractsSection = ({
@@ -51,6 +53,7 @@ export const PersonContractsSection = ({
   canDecide = false,
   personName = "",
   positions = [],
+  showHeading = true,
 }: PersonContractsSectionProps) => {
   const vigente = contracts.find((contract) => contract.status === "vigente");
   const decidable =
@@ -58,13 +61,15 @@ export const PersonContractsSection = ({
 
   return (
     <section className="space-y-3">
-      <div>
-        <h2 className="text-base font-semibold">Contratos</h2>
-        <p className="text-muted-foreground text-sm">
-          Historial de contratos en el expediente — cada emisión conserva su
-          texto generado.
-        </p>
-      </div>
+      {showHeading ? (
+        <div>
+          <h2 className="text-base font-semibold">Contratos</h2>
+          <p className="text-muted-foreground text-sm">
+            Historial de contratos en el expediente — cada emisión conserva su
+            texto generado.
+          </p>
+        </div>
+      ) : null}
 
       <div className="space-y-4">
         {vigente ? (
