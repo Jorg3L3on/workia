@@ -42,12 +42,12 @@ export const PersonBajaCard = ({
   return (
     <DetailCard id="baja" title="Baja">
       {details.length > 0 ? (
-        <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm lg:grid-cols-3 xl:grid-cols-6">
           {details.map((detail) => (
             <div
               className={cn(
                 "min-w-0",
-                detail.wide && "sm:col-span-2 lg:col-span-3 xl:col-span-6",
+                detail.wide && "col-span-2 lg:col-span-3 xl:col-span-6",
               )}
               data-testid={detail.testId}
               key={detail.label}
