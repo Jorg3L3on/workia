@@ -1,24 +1,34 @@
 import type { ReactNode } from "react";
 
 import { DetailCard } from "@/components/people/person-detail-card";
+import { cn } from "@/lib/utils";
 
-export type PersonBajaDetail = { label: string; value: ReactNode };
+export type PersonBajaDetail = {
+  label: string;
+  value: ReactNode;
+  /** A muted line under the value («inferida», what to review). */
+  hint?: string;
+  /** Spans the whole row (the comentario). */
+  wide?: boolean;
+  testId?: string;
+};
 
 type PersonBajaCardProps = {
   status: "activa" | "baja";
   /**
-   * The baja as label/value rows (fecha, tipo, motivo, recontratable,
-   * finiquito, periodos). The baja model is iniciativa 2's: until it lands
-   * there are none and the card says so.
+   * The baja as label/value rows (bajaDetails(): fecha, tipo, motivo,
+   * recontratable, finiquito, comentario). The card does no masking: the
+   * finiquito amount comes in already masked without compensation:read.
    */
   details?: PersonBajaDetail[];
-  /** «Reingresar», from iniciativa 2. */
+  /** «Reingresar» (people:update). */
   action?: ReactNode;
 };
 
 /**
- * The slot for the baja block. Renders nothing for an active person; for a
- * person on baja it shows the details it is given, or a placeholder.
+ * The baja block. Renders nothing for an active person; for a person on baja
+ * it shows the details it is given, or a placeholder when the baja has no
+ * employment period to read them from.
  */
 export const PersonBajaCard = ({
   status,
@@ -32,18 +42,28 @@ export const PersonBajaCard = ({
   return (
     <DetailCard id="baja" title="Baja">
       {details.length > 0 ? (
-        <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+        <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm lg:grid-cols-3 xl:grid-cols-6">
           {details.map((detail) => (
-            <div className="min-w-0" key={detail.label}>
+            <div
+              className={cn(
+                "min-w-0",
+                detail.wide && "col-span-2 lg:col-span-3 xl:col-span-6",
+              )}
+              data-testid={detail.testId}
+              key={detail.label}
+            >
               <dt className="workia-field-label">{detail.label}</dt>
               <dd className="font-medium break-words">{detail.value}</dd>
+              {detail.hint ? (
+                <dd className="text-muted-foreground text-xs">{detail.hint}</dd>
+              ) : null}
             </div>
           ))}
         </dl>
       ) : (
         <p className="text-muted-foreground text-sm" data-testid="baja-empty">
-          Esta persona está dada de baja. La fecha, el tipo, el motivo y si es
-          recontratable todavía no se registran en Workia.
+          Esta persona está dada de baja, pero no tiene un periodo laboral
+          registrado: la fecha, el tipo y el motivo no se capturaron.
         </p>
       )}
       {action ? <div className="mt-4">{action}</div> : null}

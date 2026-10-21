@@ -5,9 +5,10 @@ import { expect, test, type Page } from "@playwright/test";
 import { chooseSelectOption } from "./choose-select-option";
 
 /**
- * Baja y periodos laborales (Iniciativa 2): a baja with its fields, a
- * reingreso in the same expediente and both in Historial. Fictional data;
- * the person is hard-deleted at the end.
+ * Baja y periodos laborales (Iniciativa 2): a baja with its fields and the
+ * expediente's baja block, a reingreso from that block in the same
+ * expediente, both periods in the Laboral card and both in Historial.
+ * Fictional data; the person is hard-deleted at the end.
  */
 test.describe.configure({ mode: "serial" });
 
@@ -64,7 +65,21 @@ test("baja → reingreso → historial keeps both periods", async ({ page }) => 
     await baja.getByRole("radio", { name: "Sí" }).check();
     await baja.getByRole("button", { name: "Dar de baja" }).click();
     await expect(baja).toHaveCount(0);
-    await expect(page.getByText("Baja", { exact: true }).first()).toBeVisible();
+    await expect(page).toHaveURL(/\?baja=1$/);
+    await expect(page.getByText("Baja registrada.")).toBeVisible();
+    await expect(page.getByTestId("person-credential")).toHaveAttribute(
+      "data-status",
+      "baja",
+    );
+
+    // The baja block: fecha, tipo, motivo, comentario, recontratable.
+    const bajaCard = page.getByRole("region", { name: "Baja", exact: true });
+    await expect(bajaCard).toContainText("Voluntaria");
+    await expect(bajaCard).toContainText("Cambio de residencia");
+    await expect(bajaCard).toContainText("Se muda a otra ciudad");
+    await expect(bajaCard.getByTestId("baja-recontratable")).toHaveText(
+      /RecontratableSí/,
+    );
 
     // Finiquito after the baja.
     await page.getByRole("button", { name: "Más acciones" }).click();
@@ -74,22 +89,48 @@ test("baja → reingreso → historial keeps both periods", async ({ page }) => 
     await finiquito.getByLabel("Monto (MXN)").fill("12345.67");
     await finiquito.getByRole("button", { name: "Guardar finiquito" }).click();
     await expect(finiquito).toHaveCount(0);
+    await expect(page.getByText("Finiquito actualizado.")).toBeVisible();
+    await expect(bajaCard.getByTestId("baja-finiquito-monto")).toContainText(
+      "12,345.67",
+    );
 
-    // Reingreso in the same expediente, seniority restarts (default).
-    await page.getByRole("button", { name: "Más acciones" }).click();
-    await page.getByRole("menuitem", { name: "Reingresar" }).click();
+    // Reingreso from the baja block (the menu's dialog), seniority restarts.
+    await bajaCard.getByRole("button", { name: "Reingresar" }).click();
     const rehire = page.getByRole("dialog");
     await expect(rehire.getByRole("radio", { name: /^No/ })).toBeChecked();
     await rehire.getByLabel("Fecha de ingreso").fill(mx(reingreso));
     await rehire.getByRole("button", { name: "Reingresar" }).click();
     await expect(rehire).toHaveCount(0);
+    await expect(page.getByText("Reingreso registrado")).toBeVisible();
     await expect(
       page.getByText("Activa", { exact: true }).first(),
     ).toBeVisible();
+    // Rehired: the normal badge, no baja block, the period in Ingreso.
+    await expect(page.getByTestId("person-credential")).toHaveAttribute(
+      "data-status",
+      "activa",
+    );
+    await expect(
+      page.getByRole("region", { name: "Baja", exact: true }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByTestId("person-key-facts").locator('[data-fact="ingreso"]'),
+    ).toContainText("2.º periodo · antigüedad reiniciada");
+
+    // Laboral: both periods, oldest first.
+    const periods = page
+      .getByRole("region", { name: "Laboral", exact: true })
+      .getByTestId("employment-periods")
+      .getByRole("listitem");
+    await expect(periods).toHaveCount(2);
+    await expect(periods.first()).toContainText("Cambio de residencia");
+    await expect(periods.last()).toContainText("en curso");
 
     // Historial: the baja with its fields, the finiquito and the reingreso.
-    await page.getByRole("tab", { name: "Historial" }).click();
-    const history = page.getByRole("tabpanel");
+    const history = page.getByRole("region", {
+      name: "Historial de cambios",
+      exact: true,
+    });
     await expect(history.getByText("Baja laboral").first()).toBeVisible();
     await expect(history.getByText("Reingreso").first()).toBeVisible();
     await expect(

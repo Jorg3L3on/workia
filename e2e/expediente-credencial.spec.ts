@@ -137,29 +137,63 @@ test.describe("Expediente «Credencial»", () => {
     await expect(page.getByRole("status")).toContainText("Cambios guardados.");
   });
 
-  test("baja: grey badge, «Baja» and the empty baja block", async ({
+  test("baja: grey badge, the baja block, «Reingresar» and masking", async ({
     page,
   }) => {
     const suffix = Date.now().toString().slice(-6);
 
-    await login(page, "rrhh@workia.local");
+    await login(page, "admin@workia.local");
     const personId = await createDummy(page, `CredencialBaja${suffix}`);
+    // Through the domain: baja today, «Despido», not rehirable, a pending
+    // finiquito of $4,321.50.
     fixture("set-baja", personId);
     await page.reload();
 
     const credential = page.getByTestId("person-credential");
     await expect(credential).toHaveAttribute("data-status", "baja");
     await expect(credential.getByText("Baja", { exact: true })).toBeVisible();
+    await expect(
+      page.getByTestId("person-key-facts").locator('[data-fact="antiguedad"]'),
+    ).toContainText("Hasta la baja");
 
     const baja = card(page, "Baja");
     await expect(baja).toBeVisible();
-    await expect(baja.getByTestId("baja-empty")).toBeVisible();
+    await expect(baja.getByTestId("baja-empty")).toHaveCount(0);
+    await expect(baja).toContainText("Despido");
+    await expect(baja.getByTestId("baja-recontratable")).toHaveText(
+      /RecontratableNo/,
+    );
+    await expect(baja).toContainText("Pendiente");
+    // The admin has compensation:read.
+    await expect(baja.getByTestId("baja-finiquito-monto")).toContainText(
+      "4,321.50",
+    );
     await expect(
       page
         .getByRole("navigation", { name: "Secciones del expediente" })
         .getByRole("link")
         .first(),
     ).toHaveText("Baja");
+
+    // «Reingresar» on the card opens the menu's dialog, which warns.
+    await baja.getByRole("button", { name: "Reingresar" }).click();
+    const rehire = page.getByRole("dialog");
+    await expect(rehire).toContainText("no recontratable");
+    await rehire.getByRole("button", { name: "Cancelar" }).click();
+    await expect(rehire).toHaveCount(0);
+
+    // A viewer (no people:update, no compensation:read): masked, no action.
+    await page.context().clearCookies();
+    await login(page, "viewer@workia.local");
+    await page.goto(`/app/personas/${personId}`);
+    const viewerBaja = card(page, "Baja");
+    await expect(viewerBaja.getByTestId("baja-finiquito-monto")).toContainText(
+      "•••",
+    );
+    await expect(viewerBaja).not.toContainText("4,321");
+    await expect(
+      viewerBaja.getByRole("button", { name: "Reingresar" }),
+    ).toHaveCount(0);
   });
 
   test("sin permisos: no contract, resguardo, history or payroll", async ({
