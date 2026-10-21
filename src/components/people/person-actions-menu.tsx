@@ -77,6 +77,17 @@ export const PersonActionsMenu = ({
   const isBaja = status === "baja";
   const lastBaja = employment?.lastBaja ?? null;
 
+  // A saved baja, reingreso or finiquito redirects back to this expediente,
+  // and the menu keeps its state across that render: without this, a baja
+  // would reopen as the «Reingresar» dialog. Close both when the result lands.
+  const outcome = JSON.stringify([status, lastBaja]);
+  const [seenOutcome, setSeenOutcome] = useState(outcome);
+  if (seenOutcome !== outcome) {
+    setSeenOutcome(outcome);
+    setStatusOpen(false);
+    setFiniquitoOpen(false);
+  }
+
   return (
     <>
       <RowMenu
