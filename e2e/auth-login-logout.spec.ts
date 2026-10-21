@@ -21,8 +21,16 @@ test("login reaches /app and logout returns to login", async ({ page }) => {
     document.querySelector("nextjs-portal")?.remove();
   });
 
-  await page.getByLabel("Menú de usuario").click();
-  await page.getByRole("menuitem", { name: "Cerrar sesión" }).click();
+  // On a cold dev server the menu can be clicked before /app hydrates, and
+  // that click is lost: click again until the menu opens.
+  const logout = page.getByRole("menuitem", { name: "Cerrar sesión" });
+  await expect(async () => {
+    if (!(await logout.isVisible())) {
+      await page.getByLabel("Menú de usuario").click();
+    }
+    await expect(logout).toBeVisible({ timeout: 1_000 });
+  }).toPass({ timeout: 25_000 });
+  await logout.click();
 
   await expect(page).toHaveURL(/\/login/, { timeout: 15_000 });
 
