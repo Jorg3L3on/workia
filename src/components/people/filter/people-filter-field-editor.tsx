@@ -34,7 +34,9 @@ import {
 } from "@/lib/people/filter/describe";
 import {
   MAX_NEXT_DAYS,
+  MAX_SENIORITY_YEARS,
   peopleFilterOperatorLabels,
+  SENIORITY_PRESET_YEARS,
   VENCE_PRESET_DAYS,
   type PeopleFilterFieldDefinition,
   type PeopleFilterOperator,
@@ -413,11 +415,65 @@ const DaysValue = ({
   );
 };
 
+/** «al menos / menos de N años» of Antigüedad: presets and any other number. */
+const YearsValue = ({
+  years,
+  onChange,
+}: {
+  years: number | undefined;
+  onChange: (years: number) => void;
+}) => {
+  const id = useId();
+
+  return (
+    <div className="grid gap-2">
+      <div className="flex flex-wrap gap-1.5">
+        {SENIORITY_PRESET_YEARS.map((preset) => (
+          <Button
+            aria-pressed={years === preset}
+            key={preset}
+            onClick={() => onChange(preset)}
+            size="sm"
+            type="button"
+            variant={years === preset ? "primary" : "secondary"}
+          >
+            {preset === 1 ? "1 año" : `${preset} años`}
+          </Button>
+        ))}
+      </div>
+      <div className="flex items-center gap-2">
+        <Label className="text-sm font-normal" htmlFor={id}>
+          Otro
+        </Label>
+        <Input
+          className="h-8 w-24"
+          id={id}
+          inputMode="numeric"
+          max={MAX_SENIORITY_YEARS}
+          min={1}
+          onChange={(event) => {
+            const next = Number.parseInt(event.target.value, 10);
+            if (next >= 1 && next <= MAX_SENIORITY_YEARS) onChange(next);
+          }}
+          type="number"
+          defaultValue={
+            years && !SENIORITY_PRESET_YEARS.includes(years as 1) ? years : ""
+          }
+        />
+        <span className="text-muted-foreground text-sm">años</span>
+      </div>
+    </div>
+  );
+};
+
+const isYearsOperator = (op: PeopleFilterOperator) =>
+  op === "min_years" || op === "max_years";
+
 /**
  * The operator and value of one field: checkboxes with counts for lists, a
  * person search with «incluir todo el equipo» for Jefe, a calendar with
- * shortcuts for dates, presets for days. Used by the chip popover and by
- * the mobile sheet.
+ * shortcuts for dates, presets for days and for years of antigüedad. Used by
+ * the chip popover and by the mobile sheet.
  */
 export const PeopleFilterFieldEditor = ({
   field,
@@ -443,6 +499,13 @@ export const PeopleFilterFieldEditor = ({
       onChange({ ...condition, field: field.id, op: next, values });
     } else if (next === "next_days") {
       onChange({ field: field.id, op: next, days: VENCE_PRESET_DAYS[0] });
+    } else if (isYearsOperator(next)) {
+      // Keeps the years when switching between «al menos» and «menos de».
+      onChange({
+        field: field.id,
+        op: next,
+        years: condition?.years ?? SENIORITY_PRESET_YEARS[0],
+      });
     } else if (condition && condition.op !== next) {
       // A date operator waits for its date.
       onChange(null);
@@ -474,7 +537,13 @@ export const PeopleFilterFieldEditor = ({
           team={Boolean(condition?.team)}
           values={values}
         />
-      ) : field.kind === "date" ? (
+      ) : field.kind === "seniority" && isYearsOperator(op) ? (
+        <YearsValue
+          key={op}
+          onChange={(years) => onChange({ field: field.id, op, years })}
+          years={condition?.op === op ? condition.years : undefined}
+        />
+      ) : field.kind === "date" || field.kind === "seniority" ? (
         <DateValue
           condition={condition}
           onChange={({ from, to }) =>

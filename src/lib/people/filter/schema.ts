@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import {
   MAX_NEXT_DAYS,
+  MAX_SENIORITY_YEARS,
   PEOPLE_FILTER_FIELD_IDS,
   PEOPLE_FILTER_FIELDS,
   PEOPLE_FILTER_OPERATORS,
@@ -41,6 +42,8 @@ export const peopleFilterConditionSchema = z
     from: isoDate.optional(),
     to: isoDate.optional(),
     days: z.number().int().min(1).max(MAX_NEXT_DAYS).optional(),
+    /** Antigüedad: «al menos / menos de N años». */
+    years: z.number().int().min(1).max(MAX_SENIORITY_YEARS).optional(),
     /** Jefe: the whole team below (recursive), not only direct reports. */
     team: z.boolean().optional(),
   })
@@ -83,6 +86,12 @@ export const peopleFilterConditionSchema = z
 
     if (condition.op === "next_days" && !condition.days)
       issue("Faltan los días");
+
+    if (
+      (condition.op === "min_years" || condition.op === "max_years") &&
+      !condition.years
+    )
+      issue("Faltan los años");
 
     if (condition.team && field.kind !== "person") issue("Sólo para Jefe");
   });
@@ -138,6 +147,9 @@ export const normalizeCondition = (
       return { ...base, from: condition.from };
     case "next_days":
       return { ...base, days: condition.days };
+    case "min_years":
+    case "max_years":
+      return { ...base, years: condition.years };
     default:
       return base;
   }

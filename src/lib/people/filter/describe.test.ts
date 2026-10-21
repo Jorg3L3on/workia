@@ -71,6 +71,49 @@ describe("describeCondition", () => {
     ).toBe("Valor desconocido");
   });
 
+  it("names the baja fields and the years of antigüedad", () => {
+    expect(
+      describeCondition(
+        { field: "antiguedad", op: "min_years", years: 5 },
+        options,
+      ),
+    ).toEqual({ field: "Antigüedad", operator: "al menos", value: "5 años" });
+    expect(
+      describeCondition(
+        { field: "antiguedad", op: "max_years", years: 1 },
+        options,
+      ),
+    ).toEqual({ field: "Antigüedad", operator: "menos de", value: "1 año" });
+    expect(
+      describeCondition(
+        { field: "tipoBaja", op: "is", values: ["termino_contrato"] },
+        options,
+      ).value,
+    ).toBe("Término de contrato");
+    expect(
+      describeCondition(
+        { field: "motivoBaja", op: "is", values: [AREA] },
+        { motivoBaja: [{ value: AREA, label: "Renuncia voluntaria" }] },
+      ),
+    ).toEqual({
+      field: "Motivo de baja",
+      operator: "es",
+      value: "Renuncia voluntaria",
+    });
+    expect(
+      conditionAriaLabel(
+        { field: "recontratable", op: "is", values: ["no"] },
+        options,
+      ),
+    ).toBe("Recontratable: No");
+    expect(
+      conditionAriaLabel(
+        { field: "baja", op: "between", from: "2026-01-01", to: "2026-06-30" },
+        options,
+      ),
+    ).toBe("Fecha de baja: entre 01/01/2026 – 30/06/2026");
+  });
+
   it("gives chips the accessible names of the old filters", () => {
     expect(
       conditionAriaLabel(

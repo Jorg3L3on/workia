@@ -99,6 +99,66 @@ describe("serializeFilterConditions / parseFilterConditions", () => {
     });
   });
 
+  it("round-trips the baja and antigüedad fields", () => {
+    const original = filter([
+      { field: "antiguedad", op: "min_years", years: 15 },
+      { field: "baja", op: "between", from: "2026-01-01", to: "2026-06-30" },
+      { field: "tipoBaja", op: "is_not", values: ["despido", "otra"] },
+      { field: "motivoBaja", op: "is", values: [AREA_A] },
+      { field: "recontratable", op: "is", values: ["no"] },
+      { field: "revisionBaja", op: "is", values: ["revision", "sin_fecha"] },
+    ]);
+    const f = serializeFilterConditions(original);
+
+    expect(f).toBe(
+      [
+        "1",
+        "an.ya.15",
+        "fb.b.20260101.20260630",
+        "tb.x.despido.otra",
+        `mb.i.${uuidToToken(AREA_A)}`,
+        "rc.i.no",
+        "rv.i.revision.sin_fecha",
+      ].join("*"),
+    );
+    expect(encodeURIComponent(f)).toBe(f);
+    expect(
+      parsePeopleFilterParams(new URLSearchParams({ f })).conditions,
+    ).toEqual(original.conditions);
+
+    for (const condition of [
+      { field: "antiguedad", op: "max_years", years: 1 },
+      { field: "antiguedad", op: "before", from: "2016-10-21" },
+      { field: "baja", op: "empty" },
+      { field: "baja", op: "after", from: "2026-06-30" },
+    ] as const) {
+      expect(
+        parsePeopleFilterParams(
+          new URLSearchParams({
+            f: serializeFilterConditions(filter([condition])),
+          }),
+        ).conditions,
+      ).toEqual([condition]);
+    }
+  });
+
+  it("drops broken years and baja values", () => {
+    const parsed = parsePeopleFilterParams(
+      new URLSearchParams({
+        f: [
+          "1",
+          "an.ya", // no years
+          "an.yb.100", // more than 60
+          "fb.n.30", // Fecha de baja has no «próximos N días»
+          "tb.i.renuncia", // not a tipo
+          "rc.i.tal_vez",
+          "mb.i.nope",
+        ].join("*"),
+      }),
+    );
+    expect(parsed.conditions).toEqual([]);
+  });
+
   it("is empty without conditions", () => {
     expect(serializeFilterConditions(EMPTY_PEOPLE_FILTER)).toBe("");
   });

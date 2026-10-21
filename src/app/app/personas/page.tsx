@@ -32,6 +32,7 @@ import { formatPersonName } from "@/lib/people/schema";
 import { listPeopleViews } from "@/lib/people/views";
 import { listRegions } from "@/lib/regions";
 import { listSites } from "@/lib/sites";
+import { listTerminationReasons } from "@/lib/termination-reasons";
 
 export const dynamic = "force-dynamic";
 
@@ -79,6 +80,7 @@ const PersonasPage = async ({ searchParams }: PersonasPageProps) => {
     areaRows,
     positionRows,
     siteRows,
+    reasonRows,
     managers,
   ] = await Promise.all([
     listPeopleFiltered(companyId, {
@@ -92,6 +94,8 @@ const PersonasPage = async ({ searchParams }: PersonasPageProps) => {
     listAreas(companyId),
     listPositions(companyId),
     listSites(companyId),
+    // Inactive motivos too: older bajas keep theirs.
+    listTerminationReasons(companyId),
     listPeopleNamesByIds(companyId, managerIds),
   ]);
   const can = (permission: PermissionSlug) => permissions.has(permission);
@@ -174,6 +178,7 @@ const PersonasPage = async ({ searchParams }: PersonasPageProps) => {
           area: toOptions(areaRows),
           puesto: toOptions(positionRows),
           sucursal: toOptions(siteRows),
+          motivoBaja: toOptions(reasonRows),
           jefe: managers.map((manager) => ({
             value: manager.id,
             label: formatPersonName(manager),
