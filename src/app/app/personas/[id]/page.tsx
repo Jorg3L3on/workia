@@ -5,17 +5,33 @@ import { FileSignatureIcon, PencilIcon } from "lucide-react";
 
 import { pageTitles } from "@/lib/brand/chrome-copy";
 
-import { AuditEventList } from "@/components/audit/audit-event-list";
 import { PersonContractsSection } from "@/components/contracts/person-contracts-section";
 import { PersonAssetsSection } from "@/components/resguardo/person-assets-section";
-import { PersonExpedienteTabs } from "@/components/people/person-expediente-tabs";
 import { PersonActionsMenu } from "@/components/people/person-actions-menu";
+import { PersonBajaCard } from "@/components/people/person-baja-card";
+import { PersonCredential } from "@/components/people/person-credential";
+import {
+  DetailCard,
+  DetailFieldList,
+} from "@/components/people/person-detail-card";
+import {
+  DETAIL_CARDS,
+  contractFact,
+  isPersonFormField,
+  isPersonFormSection,
+  personEditHref,
+  personInitials,
+  seniorityFact,
+  type DetailCardId,
+  type KeyFact,
+} from "@/components/people/person-detail-model";
 import { PersonForm } from "@/components/people/person-form";
+import { PersonHistory } from "@/components/people/person-history";
+import { PersonSectionNav } from "@/components/people/person-section-nav";
 import { SectionSkeleton } from "@/components/loading/page-skeletons";
 import { PageBreadcrumbLabel } from "@/components/layout/app-breadcrumbs";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/layout/page-header";
-import { listAuditEvents } from "@/lib/audit";
 import {
   listActiveAreas,
   listActivePositions,
@@ -25,6 +41,8 @@ import {
   listActiveContractTemplates,
   listContractsByPerson,
 } from "@/lib/contracts";
+import { contractTypeLabels, formatContractDate } from "@/lib/contracts/schema";
+import { isoToday } from "@/lib/format/date";
 import { listAssetsByPerson } from "@/lib/resguardo";
 import { getPersonWithRelations, listPersonBeneficiaries } from "@/lib/people";
 import { requirePeopleRead } from "@/lib/people/auth";
@@ -64,46 +82,32 @@ const buildSiteLabel = (
 
 export const dynamic = "force-dynamic";
 
-const formatAddress = (person: {
-  domicilioCalle: string | null;
-  domicilioNumeroExterior: string | null;
-  domicilioNumeroInterior: string | null;
-  domicilioColonia: string | null;
-  domicilioMunicipio: string | null;
-  domicilioEstado: string | null;
-  domicilioCodigoPostal: string | null;
-}) => formatMexicanAddress(person);
-
 type PersonaDetailPageProps = {
   params: Promise<{ id: string }>;
   searchParams: Promise<{
     edit?: string;
+    /** With edit=1: the form section to open at (seccion-…). */
+    seccion?: string;
+    /** With seccion: the field to focus. */
+    campo?: string;
     saved?: string;
     contract?: string;
     emit?: string;
   }>;
 };
 
-const PersonHistory = async ({
+/** Resguardo loads on its own so the rest of the expediente does not wait. */
+const PersonAssetsCard = async ({
   companyId,
   personId,
 }: {
   companyId: string;
   personId: string;
 }) => {
-  const auditEvents = await listAuditEvents({
-    companyId,
-    resourceType: "person",
-    resourceId: personId,
-    limit: 50,
-  });
+  const assets = await listAssetsByPerson(companyId, personId);
 
   return (
-    <AuditEventList
-      emptyMessage="Aún no hay cambios registrados para esta persona."
-      events={auditEvents}
-      layout="inset"
-    />
+    <PersonAssetsSection assets={assets} canReadAssets showHeading={false} />
   );
 };
 
@@ -113,7 +117,7 @@ const PersonaDetailPage = async ({
 }: PersonaDetailPageProps) => {
   const session = await requirePeopleRead();
   const { id } = await params;
-  const { edit, saved, contract, emit } = await searchParams;
+  const { edit, seccion, campo, saved, contract, emit } = await searchParams;
 
   const [
     person,
@@ -125,9 +129,6 @@ const PersonaDetailPage = async ({
     canUpdateContracts,
     canReadAssets,
     canSeeCompensation,
-    personContracts,
-    contractTemplates,
-    personAssets,
     positionActivities,
     beneficiaries,
   ] = await Promise.all([
@@ -140,11 +141,6 @@ const PersonaDetailPage = async ({
     userHasPermission(session.user.id, "contracts:update"),
     userHasPermission(session.user.id, "assets:read"),
     userHasPermission(session.user.id, "compensation:read"),
-    listContractsByPerson(session.companyId, id),
-    listActiveContractTemplates(session.companyId),
-    userHasPermission(session.user.id, "assets:read").then((allowed) =>
-      allowed ? listAssetsByPerson(session.companyId, id) : Promise.resolve([]),
-    ),
     listActivitiesForPersonPosition(session.companyId, id),
     listPersonBeneficiaries(session.companyId, id),
   ]);
@@ -164,6 +160,7 @@ const PersonaDetailPage = async ({
       listActivePositions(session.companyId),
       listActiveSites(session.companyId),
     ]);
+    const initialSection = isPersonFormSection(seccion) ? seccion : undefined;
 
     return (
       <div className="mx-auto w-full max-w-5xl">
@@ -175,6 +172,9 @@ const PersonaDetailPage = async ({
             parentesco: item.parentesco,
             porcentaje: item.porcentaje,
           }))}
+          initialField={
+            initialSection && isPersonFormField(campo) ? campo : undefined
+          }
           initialManager={
             person.manager
               ? {
@@ -183,6 +183,7 @@ const PersonaDetailPage = async ({
                 }
               : null
           }
+          initialSection={initialSection}
           mode="edit"
           person={person}
           positions={positions}
@@ -193,12 +194,21 @@ const PersonaDetailPage = async ({
     );
   }
 
+  // Contracts (and their templates) only load for contracts:read.
+  const [personContracts, contractTemplates] = canReadContracts
+    ? await Promise.all([
+        listContractsByPerson(session.companyId, id),
+        listActiveContractTemplates(session.companyId),
+      ])
+    : [[], []];
+
+  const today = isoToday();
+  const canEdit = canUpdate && !isDeleted;
   const canEmit = canCreateContracts && canReadContracts && !isDeleted;
+  const vigente = personContracts.find((item) => item.status === "vigente");
   // «Decidir renovación» needs positions only when there is something to decide.
   const renewalPositions =
-    canUpdateContracts &&
-    !isDeleted &&
-    personContracts.some((item) => item.status === "vigente" && item.endDate)
+    canUpdateContracts && !isDeleted && vigente?.endDate
       ? (await listActivePositions(session.companyId)).map((position) => ({
           id: position.id,
           name: position.name,
@@ -209,79 +219,155 @@ const PersonaDetailPage = async ({
     person.position?.name,
     person.area?.name,
     person.site?.name,
-    person.fechaIngreso
-      ? `ingresó ${formatDateLabel(person.fechaIngreso)}`
-      : null,
   ]
     .filter(Boolean)
     .join(" · ");
+  const horario = formatHorarioToken(person.schedule);
+  const editAction = (
+    section: Parameters<typeof personEditHref>[1],
+    field?: string,
+  ) =>
+    canEdit
+      ? { label: "Editar", href: personEditHref(person.id, section, field) }
+      : null;
 
-  const defaultTab =
+  const facts: KeyFact[] = [
+    {
+      id: "antiguedad",
+      label: "Antigüedad",
+      // Iniciativa 2: the seniority date of the current period and, on
+      // baja, the baja date as `asOf`.
+      ...seniorityFact({
+        seniorityDate: person.fechaIngreso,
+        asOf: person.status === "baja" ? null : today,
+      }),
+    },
+    {
+      id: "ingreso",
+      label: "Ingreso",
+      value: person.fechaIngreso
+        ? formatDateLabel(person.fechaIngreso)
+        : "Sin capturar",
+    },
+    ...(canReadContracts
+      ? [
+          {
+            id: "contrato" as const,
+            label: "Contrato vigente",
+            ...contractFact(
+              vigente
+                ? {
+                    typeLabel: contractTypeLabels[vigente.type],
+                    endDate: vigente.endDate,
+                  }
+                : null,
+              today,
+              formatContractDate,
+            ),
+          },
+        ]
+      : []),
+    {
+      id: "jefe",
+      label: "Jefe directo",
+      value: person.manager
+        ? formatPersonName(person.manager)
+        : "Sin jefe directo",
+      href: person.manager ? `/app/personas/${person.manager.id}` : undefined,
+    },
+    {
+      id: "horario",
+      label: "Horario",
+      value: horario === "—" ? "Sin horario" : horario,
+    },
+  ];
+
+  // Contrato lands first on ?emit=1 / ?contract=created (they opened its tab).
+  const landOn: DetailCardId | undefined =
     (emit === "1" || contract === "created") && canReadContracts && !isDeleted
-      ? "contratos"
-      : "datos";
+      ? "contrato"
+      : undefined;
+
+  const cards: DetailCardId[] = [
+    ...(person.status === "baja" ? (["baja"] as const) : []),
+    "identidad",
+    "laboral",
+    "contacto",
+    ...(canReadContracts ? (["contrato"] as const) : []),
+    "fiscal",
+    "datos-mexico",
+    ...(canReadAssets ? (["resguardo"] as const) : []),
+    ...(canReadAudit ? (["historial"] as const) : []),
+  ];
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
       <PageBreadcrumbLabel label={personName} />
-      <PageHeader
-        menu={
-          <PersonActionsMenu
-            deleteAction={
-              canDelete && !isDeleted
-                ? deletePersonAction.bind(null, person.id)
-                : undefined
+
+      <PersonCredential
+        facts={facts}
+        header={
+          <PageHeader
+            menu={
+              <PersonActionsMenu
+                deleteAction={
+                  canDelete && !isDeleted
+                    ? deletePersonAction.bind(null, person.id)
+                    : undefined
+                }
+                emitContractHref={canEmit ? emitHref : undefined}
+                personId={person.id}
+                personName={personName}
+                showConstancia={canReadContracts}
+                showStartAlta={canEdit && person.status === "activa"}
+                status={person.status}
+                statusAction={
+                  canEdit
+                    ? setPersonStatusAction.bind(
+                        null,
+                        person.id,
+                        person.status === "baja" ? "activa" : "baja",
+                      )
+                    : undefined
+                }
+              />
             }
-            emitContractHref={canEmit ? emitHref : undefined}
-            personId={person.id}
-            personName={personName}
-            showConstancia={canReadContracts}
-            showStartAlta={
-              canUpdate && !isDeleted && person.status === "activa"
+            meta={personMeta || undefined}
+            primary={
+              canEdit
+                ? {
+                    label: "Editar",
+                    icon: PencilIcon,
+                    href: `/app/personas/${person.id}?edit=1`,
+                  }
+                : null
             }
-            status={person.status}
-            statusAction={
-              canUpdate && !isDeleted
-                ? setPersonStatusAction.bind(
-                    null,
-                    person.id,
-                    person.status === "baja" ? "activa" : "baja",
-                  )
-                : undefined
+            secondary={
+              canEmit
+                ? {
+                    label: "Emitir contrato",
+                    icon: FileSignatureIcon,
+                    href: emitHref,
+                  }
+                : null
             }
+            status={
+              <>
+                <Badge tone={toneFor("person", person.status)}>
+                  {personStatusLabels[person.status]}
+                </Badge>
+                {isDeleted ? (
+                  <Badge tone={deletedTone}>{personDeletedLabel}</Badge>
+                ) : null}
+              </>
+            }
+            title={personName}
+            variant="detail"
           />
         }
-        meta={personMeta || undefined}
-        primary={
-          canUpdate && !isDeleted
-            ? {
-                label: "Editar",
-                icon: PencilIcon,
-                href: `/app/personas/${person.id}?edit=1`,
-              }
-            : null
-        }
-        secondary={
-          canEmit
-            ? {
-                label: "Emitir contrato",
-                icon: FileSignatureIcon,
-                href: emitHref,
-              }
-            : null
-        }
-        status={
-          <>
-            <Badge tone={toneFor("person", person.status)}>
-              {personStatusLabels[person.status]}
-            </Badge>
-            {isDeleted ? (
-              <Badge tone={deletedTone}>{personDeletedLabel}</Badge>
-            ) : null}
-          </>
-        }
-        title={personName}
-        variant="detail"
+        initials={personInitials(person)}
+        isDeleted={isDeleted}
+        status={person.status}
       />
 
       <div className="space-y-4 empty:hidden">
@@ -314,210 +400,301 @@ const PersonaDetailPage = async ({
         ) : null}
       </div>
 
-      <PersonExpedienteTabs
-        key={defaultTab}
-        contratos={
-          canReadContracts ? (
-            <PersonContractsSection
-              canCreate={canCreateContracts}
-              canDecide={canUpdateContracts && !isDeleted}
-              personName={personName}
-              positions={renewalPositions}
-              canSeeCompensation={canSeeCompensation}
-              contracts={personContracts}
-              personContext={{
-                nombres: person.nombres,
-                apellidoPaterno: person.apellidoPaterno,
-                apellidoMaterno: person.apellidoMaterno,
-                puesto: person.position?.name ?? null,
-                area: person.area?.name ?? null,
-                sucursal: buildSiteLabel(person.site),
-                rfc: person.rfc,
-                horario: formatHorarioToken(person.schedule),
-              }}
-              personId={person.id}
-              showEmitForm={emit === "1" && !isDeleted}
-              templates={contractTemplates}
-            />
-          ) : undefined
-        }
-        datos={
-          <div className="workia-pass-card p-5 sm:p-6">
-            <dl className="grid gap-3 text-sm sm:grid-cols-2">
-              <div>
-                <dt className="text-muted-foreground">Nombre(s)</dt>
-                <dd className="font-medium">{person.nombres}</dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">Apellido paterno</dt>
-                <dd className="font-medium">{person.apellidoPaterno}</dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">Apellido materno</dt>
-                <dd className="font-medium">{person.apellidoMaterno ?? "—"}</dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">Fecha de ingreso</dt>
-                <dd className="font-medium">
-                  {formatDateLabel(person.fechaIngreso)}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">Fecha de nacimiento</dt>
-                <dd className="font-medium">
-                  {formatDateLabel(person.fechaNacimiento)}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">Ubicación</dt>
-                <dd className="font-medium">
-                  {person.site
-                    ? `${person.site.name} (${siteKindLabels[person.site.kind]})`
-                    : "—"}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">Área</dt>
-                <dd className="font-medium">{person.area?.name ?? "—"}</dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">Puesto</dt>
-                <dd className="font-medium">{person.position?.name ?? "—"}</dd>
-              </div>
-              <div className="sm:col-span-2" data-testid="person-schedule">
-                <dt className="text-muted-foreground">Horario</dt>
-                <dd className="font-medium">
-                  {formatHorarioToken(person.schedule)}
-                </dd>
-              </div>
-              {person.position ? (
-                <div className="sm:col-span-2">
-                  <dt className="text-muted-foreground">
-                    Actividades del puesto
-                  </dt>
-                  <dd>
-                    {positionActivities.length === 0 ? (
-                      <span className="font-medium">—</span>
-                    ) : (
-                      <ul className="list-disc space-y-1 pl-5">
-                        {positionActivities.map((activity) => (
-                          <li className="font-medium" key={activity.id}>
-                            {activity.name}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </dd>
-                </div>
-              ) : null}
-              <div className="sm:col-span-2">
-                <dt className="text-muted-foreground">Jefe directo</dt>
-                <dd className="font-medium">
-                  {person.manager ? formatPersonName(person.manager) : "—"}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">RFC</dt>
-                <dd className="font-medium">{person.rfc ?? "—"}</dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">CURP</dt>
-                <dd className="font-medium">{person.curp ?? "—"}</dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">NSS</dt>
-                <dd className="font-medium">{person.nss ?? "—"}</dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">Teléfono</dt>
-                <dd className="font-medium">{person.telefono ?? "—"}</dd>
-              </div>
-              <div className="sm:col-span-2">
-                <dt className="text-muted-foreground">Correo</dt>
-                <dd className="font-medium">{person.email ?? "—"}</dd>
-              </div>
-              <div className="border-t pt-3 sm:col-span-2">
-                <dt className="text-sm font-semibold">Datos México</dt>
-              </div>
-              <div className="sm:col-span-2">
-                <dt className="text-muted-foreground">Domicilio</dt>
-                <dd className="font-medium">{formatAddress(person) ?? "—"}</dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">Estado civil</dt>
-                <dd className="font-medium">
-                  {person.estadoCivil
-                    ? maritalStatusLabels[person.estadoCivil]
-                    : "—"}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">Sexo</dt>
-                <dd className="font-medium">
-                  {person.sexo ? sexLabels[person.sexo] : "—"}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">Lugar de nacimiento</dt>
-                <dd className="font-medium">{person.lugarNacimiento ?? "—"}</dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">Nacionalidad</dt>
-                <dd className="font-medium">{person.nacionalidad ?? "—"}</dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">
-                  Clave de elector (INE)
-                </dt>
-                <dd className="font-medium">{person.ineClaveElector ?? "—"}</dd>
-              </div>
-              <div className="sm:col-span-2">
-                <dt className="text-muted-foreground">Beneficiarios</dt>
-                <dd>
-                  {beneficiaries.length === 0 ? (
-                    <span className="font-medium">—</span>
-                  ) : (
-                    <ul className="space-y-1">
-                      {beneficiaries.map((item) => (
-                        <li className="font-medium" key={item.id}>
-                          {item.nombre} · {item.parentesco} ·{" "}
-                          {item.porcentaje.toLocaleString("es-MX")} %
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </dd>
-              </div>
-            </dl>
-          </div>
-        }
-        defaultValue={defaultTab}
-        historial={
-          canReadAudit ? (
-            <section className="space-y-3">
-              <div>
-                <h2 className="text-base font-semibold">
-                  Historial de cambios
-                </h2>
-                <p className="text-muted-foreground text-sm">
-                  Quién cambió qué en este expediente.
-                </p>
-              </div>
-              <Suspense fallback={<SectionSkeleton rows={3} />}>
-                <PersonHistory companyId={session.companyId} personId={id} />
-              </Suspense>
-            </section>
-          ) : undefined
-        }
-        resguardo={
-          canReadAssets ? (
-            <PersonAssetsSection
-              assets={personAssets}
-              canReadAssets={canReadAssets}
-            />
-          ) : undefined
-        }
+      <PersonSectionNav
+        cards={cards.map((card) => ({ id: card, label: DETAIL_CARDS[card] }))}
+        landOn={landOn}
       />
+
+      <div className="workia-detail-grid flex flex-col gap-4">
+        {/* Iniciativa 2 passes the baja details and «Reingresar» here. */}
+        <PersonBajaCard status={person.status} />
+
+        {/* Two stacks, not rows: cards keep their own height, and on phones
+            the DOM order (left stack, then right) is the reading order. */}
+        <div className="grid items-start gap-4 lg:grid-cols-2">
+          <div className="flex min-w-0 flex-col gap-4">
+            <DetailCard action={editAction("nombre")} id="identidad">
+              <DetailFieldList
+                canEdit={canEdit}
+                fields={[
+                  { label: "Nombre(s)", value: person.nombres },
+                  { label: "Apellido paterno", value: person.apellidoPaterno },
+                  {
+                    label: "Apellido materno",
+                    value: person.apellidoMaterno,
+                    section: "nombre",
+                    field: "apellidoMaterno",
+                  },
+                  {
+                    label: "Fecha de nacimiento",
+                    value: person.fechaNacimiento
+                      ? formatDateLabel(person.fechaNacimiento)
+                      : null,
+                    section: "empresa",
+                    field: "fechaNacimiento",
+                  },
+                ]}
+                personId={person.id}
+              />
+            </DetailCard>
+
+            <DetailCard action={editAction("empresa")} id="laboral">
+              <DetailFieldList
+                canEdit={canEdit}
+                fields={[
+                  {
+                    label: "Fecha de ingreso",
+                    value: person.fechaIngreso
+                      ? formatDateLabel(person.fechaIngreso)
+                      : null,
+                    section: "empresa",
+                    field: "fechaIngreso",
+                  },
+                  {
+                    label: "Ubicación",
+                    value: buildSiteLabel(person.site),
+                    section: "empresa",
+                    field: "siteId",
+                  },
+                  {
+                    label: "Área",
+                    value: person.area?.name,
+                    section: "empresa",
+                    field: "areaId",
+                  },
+                  {
+                    label: "Puesto",
+                    value: person.position?.name,
+                    section: "empresa",
+                    field: "positionId",
+                  },
+                  {
+                    label: "Jefe directo",
+                    value: person.manager
+                      ? formatPersonName(person.manager)
+                      : null,
+                    section: "empresa",
+                    field: "managerId",
+                    wide: true,
+                  },
+                  {
+                    label: "Horario",
+                    value: horario,
+                    section: "horario",
+                    wide: true,
+                    testId: "person-schedule",
+                  },
+                  // Read-only: the activities come from the puesto's catalog.
+                  ...(person.position && positionActivities.length > 0
+                    ? [
+                        {
+                          label: "Actividades del puesto",
+                          value: (
+                            <ul className="list-disc space-y-1 pl-5">
+                              {positionActivities.map((activity) => (
+                                <li key={activity.id}>{activity.name}</li>
+                              ))}
+                            </ul>
+                          ),
+                          wide: true,
+                        },
+                      ]
+                    : []),
+                ]}
+                personId={person.id}
+              />
+            </DetailCard>
+
+            <DetailCard
+              action={editAction("identificadores", "telefono")}
+              id="contacto"
+            >
+              <DetailFieldList
+                canEdit={canEdit}
+                fields={[
+                  {
+                    label: "Teléfono",
+                    value: person.telefono,
+                    section: "identificadores",
+                    field: "telefono",
+                  },
+                  {
+                    label: "Correo",
+                    value: person.email,
+                    section: "identificadores",
+                    field: "email",
+                  },
+                ]}
+                personId={person.id}
+              />
+            </DetailCard>
+          </div>
+          <div className="flex min-w-0 flex-col gap-4">
+            {canReadContracts ? (
+              <DetailCard
+                action={
+                  canEmit && !vigente
+                    ? { label: "Emitir contrato", href: emitHref }
+                    : {
+                        label: "Ver constancia",
+                        href: `/app/personas/${person.id}/constancia`,
+                      }
+                }
+                id="contrato"
+              >
+                <PersonContractsSection
+                  canCreate={canCreateContracts}
+                  canDecide={canUpdateContracts && !isDeleted}
+                  personName={personName}
+                  positions={renewalPositions}
+                  canSeeCompensation={canSeeCompensation}
+                  contracts={personContracts}
+                  personContext={{
+                    nombres: person.nombres,
+                    apellidoPaterno: person.apellidoPaterno,
+                    apellidoMaterno: person.apellidoMaterno,
+                    puesto: person.position?.name ?? null,
+                    area: person.area?.name ?? null,
+                    sucursal: buildSiteLabel(person.site),
+                    rfc: person.rfc,
+                    horario,
+                  }}
+                  personId={person.id}
+                  showEmitForm={emit === "1" && !isDeleted}
+                  showHeading={false}
+                  templates={contractTemplates}
+                />
+              </DetailCard>
+            ) : null}
+
+            <DetailCard
+              action={editAction("identificadores", "rfc")}
+              id="fiscal"
+            >
+              <DetailFieldList
+                canEdit={canEdit}
+                fields={[
+                  {
+                    label: "RFC",
+                    value: person.rfc,
+                    section: "identificadores",
+                    field: "rfc",
+                  },
+                  {
+                    label: "CURP",
+                    value: person.curp,
+                    section: "identificadores",
+                    field: "curp",
+                  },
+                  {
+                    label: "NSS",
+                    value: person.nss,
+                    section: "identificadores",
+                    field: "nss",
+                  },
+                ]}
+                personId={person.id}
+              />
+            </DetailCard>
+
+            <DetailCard action={editAction("datos-mexico")} id="datos-mexico">
+              <DetailFieldList
+                canEdit={canEdit}
+                fields={[
+                  {
+                    label: "Domicilio",
+                    value: formatMexicanAddress(person),
+                    section: "datos-mexico",
+                    field: "domicilioCalle",
+                    wide: true,
+                  },
+                  {
+                    label: "Estado civil",
+                    value: person.estadoCivil
+                      ? maritalStatusLabels[person.estadoCivil]
+                      : null,
+                    section: "datos-mexico",
+                    field: "estadoCivil",
+                  },
+                  {
+                    label: "Sexo",
+                    value: person.sexo ? sexLabels[person.sexo] : null,
+                    section: "datos-mexico",
+                    field: "sexo",
+                  },
+                  {
+                    label: "Lugar de nacimiento",
+                    value: person.lugarNacimiento,
+                    section: "datos-mexico",
+                    field: "lugarNacimiento",
+                  },
+                  {
+                    label: "Nacionalidad",
+                    value: person.nacionalidad,
+                    section: "datos-mexico",
+                    field: "nacionalidad",
+                  },
+                  {
+                    label: "Clave de elector (INE)",
+                    value: person.ineClaveElector,
+                    section: "datos-mexico",
+                    field: "ineClaveElector",
+                  },
+                  {
+                    label: "Beneficiarios",
+                    value:
+                      beneficiaries.length > 0 ? (
+                        <ul className="space-y-1">
+                          {beneficiaries.map((item) => (
+                            <li key={item.id}>
+                              {item.nombre} · {item.parentesco} ·{" "}
+                              {item.porcentaje.toLocaleString("es-MX")} %
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null,
+                    section: "beneficiarios",
+                    wide: true,
+                  },
+                ]}
+                personId={person.id}
+              />
+            </DetailCard>
+          </div>
+        </div>
+
+        {canReadAssets ? (
+          <DetailCard
+            action={{ label: "Ver todo", href: "/app/resguardo" }}
+            description="Activos asignados actualmente a esta persona."
+            id="resguardo"
+            title="Equipo en resguardo"
+          >
+            <Suspense fallback={<SectionSkeleton rows={2} />}>
+              <PersonAssetsCard
+                companyId={session.companyId}
+                personId={person.id}
+              />
+            </Suspense>
+          </DetailCard>
+        ) : null}
+
+        {canReadAudit ? (
+          <DetailCard
+            action={{
+              label: "Ver todo",
+              href: `/app/auditoria?resourceType=person&resourceId=${person.id}`,
+            }}
+            description="Quién cambió qué en este expediente."
+            id="historial"
+            title="Historial de cambios"
+          >
+            <Suspense fallback={<SectionSkeleton rows={3} />}>
+              <PersonHistory companyId={session.companyId} personId={id} />
+            </Suspense>
+          </DetailCard>
+        ) : null}
+      </div>
     </div>
   );
 };
