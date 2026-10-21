@@ -134,7 +134,9 @@ describe("buildPeopleWhere", () => {
             ? { field: id, op, from: "2026-01-01", to: "2026-02-01" }
             : op === "next_days"
               ? { field: id, op, days: 30 }
-              : { field: id, op };
+              : op === "min_years" || op === "max_years"
+                ? { field: id, op, years: 5 }
+                : { field: id, op };
       const filter = coercePeopleFilter({ conditions: [condition] });
       expect(filter.conditions, id).toHaveLength(1);
       const base = render(EMPTY_PEOPLE_FILTER).sql;
@@ -142,6 +144,137 @@ describe("buildPeopleWhere", () => {
         base.length,
       );
     }
+  });
+});
+
+describe("baja and antigüedad fields", () => {
+  const one = (condition: unknown) =>
+    render(coercePeopleFilter({ conditions: [condition] }));
+
+  it("any condition on Fecha de baja implies Relación = Baja", () => {
+    for (const condition of [
+      { field: "baja", op: "between", from: "2026-01-01", to: "2026-06-30" },
+      { field: "baja", op: "before", from: "2026-01-01" },
+      { field: "baja", op: "after", from: "2026-01-01" },
+      { field: "baja", op: "empty" },
+      { field: "baja", op: "not_empty" },
+    ]) {
+      const { sql, params } = one(condition);
+      expect(sql, condition.op).toContain('"people"."status" = $');
+      expect(params, condition.op).toContain("baja");
+    }
+  });
+
+  it("a fecha de baja range reads the current period and starts from (company_id, fecha_baja)", () => {
+    const { sql, params } = one({
+      field: "baja",
+      op: "between",
+      from: "2026-01-01",
+      to: "2026-06-30",
+    });
+    expect(sql).toContain(
+      "in (select ep.person_id from employment_periods ep where ep.company_id = $",
+    );
+    expect(sql).toContain(
+      "order by (e.fecha_baja is null and not e.baja_sin_fecha) desc, e.fecha_ingreso desc nulls last, e.created_at desc",
+    );
+    expect(sql).toContain("ep.fecha_baja between");
+    // Every subquery is scoped by the company.
+    expect(params.filter((param) => param === COMPANY).length).toBe(3);
+  });
+
+  it("tipo, motivo and recontratable read the current period of the company", () => {
+    const motivo = one({ field: "motivoBaja", op: "is", values: [AREA] });
+    expect(motivo.sql).toContain("e.company_id = $");
+    expect(motivo.sql).toContain("ep.motivo_baja_id in ($");
+    expect(motivo.params).toContain(AREA);
+    expect(motivo.params).toContain(COMPANY);
+
+    expect(
+      one({ field: "motivoBaja", op: "is_not", values: [AREA] }).sql,
+    ).toContain("not exists (select 1 from");
+    expect(
+      one({ field: "tipoBaja", op: "is", values: ["despido"] }).sql,
+    ).toContain("ep.tipo_baja::text in ($");
+
+    const both = one({
+      field: "recontratable",
+      op: "is",
+      values: ["si", "no"],
+    });
+    expect(both.sql).toContain("(ep.recontratable or not ep.recontratable)");
+    expect(
+      one({ field: "recontratable", op: "is", values: ["no"] }).sql,
+    ).toContain("not ep.recontratable");
+  });
+
+  it("por revisar looks at every period of the person", () => {
+    const { sql } = one({
+      field: "revisionBaja",
+      op: "is",
+      values: ["sin_fecha", "revision"],
+    });
+    expect(sql).toContain("e.baja_sin_fecha");
+    expect(sql).toContain("e.requiere_revision");
+    expect(sql).not.toContain("limit 1");
+  });
+
+  it("antigüedad counts years from the stored seniority date, up to the baja", () => {
+    const { sql, params } = one({
+      field: "antiguedad",
+      op: "min_years",
+      years: 5,
+    });
+    expect(sql).toContain("coalesce((select ep.fecha_antiguedad from");
+    expect(sql).toContain('"people"."fecha_ingreso")');
+    expect(sql).toContain("make_interval(years => $");
+    expect(sql).toContain("least(coalesce(");
+    expect(sql).toMatch(/\) <= \(\(case when/);
+    expect(params).toContain(5);
+    expect(params).toContain(TODAY);
+
+    expect(one({ field: "antiguedad", op: "max_years", years: 1 }).sql).toMatch(
+      /\) > \(\(case when/,
+    );
+    expect(
+      one({
+        field: "antiguedad",
+        op: "between",
+        from: "2020-01-01",
+        to: "2020-12-31",
+      }).sql,
+    ).toContain('"people"."fecha_ingreso") between $');
+  });
+
+  it("rejects years outside 1–60 and keeps only the years", () => {
+    expect(
+      coercePeopleFilter({
+        conditions: [{ field: "antiguedad", op: "min_years", years: 0 }],
+      }).conditions,
+    ).toEqual([]);
+    expect(
+      coercePeopleFilter({
+        conditions: [{ field: "antiguedad", op: "min_years" }],
+      }).conditions,
+    ).toEqual([]);
+    expect(
+      coercePeopleFilter({
+        conditions: [
+          {
+            field: "antiguedad",
+            op: "max_years",
+            years: 3,
+            from: "2020-01-01",
+          },
+        ],
+      }).conditions,
+    ).toEqual([{ field: "antiguedad", op: "max_years", years: 3 }]);
+    // Years belong to Antigüedad only.
+    expect(
+      coercePeopleFilter({
+        conditions: [{ field: "ingreso", op: "min_years", years: 3 }],
+      }).conditions,
+    ).toEqual([]);
   });
 });
 
@@ -198,5 +331,30 @@ describe("filter helpers", () => {
       coercePeopleColumns(["salarioMensual", "finContrato"], payroll),
     ).toEqual(["salarioMensual", "finContrato"]);
     expect(canSeePeopleColumn("salarioDiario", contractsOnly)).toBe(false);
+  });
+
+  it("shows the baja columns to everyone and the finiquito amount only with compensation:read", () => {
+    const baja = [
+      "fechaBaja",
+      "tipoBaja",
+      "motivoBaja",
+      "recontratable",
+      "fechaAntiguedad",
+      "antiguedad",
+    ] as const;
+
+    expect(coercePeopleColumns([...baja, "finiquitoMonto"], new Set())).toEqual(
+      baja,
+    );
+    expect(
+      coercePeopleColumns(
+        "fechaBaja.finiquitoMonto",
+        new Set(["contracts:read"]),
+      ),
+    ).toEqual(["fechaBaja"]);
+    // The amount is payroll, not contract data: compensation:read alone is enough.
+    expect(
+      coercePeopleColumns(["finiquitoMonto"], new Set(["compensation:read"])),
+    ).toEqual(["finiquitoMonto"]);
   });
 });

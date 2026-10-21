@@ -74,6 +74,36 @@ describe("PersonasDataTable (server paged)", () => {
     ).toBeTruthy();
   });
 
+  it("formats the baja columns: dates as dd/mm/aaaa, the finiquito as money", () => {
+    render(
+      <PersonasDataTable
+        {...props()}
+        columns={["fechaBaja", "motivoBaja", "antiguedad", "finiquitoMonto"]}
+        people={[
+          {
+            id: "person-baja",
+            name: "Persona Baja",
+            status: "baja",
+            deleted: false,
+            cells: {
+              fechaBaja: "2026-02-15",
+              motivoBaja: "Cambio de residencia",
+              antiguedad: "5 años, 11 meses",
+              finiquitoMonto: "12345.67",
+            },
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.getAllByText("15/02/2026").length).toBeGreaterThan(0);
+    expect(screen.queryByText("2026-02-15")).toBeNull();
+    expect(screen.getAllByText("Cambio de residencia").length).toBeGreaterThan(
+      0,
+    );
+    expect(screen.getAllByText(/12,345\.67/).length).toBeGreaterThan(0);
+  });
+
   it("shows the borrados rows when the server sends them", () => {
     render(
       <PersonasDataTable
