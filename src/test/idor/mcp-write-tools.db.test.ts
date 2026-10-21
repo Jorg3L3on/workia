@@ -762,42 +762,148 @@ describe("people", () => {
     expect(code(done)).toBe("FORBIDDEN_RBAC");
   });
 
-  it("set_person_status records a baja with warnings and a reactivation", async () => {
-    const { preview, done } = await confirm(tokens.a, "set_person_status", {
-      person_id: a.person.id,
+  /** A person of A of its own, so the bajas below leave the fixtures alone. */
+  const freshPerson = async (nombres: string) =>
+    (
+      await ownerDb
+        .insert(people)
+        .values({
+          companyId: a.companyId,
+          nombres,
+          apellidoPaterno: "Estatus",
+          fechaIngreso: "2022-01-10",
+        })
+        .returning()
+    )[0];
+
+  it("set_person_status warns about the vigente contract and the assets", async () => {
+    const person = await freshPerson("Avisos");
+    await ownerDb.insert(contracts).values({
+      companyId: a.companyId,
+      personId: person.id,
+      type: "indeterminado",
+      startDate: "2022-01-10",
+      generatedText: "texto",
+    });
+    await ownerDb.insert(assets).values({
+      companyId: a.companyId,
+      name: "Tableta",
+      identifier: `TB-${person.id.slice(0, 8)}`,
+      category: "tablet",
+      holderId: person.id,
+      status: "asignado",
+    });
+    const preview = await call(tokens.a, "set_person_status", {
+      person_id: person.id,
       status: "baja",
-      motivo: "Renuncia",
+      fecha_baja: "2026-06-30",
+      tipo_baja: "voluntaria",
+      motivo: "Renuncia voluntaria",
+      recontratable: true,
+      idempotency_key: "key-status-warnings",
     });
 
-    expect(preview.structuredContent.preview.warnings.join(" ")).toMatch(
-      /activo/,
+    const warnings = preview.structuredContent.preview.warnings.join(" ");
+    expect(warnings).toMatch(/activo/);
+    expect(warnings).toMatch(/Terminado/);
+  });
+
+  it("set_person_status records a baja with its fields and a reingreso", async () => {
+    const person = await freshPerson("Reingreso");
+    // A baja without the required fields lists what is missing and the catalog.
+    const missing = await call(tokens.a, "set_person_status", {
+      person_id: person.id,
+      status: "baja",
+      motivo: "Se fue",
+      idempotency_key: "key-status-missing",
+    });
+    expect(code(missing)).toBe("VALIDATION");
+    const details = JSON.stringify(missing.structuredContent.error);
+    expect(details).toMatch(/recontratable/);
+    expect(details).toMatch(/Renuncia voluntaria/);
+
+    const { preview, done } = await confirm(tokens.a, "set_person_status", {
+      person_id: person.id,
+      status: "baja",
+      fecha_baja: "2026-06-30",
+      tipo_baja: "voluntaria",
+      // Backwards compatible: the motivo by its catalog name.
+      motivo: "renuncia voluntaria",
+      comentario: "Se muda de ciudad",
+      recontratable: false,
+    });
+
+    expect(preview.structuredContent.preview.summary).toMatch(
+      /no recontratable/,
     );
     expect(done.structuredContent).toMatchObject({
       status: "done",
       person: { status: "baja" },
+      contrato_terminado: null,
     });
     const [event] = await eventsOf(done);
     expect(event).toMatchObject({ action: "baja", source: "mcp" });
+    expect(event.payload).toMatchObject({
+      changes: {
+        fechaBaja: { to: "2026-06-30" },
+        motivoBaja: { to: "Renuncia voluntaria" },
+        recontratable: { to: false },
+      },
+    });
 
     const back = await confirm(tokens.a, "set_person_status", {
-      person_id: a.person.id,
+      person_id: person.id,
       status: "activa",
+      fecha_ingreso: "2026-08-01",
     });
-    const [reactivation] = await eventsOf(back.done);
-    expect(reactivation.action).toBe("reactivate");
+    expect(back.preview.structuredContent.preview.warnings.join(" ")).toMatch(
+      /no recontratable/,
+    );
+    const [reingreso] = await eventsOf(back.done);
+    expect(reingreso.action).toBe("reingreso");
 
     const same = await confirm(tokens.a, "set_person_status", {
-      person_id: a.person.id,
+      person_id: person.id,
       status: "activa",
     });
     expect(code(same.done)).toBe("CONFLICT");
+  });
+
+  it("set_person_status takes the finiquito amount only with compensation:read", async () => {
+    const person = await freshPerson("Finiquito");
+    const editor = await tokenFor(a, a.editor.id, ALL_WRITES);
+    const { done } = await confirm(editor, "set_person_status", {
+      person_id: person.id,
+      status: "baja",
+      fecha_baja: "2026-09-30",
+      tipo_baja: "despido",
+      motivo: "Bajo desempeño",
+      recontratable: false,
+      finiquito: { estado: "pendiente", monto: 12000 },
+    });
+    expect(code(done)).toBe("FORBIDDEN_RBAC");
+    expect(
+      (
+        await ownerDb
+          .select({ status: people.status })
+          .from(people)
+          .where(eq(people.id, person.id))
+      )[0].status,
+    ).toBe("activa");
   });
 
   it("mcp:set_person_status", async () => {
     await expectRefusedWithoutEffect(
       tokens.b,
       "set_person_status",
-      { person_id: a.person.id, status: "baja" },
+      {
+        person_id: a.person.id,
+        status: "baja",
+        fecha_baja: "2026-06-30",
+        tipo_baja: "voluntaria",
+        motivo: "Renuncia voluntaria",
+        recontratable: true,
+      },
       "NOT_FOUND",
     );
   });

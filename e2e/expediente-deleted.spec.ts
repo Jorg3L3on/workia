@@ -4,6 +4,8 @@ import { expect, test } from "@playwright/test";
 
 import { OFFICIAL_DELETED_DEMO_FULL_NAME } from "../src/lib/people/borrados-cleanup";
 
+import { chooseSelectOption } from "./choose-select-option";
+
 test.describe.configure({ mode: "serial" });
 
 const loginAsDemoAdmin = async (page: import("@playwright/test").Page) => {
@@ -125,7 +127,17 @@ test("soft-deleted expediente stays open and appears in borrados", async ({
   ).toHaveCount(0);
 });
 
-test("baja and reactivation live in the expediente menu, not the form", async ({
+/** dd/mm/aaaa a month from today: a reingreso must come after today's baja. */
+const nextMonthMx = () => {
+  const date = new Date(Date.now() + 31 * 86_400_000);
+  return [
+    String(date.getDate()).padStart(2, "0"),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    date.getFullYear(),
+  ].join("/");
+};
+
+test("baja and reingreso live in the expediente menu, not the form", async ({
   page,
 }) => {
   const suffix = Date.now().toString().slice(-6);
@@ -155,18 +167,23 @@ test("baja and reactivation live in the expediente menu, not the form", async ({
 
     await page.getByRole("button", { name: "Más acciones" }).click();
     await page.getByRole("menuitem", { name: "Dar de baja" }).click();
-    const dialog = page.getByRole("alertdialog");
+    const dialog = page.getByRole("dialog");
     await expect(dialog).toContainText("El expediente no se borra");
+    await chooseSelectOption(dialog.getByLabel("Tipo de baja"), "Voluntaria");
+    await chooseSelectOption(
+      dialog.getByLabel("Motivo"),
+      "Renuncia voluntaria",
+    );
+    await dialog.getByRole("radio", { name: "Sí" }).check();
     await dialog.getByRole("button", { name: "Dar de baja" }).click();
     await expect(dialog).toHaveCount(0);
     await expect(page.getByText("Baja", { exact: true }).first()).toBeVisible();
 
     await page.getByRole("button", { name: "Más acciones" }).click();
-    await page.getByRole("menuitem", { name: "Reactivar" }).click();
-    await page
-      .getByRole("alertdialog")
-      .getByRole("button", { name: "Reactivar" })
-      .click();
+    await page.getByRole("menuitem", { name: "Reingresar" }).click();
+    const rehire = page.getByRole("dialog");
+    await rehire.getByLabel("Fecha de ingreso").fill(nextMonthMx());
+    await rehire.getByRole("button", { name: "Reingresar" }).click();
     await expect(
       page.getByText("Activa", { exact: true }).first(),
     ).toBeVisible();

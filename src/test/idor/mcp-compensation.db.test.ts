@@ -240,3 +240,85 @@ describe("compensation through the connector", () => {
     });
   });
 });
+
+describe("finiquito amount through the connector (Iniciativa 2)", () => {
+  let leftId: string;
+
+  beforeAll(async () => {
+    const { createPerson } = await import("@/lib/people");
+    const { terminatePerson } = await import("@/lib/people/employment");
+    const { listTerminationReasons } =
+      await import("@/lib/termination-reasons");
+    const person = await createPerson(t.companyId, {
+      nombres: "Finiquito",
+      apellidoPaterno: "Conector",
+      apellidoMaterno: "",
+      email: "",
+      telefono: "",
+      fechaNacimiento: "",
+      fechaIngreso: "2021-01-04",
+      areaId: "",
+      positionId: "",
+      managerId: "",
+      siteId: "",
+      rfc: "",
+      curp: "",
+      nss: "",
+      horarioEntrada: "",
+      horarioSalidaComer: "",
+      horarioRegresoComer: "",
+      horarioSalida: "",
+      status: "activa",
+    });
+    await terminatePerson(t.companyId, person.id, {
+      fechaBaja: "2025-08-31",
+      tipoBaja: "despido",
+      motivoBajaId: (await listTerminationReasons(t.companyId))[0].id,
+      comentario: "Sin comentarios",
+      recontratable: false,
+      finiquito: { estado: "pagado", fecha: "2025-09-05", monto: 24680.5 },
+    });
+    leftId = person.id;
+  });
+
+  it("get_person shows the amount only with pii and compensation:read", async () => {
+    const periodo = async (bearer: string) =>
+      (
+        await call(bearer, "get_person", {
+          person_id: leftId,
+          include: ["periodos"],
+        })
+      ).structuredContent;
+
+    const full = await periodo(tokens.admin);
+    expect(full.periodo_laboral).toMatchObject({
+      abierto: false,
+      fecha_baja: "2025-08-31",
+      tipo_baja: "despido",
+      recontratable: false,
+      finiquito: { estado: "pagado", monto: 24680.5, monto_capturado: true },
+    });
+    expect(full.periodos_laborales).toHaveLength(1);
+
+    for (const bearer of [tokens.adminNoPii, tokens.editor]) {
+      const masked = await periodo(bearer);
+      expect(masked.periodo_laboral.finiquito).toMatchObject({
+        estado: "pagado",
+        monto: null,
+        monto_capturado: true,
+      });
+      expect(JSON.stringify(masked)).not.toContain("24680");
+    }
+  });
+
+  it("the audit log hides it without pii", async () => {
+    const audit = await tokenFor(t.admin.id, ["read", "audit"]);
+    const result = await call(audit, "list_audit_events", {
+      resource_type: "person",
+      resource_id: leftId,
+    });
+
+    expect(result.isError).toBeFalsy();
+    expect(JSON.stringify(result.structuredContent)).not.toContain("24680");
+  });
+});
