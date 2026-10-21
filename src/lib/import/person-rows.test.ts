@@ -2,12 +2,15 @@ import { describe, expect, it } from "vitest";
 
 import { curpCheckDigit } from "@/lib/people/identity";
 
+import type { EmploymentSummary } from "@/lib/people/employment";
+
 import {
   classifyPersonRow,
   diffPerson,
   findFileDuplicates,
   findManagerCycleNodes,
   normalizePersonRow,
+  planEmployment,
   possibleDuplicateKey,
   type PersonLookups,
 } from "./person-rows";
@@ -40,6 +43,24 @@ const catalogs: CatalogIndex = {
     ],
   ]),
   sites: new Map([["matriz", "c1111111-1111-4111-8111-111111111111"]]),
+  terminationReasons: new Map([
+    [
+      "renuncia voluntaria",
+      {
+        id: "d1111111-1111-4111-8111-111111111111",
+        name: "Renuncia voluntaria",
+        active: true,
+      },
+    ],
+    [
+      "jubilacion",
+      {
+        id: "d2222222-2222-4222-8222-222222222222",
+        name: "Jubilación",
+        active: false,
+      },
+    ],
+  ]),
 };
 
 const validCurp = (() => {
@@ -334,5 +355,326 @@ describe("possibleDuplicateKey", () => {
         fechaNacimiento: null,
       }),
     ).toBeNull();
+  });
+});
+
+describe("baja columns", () => {
+  const RENUNCIA = "d1111111-1111-4111-8111-111111111111";
+  const JUBILACION = "d2222222-2222-4222-8222-222222222222";
+  const bajaCells = {
+    estatus: "Baja",
+    fechaBaja: "2025-11-28",
+    tipoBaja: "voluntaria",
+    motivoBaja: " renuncia VOLUNTARIA ",
+    comentarioBaja: "Se mudó.",
+    recontratable: "si",
+  };
+  const row = (extra = {}) =>
+    normalizePersonRow({ ...base, curp: validCurp, ...extra }, catalogs, none);
+  const summary = (
+    overrides: Partial<EmploymentSummary> = {},
+  ): EmploymentSummary => ({
+    personId: "11111111-1111-4111-8111-111111111111",
+    periodId: "e1111111-1111-4111-8111-111111111111",
+    periodCount: 1,
+    abierto: true,
+    fechaIngreso: "2020-02-03",
+    fechaAntiguedad: "2020-02-03",
+    reconoceAntiguedad: false,
+    fechaBaja: null,
+    bajaSinFecha: false,
+    tipoBaja: null,
+    motivoBajaId: null,
+    motivoBaja: null,
+    comentarioBaja: null,
+    recontratable: null,
+    finiquitoEstado: null,
+    finiquitoFecha: null,
+    finiquitoMonto: null,
+    fechaBajaInferida: false,
+    requiereRevision: false,
+    ...overrides,
+  });
+  const closed = summary({
+    abierto: false,
+    fechaBaja: "2025-11-28",
+    tipoBaja: "voluntaria",
+    motivoBajaId: RENUNCIA,
+    motivoBaja: "Renuncia voluntaria",
+    comentarioBaja: "Se mudó.",
+    recontratable: true,
+  });
+  const withEmployment = (
+    person: ExistingPerson,
+    current: EmploymentSummary,
+  ): PersonLookups => ({
+    ...lookupsOf(person),
+    employment: new Map([[person.id, current]]),
+  });
+
+  it("parses the cells: labels or keys, Sí/No, the motivo by catalog name", () => {
+    const { normalized, errors } = row(bajaCells);
+
+    expect(errors).toEqual([]);
+    expect(normalized?.baja).toEqual({
+      fechaBaja: "2025-11-28",
+      tipoBaja: "voluntaria",
+      motivoBajaId: RENUNCIA,
+      motivoBaja: "Renuncia voluntaria",
+      motivoActivo: true,
+      comentario: "Se mudó.",
+      recontratable: true,
+    });
+    expect(
+      row({ ...bajaCells, tipoBaja: "Término de contrato" }).normalized?.baja
+        ?.tipoBaja,
+    ).toBe("termino_contrato");
+    expect(row({ fechaBaja: "28/11/2025" }).normalized?.baja?.fechaBaja).toBe(
+      "2025-11-28",
+    );
+    expect(row().normalized?.baja).toBeNull();
+  });
+
+  it("explains how to fix each bad baja cell", () => {
+    const { normalized, errors } = row({
+      estatus: "Baja",
+      fechaBaja: "31/02/2025",
+      tipoBaja: "Renuncia",
+      motivoBaja: "Se fue",
+      comentarioBaja: "x".repeat(1001),
+      recontratable: "Tal vez",
+      fechaAntiguedad: "ayer",
+    });
+    const byField = Object.fromEntries(
+      errors.map((error) => [error.field, error.message]),
+    );
+
+    expect(normalized).toBeNull();
+    expect(byField.fechaBaja).toContain("AAAA-MM-DD");
+    expect(byField.tipoBaja).toContain("Voluntaria, Despido");
+    expect(byField.motivoBaja).toContain("Catálogo > Motivos de baja");
+    expect(byField.comentarioBaja).toContain("1,000");
+    expect(byField.recontratable).toContain('"Sí" o "No"');
+    expect(byField.fechaAntiguedad).toContain("AAAA-MM-DD");
+  });
+
+  it("closes the open period of an active person with the row's baja", () => {
+    const person = existing({ fechaIngreso: "2020-02-03" });
+    const outcome = classifyPersonRow(
+      row(bajaCells).normalized!,
+      withEmployment(person, summary()),
+    );
+
+    expect(outcome.action).toBe("update");
+    expect(outcome.diff).toMatchObject({
+      status: ["activa", "baja"],
+      fechaBaja: [null, "2025-11-28"],
+      tipoBaja: [null, "Voluntaria"],
+      motivoBaja: [null, "Renuncia voluntaria"],
+      recontratable: [null, "Sí"],
+    });
+    expect(
+      planEmployment(row(bajaCells).normalized!, person, summary()).termination,
+    ).toEqual({
+      mode: "close",
+      values: {
+        fechaBaja: "2025-11-28",
+        tipoBaja: "voluntaria",
+        motivoBajaId: RENUNCIA,
+        comentario: "Se mudó.",
+        recontratable: true,
+      },
+    });
+  });
+
+  it("creates a person de baja with the baja, or warns when it has no data", () => {
+    const create = classifyPersonRow(row(bajaCells).normalized!, lookupsOf());
+
+    expect(create.action).toBe("create");
+    expect(
+      planEmployment(row(bajaCells).normalized!, null, null).termination?.mode,
+    ).toBe("close");
+
+    const bare = classifyPersonRow(
+      row({ estatus: "Baja" }).normalized!,
+      lookupsOf(),
+    );
+
+    expect(bare.action).toBe("create");
+    expect(bare.errors).toEqual([
+      expect.objectContaining({
+        severity: "warning",
+        message: expect.stringContaining("«sin fecha»"),
+      }),
+    ]);
+  });
+
+  it("asks for the missing baja columns, recontratable included", () => {
+    const outcome = classifyPersonRow(
+      row({ estatus: "Baja", fechaBaja: "2025-11-28", tipoBaja: "Despido" })
+        .normalized!,
+      withEmployment(existing(), summary()),
+    );
+
+    expect(outcome.action).toBe("error");
+    expect(outcome.errors[0]).toMatchObject({ field: "motivoBaja" });
+    expect(outcome.errors[0].message).toContain(
+      "falta Motivo de baja, Recontratable",
+    );
+
+    const noDate = classifyPersonRow(
+      row({ estatus: "Baja", motivoBaja: "Renuncia voluntaria" }).normalized!,
+      lookupsOf(),
+    );
+
+    expect(noDate.errors[0].message).toContain("Fecha de baja");
+  });
+
+  it("refuses baja data without Estatus Baja, a baja before the ingreso and an inactive motivo", () => {
+    const activa = classifyPersonRow(
+      row({ ...bajaCells, estatus: "Activa" }).normalized!,
+      lookupsOf(),
+    );
+
+    expect(activa.action).toBe("error");
+    expect(activa.errors[0]).toMatchObject({ field: "estatus" });
+
+    const early = classifyPersonRow(
+      row({ ...bajaCells, fechaIngreso: "2026-01-05" }).normalized!,
+      lookupsOf(),
+    );
+
+    expect(early.errors[0]).toMatchObject({ field: "fechaBaja" });
+    expect(early.errors[0].message).toContain("05/01/2026");
+
+    const inactive = classifyPersonRow(
+      row({ ...bajaCells, motivoBaja: "Jubilación" }).normalized!,
+      lookupsOf(),
+    );
+
+    expect(inactive.errors[0].message).toContain("inactivo");
+  });
+
+  it("re-importing the same baja changes nothing; a new value corrects the last period", () => {
+    const person = existing({ status: "baja", fechaIngreso: "2020-02-03" });
+    const lookups = withEmployment(person, closed);
+
+    expect(classifyPersonRow(row(bajaCells).normalized!, lookups).action).toBe(
+      "unchanged",
+    );
+    // A motivo deactivated since the baja still re-imports unchanged.
+    expect(
+      classifyPersonRow(
+        row({ ...bajaCells, motivoBaja: "Jubilación" }).normalized!,
+        withEmployment(person, {
+          ...closed,
+          motivoBajaId: JUBILACION,
+          motivoBaja: "Jubilación",
+        }),
+      ).action,
+    ).toBe("unchanged");
+
+    const corrected = classifyPersonRow(
+      row({ estatus: "Baja", recontratable: "No" }).normalized!,
+      lookups,
+    );
+
+    expect(corrected.action).toBe("update");
+    expect(corrected.diff).toEqual({ recontratable: ["Sí", "No"] });
+    expect(
+      planEmployment(
+        row({ estatus: "Baja", recontratable: "No" }).normalized!,
+        person,
+        closed,
+      ).termination,
+    ).toMatchObject({
+      mode: "correct",
+      values: { motivoBajaId: RENUNCIA, recontratable: false },
+    });
+  });
+
+  it("completes a baja «sin fecha» and keeps it quiet when nothing is given", () => {
+    const person = existing({ status: "baja" });
+    const sinFecha = summary({ abierto: false, bajaSinFecha: true });
+
+    expect(
+      classifyPersonRow(
+        row({ estatus: "Baja" }).normalized!,
+        withEmployment(person, sinFecha),
+      ),
+    ).toMatchObject({ action: "unchanged", errors: [] });
+    expect(
+      classifyPersonRow(
+        row(bajaCells).normalized!,
+        withEmployment(person, sinFecha),
+      ).action,
+    ).toBe("update");
+  });
+
+  it("refuses a fecha de ingreso after the baja of someone de baja", () => {
+    const outcome = classifyPersonRow(
+      row({ estatus: "Baja", fechaIngreso: "2026-01-05" }).normalized!,
+      withEmployment(existing({ status: "baja" }), closed),
+    );
+
+    expect(outcome.errors[0]).toMatchObject({ field: "fechaIngreso" });
+  });
+
+  it("takes Fecha de antigüedad only when it differs from the ingreso", () => {
+    const person = existing({ fechaIngreso: "2020-02-03" });
+    const lookups = withEmployment(person, summary());
+
+    expect(
+      classifyPersonRow(
+        row({ fechaAntiguedad: "2020-02-03" }).normalized!,
+        lookups,
+      ).action,
+    ).toBe("unchanged");
+
+    const recognized = classifyPersonRow(
+      row({ fechaAntiguedad: "2015-06-01" }).normalized!,
+      lookups,
+    );
+
+    expect(recognized.diff).toEqual({
+      fechaAntiguedad: ["2020-02-03", "2015-06-01"],
+    });
+    expect(
+      planEmployment(
+        row({ fechaAntiguedad: "2015-06-01" }).normalized!,
+        person,
+        summary(),
+      ).antiguedad,
+    ).toBe("2015-06-01");
+
+    const later = classifyPersonRow(
+      row({ fechaAntiguedad: "2021-01-01" }).normalized!,
+      lookups,
+    );
+
+    expect(later.errors[0]).toMatchObject({ field: "fechaAntiguedad" });
+
+    // Already recognized: the export writes it back unchanged.
+    expect(
+      classifyPersonRow(
+        row({ fechaAntiguedad: "2015-06-01" }).normalized!,
+        withEmployment(
+          person,
+          summary({ fechaAntiguedad: "2015-06-01", reconoceAntiguedad: true }),
+        ),
+      ).action,
+    ).toBe("unchanged");
+
+    // De baja it is not stored: a warning, not an error.
+    const baja = classifyPersonRow(
+      row({ ...bajaCells, fechaAntiguedad: "2015-06-01" }).normalized!,
+      withEmployment(existing({ status: "baja" }), closed),
+    );
+
+    expect(baja.action).toBe("unchanged");
+    expect(baja.errors[0]).toMatchObject({
+      field: "fechaAntiguedad",
+      severity: "warning",
+    });
   });
 });

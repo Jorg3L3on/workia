@@ -1,10 +1,20 @@
-import { and, asc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  eq,
+  inArray,
+  isNotNull,
+  isNull,
+  notInArray,
+  sql,
+} from "drizzle-orm";
 
 import { recordAuditEvent } from "@/lib/audit";
 import { db, tdb, withTransaction, type DbTransaction } from "@/lib/db";
 import {
   auditEvents,
   contracts,
+  employmentPeriods,
   importJobs,
   importRows,
   people,
@@ -13,7 +23,7 @@ import {
 } from "@/lib/db/schema";
 import { env } from "@/env";
 
-import { ImportBlockedError } from "./apply";
+import { ImportBlockedError, type EmploymentSnapshot } from "./apply";
 
 export const UNDO_BATCH_SIZE = 200;
 
@@ -76,6 +86,21 @@ const findBlockers = async (
                   else 'Se editó después de la importación.' end as reason
       from r join people p on p.id = r.target_person_id
       where r.sheet = 'personas' and (p.updated_at > ${appliedAt} or p.deleted_at is not null)
+      union all
+      select 'persona', p.id::text, p.nombres || ' ' || p.apellido_paterno,
+             'Su periodo laboral o su baja cambió después de la importación.'
+      from r join people p on p.id = r.target_person_id
+      where r.sheet = 'personas' and r.previous_snapshot ? 'employment'
+        and (exists (select 1 from employment_periods e
+                     where e.company_id = p.company_id and e.person_id = p.id and e.updated_at > ${appliedAt})
+          or exists (select 1 from contracts c
+                     where c.company_id = p.company_id and c.updated_at > ${appliedAt}
+                       and c.id not in (select id from jobcontracts)
+                       and c.id::text in (select x ->> 'id' from jsonb_array_elements(r.previous_snapshot -> 'employment' -> 'contracts') x))
+          or exists (select 1 from onboardings o join employment_periods e
+                       on e.company_id = o.company_id and e.id = o.employment_period_id
+                     where o.company_id = p.company_id and e.person_id = p.id
+                       and e.id::text not in (select x ->> 'id' from jsonb_array_elements(r.previous_snapshot -> 'employment' -> 'periods') x)))
       union all
       select 'persona', p.id::text, p.nombres || ' ' || p.apellido_paterno,
              'Tiene contratos creados después de la importación.'
@@ -232,6 +257,124 @@ const PERSON_RESTORE = [
   ["managerId", "manager_id"],
 ] as const;
 
+/** employment_periods columns undo writes back, as previous_snapshot keeps them. */
+const PERIOD_RESTORE = [
+  ["fechaIngreso", "fecha_ingreso", "date"],
+  ["reconoceAntiguedad", "reconoce_antiguedad", "boolean"],
+  ["fechaAntiguedadReconocida", "fecha_antiguedad_reconocida", "date"],
+  ["fechaAntiguedad", "fecha_antiguedad", "date"],
+  ["fechaBaja", "fecha_baja", "date"],
+  ["bajaSinFecha", "baja_sin_fecha", "boolean"],
+  ["tipoBaja", "tipo_baja", "termination_type"],
+  ["motivoBajaId", "motivo_baja_id", "uuid"],
+  ["comentarioBaja", "comentario_baja", "text"],
+  ["recontratable", "recontratable", "boolean"],
+  ["finiquitoEstado", "finiquito_estado", "finiquito_status"],
+  ["finiquitoFecha", "finiquito_fecha", "date"],
+  ["finiquitoMonto", "finiquito_monto", "numeric"],
+  ["fechaBajaInferida", "fecha_baja_inferida", "boolean"],
+  ["requiereRevision", "requiere_revision", "boolean"],
+] as const;
+
+const restorePeriods = (
+  tx: DbTransaction,
+  companyId: string,
+  periods: Record<string, unknown>[],
+) =>
+  periods.length === 0
+    ? Promise.resolve()
+    : tx.execute(sql`
+        update employment_periods e set
+          ${sql.join(
+            PERIOD_RESTORE.map(
+              ([, column, type]) =>
+                sql`${sql.raw(column)} = (v.p ->> ${column})::${sql.raw(type)}`,
+            ),
+            sql`, `,
+          )},
+          updated_at = now()
+        from jsonb_array_elements(${JSON.stringify(
+          periods.map((period) => ({
+            id: period.id,
+            ...Object.fromEntries(
+              PERIOD_RESTORE.map(([key, column]) => [
+                column,
+                period[key] ?? null,
+              ]),
+            ),
+          })),
+        )}::jsonb) as v(p)
+        where e.id = (v.p ->> 'id')::uuid and e.company_id = ${companyId}
+      `);
+
+/**
+ * Puts the employment periods and vigente contracts of updated people back
+ * as they were before the import (bajas it recorded, periods it closed or
+ * opened). Periods the import created go; then closed periods are restored
+ * before open ones, so at most one is open at any moment.
+ */
+const restoreEmployment = async (
+  tx: DbTransaction,
+  companyId: string,
+  rows: UndoRow[],
+) => {
+  const snapshots = rows.flatMap((row) => {
+    const employment = row.previousSnapshot?.employment as
+      EmploymentSnapshot | undefined;
+
+    return employment && row.targetPersonId
+      ? [{ personId: row.targetPersonId, ...employment }]
+      : [];
+  });
+
+  if (snapshots.length === 0) {
+    return;
+  }
+
+  const periods = snapshots.flatMap(
+    (snapshot) => snapshot.periods as unknown as Record<string, unknown>[],
+  );
+  const kept = periods.map((period) => String(period.id));
+
+  await tx.delete(employmentPeriods).where(
+    and(
+      eq(employmentPeriods.companyId, companyId),
+      inArray(
+        employmentPeriods.personId,
+        snapshots.map((snapshot) => snapshot.personId),
+      ),
+      kept.length > 0 ? notInArray(employmentPeriods.id, kept) : undefined,
+    ),
+  );
+
+  const open = (period: Record<string, unknown>) =>
+    period.fechaBaja === null && !period.bajaSinFecha;
+
+  await restorePeriods(
+    tx,
+    companyId,
+    periods.filter((period) => !open(period)),
+  );
+  await restorePeriods(tx, companyId, periods.filter(open));
+
+  const vigentes = snapshots.flatMap((snapshot) => snapshot.contracts);
+
+  if (vigentes.length > 0) {
+    await tx.execute(sql`
+      update contracts c set
+        status = v.status::contract_status, end_date = v.end_date::date, updated_at = now()
+      from jsonb_to_recordset(${JSON.stringify(
+        vigentes.map((contract) => ({
+          id: contract.id,
+          status: contract.status,
+          end_date: contract.endDate,
+        })),
+      )}::jsonb) as v(id uuid, status text, end_date text)
+      where c.id = v.id and c.company_id = ${companyId}
+    `);
+  }
+};
+
 const undoBatch = async (
   job: ImportJob,
   sheet: "contratos" | "horarios" | "personas",
@@ -339,6 +482,7 @@ const undoBatch = async (
           )
           where p.id = v.id and p.company_id = ${job.companyId}
         `);
+        await restoreEmployment(tx, job.companyId, updated);
         updated.forEach((row) =>
           event(
             "person",

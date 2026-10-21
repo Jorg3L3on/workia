@@ -7,6 +7,7 @@ import { listActivePeopleForSelect } from "@/lib/people";
 import { requirePeopleImport } from "@/lib/people/auth";
 import { AuthorizationError } from "@/lib/rbac/errors";
 import { listActiveSites } from "@/lib/sites";
+import { listTerminationReasons } from "@/lib/termination-reasons";
 
 export const dynamic = "force-dynamic";
 
@@ -24,13 +25,15 @@ export const GET = async () => {
     });
   }
 
-  const [areas, positions, sites, templates, activePeople] = await Promise.all([
-    listActiveAreas(session.companyId),
-    listActivePositions(session.companyId),
-    listActiveSites(session.companyId),
-    listActiveContractTemplates(session.companyId),
-    listActivePeopleForSelect(session.companyId),
-  ]);
+  const [areas, positions, sites, templates, activePeople, reasons] =
+    await Promise.all([
+      listActiveAreas(session.companyId),
+      listActivePositions(session.companyId),
+      listActiveSites(session.companyId),
+      listActiveContractTemplates(session.companyId),
+      listActivePeopleForSelect(session.companyId),
+      listTerminationReasons(session.companyId, { activeOnly: true }),
+    ]);
   // A name shared by two people cannot pick one: those need a CURP or ID.
   const names = activePeople.map((person) =>
     [person.nombres, person.apellidoPaterno, person.apellidoMaterno]
@@ -54,6 +57,7 @@ export const GET = async () => {
         .map((position) => position.name),
     })),
     managers: names.filter((name) => !repeated.has(name)),
+    terminationReasons: reasons.map((reason) => reason.name),
   });
 
   return new NextResponse(file, {

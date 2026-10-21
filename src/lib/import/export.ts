@@ -27,6 +27,7 @@ import {
   coercePeopleFilter,
   type PeopleFilter,
 } from "@/lib/people/filter/schema";
+import { listEmploymentSummaries } from "@/lib/people/employment";
 import { listPeopleFilteredAfter, peopleColumnValue } from "@/lib/people/list";
 
 import {
@@ -298,6 +299,7 @@ export const writeExport = async (
     if (page.length === 0) break;
 
     const ids = page.map((person) => person.id);
+    const employment = await listEmploymentSummaries(options.companyId, ids);
     const [schedules, contractRows] = needsExtras
       ? await Promise.all([
           fetchSchedules(options.companyId, ids),
@@ -317,7 +319,13 @@ export const writeExport = async (
     }
 
     for (const person of page) {
-      sink.row("personas", orderedValues("personas", personExportRow(person)));
+      sink.row(
+        "personas",
+        orderedValues(
+          "personas",
+          personExportRow(person, employment.get(person.id)),
+        ),
+      );
 
       const schedule = scheduleByPerson.get(person.id);
 

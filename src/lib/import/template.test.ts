@@ -24,6 +24,7 @@ const load = async () => {
         { area: "Almacén", positions: [] },
       ],
       managers: ["Laura Méndez Ortiz"],
+      terminationReasons: ["Renuncia voluntaria", "Jubilación"],
     },
     new Date("2026-10-21T12:00:00Z"),
   );
@@ -167,9 +168,101 @@ describe("buildImportTemplate", () => {
 
     expect(String(example.getCell(1, 1).value)).toContain("no se importa");
     expect(headers).toEqual(IMPORT_COLUMNS.personas.map((c) => c.label));
-    expect(example.actualRowCount).toBe(5);
+    expect(example.actualRowCount).toBe(6);
     expect(example.getCell(4, columnOf("jefeDirecto")).value).toBe(
       "Laura Méndez Ortiz",
     );
+    // One example de baja, with the motivo from the company's catalog.
+    expect(example.getCell(6, columnOf("estatus")).value).toBe("Baja");
+    expect(example.getCell(6, columnOf("motivoBaja")).value).toBe(
+      "Renuncia voluntaria",
+    );
+    expect(example.getCell(6, columnOf("recontratable")).value).toBe("Sí");
+  });
+
+  it("adds the baja columns with dates checked and stop dropdowns", async () => {
+    const workbook = await load();
+    const personas = workbook.getWorksheet(SHEET_NAMES.personas)!;
+    const headers = (personas.getRow(1).values as unknown[]).slice(1);
+
+    expect(headers).toEqual(
+      expect.arrayContaining([
+        "Fecha de baja",
+        "Tipo de baja",
+        "Motivo de baja",
+        "Comentario de baja",
+        "Recontratable",
+        "Fecha de antigüedad",
+      ]),
+    );
+    // Optional, and ID Workia stays last.
+    expect(
+      (personas.getCell(1, columnOf("fechaBaja")).fill as ExcelJS.FillPattern)
+        .fgColor?.argb,
+    ).toBe(
+      (personas.getCell(1, columnOf("email")).fill as ExcelJS.FillPattern)
+        .fgColor?.argb,
+    );
+    expect(headers.at(-1)).toBe("ID Workia");
+
+    for (const key of ["fechaBaja", "fechaAntiguedad"]) {
+      expect(personas.getCell(2, columnOf(key)).dataValidation).toMatchObject({
+        type: "date",
+        errorStyle: "stop",
+      });
+      expect(personas.getColumn(columnOf(key)).numFmt).toBe("yyyy-mm-dd");
+    }
+
+    const catalogs = workbook.getWorksheet(CATALOGS_SHEET_NAME)!;
+    const catalogValues = (header: string) => {
+      const values: string[] = [];
+
+      catalogs.getRow(1).eachCell((cell, column) => {
+        if (cell.value === header) {
+          catalogs.getColumn(column).eachCell((entry, row) => {
+            if (row > 1 && entry.value) values.push(String(entry.value));
+          });
+        }
+      });
+
+      return values;
+    };
+
+    expect(catalogValues("Motivos de baja")).toEqual([
+      "Renuncia voluntaria",
+      "Jubilación",
+    ]);
+    expect(catalogValues("Tipo de baja")).toEqual([
+      "Voluntaria",
+      "Despido",
+      "Término de contrato",
+      "Otra",
+    ]);
+    expect(catalogValues("Recontratable")).toEqual(["Sí", "No"]);
+
+    for (const key of ["tipoBaja", "motivoBaja", "recontratable"]) {
+      const rule = personas.getCell(2, columnOf(key)).dataValidation;
+
+      expect(rule).toMatchObject({ type: "list", errorStyle: "stop" });
+      expect(rule.formulae?.[0]).toContain("Catálogos");
+    }
+
+    expect(
+      personas.getCell(2, columnOf("motivoBaja")).dataValidation.error,
+    ).toContain("Motivos de baja");
+    expect(
+      personas.getCell(2, columnOf("comentarioBaja")).dataValidation,
+    ).toBeFalsy();
+
+    const instructions = workbook.getWorksheet(INSTRUCTIONS_SHEET_NAME)!;
+    const text: string[] = [];
+
+    instructions.eachRow((row) =>
+      row.eachCell((cell) => text.push(String(cell.value))),
+    );
+    expect(text).toContain("Bajas y antigüedad");
+    expect(text).toContain("Fecha de baja");
+    expect(text.join(" ")).toContain("«sin fecha»");
+    expect(text.join(" ")).toContain("El finiquito no se importa");
   });
 });

@@ -57,6 +57,54 @@ describe("export rows", () => {
     ).toBe("CURP1");
   });
 
+  it("writes the baja of someone de baja and Fecha de antigüedad, never the finiquito", () => {
+    const employment = {
+      abierto: false,
+      fechaAntiguedad: "2015-06-01",
+      fechaBaja: "2025-11-28",
+      tipoBaja: "termino_contrato" as const,
+      motivoBaja: "Fin de contrato o proyecto",
+      comentarioBaja: "Cerró la obra.",
+      recontratable: false,
+    };
+    const row = personExportRow(person, {
+      ...employment,
+      // Extra fields of the summary are ignored.
+      ...({ finiquitoMonto: "12345.00" } as object),
+    });
+
+    expect(row).toMatchObject({
+      fechaAntiguedad: "01/06/2015",
+      fechaBaja: "28/11/2025",
+      tipoBaja: "Término de contrato",
+      motivoBaja: "Fin de contrato o proyecto",
+      comentarioBaja: "Cerró la obra.",
+      recontratable: "No",
+    });
+    expect(Object.values(row)).not.toContain("12345.00");
+    expect(
+      IMPORT_COLUMNS.personas.some((column) => /finiquito/i.test(column.key)),
+    ).toBe(false);
+
+    // An active person (or an open period) carries no baja columns.
+    const active = personExportRow(
+      { ...person, status: "activa" },
+      { ...employment, abierto: true, fechaBaja: null },
+    );
+
+    expect(active).toMatchObject({
+      fechaAntiguedad: "01/06/2015",
+      fechaBaja: "",
+      tipoBaja: "",
+      motivoBaja: "",
+      recontratable: "",
+    });
+    // Without periods: empty cells, not "undefined".
+    expect(orderedValues("personas", personExportRow(person))).not.toContain(
+      "undefined",
+    );
+  });
+
   it("labels contract enums like the template dropdowns", () => {
     const row = contractExportRow(
       {

@@ -190,6 +190,25 @@ test("fills the downloaded template and applies it all or nothing", async ({
     "Jefe directo (nombre, CURP o ID Workia)": `Jefa ${lastName}`,
   });
 
+  // Someone who already left, with the baja columns and a motivo of the
+  // company's catalog (Catálogos lists the active ones).
+  const catalogs = workbook.getWorksheet("Catálogos")!;
+  const motivoColumn = (catalogs.getRow(1).values as unknown[]).indexOf(
+    "Motivos de baja",
+  );
+  const motivo = String(catalogs.getRow(2).getCell(motivoColumn).value);
+
+  add({
+    Nombres: "Salida",
+    "Apellido paterno": lastName,
+    "Fecha de ingreso": "2021-01-04",
+    Estatus: "Baja",
+    "Fecha de baja": "2025-11-28",
+    "Tipo de baja": "Voluntaria",
+    "Motivo de baja": motivo,
+    Recontratable: "Sí",
+  });
+
   await stageAndValidate(
     page,
     {
@@ -200,7 +219,7 @@ test("fills the downloaded template and applies it all or nothing", async ({
     },
     { createCatalogs: false },
   );
-  expect(await counter(page, "Crear")).toBe(2);
+  expect(await counter(page, "Crear")).toBe(3);
   expect(await counter(page, "Con errores")).toBe(0);
 
   await page

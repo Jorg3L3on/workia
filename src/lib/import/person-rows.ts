@@ -1,11 +1,25 @@
 import type { ImportRowError } from "@/lib/db/schema";
+import { formatDateMx } from "@/lib/format/date";
+import type { EmploymentSummary } from "@/lib/people/employment";
+import {
+  terminationTypeLabels,
+  type TerminationValues,
+} from "@/lib/people/employment-schema";
 import { identifierOrNull } from "@/lib/people/identity";
 import { personFormSchema } from "@/lib/people/schema";
 
-import { catalogKey, parsePersonStatus } from "./format";
+import {
+  catalogKey,
+  parseImportDate,
+  parsePersonStatus,
+  parseTerminationType,
+  parseYesNo,
+  TERMINATION_TYPE_OPTIONS,
+} from "./format";
 import type {
   CatalogIndex,
   ExistingPerson,
+  NormalizedBaja,
   NormalizedPerson,
   NormalizedPersonValues,
   RowOutcome,
@@ -134,6 +148,101 @@ const resolveCatalogs = (
   return { areaId, positionId, siteId, missing };
 };
 
+const INVALID_DATE = IMPORT_MESSAGES["Fecha inválida"];
+
+/** A date cell already parsed by the browser, or parsed here (CSV, API). */
+const dateCell = (
+  cells: Cells,
+  key: string,
+  errors: ImportRowError[],
+): string | null => {
+  const value = text(cells, key);
+
+  if (!value) return null;
+
+  const parsed = parseImportDate(value);
+
+  if (!parsed) errors.push({ field: key, message: INVALID_DATE });
+
+  return parsed;
+};
+
+const COMENTARIO_MAX = 1000;
+
+/**
+ * The baja columns (Iniciativa 2), cell by cell. Whether they fit the row's
+ * Estatus and the person's current baja is planEmployment()'s job.
+ */
+const resolveBaja = (
+  cells: Cells,
+  catalogs: CatalogIndex,
+  errors: ImportRowError[],
+): NormalizedBaja | null => {
+  const fechaBaja = dateCell(cells, "fechaBaja", errors);
+  const tipoText = text(cells, "tipoBaja");
+  const motivoText = text(cells, "motivoBaja");
+  const comentario = text(cells, "comentarioBaja") || null;
+  const recontratableText = text(cells, "recontratable");
+
+  if (
+    !text(cells, "fechaBaja") &&
+    !tipoText &&
+    !motivoText &&
+    !comentario &&
+    !recontratableText
+  ) {
+    return null;
+  }
+
+  const tipoBaja = tipoText ? parseTerminationType(tipoText) : null;
+
+  if (tipoText && !tipoBaja) {
+    errors.push({
+      field: "tipoBaja",
+      message: `Tipo de baja debe ser ${TERMINATION_TYPE_OPTIONS.join(", ")}. Elígelo de la lista.`,
+    });
+  }
+
+  const motivo = motivoText
+    ? catalogs.terminationReasons.get(catalogKey(motivoText))
+    : undefined;
+
+  if (motivoText && !motivo) {
+    errors.push({
+      field: "motivoBaja",
+      message: `Motivo de baja "${motivoText}" no existe en el catálogo. Elígelo de la lista o agrégalo en Catálogo > Motivos de baja.`,
+    });
+  }
+
+  if (comentario && comentario.length > COMENTARIO_MAX) {
+    errors.push({
+      field: "comentarioBaja",
+      message: "Máximo 1,000 caracteres. Acorta el comentario.",
+    });
+  }
+
+  const recontratable = recontratableText
+    ? parseYesNo(recontratableText)
+    : null;
+
+  if (recontratableText && recontratable === null) {
+    errors.push({
+      field: "recontratable",
+      message: 'Recontratable debe ser "Sí" o "No". Elígelo de la lista.',
+    });
+  }
+
+  return {
+    fechaBaja,
+    tipoBaja,
+    motivoBajaId: motivo?.id ?? null,
+    motivoBaja: motivo?.name ?? null,
+    motivoActivo: motivo?.active ?? true,
+    comentario,
+    recontratable,
+  };
+};
+
 /** Validates a Personas row with the same zod schema as the person form. */
 export const normalizePersonRow = (
   cells: Cells,
@@ -168,6 +277,9 @@ export const normalizePersonRow = (
         "ID Workia inválido. Déjalo vacío en altas nuevas o cópialo tal cual de una exportación.",
     });
   }
+
+  const baja = resolveBaja(cells, catalogs, errors);
+  const fechaAntiguedad = dateCell(cells, "fechaAntiguedad", errors);
 
   const parsed = personFormSchema.safeParse({
     nombres: text(cells, "nombres"),
@@ -231,6 +343,8 @@ export const normalizePersonRow = (
     normalized: {
       idWorkia,
       values,
+      baja,
+      fechaAntiguedad,
       missingCatalogs: missing,
       managerInput: text(cells, "jefeDirecto") || null,
       managerRef: null,
@@ -290,6 +404,188 @@ export type PersonLookups = {
   byId: Map<string, ExistingPerson>;
   byCurp: Map<string, ExistingPerson>;
   byRfc: Map<string, ExistingPerson>;
+  /** Current (or last) employment period by person id; Personas rows need it. */
+  employment?: Map<string, EmploymentSummary>;
+};
+
+/** What an import row does to the employment periods (Iniciativa 2). */
+export type EmploymentPlan = {
+  /**
+   * «close»: the person becomes de baja with these values
+   * (recordTermination). «correct»: the person already is, and the last
+   * baja takes them (correctTermination).
+   */
+  termination: { mode: "close" | "correct"; values: TerminationValues } | null;
+  /** Recognized seniority for the open period (recognizeSeniority). */
+  antiguedad: string | null;
+  /** Review lines, keyed by import column. */
+  diff: Record<string, [unknown, unknown]>;
+  errors: ImportRowError[];
+};
+
+const yesNo = (value: boolean | null | undefined) =>
+  value === null || value === undefined ? null : value ? "Sí" : "No";
+
+const typeLabel = (value: EmploymentSummary["tipoBaja"] | undefined) =>
+  value ? terminationTypeLabels[value] : null;
+
+const BAJA_COLUMNS = [
+  ["fechaBaja", "Fecha de baja"],
+  ["tipoBaja", "Tipo de baja"],
+  ["motivoBaja", "Motivo de baja"],
+  ["recontratable", "Recontratable"],
+] as const;
+
+/**
+ * The baja and «Fecha de antigüedad» of a row against the person's current
+ * (or last) period. A blank cell keeps what is stored, as for every column.
+ *
+ * - Estatus Baja with the baja columns closes the open period with them, or
+ *   corrects the last baja of someone already de baja. Fecha, Tipo, Motivo
+ *   and Recontratable are then all needed (stored values count); a new
+ *   motivo must be active, a stored one may have been deactivated since.
+ * - Estatus Baja without them keeps the old behaviour: the period closes
+ *   «sin fecha» for review, with a warning on the row.
+ * - «Fecha de antigüedad» becomes the open period's recognized seniority
+ *   only when it differs from the fecha de ingreso (and from what it already
+ *   counts from).
+ */
+export const planEmployment = (
+  normalized: NormalizedPerson,
+  person: ExistingPerson | null,
+  summary: EmploymentSummary | null,
+): EmploymentPlan => {
+  const plan: EmploymentPlan = {
+    termination: null,
+    antiguedad: null,
+    diff: {},
+    errors: [],
+  };
+  const baja = normalized.baja ?? null;
+  const status = normalized.values.status ?? person?.status ?? "activa";
+  const ingreso =
+    normalized.values.fechaIngreso ?? person?.fechaIngreso ?? null;
+  const becomesBaja = status === "baja" && person?.status !== "baja";
+  // A person who is already de baja: the last period holds the baja.
+  const current = becomesBaja || !summary || summary.abierto ? null : summary;
+
+  if (status !== "baja" && baja) {
+    plan.errors.push({
+      field: "estatus",
+      message:
+        "Fecha de baja, Tipo de baja, Motivo de baja, Comentario de baja y Recontratable solo aplican con Estatus Baja. Escribe Baja en Estatus o borra esas celdas.",
+    });
+  } else if (becomesBaja && !baja) {
+    plan.errors.push({
+      field: "fechaBaja",
+      severity: "warning",
+      message:
+        "Baja sin fecha: el periodo laboral se cierra «sin fecha» y queda para revisión. Para registrar la baja completa escribe Fecha de baja, Tipo de baja, Motivo de baja y Recontratable.",
+    });
+  } else if (baja) {
+    const merged = {
+      fechaBaja: baja.fechaBaja ?? current?.fechaBaja ?? null,
+      tipoBaja: baja.tipoBaja ?? current?.tipoBaja ?? null,
+      motivoBajaId: baja.motivoBajaId ?? current?.motivoBajaId ?? null,
+      comentario: baja.comentario ?? current?.comentarioBaja ?? null,
+      recontratable: baja.recontratable ?? current?.recontratable ?? null,
+    };
+    const change = (key: string, from: unknown, to: unknown) => {
+      if (to !== null && to !== from) plan.diff[key] = [from, to];
+    };
+
+    change("fechaBaja", current?.fechaBaja ?? null, baja.fechaBaja);
+    change("tipoBaja", typeLabel(current?.tipoBaja), typeLabel(baja.tipoBaja));
+    if (baja.motivoBajaId && baja.motivoBajaId !== current?.motivoBajaId) {
+      plan.diff.motivoBaja = [current?.motivoBaja ?? null, baja.motivoBaja];
+    }
+    change("comentarioBaja", current?.comentarioBaja ?? null, baja.comentario);
+    change(
+      "recontratable",
+      yesNo(current?.recontratable),
+      yesNo(baja.recontratable),
+    );
+
+    if (Object.keys(plan.diff).length > 0) {
+      const missing = BAJA_COLUMNS.filter(([key]) =>
+        key === "motivoBaja"
+          ? merged.motivoBajaId === null
+          : merged[key] === null,
+      );
+      if (missing.length > 0) {
+        plan.errors.push({
+          field: missing[0][0],
+          message: `Para registrar la baja falta ${missing.map(([, label]) => label).join(", ")}. Llena ${missing.length === 1 ? "esa columna" : "esas columnas"} o borra los demás datos de baja.`,
+        });
+      } else if (plan.diff.motivoBaja && !baja.motivoActivo) {
+        plan.errors.push({
+          field: "motivoBaja",
+          message: `El motivo de baja "${baja.motivoBaja}" está inactivo. Elige un motivo activo de la lista o reactívalo en Catálogo > Motivos de baja.`,
+        });
+      } else if (ingreso && merged.fechaBaja! < ingreso) {
+        plan.errors.push({
+          field: "fechaBaja",
+          message: `La fecha de baja no puede ser anterior a la Fecha de ingreso (${formatDateMx(ingreso)}). Corrige alguna de las dos.`,
+        });
+      } else {
+        plan.termination = {
+          mode: becomesBaja ? "close" : "correct",
+          values: {
+            fechaBaja: merged.fechaBaja!,
+            tipoBaja: merged.tipoBaja!,
+            motivoBajaId: merged.motivoBajaId!,
+            comentario: merged.comentario,
+            recontratable: merged.recontratable!,
+          },
+        };
+      }
+    }
+  }
+
+  // Someone de baja keeps the ingreso of their last period before its baja.
+  const fechaBaja = plan.termination?.values.fechaBaja ?? current?.fechaBaja;
+
+  if (
+    !becomesBaja &&
+    status === "baja" &&
+    fechaBaja &&
+    normalized.values.fechaIngreso &&
+    normalized.values.fechaIngreso > fechaBaja
+  ) {
+    plan.errors.push({
+      field: "fechaIngreso",
+      message: `La Fecha de ingreso no puede ser posterior a la Fecha de baja (${formatDateMx(fechaBaja)}). Corrige alguna de las dos.`,
+    });
+  }
+
+  const antiguedad = normalized.fechaAntiguedad ?? null;
+
+  if (antiguedad && status === "baja") {
+    if (antiguedad !== (summary?.fechaAntiguedad ?? ingreso)) {
+      plan.errors.push({
+        field: "fechaAntiguedad",
+        severity: "warning",
+        message:
+          "La Fecha de antigüedad solo se guarda para personas activas; en esta fila no se cambió.",
+      });
+    }
+  } else if (antiguedad) {
+    const counted = summary?.abierto ? summary.fechaAntiguedad : null;
+
+    if (antiguedad !== counted && antiguedad !== ingreso) {
+      if (ingreso && antiguedad > ingreso) {
+        plan.errors.push({
+          field: "fechaAntiguedad",
+          message: `La Fecha de antigüedad no puede ser posterior a la Fecha de ingreso (${formatDateMx(ingreso)}). Escribe una fecha anterior o deja la celda vacía.`,
+        });
+      } else {
+        plan.antiguedad = antiguedad;
+        plan.diff.fechaAntiguedad = [counted, antiguedad];
+      }
+    }
+  }
+
+  return plan;
 };
 
 /**
@@ -375,25 +671,40 @@ export const classifyPersonRow = (
     };
   }
 
+  const employment = planEmployment(
+    normalized,
+    person,
+    person ? (lookups.employment?.get(person.id) ?? null) : null,
+  );
+
+  if (employment.errors.some((error) => error.severity !== "warning")) {
+    return {
+      action: "error",
+      errors: employment.errors,
+      diff: null,
+      targetPersonId: null,
+      normalized: null,
+    };
+  }
+
   if (!person) {
     return {
       action: "create",
-      errors: [],
+      errors: employment.errors,
       diff: null,
       targetPersonId: null,
       normalized,
     };
   }
 
-  const diff = diffPerson(
-    normalized.values,
-    person,
-    normalized.missingCatalogs,
-  );
+  const diff = {
+    ...diffPerson(normalized.values, person, normalized.missingCatalogs),
+    ...employment.diff,
+  };
 
   return {
     action: Object.keys(diff).length === 0 ? "unchanged" : "update",
-    errors: [],
+    errors: employment.errors,
     diff,
     targetPersonId: person.id,
     normalized,

@@ -1,4 +1,5 @@
 import type { ImportRowAction, ImportRowError } from "@/lib/db/schema";
+import type { TerminationType } from "@/lib/db/schema/employment";
 
 /** Person fields an import row can set, already normalized and validated. */
 export type NormalizedPersonValues = {
@@ -22,9 +23,29 @@ export type NormalizedPersonValues = {
 export type ManagerRef =
   { type: "person"; id: string } | { type: "row"; rowNumber: number };
 
+/**
+ * Baja columns of a row (Iniciativa 2), already parsed; null fields were
+ * left blank. The motivo is resolved against the company's catalog.
+ */
+export type NormalizedBaja = {
+  fechaBaja: string | null;
+  tipoBaja: TerminationType | null;
+  motivoBajaId: string | null;
+  /** Catalog name, for the review and the audit. */
+  motivoBaja: string | null;
+  /** false: the motivo exists but is inactive (only accepted unchanged). */
+  motivoActivo: boolean;
+  comentario: string | null;
+  recontratable: boolean | null;
+};
+
 export type NormalizedPerson = {
   idWorkia: string | null;
   values: NormalizedPersonValues;
+  /** Absent in rows staged before the baja columns existed. */
+  baja?: NormalizedBaja | null;
+  /** «Fecha de antigüedad»: recognized seniority on the open period. */
+  fechaAntiguedad?: string | null;
   /** Catalog names that do not exist yet; created at apply when allowed. */
   missingCatalogs: { area?: string; position?: string; site?: string };
   managerInput: string | null;
@@ -49,6 +70,11 @@ export type CatalogIndex = {
     { id: string; areaId: string | null; areaName?: string | null }[]
   >;
   sites: Map<string, string>;
+  /** name key -> motivo de baja (not deleted; active or not). */
+  terminationReasons: Map<
+    string,
+    { id: string; name: string; active: boolean }
+  >;
 };
 
 export type ExistingPerson = {

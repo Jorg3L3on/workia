@@ -11,7 +11,9 @@ import {
   INSTRUCTIONS_SHEET_NAME,
   NOTICE_OPTIONS,
   PERSON_STATUS_OPTIONS,
+  RECONTRATABLE_OPTIONS,
   SHEET_NAMES,
+  TERMINATION_TYPE_OPTIONS,
   type ImportColumn,
   type ImportSheetKey,
 } from "./format";
@@ -28,6 +30,8 @@ export type TemplateCatalogs = {
   areaPositions?: { area: string; positions: string[] }[];
   /** Full names of active people, suggested in Jefe directo. */
   managers?: string[];
+  /** Active motivos de baja of the company, for Motivo de baja. */
+  terminationReasons?: string[];
 };
 
 // exceljs supports range validations but does not type them.
@@ -62,6 +66,9 @@ const catalogColumns = (catalogs: TemplateCatalogs): CatalogColumn[] => [
   { header: "Aviso (meses)", values: NOTICE_OPTIONS },
   { header: "Estatus de contrato", values: CONTRACT_STATUS_OPTIONS },
   { header: MANAGERS_HEADER, values: catalogs.managers ?? [] },
+  { header: "Motivos de baja", values: catalogs.terminationReasons ?? [] },
+  { header: "Tipo de baja", values: TERMINATION_TYPE_OPTIONS },
+  { header: "Recontratable", values: RECONTRATABLE_OPTIONS },
 ];
 
 const columnLetter = (index: number) => {
@@ -84,6 +91,7 @@ const dropdownSource = (column: ImportColumn): string | null => {
   if (column.catalog === "positions") return "Puestos";
   if (column.catalog === "sites") return "Sucursales";
   if (column.catalog === "templates") return "Plantillas de contrato";
+  if (column.catalog === "terminationReasons") return "Motivos de baja";
   if (column.key === "estatus") {
     return column.options === PERSON_STATUS_OPTIONS
       ? "Estatus de persona"
@@ -92,6 +100,8 @@ const dropdownSource = (column: ImportColumn): string | null => {
   if (column.key === "tipo") return "Tipo de contrato";
   if (column.key === "aviso") return "Aviso (meses)";
   if (column.key === "jefeDirecto") return MANAGERS_HEADER;
+  if (column.key === "tipoBaja") return "Tipo de baja";
+  if (column.key === "recontratable") return "Recontratable";
 
   return null;
 };
@@ -100,6 +110,10 @@ const dropdownSource = (column: ImportColumn): string | null => {
 const dropdownError = (column: ImportColumn) => {
   if (column.key === "puesto") {
     return "Elige un puesto de la lista: muestra los puestos del Área de la fila. Si el puesto es de otra área, cambia primero el Área.";
+  }
+
+  if (column.catalog === "terminationReasons") {
+    return "Elige un motivo de la lista. Si falta, agrégalo en Catálogo > Motivos de baja y descarga otra plantilla.";
   }
 
   if (column.catalog && column.catalog !== "templates") {
@@ -198,6 +212,26 @@ const instructionRows = (maxDate: string): InstructionRow[] => {
     ),
     text(
       "Las listas solo aceptan sus valores. Si falta un área, puesto o sucursal, agrégalo en el Catálogo de Workia y descarga otra plantilla, o al importar marca «Crear áreas, puestos y sucursales que no existan».",
+    ),
+    text(""),
+    title("Bajas y antigüedad"),
+    text(
+      "Para dar de baja: Estatus Baja, Fecha de baja, Tipo de baja, Motivo de baja y Recontratable (el Comentario es opcional). Se cierra el periodo laboral vigente y el contrato vigente queda «Terminado», igual que al dar de baja en Workia.",
+    ),
+    text(
+      "Si escribes solo Estatus Baja, la baja queda «sin fecha» y marcada para revisión en el expediente; la revisión de la importación te lo avisa en la fila.",
+    ),
+    text(
+      "Para corregir una baja ya registrada, cambia esas columnas en la fila de la persona. Una celda vacía no borra lo guardado.",
+    ),
+    text(
+      "Motivo de baja: un motivo activo de Catálogo > Motivos de baja. Si falta, agrégalo ahí y descarga otra plantilla.",
+    ),
+    text(
+      "Fecha de antigüedad: solo para personas activas cuya antigüedad cuenta desde antes del ingreso (por ejemplo, un reingreso que reconoce la antigüedad previa). Vacía o igual a la Fecha de ingreso no cambia nada.",
+    ),
+    text(
+      "El finiquito no se importa: captúralo en el expediente de la persona.",
     ),
     text(""),
   ];
@@ -300,6 +334,22 @@ const exampleRows = (catalogs: TemplateCatalogs) => {
       jefeDirecto: "XEXX880514MDFXXX04",
       curp: "XEXX950817MNLXXX03",
       nss: "07234567894",
+    },
+    {
+      nombres: "Jorge",
+      apellidoPaterno: "Ibarra",
+      apellidoMaterno: "Luna",
+      fechaIngreso: date("2019-08-05"),
+      area,
+      puesto: position,
+      sucursal: site,
+      curp: "XEXX870921HQTXXX08",
+      estatus: "Baja",
+      fechaBaja: date("2025-11-28"),
+      tipoBaja: TERMINATION_TYPE_OPTIONS[0],
+      motivoBaja: catalogs.terminationReasons?.[0] ?? "Renuncia voluntaria",
+      comentarioBaja: "Se cambió de ciudad.",
+      recontratable: "Sí",
     },
   ];
 

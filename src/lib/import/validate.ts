@@ -14,7 +14,9 @@ import {
   type ImportRowError,
 } from "@/lib/db/schema";
 import { contracts, contractTemplates } from "@/lib/db/schema";
+import { listEmploymentSummaries } from "@/lib/people/employment";
 import { identifierOrNull, normalizeNss } from "@/lib/people/identity";
+import { listTerminationReasons } from "@/lib/termination-reasons";
 
 import {
   contractIdentity,
@@ -80,7 +82,7 @@ const personColumns = {
 export const loadCatalogIndex = async (
   companyId: string,
 ): Promise<CatalogIndex> => {
-  const [areaRows, positionRows, siteRows] = await Promise.all([
+  const [areaRows, positionRows, siteRows, reasonRows] = await Promise.all([
     tdb(companyId)
       .select({ id: areas.id, name: areas.name })
       .from(areas)
@@ -99,6 +101,8 @@ export const loadCatalogIndex = async (
       .select({ id: sites.id, name: sites.name })
       .from(sites)
       .where(and(eq(sites.companyId, companyId), isNull(sites.deletedAt))),
+    // Inactive motivos too: an exported baja keeps its motivo unchanged.
+    listTerminationReasons(companyId),
   ]);
   const positionIndex: CatalogIndex["positions"] = new Map();
   const areaNames = new Map(areaRows.map((row) => [row.id, row.name]));
@@ -120,6 +124,12 @@ export const loadCatalogIndex = async (
     areas: new Map(areaRows.map((row) => [catalogKey(row.name), row.id])),
     positions: positionIndex,
     sites: new Map(siteRows.map((row) => [catalogKey(row.name), row.id])),
+    terminationReasons: new Map(
+      reasonRows.map((row) => [
+        catalogKey(row.name),
+        { id: row.id, name: row.name, active: row.active },
+      ]),
+    ),
   };
 };
 
@@ -286,6 +296,7 @@ export const loadLookups = async (
   companyId: string,
   rows: KeyedRow[],
   executor: DbExecutor = tdb(companyId),
+  options: { employment?: boolean } = {},
 ): Promise<PersonLookups> => {
   const ids = [
     ...new Set(
@@ -329,6 +340,15 @@ export const loadLookups = async (
       if (person.curp) lookups.byCurp.set(person.curp, person);
       if (person.rfc) lookups.byRfc.set(person.rfc, person);
     }
+  }
+
+  // Personas rows compare their baja columns with the current period.
+  if (options.employment) {
+    lookups.employment = await listEmploymentSummaries(
+      companyId,
+      found.map((person) => person.id),
+      executor,
+    );
   }
 
   return lookups;
@@ -488,7 +508,9 @@ export const validatePersonasChunk = async (
   const chunkKeys = pending.map((row) =>
     fileKeyOf({ ...row, action: "pending", targetPersonId: null }),
   );
-  const lookups = await loadLookups(companyId, chunkKeys);
+  const lookups = await loadLookups(companyId, chunkKeys, tdb(companyId), {
+    employment: true,
+  });
   const options = {
     createMissingCatalogs: job.options.createMissingCatalogs === true,
   };

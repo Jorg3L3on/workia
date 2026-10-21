@@ -14,12 +14,14 @@ import {
   auditEvents,
   contractTemplates,
   contracts,
+  employmentPeriods,
   importJobs,
   importRows,
   people,
   personSchedules,
   positions,
   sites,
+  terminationReasons,
   type ImportJob,
   type ImportJobCounts,
 } from "@/lib/db/schema";
@@ -29,8 +31,15 @@ import {
   buildContractScheduleSnapshot,
   fillContractTemplate,
 } from "@/lib/contracts/schema";
-import { syncEmploymentPeriods } from "@/lib/people/employment";
+import type { EmploymentPeriod } from "@/lib/db/schema/employment";
+import {
+  correctTermination,
+  recognizeSeniority,
+  recordTermination,
+  syncEmploymentPeriods,
+} from "@/lib/people/employment";
 import { formatHorarioToken } from "@/lib/people/schema";
+import { withTenant } from "@/lib/tenant/scope";
 
 import {
   contractIdentity,
@@ -38,8 +47,17 @@ import {
   IMPORTED_TEMPLATE_NAME,
 } from "./contract-rows";
 import { catalogKey } from "./format";
-import { classifyPersonRow } from "./person-rows";
-import type { ManagerRef, NormalizedContract, NormalizedPerson } from "./types";
+import {
+  classifyPersonRow,
+  planEmployment,
+  type EmploymentPlan,
+} from "./person-rows";
+import type {
+  ManagerRef,
+  NormalizedContract,
+  NormalizedPerson,
+  NormalizedPersonValues,
+} from "./types";
 import { loadLookups, restartValidation, validateJobStep } from "./validate";
 
 export const APPLY_BATCH_SIZE = 200;
@@ -383,6 +401,132 @@ const failRows = (
       and(eq(importRows.companyId, companyId), inArray(importRows.id, ids)),
     );
 
+const loadActiveReasonIds = async (tx: DbTransaction, companyId: string) =>
+  new Set(
+    (
+      await tx
+        .select({ id: terminationReasons.id })
+        .from(terminationReasons)
+        .where(
+          withTenant(
+            terminationReasons,
+            companyId,
+            isNull(terminationReasons.deletedAt),
+            eq(terminationReasons.active, true),
+          ),
+        )
+    ).map((reason) => reason.id),
+  );
+
+/** Rows whose write can change employment periods (status, ingreso, baja, antigüedad). */
+const touchesEmployment = (row: StagedRow, plan: EmploymentPlan | undefined) =>
+  Boolean(plan?.termination || plan?.antiguedad) ||
+  Object.keys(row.diff ?? {}).some((field) =>
+    ["status", "fechaIngreso"].includes(field),
+  );
+
+/** What undo needs to put the periods of a person back (previous_snapshot.employment). */
+export type EmploymentSnapshot = {
+  /** Every period of the person, as stored (JSON: dates become strings). */
+  periods: EmploymentPeriod[];
+  /** Vigente contracts, which a baja turns into «Terminado». */
+  contracts: { id: string; status: string; endDate: string | null }[];
+};
+
+const snapshotEmployment = async (
+  tx: DbTransaction,
+  companyId: string,
+  personIds: string[],
+) => {
+  const snapshots = new Map<string, EmploymentSnapshot>();
+
+  if (personIds.length === 0) {
+    return snapshots;
+  }
+
+  const periods = await tx
+    .select()
+    .from(employmentPeriods)
+    .where(
+      withTenant(
+        employmentPeriods,
+        companyId,
+        inArray(employmentPeriods.personId, personIds),
+      ),
+    );
+  const vigentes = await tx
+    .select({
+      id: contracts.id,
+      personId: contracts.personId,
+      status: contracts.status,
+      endDate: contracts.endDate,
+    })
+    .from(contracts)
+    .where(
+      withTenant(
+        contracts,
+        companyId,
+        inArray(contracts.personId, personIds),
+        eq(contracts.status, "vigente"),
+        isNull(contracts.deletedAt),
+      ),
+    );
+
+  for (const personId of personIds) {
+    snapshots.set(personId, {
+      periods: periods.filter((period) => period.personId === personId),
+      contracts: vigentes
+        .filter((contract) => contract.personId === personId)
+        .map(({ id, status, endDate }) => ({ id, status, endDate })),
+    });
+  }
+
+  return snapshots;
+};
+
+/**
+ * The baja and «Fecha de antigüedad» of the batch, through the employment
+ * domain (same rules and audit as the baja dialog), after the people were
+ * written and their periods synced.
+ */
+const applyEmploymentPlans = async (
+  tx: DbTransaction,
+  job: ImportJob,
+  marks: { id: string; targetPersonId: string | null }[],
+  plans: Map<string, EmploymentPlan>,
+) => {
+  for (const mark of marks) {
+    const plan = plans.get(mark.id);
+
+    if (!plan || !mark.targetPersonId) continue;
+
+    if (plan.termination) {
+      const write =
+        plan.termination.mode === "close"
+          ? recordTermination
+          : correctTermination;
+
+      await write(
+        tx,
+        job.companyId,
+        mark.targetPersonId,
+        plan.termination.values,
+        job.actorUserId,
+        { source: "import" },
+      );
+    }
+
+    if (plan.antiguedad) {
+      await recognizeSeniority(
+        tx,
+        job.companyId,
+        mark.targetPersonId,
+        plan.antiguedad,
+      );
+    }
+  }
+};
+
 /** One transaction: ≤ APPLY_BATCH_SIZE people created or updated, audited, marked. */
 const applyPersonasBatch = async (job: ImportJob) =>
   withTransaction(async (tx) => {
@@ -410,20 +554,37 @@ const applyPersonasBatch = async (job: ImportJob) =>
         rfc: row.normalized.values.rfc,
       })),
       tx,
+      { employment: true },
     );
+    const activeReasons = await loadActiveReasonIds(tx, job.companyId);
     const stale: string[] = [];
     const ready: StagedRow[] = [];
+    const plans = new Map<string, EmploymentPlan>();
 
     for (const row of rows) {
       const fresh = classifyPersonRow(row.normalized, lookups);
+      const person = fresh.targetPersonId
+        ? (lookups.byId.get(fresh.targetPersonId) ?? null)
+        : null;
+      const plan = planEmployment(
+        row.normalized,
+        person,
+        person ? (lookups.employment?.get(person.id) ?? null) : null,
+      );
+      // A new motivo must still be active (the catalog may have changed).
+      const motivoGone =
+        plan.diff.motivoBaja !== undefined &&
+        !activeReasons.has(plan.termination?.values.motivoBajaId ?? "");
 
       if (
         fresh.action !== row.action ||
-        fresh.targetPersonId !== row.targetPersonId
+        fresh.targetPersonId !== row.targetPersonId ||
+        motivoGone
       ) {
         stale.push(row.id);
       } else {
         ready.push(row);
+        plans.set(row.id, plan);
       }
     }
 
@@ -530,12 +691,16 @@ const applyPersonasBatch = async (job: ImportJob) =>
         values: resolve(row),
       }));
 
+      // A baja with its data is recorded after the alta, as the domain does.
+      const statusOf = (row: StagedRow, values: NormalizedPersonValues) =>
+        plans.get(row.id)?.termination ? "activa" : (values.status ?? "activa");
+
       await tx.insert(people).values(
-        inserted.map(({ id, values }) => ({
+        inserted.map(({ row, id, values }) => ({
           id,
           ...values,
           companyId: job.companyId,
-          status: values.status ?? "activa",
+          status: statusOf(row, values),
         })),
       );
 
@@ -550,10 +715,7 @@ const applyPersonasBatch = async (job: ImportJob) =>
           source: "import",
           payload: {
             summary: `Alta por importación: ${values.nombres} ${values.apellidoPaterno}`,
-            after: snapshotPerson({
-              ...values,
-              status: values.status ?? "activa",
-            }),
+            after: snapshotPerson({ ...values, status: statusOf(row, values) }),
           },
         });
       }
@@ -584,6 +746,17 @@ const applyPersonasBatch = async (job: ImportJob) =>
           "La persona fue borrada desde la revisión.",
         );
       }
+
+      // Periods and vigente contracts as they were, so undo restores them.
+      const employmentBefore = await snapshotEmployment(
+        tx,
+        job.companyId,
+        live.flatMap((row) =>
+          touchesEmployment(row, plans.get(row.id))
+            ? [row.targetPersonId!]
+            : [],
+        ),
+      );
 
       if (live.length > 0) {
         await tx.execute(sql`
@@ -622,7 +795,11 @@ const applyPersonasBatch = async (job: ImportJob) =>
                 rfc: values.rfc,
                 curp: values.curp,
                 nss: values.nss,
-                status: values.status,
+                // recordTermination() sets the baja itself.
+                status:
+                  plans.get(row.id)?.termination?.mode === "close"
+                    ? null
+                    : values.status,
               };
             }),
           )}::jsonb) as v(
@@ -636,12 +813,16 @@ const applyPersonasBatch = async (job: ImportJob) =>
 
         for (const row of live) {
           const before = byId.get(row.targetPersonId!)!;
-          const previous = Object.fromEntries(
-            [...PERSON_FIELDS, "managerId" as const].map((field) => [
-              field,
-              before[field],
-            ]),
-          );
+          const employment = employmentBefore.get(row.targetPersonId!);
+          const previous = {
+            ...Object.fromEntries(
+              [...PERSON_FIELDS, "managerId" as const].map((field) => [
+                field,
+                before[field],
+              ]),
+            ),
+            ...(employment ? { employment } : {}),
+          };
           const changes = Object.fromEntries(
             Object.entries(row.diff ?? {})
               .filter(
@@ -683,6 +864,7 @@ const applyPersonasBatch = async (job: ImportJob) =>
         ),
         job.actorUserId,
       );
+      await applyEmploymentPlans(tx, job, marks, plans);
     }
 
     if (audit.length > 0) {
