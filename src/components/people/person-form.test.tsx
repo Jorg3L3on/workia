@@ -9,7 +9,10 @@ vi.mock("@/lib/people/actions", () => ({
 
 import { PersonForm } from "@/components/people/person-form";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
 
 const renderCreate = () =>
   render(<PersonForm areas={[]} mode="create" positions={[]} sites={[]} />);
@@ -98,5 +101,46 @@ describe("PersonForm", () => {
     expect(editor.textContent).toContain("Día de descanso (opcional)");
     expect(editor.textContent).toContain("Sin horario capturado.");
     expect(editor.textContent).not.toContain("—");
+  });
+
+  it("opens at the section and field a card's «Editar» names", () => {
+    // Outside the shell there is no inner scroller: the window scrolls.
+    const scrollBy = vi.spyOn(window, "scrollBy").mockImplementation(() => {});
+    render(
+      <PersonForm
+        areas={[]}
+        initialField="curp"
+        initialSection="identificadores"
+        mode="create"
+        positions={[]}
+        sites={[]}
+      />,
+    );
+
+    expect(scrollBy).toHaveBeenCalledWith(
+      expect.objectContaining({ behavior: "auto" }),
+    );
+    expect(document.activeElement?.id).toBe("curp");
+    expect(
+      screen
+        .getByRole("navigation", { name: "Secciones del formulario" })
+        .querySelector('[aria-current="location"]')?.textContent,
+    ).toBe("Identificadores");
+  });
+
+  it("focuses the section's first control when the field is elsewhere", () => {
+    vi.spyOn(window, "scrollBy").mockImplementation(() => {});
+    render(
+      <PersonForm
+        areas={[]}
+        initialField="curp"
+        initialSection="nombre"
+        mode="create"
+        positions={[]}
+        sites={[]}
+      />,
+    );
+
+    expect(document.activeElement?.id).toBe("nombres");
   });
 });
