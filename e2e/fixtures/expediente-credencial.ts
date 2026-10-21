@@ -11,6 +11,10 @@
  *     the domain (setPersonStatus → terminatePerson), so the employment
  *     period is closed too: baja today, «Despido», the first motivo of the
  *     catalog, no recontratable and a pending finiquito of $4,321.50.
+ *     e2e/personas-filtros.spec.ts uses it too, for a baja to filter on.
+ *   npx tsx e2e/fixtures/expediente-credencial.ts hard-delete <personId>
+ *     Removes a demo-company dummy (and its periods) the spec created, even
+ *     when the spec failed before it could delete it from the UI.
  */
 import { config } from "dotenv";
 import bcrypt from "bcryptjs";
@@ -72,8 +76,20 @@ const main = async () => {
     return;
   }
 
+  if (command === "hard-delete" && argument) {
+    const { and } = await import("drizzle-orm");
+    const { people } = await import("@/lib/db/schema");
+
+    await db
+      .delete(people)
+      .where(and(eq(people.companyId, company.id), eq(people.id, argument)));
+    return;
+  }
+
   if (command !== "people-only-user") {
-    throw new Error("Usage: people-only-user | set-baja <personId>");
+    throw new Error(
+      "Usage: people-only-user | set-baja <personId> | hard-delete <personId>",
+    );
   }
 
   await db

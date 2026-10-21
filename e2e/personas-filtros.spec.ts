@@ -1,3 +1,5 @@
+import { execFileSync } from "node:child_process";
+
 import { expect, test } from "@playwright/test";
 
 const loginAsDemoAdmin = async (page: import("@playwright/test").Page) => {
@@ -8,6 +10,28 @@ const loginAsDemoAdmin = async (page: import("@playwright/test").Page) => {
   await page.getByRole("button", { name: "Iniciar sesión" }).click();
   await expect(page).toHaveURL(/\/app/, { timeout: 25_000 });
 };
+
+const fixture = (...args: string[]) => {
+  execFileSync(
+    "npx",
+    ["tsx", "e2e/fixtures/expediente-credencial.ts", ...args],
+    { cwd: process.cwd(), stdio: "inherit", timeout: 60_000 },
+  );
+};
+
+const shiftDays = (days: number) => new Date(Date.now() + days * 86_400_000);
+const urlDate = (date: Date) =>
+  [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0"),
+  ].join("");
+const mxDate = (date: Date) =>
+  [
+    String(date.getDate()).padStart(2, "0"),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    date.getFullYear(),
+  ].join("/");
 
 const exportCount = async (page: import("@playwright/test").Page) => {
   const text = await page.getByTestId("personas-exportar").innerText();
@@ -64,42 +88,72 @@ test.describe("Personas: filtros avanzados (Iniciativa 3)", () => {
   }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await loginAsDemoAdmin(page);
-    await page.goto(
-      "/app/personas?f=1*fb.b.20260101.20260630&cols=fechaBaja.tipoBaja.motivoBaja.antiguedad.finiquitoMonto",
-    );
 
-    await expect(
-      page.getByRole("button", {
-        name: "Fecha de baja: entre 01/01/2026 – 30/06/2026",
-      }),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("columnheader", { name: "Motivo de baja" }),
-    ).toBeVisible();
+    // The seed has no fecha de baja (its bajas predate the periods), so a
+    // dummy goes on baja today with eight years of antigüedad.
+    const suffix = Date.now().toString().slice(-6);
+    const fullName = `Persona FiltroBaja${suffix}`;
+    await page.goto("/app/personas/nueva");
+    await page.locator("#nombres").fill("Persona");
+    await page.locator("#apellidoPaterno").fill(`FiltroBaja${suffix}`);
+    await page.locator("#fechaIngreso").fill(mxDate(shiftDays(-8 * 366)));
+    await page.getByRole("button", { name: "Guardar persona" }).click();
+    await expect(page).toHaveURL(/\/app\/personas\/[0-9a-f-]{36}$/);
+    const personId = page.url().split("/").at(-1)!;
 
-    await page.getByRole("button", { name: "Filtro", exact: true }).click();
-    await page.getByRole("option", { name: "Antigüedad" }).click();
-    await page.getByRole("button", { name: "5 años" }).click();
-    await expect(page).toHaveURL(/an\.ya\.5/);
-    await page.keyboard.press("Escape");
+    try {
+      fixture("set-baja", personId);
+      const from = shiftDays(-60);
+      const to = shiftDays(60);
+      const range = `fb.b.${urlDate(from)}.${urlDate(to)}`;
 
-    const n = await exportCount(page);
-    await page.getByTestId("personas-exportar").click();
-    const href = await page
-      .getByRole("menuitem", { name: "CSV" })
-      .getAttribute("href");
-    expect(href).toContain("fb.b.20260101.20260630");
+      await page.goto(
+        `/app/personas?f=1*${range}&cols=fechaBaja.tipoBaja.motivoBaja.antiguedad.finiquitoMonto`,
+      );
 
-    const response = await page.request.get(href!);
-    expect(response.status()).toBe(200);
-    const lines = (await response.text())
-      .replace(/^\uFEFF/, "")
-      .trim()
-      .split(/\r?\n/);
-    // The demo admin has compensation:read: the finiquito column is there.
-    expect(lines[0]).toContain("Fecha de baja");
-    expect(lines[0]).toContain("Finiquito (monto)");
-    expect(lines.length - 1).toBe(n);
+      await expect(
+        page.getByRole("button", {
+          name: `Fecha de baja: entre ${mxDate(from)} – ${mxDate(to)}`,
+        }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("columnheader", { name: "Motivo de baja" }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("cell", { name: fullName, exact: true }),
+      ).toBeVisible();
+
+      await page.getByRole("button", { name: "Filtro", exact: true }).click();
+      await page.getByRole("option", { name: "Antigüedad" }).click();
+      await page.getByRole("button", { name: "5 años", exact: true }).click();
+      await expect(page).toHaveURL(/an\.ya\.5/);
+      await page.keyboard.press("Escape");
+      await expect(
+        page.getByRole("cell", { name: fullName, exact: true }),
+      ).toBeVisible();
+
+      const n = await exportCount(page);
+      expect(n).toBeGreaterThan(0);
+      await page.getByTestId("personas-exportar").click();
+      const href = await page
+        .getByRole("menuitem", { name: "CSV" })
+        .getAttribute("href");
+      expect(href).toContain(range);
+
+      const response = await page.request.get(href!);
+      expect(response.status()).toBe(200);
+      const lines = (await response.text())
+        .replace(/^\uFEFF/, "")
+        .trim()
+        .split(/\r?\n/);
+      // The demo admin has compensation:read: the finiquito column is there.
+      expect(lines[0]).toContain("Fecha de baja");
+      expect(lines[0]).toContain("Finiquito (monto)");
+      expect(lines.length - 1).toBe(n);
+      expect(lines.join("\n")).toContain("4321.5");
+    } finally {
+      fixture("hard-delete", personId);
+    }
   });
 
   test("old links keep working", async ({ page }) => {

@@ -29,6 +29,15 @@ const hardDelete = (fullName: string) => {
   );
 };
 
+/** Removes the dummy even when the test failed before it was soft-deleted. */
+const hardDeleteById = (personId: string) => {
+  execFileSync(
+    "npx",
+    ["tsx", "e2e/fixtures/expediente-credencial.ts", "hard-delete", personId],
+    { cwd: process.cwd(), stdio: "inherit", timeout: 60_000 },
+  );
+};
+
 const mx = (date: Date) =>
   [
     String(date.getDate()).padStart(2, "0"),
@@ -42,6 +51,7 @@ test("baja → reingreso → historial keeps both periods", async ({ page }) => 
   const fullName = `Persona Borrada Demo${suffix}`;
   const ingreso = new Date(Date.now() - 400 * 86_400_000);
   const reingreso = new Date(Date.now() + 31 * 86_400_000);
+  let personId: string | undefined;
 
   try {
     await loginAsDemoAdmin(page);
@@ -52,6 +62,7 @@ test("baja → reingreso → historial keeps both periods", async ({ page }) => 
     await page.locator("#fechaIngreso").fill(mx(ingreso));
     await page.getByRole("button", { name: "Guardar persona" }).click();
     await expect(page).toHaveURL(/\/app\/personas\/[0-9a-f-]{36}$/);
+    personId = page.url().split("/").at(-1);
 
     // Baja: fecha (today by default), tipo, motivo, comentario, recontratable.
     await page.getByRole("button", { name: "Más acciones" }).click();
@@ -131,11 +142,17 @@ test("baja → reingreso → historial keeps both periods", async ({ page }) => 
       name: "Historial de cambios",
       exact: true,
     });
-    await expect(history.getByText("Baja laboral").first()).toBeVisible();
-    await expect(history.getByText("Reingreso").first()).toBeVisible();
-    await expect(
-      history.getByText("Finiquito actualizado").first(),
-    ).toBeVisible();
+    // The table's Acción cells: the same events also render as phone cards,
+    // hidden on desktop, so match the cells rather than the first text.
+    for (const accion of [
+      "Baja laboral",
+      "Reingreso",
+      "Finiquito actualizado",
+    ]) {
+      await expect(
+        history.getByRole("cell", { name: accion, exact: true }),
+      ).toBeVisible();
+    }
     await expect(history).toContainText("Cambio de residencia");
     // The admin sees payroll data; the amount is in the finiquito change.
     await expect(history).toContainText("12345.67");
@@ -146,6 +163,8 @@ test("baja → reingreso → historial keeps both periods", async ({ page }) => 
       page.getByRole("menuitem", { name: "Dar de baja" }),
     ).toBeVisible();
     await page.keyboard.press("Escape");
+    // Reopening while the menu still plays its exit leaves it closed.
+    await expect(page.getByRole("menu")).toHaveCount(0);
 
     await page.getByRole("button", { name: "Más acciones" }).click();
     await page.getByRole("menuitem", { name: "Eliminar expediente" }).click();
@@ -155,5 +174,6 @@ test("baja → reingreso → historial keeps both periods", async ({ page }) => 
       .click();
   } finally {
     hardDelete(fullName);
+    if (personId) hardDeleteById(personId);
   }
 });

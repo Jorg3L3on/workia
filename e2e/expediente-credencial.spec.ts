@@ -27,15 +27,30 @@ const fixture = (...args: string[]) => {
   );
 };
 
-/** A dummy person with only the required fields, so most fields are missing. */
-const createDummy = async (page: Page, surname: string) => {
+/** Dummies of the current test, hard-deleted after it even when it fails. */
+const created: string[] = [];
+
+/**
+ * A dummy person with only the required fields, so most fields are missing.
+ * `fechaIngreso` (DD/MM/AAAA) is for a baja, whose seniority needs a start.
+ */
+const createDummy = async (
+  page: Page,
+  surname: string,
+  fechaIngreso?: string,
+) => {
   await page.goto("/app/personas/nueva");
   await page.locator("#nombres").fill("Persona");
   await page.locator("#apellidoPaterno").fill(surname);
+  if (fechaIngreso) {
+    await page.locator("#fechaIngreso").fill(fechaIngreso);
+  }
   await page.getByRole("button", { name: "Guardar persona" }).click();
   await expect(page).toHaveURL(/\/app\/personas\/[0-9a-f-]{36}$/);
 
-  return page.url().split("/").at(-1)!;
+  const personId = page.url().split("/").at(-1)!;
+  created.push(personId);
+  return personId;
 };
 
 const openFirstExpediente = async (page: Page) => {
@@ -52,6 +67,12 @@ const card = (page: Page, name: string) =>
   page.getByRole("region", { name, exact: true });
 
 test.describe("Expediente «Credencial»", () => {
+  test.afterEach(() => {
+    for (const personId of created.splice(0)) {
+      fixture("hard-delete", personId);
+    }
+  });
+
   test("activa: badge, facts, cards without tabs, open-at-section and emit", async ({
     page,
   }) => {
@@ -143,7 +164,12 @@ test.describe("Expediente «Credencial»", () => {
     const suffix = Date.now().toString().slice(-6);
 
     await login(page, "admin@workia.local");
-    const personId = await createDummy(page, `CredencialBaja${suffix}`);
+    // With an ingreso: without one the strip says «Sin fecha de ingreso».
+    const personId = await createDummy(
+      page,
+      `CredencialBaja${suffix}`,
+      "15/01/2024",
+    );
     // Through the domain: baja today, «Despido», not rehirable, a pending
     // finiquito of $4,321.50.
     fixture("set-baja", personId);
