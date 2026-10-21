@@ -9,6 +9,8 @@ history and seeded errors) against a local Postgres.
 ```bash
 npm run db:seed          # local database with the demo admin
 npm run import:budgets   # refuses to run unless DATABASE_URL is localhost
+# A scratch database on a throwaway Neon branch (never production, never neondb):
+IMPORT_BUDGETS_REMOTE_HOST=<endpoint host> DATABASE_URL=<branch URL>/<scratch db> npm run import:budgets
 npx playwright test e2e/personas-import.spec.ts   # full round trip in the browser
 ```
 
@@ -76,9 +78,40 @@ undo and 34 s to apply), so compare the statement counts first.
   1,600-person file with tricky keys (lower case, spaces, non-breaking spaces,
   numbers in CURP/ID cells, duplicates across chunks): identical.
 
-**Pending: the same measurement against a Neon branch** (never production),
-which is what the acceptance criteria ask for. Statement counts carry over;
-times there are dominated by round trips.
+### Measured on a Neon branch (21 oct 2026)
+
+Throwaway branch `budgets-medicion-2026-10-21` of the `workia` project
+(Postgres 18, us-west-2, 0.25 CU like production), in a separate scratch
+database `workia_budgets` migrated from 0000 to 0026 and seeded with the demo
+data only; the branch's copy of production data was not read. The app ran with
+its production drivers (neon-http, and the WebSocket pool inside
+transactions) from a dev box outside AWS, so every statement paid a round trip
+from there:
+
+| Step                       | Time   | Statements | Slowest request |
+| -------------------------- | ------ | ---------- | --------------- |
+| Parse the file (Node)      | 0.9 s  | -          | -               |
+| Stage rows                 | 9.3 s  | 68         | -               |
+| Validate                   | 28.3 s | 385        | 2.0 s           |
+| Apply (killed + resumed)   | 82.8 s | 1,496      | 2.1 s           |
+| Export                     | 5.8 s  | 30         | -               |
+| Re-import of the export    | 43.5 s | 474        | -               |
+| Undo                       | 96.8 s | 1,421      | 1.6 s           |
+| "Todo o nada" (revalidate) | 29.2 s | 419        | 2.0 s           |
+
+Result: 4,925 people created with no duplicates or unapplied rows, the
+re-import was all "unchanged", undo left the database identical, and "Todo o
+nada" refused the file with errors in 31 requests. The script reports apply,
+re-import and undo as over budget because the time budgets above are for a
+local database; what matters on Neon is the slowest single request, and the
+worst one was 2.1 s against the 60 s function limit. Statement counts match
+local except apply (1,496 vs 1,222), which depends on where the kill lands.
+The whole undo of 5,000 people took about a minute and a half, spread over
+requests of under 2 s each.
+
+Latency check before relying on these totals: the Vercel functions should run
+in the same region as the Neon project (us-west-2); a cross-region function
+would pay a similar round trip per statement.
 
 ### With several companies (WRK-I4-11)
 
