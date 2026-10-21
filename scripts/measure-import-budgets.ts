@@ -7,10 +7,13 @@
  * also report their slowest single request (step), which must stay well under
  * the 60 s function limit.
  *
- *   npm run import:budgets            # local Postgres only
+ *   npm run import:budgets            # local Postgres
+ *   IMPORT_BUDGETS_REMOTE_HOST=<host> DATABASE_URL=<throwaway Neon branch> \
+ *     npm run import:budgets          # a scratch database on a Neon branch
  *
  * It writes rows (and undoes them), so it refuses to run against a remote
- * database.
+ * database unless IMPORT_BUDGETS_REMOTE_HOST names that exact host. Point it
+ * only at a scratch database on a throwaway branch, never at production.
  */
 
 import { spawn } from "node:child_process";
@@ -19,6 +22,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PassThrough } from "node:stream";
 
+import { Client as neonClient } from "@neondatabase/serverless";
 import { config } from "dotenv";
 import { and, eq, sql } from "drizzle-orm";
 import pg from "pg";
@@ -27,27 +31,59 @@ import readXlsxFile from "read-excel-file/node";
 config({ path: ".env.local" });
 config();
 
-const host = new URL(process.env.DATABASE_URL ?? "postgresql://x@remote/x")
-  .hostname;
+const databaseUrl = new URL(
+  process.env.DATABASE_URL ?? "postgresql://x@remote/x",
+);
+const host = databaseUrl.hostname;
+const isLocal = ["localhost", "127.0.0.1", "[::1]"].includes(host);
 
-if (!["localhost", "127.0.0.1", "[::1]"].includes(host)) {
-  console.error(
-    "Refusing to run: DATABASE_URL must point to a local Postgres.",
-  );
-  process.exit(2);
+if (!isLocal) {
+  // A remote run is opt-in for one exact host, and never the default database
+  // that holds the app's data.
+  if (process.env.IMPORT_BUDGETS_REMOTE_HOST !== host) {
+    console.error(
+      "Refusing to run: DATABASE_URL must point to a local Postgres, or set IMPORT_BUDGETS_REMOTE_HOST to its host for a throwaway Neon branch.",
+    );
+    process.exit(2);
+  }
+
+  if (databaseUrl.pathname === "/neondb") {
+    console.error(
+      "Refusing to run: use a scratch database on the branch, not neondb.",
+    );
+    process.exit(2);
+  }
 }
 
 let statements = 0;
-const originalQuery = pg.Client.prototype.query as (
-  ...args: unknown[]
-) => unknown;
+const countQueries = (prototype: { query: unknown }) => {
+  const originalQuery = prototype.query as (...args: unknown[]) => unknown;
 
-(pg.Client.prototype as unknown as { query: unknown }).query = function (
-  ...args: unknown[]
-) {
-  statements += 1;
+  prototype.query = function (...args: unknown[]) {
+    statements += 1;
 
-  return originalQuery.apply(this, args);
+    return originalQuery.apply(this, args);
+  };
+};
+
+countQueries(pg.Client.prototype as unknown as { query: unknown });
+// On Neon the app talks over HTTP (one request per statement) and, inside
+// transactions, over the WebSocket client.
+countQueries(neonClient.prototype as unknown as { query: unknown });
+
+const originalFetch = globalThis.fetch;
+
+globalThis.fetch = (input, init) => {
+  const url =
+    typeof input === "string"
+      ? input
+      : input instanceof URL
+        ? input.href
+        : input.url;
+
+  if (!isLocal && url.endsWith("/sql")) statements += 1;
+
+  return originalFetch(input, init);
 };
 
 /** Seconds and statement counts allowed per step (local Postgres). */
