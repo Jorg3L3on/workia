@@ -1,8 +1,11 @@
 /**
  * Scale check for personas import/export: a 5,000-person file with contract
  * history and seeded errors goes through parse → stage → validate → apply
- * (with a kill and resume) → export → re-import → undo, and every step is
- * compared with the budgets in docs/personas-import-budgets.md.
+ * (with a kill and resume) → export → re-import → undo → "all or nothing",
+ * and every step is compared with the budgets in
+ * docs/personas-import-budgets.md. Validate, apply, undo and "all or nothing"
+ * also report their slowest single request (step), which must stay well under
+ * the 60 s function limit.
  *
  *   npm run import:budgets            # local Postgres only
  *
@@ -50,13 +53,19 @@ const originalQuery = pg.Client.prototype.query as (
 /** Seconds and statement counts allowed per step (local Postgres). */
 const BUDGETS = {
   parse: { seconds: 15 },
-  stage: { seconds: 10, statements: 60 },
+  // One insert per chunk of 500, plus the count of stored rows behind the
+  // server-side row limit.
+  stage: { seconds: 10, statements: 80 },
   validate: { seconds: 30, statements: 400 },
   apply: { seconds: 60, statements: 2500 },
   export: { seconds: 15, rssMb: 200 },
   reimport: { seconds: 40, statements: 500 },
   undo: { seconds: 40, statements: 2500 },
+  allOrNothing: { seconds: 40, statements: 500 },
 } as const;
+
+/** Slowest single request of validate, apply, undo or "all or nothing". */
+const STEP_BUDGET_SECONDS = 30;
 
 const PEOPLE = Number(process.env.IMPORT_BUDGET_PEOPLE ?? 5000);
 const RUN = Math.floor(Date.now() / 1000) % 40;
@@ -65,8 +74,29 @@ type Row = {
   step: string;
   seconds: number;
   statements: number | null;
+  maxStep: number | null;
   extra: string;
   ok: boolean;
+};
+
+/** Times each call of a step loop; the slowest one is a request's worst case. */
+const stepTimer = () => {
+  let max = 0;
+
+  return {
+    run: async <T>(fn: () => Promise<T>) => {
+      const start = performance.now();
+
+      try {
+        return await fn();
+      } finally {
+        max = Math.max(max, (performance.now() - start) / 1000);
+      }
+    },
+    get max() {
+      return Math.round(max * 100) / 100;
+    },
+  };
 };
 const report: Row[] = [];
 
@@ -76,6 +106,7 @@ const record = (
   used: number | null,
   extra = "",
   rssMb?: number,
+  maxStep?: number,
 ) => {
   const budget = BUDGETS[step] as {
     seconds: number;
@@ -89,12 +120,14 @@ const record = (
       used <= budget.statements) &&
     (budget.rssMb === undefined ||
       rssMb === undefined ||
-      rssMb <= budget.rssMb);
+      rssMb <= budget.rssMb) &&
+    (maxStep === undefined || maxStep <= STEP_BUDGET_SECONDS);
 
   report.push({
     step,
     seconds: Math.round(seconds * 100) / 100,
     statements: used,
+    maxStep: maxStep ?? null,
     extra: rssMb === undefined ? extra : `${extra} rss+${rssMb}MB`.trim(),
     ok,
   });
@@ -191,15 +224,19 @@ const main = async () => {
     return { job, parsed };
   };
 
-  const validateJob = async (jobId: string) => {
+  const validateJob = async (jobId: string, timer = stepTimer()) => {
     let step;
 
     do {
-      step = await validate.validateJobStep(companyId, jobId);
+      step = await timer.run(() => validate.validateJobStep(companyId, jobId));
     } while (!step.done);
 
     return step.counts;
   };
+
+  // Planner statistics, as a database that has been running a while has them:
+  // without them undo took up to 70 s locally.
+  const analyze = () => db.execute(sql`analyze`);
 
   const snapshot = async () =>
     (
@@ -220,6 +257,8 @@ const main = async () => {
 
   const before = await snapshot();
 
+  await analyze();
+
   // 1) Parse in memory (browser parsing time is of the same order).
   const parse = await timed(() => parseImportFile(file, readWorkbook));
 
@@ -237,18 +276,23 @@ const main = async () => {
   const { job } = stage.value;
 
   record("stage", stage.seconds, stage.used);
+  await analyze();
 
   // 3) Validate
-  const validated = await timed(() => validateJob(job.id));
+  const validateSteps = stepTimer();
+  const validated = await timed(() => validateJob(job.id, validateSteps));
 
   record(
     "validate",
     validated.seconds,
     validated.used,
     JSON.stringify(validated.value),
+    undefined,
+    validateSteps.max,
   );
 
   // 4) Apply with a kill in the middle, then resume
+  const applySteps = stepTimer();
   const apply1 = await timed(async () => {
     const child = spawn(
       "npx",
@@ -297,7 +341,7 @@ const main = async () => {
     let step;
 
     do {
-      step = await apply.applyJobStep(companyId, job.id);
+      step = await applySteps.run(() => apply.applyJobStep(companyId, job.id));
     } while (!step.done);
 
     return { killedMidway, applied: step.applied };
@@ -308,6 +352,8 @@ const main = async () => {
     apply1.seconds,
     apply1.used,
     `applied ${apply1.value.applied}, killed midway: ${apply1.value.killedMidway}`,
+    undefined,
+    applySteps.max,
   );
 
   const [{ n }] = (
@@ -386,11 +432,12 @@ const main = async () => {
   const changed = (counts.create ?? 0) + (counts.update ?? 0);
 
   // 7) Undo the import and compare the database with its state before
+  const undoSteps = stepTimer();
   const undone = await timed(async () => {
     let step;
 
     do {
-      step = await undo.undoJobStep(companyId, job.id);
+      step = await undoSteps.run(() => undo.undoJobStep(companyId, job.id));
     } while (!step.done);
   });
   const after = await snapshot();
@@ -401,8 +448,43 @@ const main = async () => {
     undone.seconds,
     undone.used,
     `database identical to before: ${identical}`,
+    undefined,
+    undoSteps.max,
   );
 
+  // 8) "All or nothing": apply validates the whole file again, in steps the
+  // page repeats, and refuses because the fixture has seeded errors.
+  const aonJob = (
+    await stageFile(file, {
+      createMissingCatalogs: true,
+      mode: "all_or_nothing",
+    })
+  ).job;
+
+  await validateJob(aonJob.id);
+
+  const aonSteps = stepTimer();
+  const aon = await timed(async () => {
+    for (let calls = 1; ; calls += 1) {
+      try {
+        await aonSteps.run(() => apply.applyJobStep(companyId, aonJob.id));
+      } catch (error) {
+        return { calls, code: (error as { code?: string }).code };
+      }
+    }
+  });
+  const aonRefused = aon.value.code === "has_errors";
+
+  record(
+    "allOrNothing",
+    aon.seconds,
+    aon.used,
+    `${aon.value.calls} requests, refused with errors: ${aonRefused}`,
+    undefined,
+    aonSteps.max,
+  );
+
+  await db.delete(importJobs).where(eq(importJobs.id, aonJob.id));
   await db.delete(importJobs).where(eq(importJobs.id, reimport.value.jobId));
   await db.delete(importJobs).where(eq(importJobs.id, job.id));
   void people;
@@ -421,6 +503,9 @@ const main = async () => {
       ? [`re-import of the export is not unchanged (${changed} create/update)`]
       : []),
     ...(!identical ? ["undo did not restore the database"] : []),
+    ...(!aonRefused
+      ? ['"all or nothing" did not refuse a file with errors']
+      : []),
   ];
 
   if (problems.length > 0) {
