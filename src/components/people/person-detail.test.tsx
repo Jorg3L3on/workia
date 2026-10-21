@@ -4,6 +4,7 @@ import {
   fireEvent,
   render,
   screen,
+  within,
 } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -26,7 +27,14 @@ import {
   DetailCard,
   DetailFieldList,
 } from "@/components/people/person-detail-card";
-import { contractFact } from "@/components/people/person-detail-model";
+import {
+  bajaDetails,
+  contractFact,
+  employmentPeriodItems,
+  ingresoFact,
+} from "@/components/people/person-detail-model";
+import { PersonEmploymentPeriods } from "@/components/people/person-employment-periods";
+import { PersonRehireButton } from "@/components/people/person-rehire-button";
 import { PersonSectionNav } from "@/components/people/person-section-nav";
 import type { Contract } from "@/lib/db/schema";
 
@@ -201,6 +209,35 @@ describe("PersonCredential", () => {
     );
     expect(screen.queryByTestId("person-key-facts")).toBeNull();
   });
+
+  it("keeps the normal badge for a rehired person, with the period in Ingreso", () => {
+    render(
+      <PersonCredential
+        facts={[
+          {
+            id: "ingreso",
+            label: "Ingreso",
+            ...ingresoFact({
+              fechaIngreso: "2025-04-01",
+              periodCount: 2,
+              reconoceAntiguedad: false,
+            }),
+          },
+        ]}
+        header={null}
+        initials="PD"
+        status="activa"
+      />,
+    );
+
+    expect(screen.getByTestId("person-credential")).toHaveAttribute(
+      "data-status",
+      "activa",
+    );
+    expect(screen.getByTestId("person-key-facts")).toHaveTextContent(
+      "01/04/20252.º periodo · antigüedad reiniciada",
+    );
+  });
 });
 
 describe("PersonBajaCard", () => {
@@ -234,6 +271,154 @@ describe("PersonBajaCard", () => {
     expect(
       screen.getByRole("button", { name: "Reingresar" }),
     ).toBeInTheDocument();
+  });
+
+  const baja = {
+    fechaBaja: "2026-06-30",
+    bajaSinFecha: false,
+    fechaBajaInferida: false,
+    requiereRevision: false,
+    tipoBaja: "despido" as const,
+    motivoBaja: "Bajo desempeño",
+    comentarioBaja: null,
+    recontratable: false,
+    finiquitoEstado: "pendiente" as const,
+    finiquitoFecha: null,
+    finiquitoMonto: "4321.00",
+  };
+
+  it("shows the finiquito amount with compensation:read", () => {
+    render(<PersonBajaCard details={bajaDetails(baja, true)} status="baja" />);
+
+    const card = screen.getByRole("region", { name: "Baja" });
+    expect(card).toHaveTextContent("Despido");
+    expect(card).toHaveTextContent("Bajo desempeño");
+    expect(screen.getByTestId("baja-recontratable")).toHaveTextContent("No");
+    expect(screen.getByTestId("baja-finiquito-monto")).toHaveTextContent(
+      /\$4,321\.00/,
+    );
+  });
+
+  it("masks it without compensation:read", () => {
+    render(<PersonBajaCard details={bajaDetails(baja, false)} status="baja" />);
+
+    expect(screen.getByTestId("baja-finiquito-monto")).toHaveTextContent("•••");
+    expect(document.body).not.toHaveTextContent(/4,?321/);
+  });
+
+  it("shows a baja without a date for review, and an inferred one", () => {
+    const { rerender } = render(
+      <PersonBajaCard
+        details={bajaDetails(
+          {
+            ...baja,
+            fechaBaja: null,
+            bajaSinFecha: true,
+            requiereRevision: true,
+          },
+          true,
+        )}
+        status="baja"
+      />,
+    );
+
+    expect(screen.getByTestId("baja-fecha")).toHaveTextContent(
+      "Sin fecha, requiere revisión",
+    );
+
+    rerender(
+      <PersonBajaCard
+        details={bajaDetails({ ...baja, fechaBajaInferida: true }, true)}
+        status="baja"
+      />,
+    );
+    expect(screen.getByTestId("baja-fecha")).toHaveTextContent(
+      "30/06/2026inferida",
+    );
+  });
+});
+
+describe("PersonRehireButton", () => {
+  const action = async () => ({});
+
+  it("opens the menu's rehire dialog", () => {
+    render(
+      <PersonRehireButton
+        action={action}
+        lastBaja={{ fechaBaja: "2026-06-30", recontratable: true }}
+        personName="Persona Demo"
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Reingresar" }));
+
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toHaveTextContent("Reingresar a Persona Demo");
+    expect(dialog).not.toHaveTextContent("no recontratable");
+  });
+
+  it("warns, but still offers it, when the last baja said not rehirable", () => {
+    render(
+      <PersonRehireButton
+        action={action}
+        lastBaja={{ fechaBaja: "2026-06-30", recontratable: false }}
+        personName="Persona Demo"
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Reingresar" }));
+
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toHaveTextContent("no recontratable");
+    expect(
+      within(dialog).getByRole("button", { name: "Reingresar" }),
+    ).toBeEnabled();
+  });
+});
+
+describe("PersonEmploymentPeriods", () => {
+  it("lists the periods oldest first, amounts masked without permission", () => {
+    render(
+      <PersonEmploymentPeriods
+        items={employmentPeriodItems(
+          [
+            {
+              id: "period-1",
+              fechaIngreso: "2020-03-12",
+              fechaBaja: "2023-06-30",
+              bajaSinFecha: false,
+              tipoBaja: "voluntaria",
+              motivoBaja: "Cambio de residencia",
+              reconoceAntiguedad: false,
+              finiquitoEstado: "pagado",
+              finiquitoMonto: "8000.00",
+            },
+            {
+              id: "period-2",
+              fechaIngreso: "2025-04-01",
+              fechaBaja: null,
+              bajaSinFecha: false,
+              tipoBaja: null,
+              motivoBaja: null,
+              reconoceAntiguedad: true,
+              finiquitoEstado: null,
+              finiquitoMonto: null,
+            },
+          ],
+          false,
+        )}
+      />,
+    );
+
+    const items = screen.getAllByRole("listitem");
+    expect(items).toHaveLength(2);
+    expect(items[0]).toHaveTextContent("1.º periodo12/03/2020 → 30/06/2023");
+    expect(items[0]).toHaveTextContent(
+      "Voluntaria · Cambio de residencia · Finiquito pagado: •••",
+    );
+    expect(items[1]).toHaveTextContent("01/04/2025 → en curso");
+    expect(items[1]).toHaveTextContent("Periodo actual · reconoce antigüedad");
+    expect(document.body).not.toHaveTextContent(/8,?000/);
   });
 });
 

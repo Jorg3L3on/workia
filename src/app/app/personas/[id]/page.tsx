@@ -16,17 +16,23 @@ import {
 } from "@/components/people/person-detail-card";
 import {
   DETAIL_CARDS,
+  bajaDetails,
   contractFact,
+  employmentPeriodItems,
+  ingresoFact,
   isPersonFormField,
   isPersonFormSection,
   personEditHref,
   personInitials,
+  seniorityAsOf,
   seniorityFact,
   type DetailCardId,
   type KeyFact,
 } from "@/components/people/person-detail-model";
+import { PersonEmploymentPeriods } from "@/components/people/person-employment-periods";
 import { PersonForm } from "@/components/people/person-form";
 import { PersonHistory } from "@/components/people/person-history";
+import { PersonRehireButton } from "@/components/people/person-rehire-button";
 import { PersonSectionNav } from "@/components/people/person-section-nav";
 import { SectionSkeleton } from "@/components/loading/page-skeletons";
 import { PageBreadcrumbLabel } from "@/components/layout/app-breadcrumbs";
@@ -66,6 +72,10 @@ import {
   setPersonStatusAction,
   updateFiniquitoAction,
 } from "@/lib/people/actions";
+import {
+  listEmploymentPeriods,
+  summarizePeriods,
+} from "@/lib/people/employment";
 import { getPersonEmploymentMenuData } from "@/lib/people/employment-menu";
 
 export const metadata: Metadata = {
@@ -95,6 +105,10 @@ type PersonaDetailPageProps = {
     saved?: string;
     contract?: string;
     emit?: string;
+    /** After «Dar de baja», «Reingresar» and «Finiquito» (setPersonStatusAction, updateFiniquitoAction). */
+    baja?: string;
+    reingreso?: string;
+    finiquito?: string;
   }>;
 };
 
@@ -119,7 +133,17 @@ const PersonaDetailPage = async ({
 }: PersonaDetailPageProps) => {
   const session = await requirePeopleRead();
   const { id } = await params;
-  const { edit, seccion, campo, saved, contract, emit } = await searchParams;
+  const {
+    edit,
+    seccion,
+    campo,
+    saved,
+    contract,
+    emit,
+    baja,
+    reingreso,
+    finiquito,
+  } = await searchParams;
 
   const [
     person,
@@ -133,6 +157,7 @@ const PersonaDetailPage = async ({
     canSeeCompensation,
     positionActivities,
     beneficiaries,
+    periods,
   ] = await Promise.all([
     getPersonWithRelations(session.companyId, id, true),
     userHasPermission(session.user.id, "people:update"),
@@ -145,6 +170,7 @@ const PersonaDetailPage = async ({
     userHasPermission(session.user.id, "compensation:read"),
     listActivitiesForPersonPosition(session.companyId, id),
     listPersonBeneficiaries(session.companyId, id),
+    listEmploymentPeriods(session.companyId, id),
   ]);
 
   if (!person) {
@@ -214,6 +240,18 @@ const PersonaDetailPage = async ({
         canSeeCompensation,
       )
     : undefined;
+  // Bound once: the ⋯ menu and the baja block's «Reingresar» share it.
+  const statusAction = canEdit
+    ? setPersonStatusAction.bind(
+        null,
+        person.id,
+        person.status === "baja" ? "activa" : "baja",
+      )
+    : undefined;
+  // The current (or last) employment period; null before any period exists,
+  // and then the page reads people.fecha_ingreso as it always did.
+  const employmentSummary = summarizePeriods(periods);
+  const isBaja = person.status === "baja";
   const vigente = personContracts.find((item) => item.status === "vigente");
   // «Decidir renovación» needs positions only when there is something to decide.
   const renewalPositions =
@@ -244,19 +282,28 @@ const PersonaDetailPage = async ({
     {
       id: "antiguedad",
       label: "Antigüedad",
-      // Iniciativa 2: the seniority date of the current period and, on
-      // baja, the baja date as `asOf`.
+      // seniorityDate() of the periods, counted to the fecha de baja on baja.
       ...seniorityFact({
-        seniorityDate: person.fechaIngreso,
-        asOf: person.status === "baja" ? null : today,
+        seniorityDate: employmentSummary
+          ? employmentSummary.fechaAntiguedad
+          : person.fechaIngreso,
+        asOf: seniorityAsOf({
+          status: person.status,
+          fechaBaja: employmentSummary?.fechaBaja ?? null,
+          today,
+        }),
+        fechaIngreso: employmentSummary?.fechaIngreso ?? person.fechaIngreso,
+        baja: isBaja,
       }),
     },
     {
       id: "ingreso",
       label: "Ingreso",
-      value: person.fechaIngreso
-        ? formatDateLabel(person.fechaIngreso)
-        : "Sin capturar",
+      ...ingresoFact({
+        fechaIngreso: employmentSummary?.fechaIngreso ?? person.fechaIngreso,
+        periodCount: employmentSummary?.periodCount,
+        reconoceAntiguedad: employmentSummary?.reconoceAntiguedad,
+      }),
     },
     ...(canReadContracts
       ? [
@@ -298,7 +345,7 @@ const PersonaDetailPage = async ({
       : undefined;
 
   const cards: DetailCardId[] = [
-    ...(person.status === "baja" ? (["baja"] as const) : []),
+    ...(isBaja ? (["baja"] as const) : []),
     "identidad",
     "laboral",
     "contacto",
@@ -336,15 +383,7 @@ const PersonaDetailPage = async ({
                     ? updateFiniquitoAction.bind(null, person.id)
                     : undefined
                 }
-                statusAction={
-                  canEdit
-                    ? setPersonStatusAction.bind(
-                        null,
-                        person.id,
-                        person.status === "baja" ? "activa" : "baja",
-                      )
-                    : undefined
-                }
+                statusAction={statusAction}
               />
             }
             meta={personMeta || undefined}
@@ -413,6 +452,33 @@ const PersonaDetailPage = async ({
             Contrato emitido y guardado en el expediente.
           </p>
         ) : null}
+
+        {baja === "1" && isBaja ? (
+          <p
+            className="text-sm font-medium text-[color:var(--workia-accent-blue)]"
+            role="status"
+          >
+            Baja registrada. El periodo laboral quedó cerrado.
+          </p>
+        ) : null}
+
+        {reingreso === "1" && !isBaja ? (
+          <p
+            className="text-sm font-medium text-[color:var(--workia-accent-blue)]"
+            role="status"
+          >
+            Reingreso registrado: se abrió un nuevo periodo laboral.
+          </p>
+        ) : null}
+
+        {finiquito === "1" ? (
+          <p
+            className="text-sm font-medium text-[color:var(--workia-accent-blue)]"
+            role="status"
+          >
+            Finiquito actualizado.
+          </p>
+        ) : null}
       </div>
 
       <PersonSectionNav
@@ -421,8 +487,23 @@ const PersonaDetailPage = async ({
       />
 
       <div className="workia-detail-grid flex flex-col gap-4">
-        {/* Iniciativa 2 passes the baja details and «Reingresar» here. */}
-        <PersonBajaCard status={person.status} />
+        <PersonBajaCard
+          action={
+            isBaja && statusAction && employment ? (
+              <PersonRehireButton
+                action={statusAction}
+                lastBaja={employment.lastBaja}
+                personName={personName}
+              />
+            ) : undefined
+          }
+          details={
+            employmentSummary
+              ? bajaDetails(employmentSummary, canSeeCompensation)
+              : undefined
+          }
+          status={person.status}
+        />
 
         {/* Two stacks, not rows: cards keep their own height, and on phones
             the DOM order (left stack, then right) is the reading order. */}
@@ -510,6 +591,23 @@ const PersonaDetailPage = async ({
                                 <li key={activity.id}>{activity.name}</li>
                               ))}
                             </ul>
+                          ),
+                          wide: true,
+                        },
+                      ]
+                    : []),
+                  // After a rehire: every period, oldest first.
+                  ...(periods.length > 1
+                    ? [
+                        {
+                          label: "Periodos laborales",
+                          value: (
+                            <PersonEmploymentPeriods
+                              items={employmentPeriodItems(
+                                periods,
+                                canSeeCompensation,
+                              )}
+                            />
                           ),
                           wide: true,
                         },

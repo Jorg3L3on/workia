@@ -7,7 +7,10 @@
  *     compensation) and a demo user with it in the demo company.
  *   npx tsx e2e/fixtures/expediente-credencial.ts set-baja <personId>
  *     Puts a demo-company person on baja without the dialog, so the spec
- *     does not depend on how «Dar de baja» asks for its data.
+ *     does not depend on how «Dar de baja» asks for its data. It goes through
+ *     the domain (setPersonStatus → terminatePerson), so the employment
+ *     period is closed too: baja today, «Despido», the first motivo of the
+ *     catalog, no recontratable and a pending finiquito of $4,321.50.
  */
 import { config } from "dotenv";
 import bcrypt from "bcryptjs";
@@ -29,16 +32,10 @@ const main = async () => {
     throw new Error(`Refusing to write e2e fixtures to ${hostname}.`);
   }
 
-  const { and, eq } = await import("drizzle-orm");
+  const { eq } = await import("drizzle-orm");
   const { db } = await import("@/lib/db");
-  const {
-    companyMemberships,
-    people,
-    permissions,
-    rolePermissions,
-    roles,
-    users,
-  } = await import("@/lib/db/schema");
+  const { companyMemberships, permissions, rolePermissions, roles, users } =
+    await import("@/lib/db/schema");
   const { DEMO_PASSWORD } = await import("@/lib/db/schema/types");
   const { DEMO_COMPANY, ensureCompany } =
     await import("@/lib/tenant/companies");
@@ -47,10 +44,31 @@ const main = async () => {
   const [command, argument] = process.argv.slice(2);
 
   if (command === "set-baja" && argument) {
-    await db
-      .update(people)
-      .set({ status: "baja" })
-      .where(and(eq(people.id, argument), eq(people.companyId, company.id)));
+    const { setPersonStatus } = await import("@/lib/people");
+    const { listTerminationReasons } =
+      await import("@/lib/termination-reasons");
+    const { isoToday } = await import("@/lib/format/date");
+    const [reason] = await listTerminationReasons(company.id, {
+      activeOnly: true,
+    });
+
+    if (!reason) {
+      throw new Error("The demo company has no active motivo de baja.");
+    }
+
+    const result = await setPersonStatus(company.id, argument, {
+      status: "baja",
+      fechaBaja: isoToday(),
+      tipoBaja: "despido",
+      motivoBajaId: reason.id,
+      comentario: "Baja de prueba e2e",
+      recontratable: false,
+      finiquito: { estado: "pendiente", monto: 4321.5 },
+    });
+
+    if (!result) {
+      throw new Error(`No demo-company person ${argument}.`);
+    }
     return;
   }
 
