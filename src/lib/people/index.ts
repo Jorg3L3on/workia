@@ -37,6 +37,8 @@ import type { PersonStatus } from "@/lib/db/schema/people";
 import { CompanyReferenceError, isUniqueViolation } from "@/lib/db/errors";
 import { withTenant } from "@/lib/tenant/scope";
 
+import { buildPeopleWhere, peopleFilterContext } from "./filter/query";
+import { coercePeopleFilter } from "./filter/schema";
 import {
   DuplicateIdentityError,
   identifierOrNull,
@@ -285,30 +287,35 @@ export type ListPeoplePageOptions = {
 export const personInRegion = (companyId: string, regionId: string) =>
   sql`${people.siteId} in (select ${sites.id} from ${sites} where ${sites.companyId} = ${companyId} and ${sites.regionId} = ${regionId})`;
 
-/** One page of the Personas list: only the columns the table shows, plus the total. */
+/**
+ * One page of people with the old list options (the command palette): the
+ * same WHERE as the Personas filter (filter/query.ts), plus the total.
+ */
 export const listPeoplePage = async (
   companyId: string,
   options: ListPeoplePageOptions,
 ) => {
-  const filters = [
-    eq(people.companyId, companyId),
-    options.deleted ? isNotNull(people.deletedAt) : isNull(people.deletedAt),
-  ];
-
-  if (options.status) {
-    filters.push(eq(people.status, options.status));
-  }
-
-  if (options.regionId) {
-    filters.push(personInRegion(companyId, options.regionId));
-  }
-
-  // Every word must appear somewhere in name/RFC/CURP/email.
-  for (const term of options.query?.trim().split(/\s+/).filter(Boolean) ?? []) {
-    filters.push(ilike(personSearchText(people), `%${escapeLike(term)}%`));
-  }
-
-  const where = and(...filters);
+  const filter = coercePeopleFilter({
+    q: options.query ?? "",
+    deleted: Boolean(options.deleted),
+    conditions: [
+      options.status && {
+        field: "relacion",
+        op: "is",
+        values: [options.status],
+      },
+      options.regionId && {
+        field: "region",
+        op: "is",
+        values: [options.regionId],
+      },
+    ],
+  });
+  const where = buildPeopleWhere(
+    companyId,
+    filter,
+    peopleFilterContext(new Set()),
+  );
 
   const [rows, [totals]] = await Promise.all([
     tdb(companyId)

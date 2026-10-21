@@ -52,11 +52,16 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `action:onboarding/startOnboardingAction`           | ✅     | `src/test/idor/onboarding.db.test.ts`                                                                  | `people:update`             |
 | `action:onboarding/updateOnboardingAction`          | ✅     | `src/test/idor/onboarding.db.test.ts`                                                                  | `people:update`             |
 | `action:people/assertPeopleListAccess`              | ⏭️     | Exento: guard de lectura sin datos (requirePeopleRead); la lista la cubre lib:people/listPeoplePage    | `people:read`               |
+| `action:people/countPeopleFilterAction`             | ✅     | `src/test/idor/people-filter.db.test.ts`                                                               | `people:read`               |
+| `action:people/countPeopleFilterOptionsAction`      | ✅     | `src/test/idor/people-filter.db.test.ts`                                                               | `people:read`               |
+| `action:people/createPeopleViewAction`              | ✅     | `src/test/idor/people-views.db.test.ts`                                                                | `people:read`               |
 | `action:people/createPersonAction`                  | ✅     | `src/test/idor/people.db.test.ts`                                                                      | `people:create`             |
+| `action:people/deletePeopleViewAction`              | ✅     | `src/test/idor/people-views.db.test.ts`                                                                | `people:read`               |
 | `action:people/deletePersonAction`                  | ✅     | `src/test/idor/people.db.test.ts`                                                                      | `people:delete`             |
 | `action:people/searchManagerOptionsAction`          | ✅     | `src/test/idor/people.db.test.ts`                                                                      | `people:read`               |
 | `action:people/searchPeopleForPaletteAction`        | ✅     | `src/test/idor/people.db.test.ts`                                                                      | `people:read`               |
 | `action:people/setPersonStatusAction`               | ✅     | `src/test/idor/people.db.test.ts`                                                                      | `people:update`             |
+| `action:people/updatePeopleViewAction`              | ✅     | `src/test/idor/people-views.db.test.ts`                                                                | `people:read`               |
 | `action:people/updatePersonAction`                  | ✅     | `src/test/idor/people.db.test.ts`                                                                      | `people:update`             |
 | `action:regions/createRegionAction`                 | ✅     | `src/test/idor/regions.db.test.ts`                                                                     | `sites:create`              |
 | `action:regions/deleteRegionAction`                 | ✅     | `src/test/idor/regions.db.test.ts`                                                                     | `sites:delete`              |
@@ -213,6 +218,11 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `lib:people/getPersonById`                    | ✅     | `src/test/idor/people.db.test.ts`             | —       |
 | `lib:people/getPersonSchedule`                | ✅     | `src/test/idor/people.db.test.ts`             | —       |
 | `lib:people/getPersonWithRelations`           | ✅     | `src/test/idor/people.db.test.ts`             | —       |
+| `lib:people/list/countPeopleFilterOptions`    | ✅     | `src/test/idor/people-filter.db.test.ts`      | —       |
+| `lib:people/list/countPeopleFiltered`         | ✅     | `src/test/idor/people-filter.db.test.ts`      | —       |
+| `lib:people/list/listPeopleFiltered`          | ✅     | `src/test/idor/people-filter.db.test.ts`      | —       |
+| `lib:people/list/listPeopleFilteredAfter`     | ✅     | `src/test/idor/people-filter.db.test.ts`      | —       |
+| `lib:people/list/listPeopleNamesByIds`        | ✅     | `src/test/idor/people-filter.db.test.ts`      | —       |
 | `lib:people/listActivePeopleForSelect`        | ✅     | `src/test/idor/people.db.test.ts`             | —       |
 | `lib:people/listPeople`                       | ✅     | `src/test/idor/people.db.test.ts`             | —       |
 | `lib:people/listPeopleKeyset`                 | ✅     | `src/test/idor/mcp-tools.db.test.ts`          | —       |
@@ -223,6 +233,11 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `lib:people/softDeletePerson`                 | ✅     | `src/test/idor/people.db.test.ts`             | —       |
 | `lib:people/updatePerson`                     | ✅     | `src/test/idor/people.db.test.ts`             | —       |
 | `lib:people/upsertPersonSchedule`             | ✅     | `src/test/idor/people.db.test.ts`             | —       |
+| `lib:people/views/createPeopleView`           | ✅     | `src/test/idor/people-views.db.test.ts`       | —       |
+| `lib:people/views/deletePeopleView`           | ✅     | `src/test/idor/people-views.db.test.ts`       | —       |
+| `lib:people/views/getPeopleView`              | ✅     | `src/test/idor/people-views.db.test.ts`       | —       |
+| `lib:people/views/listPeopleViews`            | ✅     | `src/test/idor/people-views.db.test.ts`       | —       |
+| `lib:people/views/updatePeopleView`           | ✅     | `src/test/idor/people-views.db.test.ts`       | —       |
 | `lib:regions/createRegion`                    | ✅     | `src/test/idor/regions.db.test.ts`            | —       |
 | `lib:regions/getRegionById`                   | ✅     | `src/test/idor/regions.db.test.ts`            | —       |
 | `lib:regions/listRegions`                     | ✅     | `src/test/idor/regions.db.test.ts`            | —       |

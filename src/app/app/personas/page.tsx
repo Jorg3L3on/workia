@@ -1,25 +1,37 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import {
-  DownloadIcon,
-  FileDownIcon,
-  HistoryIcon,
-  PlusIcon,
-  SheetIcon,
-  UploadIcon,
-} from "lucide-react";
+import { FileDownIcon, HistoryIcon, PlusIcon, UploadIcon } from "lucide-react";
 
 import { pageTitles } from "@/lib/brand/chrome-copy";
 
 import { PageHeader } from "@/components/layout/page-header";
 import { PersonasDataTable } from "@/components/people/personas-data-table";
 import { Button } from "@/components/ui/button";
-import { parseListPaging } from "@/lib/list/paging";
-import { listPeoplePage } from "@/lib/people";
-import { listRegions } from "@/lib/regions";
+import { listAreas, listPositions } from "@/lib/catalog";
+import type { PermissionSlug } from "@/lib/db/schema/types";
+import { isoToday } from "@/lib/format/date";
 import { assertPeopleListAccess } from "@/lib/people/actions";
+import {
+  allowedPeopleColumns,
+  coercePeopleColumns,
+  DEFAULT_PEOPLE_COLUMNS,
+} from "@/lib/people/filter/columns";
+import { allowedPeopleFilterFields } from "@/lib/people/filter/fields";
+import { peopleFilterContext } from "@/lib/people/filter/query";
+import { conditionFor, restrictPeopleFilter } from "@/lib/people/filter/schema";
+import {
+  parsePeopleListParams,
+  type PeopleSearchParams,
+} from "@/lib/people/filter/url";
+import {
+  listPeopleFiltered,
+  listPeopleNamesByIds,
+  peopleColumnValue,
+} from "@/lib/people/list";
 import { formatPersonName } from "@/lib/people/schema";
-import { userHasPermission } from "@/lib/rbac";
+import { listPeopleViews } from "@/lib/people/views";
+import { listRegions } from "@/lib/regions";
+import { listSites } from "@/lib/sites";
 
 export const dynamic = "force-dynamic";
 
@@ -28,66 +40,77 @@ export const metadata: Metadata = {
 };
 
 type PersonasPageProps = {
-  searchParams: Promise<{
-    q?: string;
-    status?: string;
-    deleted?: string;
-    page?: string;
-    pageSize?: string;
-    region?: string;
-  }>;
+  searchParams: Promise<PeopleSearchParams>;
 };
 
+const toOptions = (rows: { id: string; name: string }[]) =>
+  rows.map((row) => ({ value: row.id, label: row.name }));
+
+/**
+ * Personas: the filter, the saved view and the visible columns come from the
+ * URL (old `q`/`status`/`deleted`/`region` links included). A view's own
+ * filter applies only when the URL carries none: the URL always wins.
+ */
 const PersonasPage = async ({ searchParams }: PersonasPageProps) => {
   const session = await assertPeopleListAccess();
-  const params = await searchParams;
-  const { q, deleted } = params;
-  const status =
-    params.status === "activa" || params.status === "baja"
-      ? params.status
-      : undefined;
-  const { page, pageSize } = parseListPaging(params);
+  const { companyId, permissions } = session;
+  const parsed = parsePeopleListParams(await searchParams);
+  const views = await listPeopleViews(companyId, {
+    userId: session.user.id,
+    permissions,
+  });
+  const activeView = views.find((view) => view.id === parsed.viewId) ?? null;
+  const filter = restrictPeopleFilter(
+    parsed.hasFilterParams || !activeView ? parsed.filter : activeView.filter,
+    permissions,
+  );
+  const columns =
+    parsed.columns !== null
+      ? coercePeopleColumns(parsed.columns, permissions)
+      : activeView
+        ? activeView.columns
+        : coercePeopleColumns(DEFAULT_PEOPLE_COLUMNS, permissions);
+  const today = isoToday();
+  const managerIds = conditionFor(filter, "jefe")?.values ?? [];
 
-  const regions = await listRegions(session.companyId);
-  // Only a region of this company filters; anything else is ignored.
-  const regionId = regions.some((region) => region.id === params.region)
-    ? params.region
-    : undefined;
   const [
     { rows: people, total },
-    canCreate,
-    canImport,
-    canExport,
-    canUpdate,
-    canReadContracts,
+    regions,
+    areaRows,
+    positionRows,
+    siteRows,
+    managers,
   ] = await Promise.all([
-    listPeoplePage(session.companyId, {
-      query: q,
-      status,
-      deleted: deleted === "1",
-      regionId,
-      page,
-      pageSize,
+    listPeopleFiltered(companyId, {
+      filter,
+      context: peopleFilterContext(permissions, today),
+      columns,
+      page: parsed.page,
+      pageSize: parsed.pageSize,
     }),
-    userHasPermission(session.user.id, "people:create"),
-    userHasPermission(session.user.id, "people:import"),
-    userHasPermission(session.user.id, "people:export"),
-    userHasPermission(session.user.id, "people:update"),
-    userHasPermission(session.user.id, "contracts:read"),
+    listRegions(companyId),
+    listAreas(companyId),
+    listPositions(companyId),
+    listSites(companyId),
+    listPeopleNamesByIds(companyId, managerIds),
   ]);
-  const exportQuery = new URLSearchParams();
-
-  if (q) exportQuery.set("q", q);
-  if (status) exportQuery.set("status", status);
-  if (deleted === "1") exportQuery.set("deleted", "1");
+  const can = (permission: PermissionSlug) => permissions.has(permission);
+  // Región only shows up once the company has regions (or the URL uses it).
+  const fields = allowedPeopleFilterFields(permissions).filter(
+    (field) =>
+      field.id !== "region" ||
+      regions.length > 0 ||
+      Boolean(conditionFor(filter, "region")),
+  );
 
   const rows = people.map((person) => ({
     id: person.id,
     name: formatPersonName(person),
-    rfc: person.rfc,
-    fechaIngreso: person.fechaIngreso,
     status: person.status,
     deleted: Boolean(person.deletedAt),
+    cells: Object.fromEntries(
+      columns.map((id) => [id, peopleColumnValue(person, id)]),
+    ),
   }));
 
   return (
@@ -95,32 +118,20 @@ const PersonasPage = async ({ searchParams }: PersonasPageProps) => {
       <PageHeader
         description="Expedientes, relación laboral e identificadores."
         menu={[
-          canExport && {
-            label: "Exportar a Excel",
-            icon: SheetIcon,
-            href: `/app/personas/exportar?${exportQuery}`,
-            download: true,
-          },
-          canExport && {
-            label: "Exportar a CSV",
-            icon: DownloadIcon,
-            href: `/app/personas/exportar?${new URLSearchParams({ ...Object.fromEntries(exportQuery), format: "csv" })}`,
-            download: true,
-          },
-          canImport && {
+          can("people:import") && {
             label: "Descargar plantilla",
             icon: FileDownIcon,
             href: "/app/personas/plantilla",
             download: true,
           },
-          canImport && {
+          can("people:import") && {
             label: "Historial de importaciones",
             icon: HistoryIcon,
             href: "/app/personas/importaciones",
           },
         ]}
         primary={
-          canCreate
+          can("people:create")
             ? {
                 label: "Nueva persona",
                 icon: PlusIcon,
@@ -129,7 +140,7 @@ const PersonasPage = async ({ searchParams }: PersonasPageProps) => {
             : null
         }
         secondary={
-          canImport
+          can("people:import")
             ? {
                 label: "Importar",
                 icon: UploadIcon,
@@ -141,10 +152,14 @@ const PersonasPage = async ({ searchParams }: PersonasPageProps) => {
       />
 
       <PersonasDataTable
-        canReadContracts={canReadContracts}
-        canUpdate={canUpdate}
+        activeViewId={activeView?.id ?? null}
+        allowedColumns={allowedPeopleColumns(permissions)}
+        canExport={can("people:export")}
+        canReadContracts={can("contracts:read")}
+        canUpdate={can("people:update")}
+        columns={columns}
         emptyAction={
-          canCreate ? (
+          can("people:create") ? (
             <Button asChild>
               <Link href="/app/personas/nueva">
                 Dar de alta a la primera persona
@@ -152,18 +167,24 @@ const PersonasPage = async ({ searchParams }: PersonasPageProps) => {
             </Button>
           ) : undefined
         }
-        page={page}
-        pageSize={pageSize}
+        fields={fields}
+        filter={filter}
+        options={{
+          region: toOptions(regions),
+          area: toOptions(areaRows),
+          puesto: toOptions(positionRows),
+          sucursal: toOptions(siteRows),
+          jefe: managers.map((manager) => ({
+            value: manager.id,
+            label: formatPersonName(manager),
+          })),
+        }}
+        page={parsed.page}
+        pageSize={parsed.pageSize}
         people={rows}
-        query={q?.trim() ?? ""}
-        region={regionId ?? ""}
-        regions={regions.map((region) => ({
-          id: region.id,
-          name: region.name,
-        }))}
-        status={status ?? ""}
+        today={today}
         total={total}
-        visibility={deleted === "1" ? "deleted" : "expediente"}
+        views={views}
       />
     </div>
   );
