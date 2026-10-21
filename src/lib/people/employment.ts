@@ -6,6 +6,7 @@ import {
   snapshotEmploymentPeriod,
   snapshotPerson,
 } from "@/lib/audit";
+import type { RecordAuditEventInput } from "@/lib/audit/types";
 import {
   tdb,
   withTransaction,
@@ -188,11 +189,12 @@ const SUMMARY_BATCH = 1000;
 /**
  * Summaries for many people at once (lists, export): by person id, only the
  * people of the company with at least one period. Without ids, every period
- * of the company.
+ * of the company. Pass the transaction to read inside one (the importer).
  */
 export const listEmploymentSummaries = async (
   companyId: string,
   personIds?: string[],
+  executor: DbExecutor = tdb(companyId),
 ) => {
   const rows: EmploymentPeriodRow[] = [];
 
@@ -200,14 +202,14 @@ export const listEmploymentSummaries = async (
     for (let start = 0; start < personIds.length; start += SUMMARY_BATCH) {
       rows.push(
         ...(await selectPeriods(
-          tdb(companyId),
+          executor,
           companyId,
           personIds.slice(start, start + SUMMARY_BATCH),
         )),
       );
     }
   } else {
-    rows.push(...(await selectPeriods(tdb(companyId), companyId, null)));
+    rows.push(...(await selectPeriods(executor, companyId, null)));
   }
 
   const byPerson = new Map<string, EmploymentPeriodRow[]>();
@@ -441,11 +443,233 @@ export type TerminationResult = {
   warnings: string[];
 };
 
+/** Where a baja comes from, for the audit: the app (default) or an import. */
+export type TerminationOptions = {
+  source?: NonNullable<RecordAuditEventInput["source"]>;
+};
+
 /**
- * Baja laboral: closes the open period with fecha (≥ ingreso), tipo, motivo
- * of the company's catalog, comentario, recontratable and, optionally, the
- * finiquito; sets people.status = baja and the vigente contract to
- * «Terminado» ending on the fecha de baja, all in one transaction and audited.
+ * The rules of every baja, from the dialog, the connector or an import: the
+ * fecha is not before the period's ingreso and the motivo is active in this
+ * company's catalog. Returns the motivo. A correction may keep the period's
+ * own motivo even if it was deactivated since.
+ */
+const checkTermination = async (
+  tx: DbTransaction,
+  companyId: string,
+  period: Pick<EmploymentPeriod, "fechaIngreso" | "motivoBajaId">,
+  input: Pick<TerminationValues, "fechaBaja" | "motivoBajaId">,
+  options: { keepsMotivo?: boolean } = {},
+) => {
+  const kept =
+    options.keepsMotivo && input.motivoBajaId === period.motivoBajaId;
+
+  if (period.fechaIngreso && input.fechaBaja < period.fechaIngreso) {
+    throw new EmploymentError(
+      `La fecha de baja no puede ser anterior al ingreso (${formatDateMx(period.fechaIngreso)}).`,
+      "fechaBaja",
+    );
+  }
+
+  const [reason] = await tx
+    .select()
+    .from(terminationReasons)
+    .where(
+      withTenant(
+        terminationReasons,
+        companyId,
+        eq(terminationReasons.id, input.motivoBajaId),
+        isNull(terminationReasons.deletedAt),
+        kept ? undefined : eq(terminationReasons.active, true),
+      ),
+    )
+    .limit(1);
+
+  if (!reason) {
+    throw new EmploymentError(
+      "Elige un motivo de baja activo del catálogo de esta empresa.",
+      "motivoBajaId",
+    );
+  }
+
+  return reason;
+};
+
+/** The vigente contract of the person becomes «Terminado» on the baja, audited. */
+const terminateVigenteContract = async (
+  tx: DbTransaction,
+  companyId: string,
+  personId: string,
+  fechaBaja: string,
+  actorUserId: string | null | undefined,
+  options: TerminationOptions,
+) => {
+  const [vigente] = await tx
+    .select()
+    .from(contracts)
+    .where(
+      withTenant(
+        contracts,
+        companyId,
+        eq(contracts.personId, personId),
+        eq(contracts.status, "vigente"),
+        isNull(contracts.deletedAt),
+      ),
+    )
+    .for("update");
+
+  if (!vigente) {
+    return null;
+  }
+
+  // Ends on the baja; a contract that already ended earlier keeps its end.
+  const endDate =
+    vigente.endDate && vigente.endDate < fechaBaja
+      ? vigente.endDate
+      : fechaBaja;
+  const [terminated] = await tx
+    .update(contracts)
+    .set({ status: "terminado", endDate })
+    .where(withTenant(contracts, companyId, eq(contracts.id, vigente.id)))
+    .returning();
+
+  await recordAuditEvent(
+    {
+      companyId,
+      actorUserId,
+      resourceType: "contract",
+      resourceId: vigente.id,
+      action: "terminado",
+      source: options.source,
+      payload: {
+        before: snapshotContract(vigente),
+        after: snapshotContract(terminated),
+        changes: {
+          status: { from: vigente.status, to: terminated.status },
+          ...(vigente.endDate === terminated.endDate
+            ? {}
+            : {
+                endDate: { from: vigente.endDate, to: terminated.endDate },
+              }),
+        },
+        summary: `Contrato terminado por la baja del ${formatDateMx(fechaBaja)}`,
+      },
+    },
+    tx,
+  );
+
+  return terminated;
+};
+
+/**
+ * Baja laboral inside the caller's transaction: closes the open period with
+ * fecha (≥ ingreso), tipo, motivo of the company's catalog, comentario,
+ * recontratable and, optionally, the finiquito; sets people.status = baja
+ * and the vigente contract to «Terminado» ending on the fecha de baja,
+ * audited. terminatePerson() runs it in its own transaction; the importer
+ * runs it in its batch.
+ */
+export const recordTermination = async (
+  tx: DbTransaction,
+  companyId: string,
+  personId: string,
+  input: TerminationValues,
+  actorUserId?: string | null,
+  options: TerminationOptions = {},
+): Promise<TerminationResult | null> => {
+  const existing = await lockPerson(tx, companyId, personId);
+
+  if (!existing) {
+    return null;
+  }
+
+  if (existing.status === "baja") {
+    throw new EmploymentError("La persona ya está dada de baja.");
+  }
+
+  await syncEmploymentPeriods(tx, companyId, [personId], actorUserId);
+  const periods = await listEmploymentPeriods(companyId, personId, tx);
+  const open = periods.find(isOpenPeriod);
+
+  if (!open) {
+    throw new EmploymentError(
+      "La persona no tiene un periodo laboral abierto.",
+    );
+  }
+
+  const reason = await checkTermination(tx, companyId, open, input);
+  const [period] = await tx
+    .update(employmentPeriods)
+    .set({
+      fechaBaja: input.fechaBaja,
+      tipoBaja: input.tipoBaja,
+      motivoBajaId: reason.id,
+      comentarioBaja: input.comentario?.trim() || null,
+      recontratable: input.recontratable,
+      ...finiquitoValues(input.finiquito),
+    })
+    .where(
+      withTenant(
+        employmentPeriods,
+        companyId,
+        eq(employmentPeriods.id, open.id),
+      ),
+    )
+    .returning();
+
+  const [updated] = await tx
+    .update(people)
+    .set({ status: "baja" })
+    .where(withTenant(people, companyId, eq(people.id, personId)))
+    .returning();
+
+  const terminated = await terminateVigenteContract(
+    tx,
+    companyId,
+    personId,
+    input.fechaBaja,
+    actorUserId,
+    options,
+  );
+  const periodBefore = snapshotEmploymentPeriod(open, open.motivoBaja);
+  const periodAfter = snapshotEmploymentPeriod(period, reason.name);
+
+  await recordAuditEvent(
+    {
+      companyId,
+      actorUserId,
+      resourceType: "person",
+      resourceId: personId,
+      action: "baja",
+      source: options.source,
+      payload: {
+        before: { ...snapshotPerson(existing), ...periodBefore },
+        after: { ...snapshotPerson(updated), ...periodAfter },
+        changes: {
+          status: { from: existing.status, to: updated.status },
+          ...periodChanges(periodBefore, periodAfter),
+        },
+        // Never the amount: the summary is not masked.
+        summary: [
+          `Baja laboral el ${formatDateMx(input.fechaBaja)}`,
+          terminationTypeLabels[input.tipoBaja],
+          reason.name,
+          input.recontratable ? "recontratable" : "no recontratable",
+          terminated ? "contrato terminado" : null,
+        ]
+          .filter(Boolean)
+          .join(" · "),
+      },
+    },
+    tx,
+  );
+
+  return { person: updated, period, contract: terminated, warnings: [] };
+};
+
+/**
+ * Baja laboral in its own transaction (dialog, connector): see
+ * recordTermination().
  */
 export const terminatePerson = async (
   companyId: string,
@@ -453,152 +677,98 @@ export const terminatePerson = async (
   input: TerminationValues,
   actorUserId?: string | null,
 ): Promise<TerminationResult | null> =>
-  withTransaction(async (tx) => {
-    const existing = await lockPerson(tx, companyId, personId);
+  withTransaction(
+    (tx) => recordTermination(tx, companyId, personId, input, actorUserId),
+    companyId,
+  );
 
-    if (!existing) {
-      return null;
-    }
+/**
+ * Corrects the baja of a person who is already de baja (the importer): the
+ * last period takes these values under the same rules as a baja (its own
+ * motivo may stay even if deactivated since). A baja
+ * «sin fecha» gets its date, so the vigente contract ends on it as in a
+ * baja; the period no longer needs review. Audited as an update.
+ */
+export const correctTermination = async (
+  tx: DbTransaction,
+  companyId: string,
+  personId: string,
+  input: TerminationValues,
+  actorUserId?: string | null,
+  options: TerminationOptions = {},
+): Promise<TerminationResult | null> => {
+  const existing = await lockPerson(tx, companyId, personId);
 
-    if (existing.status === "baja") {
-      throw new EmploymentError("La persona ya está dada de baja.");
-    }
+  if (!existing) {
+    return null;
+  }
 
-    await syncEmploymentPeriods(tx, companyId, [personId], actorUserId);
-    const periods = await listEmploymentPeriods(companyId, personId, tx);
-    const open = periods.find(isOpenPeriod);
+  if (existing.status !== "baja") {
+    throw new EmploymentError("La persona no está dada de baja.");
+  }
 
-    if (!open) {
-      throw new EmploymentError(
-        "La persona no tiene un periodo laboral abierto.",
-      );
-    }
+  await syncEmploymentPeriods(tx, companyId, [personId], actorUserId);
+  const last = (await listEmploymentPeriods(companyId, personId, tx)).at(-1);
 
-    if (open.fechaIngreso && input.fechaBaja < open.fechaIngreso) {
-      throw new EmploymentError(
-        `La fecha de baja no puede ser anterior al ingreso (${formatDateMx(open.fechaIngreso)}).`,
-        "fechaBaja",
-      );
-    }
+  if (!last || isOpenPeriod(last)) {
+    throw new EmploymentError("La persona no tiene una baja que corregir.");
+  }
 
-    const [reason] = await tx
-      .select()
-      .from(terminationReasons)
-      .where(
-        withTenant(
-          terminationReasons,
-          companyId,
-          eq(terminationReasons.id, input.motivoBajaId),
-          isNull(terminationReasons.deletedAt),
-          eq(terminationReasons.active, true),
-        ),
-      )
-      .limit(1);
-
-    if (!reason) {
-      throw new EmploymentError(
-        "Elige un motivo de baja activo del catálogo de esta empresa.",
-        "motivoBajaId",
-      );
-    }
-
-    const [period] = await tx
-      .update(employmentPeriods)
-      .set({
-        fechaBaja: input.fechaBaja,
-        tipoBaja: input.tipoBaja,
-        motivoBajaId: reason.id,
-        comentarioBaja: input.comentario?.trim() || null,
-        recontratable: input.recontratable,
-        ...finiquitoValues(input.finiquito),
-      })
-      .where(
-        withTenant(
-          employmentPeriods,
-          companyId,
-          eq(employmentPeriods.id, open.id),
-        ),
-      )
-      .returning();
-
-    const [updated] = await tx
-      .update(people)
-      .set({ status: "baja" })
-      .where(withTenant(people, companyId, eq(people.id, personId)))
-      .returning();
-
-    const [vigente] = await tx
-      .select()
-      .from(contracts)
-      .where(
-        withTenant(
-          contracts,
-          companyId,
-          eq(contracts.personId, personId),
-          eq(contracts.status, "vigente"),
-          isNull(contracts.deletedAt),
-        ),
-      )
-      .for("update");
-    let terminated: typeof contracts.$inferSelect | null = null;
-
-    if (vigente) {
-      // Ends on the baja; a contract that already ended earlier keeps its end.
-      const endDate =
-        vigente.endDate && vigente.endDate < input.fechaBaja
-          ? vigente.endDate
-          : input.fechaBaja;
-      [terminated] = await tx
-        .update(contracts)
-        .set({ status: "terminado", endDate })
-        .where(withTenant(contracts, companyId, eq(contracts.id, vigente.id)))
-        .returning();
-
-      await recordAuditEvent(
-        {
-          companyId,
-          actorUserId,
-          resourceType: "contract",
-          resourceId: vigente.id,
-          action: "terminado",
-          payload: {
-            before: snapshotContract(vigente),
-            after: snapshotContract(terminated),
-            changes: {
-              status: { from: vigente.status, to: terminated.status },
-              ...(vigente.endDate === terminated.endDate
-                ? {}
-                : {
-                    endDate: { from: vigente.endDate, to: terminated.endDate },
-                  }),
-            },
-            summary: `Contrato terminado por la baja del ${formatDateMx(input.fechaBaja)}`,
-          },
-        },
+  const reason = await checkTermination(tx, companyId, last, input, {
+    keepsMotivo: true,
+  });
+  const [period] = await tx
+    .update(employmentPeriods)
+    .set({
+      fechaBaja: input.fechaBaja,
+      bajaSinFecha: false,
+      // An inferred date stays inferred only while nobody changes it.
+      fechaBajaInferida:
+        last.fechaBajaInferida && last.fechaBaja === input.fechaBaja,
+      requiereRevision: false,
+      tipoBaja: input.tipoBaja,
+      motivoBajaId: reason.id,
+      comentarioBaja: input.comentario?.trim() || null,
+      recontratable: input.recontratable,
+      ...finiquitoValues(input.finiquito),
+    })
+    .where(
+      withTenant(
+        employmentPeriods,
+        companyId,
+        eq(employmentPeriods.id, last.id),
+      ),
+    )
+    .returning();
+  const terminated = last.bajaSinFecha
+    ? await terminateVigenteContract(
         tx,
-      );
-    }
+        companyId,
+        personId,
+        input.fechaBaja,
+        actorUserId,
+        options,
+      )
+    : null;
+  const before = snapshotEmploymentPeriod(last, last.motivoBaja);
+  const after = snapshotEmploymentPeriod(period, reason.name);
+  const changes = periodChanges(before, after);
 
-    const periodBefore = snapshotEmploymentPeriod(open, open.motivoBaja);
-    const periodAfter = snapshotEmploymentPeriod(period, reason.name);
-
+  if (Object.keys(changes).length > 0) {
     await recordAuditEvent(
       {
         companyId,
         actorUserId,
         resourceType: "person",
         resourceId: personId,
-        action: "baja",
+        action: "update",
+        source: options.source,
         payload: {
-          before: { ...snapshotPerson(existing), ...periodBefore },
-          after: { ...snapshotPerson(updated), ...periodAfter },
-          changes: {
-            status: { from: existing.status, to: updated.status },
-            ...periodChanges(periodBefore, periodAfter),
-          },
-          // Never the amount: the summary is not masked.
+          before,
+          after,
+          changes,
           summary: [
-            `Baja laboral el ${formatDateMx(input.fechaBaja)}`,
+            `Baja actualizada: ${formatDateMx(input.fechaBaja)}`,
             terminationTypeLabels[input.tipoBaja],
             reason.name,
             input.recontratable ? "recontratable" : "no recontratable",
@@ -610,9 +780,63 @@ export const terminatePerson = async (
       },
       tx,
     );
+  }
 
-    return { person: updated, period, contract: terminated, warnings: [] };
-  }, companyId);
+  return { person: existing, period, contract: terminated, warnings: [] };
+};
+
+/**
+ * Recognizes seniority from `fecha` on the open period (the importer's
+ * «Fecha de antigüedad»): reconoce_antiguedad with that date, not after the
+ * ingreso. The caller audits it with the rest of the row.
+ */
+export const recognizeSeniority = async (
+  tx: DbTransaction,
+  companyId: string,
+  personId: string,
+  fecha: string,
+) => {
+  const periods = await listEmploymentPeriods(companyId, personId, tx);
+  const open = periods.find(isOpenPeriod);
+
+  if (!open) {
+    throw new EmploymentError(
+      "La persona no tiene un periodo laboral abierto.",
+    );
+  }
+
+  if (open.fechaIngreso && fecha > open.fechaIngreso) {
+    throw new EmploymentError(
+      "La antigüedad reconocida no puede ser posterior al ingreso.",
+      "fechaAntiguedadReconocida",
+    );
+  }
+
+  const recognized = {
+    reconoceAntiguedad: true,
+    fechaAntiguedadReconocida: fecha,
+  };
+  const [period] = await tx
+    .update(employmentPeriods)
+    .set({
+      ...recognized,
+      fechaAntiguedad: seniorityDate(
+        periods.map((period) =>
+          period.id === open.id ? { ...period, ...recognized } : period,
+        ),
+      ),
+    })
+    .where(
+      withTenant(
+        employmentPeriods,
+        companyId,
+        eq(employmentPeriods.id, open.id),
+      ),
+    )
+    .returning();
+
+  return period;
+};
 
 export type RehireResult = {
   person: typeof people.$inferSelect;
