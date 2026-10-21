@@ -29,6 +29,7 @@ import {
   buildContractScheduleSnapshot,
   fillContractTemplate,
 } from "@/lib/contracts/schema";
+import { syncEmploymentPeriods } from "@/lib/people/employment";
 import { formatHorarioToken } from "@/lib/people/schema";
 
 import {
@@ -672,6 +673,16 @@ const applyPersonasBatch = async (job: ImportJob) =>
 
     if (marks.length > 0) {
       await markRows(tx, job.companyId, marks);
+      // New people open their employment period; updated ones follow their
+      // status and fecha de ingreso (Iniciativa 2).
+      await syncEmploymentPeriods(
+        tx,
+        job.companyId,
+        marks.flatMap((mark) =>
+          mark.targetPersonId ? [mark.targetPersonId] : [],
+        ),
+        job.actorUserId,
+      );
     }
 
     if (audit.length > 0) {

@@ -5,14 +5,18 @@ import { listAuditEvents } from "@/lib/audit";
 export const PersonHistory = async ({
   companyId,
   personId,
+  compensation,
 }: {
   companyId: string;
   personId: string;
+  /** compensation:read: finiquito amounts in clear. */
+  compensation: boolean;
 }) => {
   const auditEvents = await listAuditEvents({
     companyId,
     resourceType: "person",
     resourceId: personId,
+    compensation,
     limit: 50,
   });
 

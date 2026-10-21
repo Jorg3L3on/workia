@@ -147,6 +147,13 @@ export const resolveBreadcrumbs = (
     ];
   }
 
+  if (path === CATALOG_PATHS.motivosBaja) {
+    return [
+      { label: "Catálogo", href: CATALOG_PATHS.index },
+      { label: "Motivos de baja" },
+    ];
+  }
+
   if (path === "/app/auditoria") {
     return [{ label: "Auditoría" }];
   }

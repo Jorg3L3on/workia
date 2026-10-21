@@ -25,6 +25,7 @@ describe("audit append-only surface", () => {
       "listAuditActors",
       "listAuditEvents",
       "listAuditEventsKeyset",
+      "maskAuditCompensation",
       "recordAuditEvent",
       "snapshotActivity",
       "snapshotArea",
@@ -32,12 +33,14 @@ describe("audit append-only surface", () => {
       "snapshotAssetMovement",
       "snapshotContract",
       "snapshotContractTemplate",
+      "snapshotEmploymentPeriod",
       "snapshotPerson",
       "snapshotPersonSchedule",
       "snapshotPosition",
       "snapshotPositionActivity",
       "snapshotRegion",
       "snapshotSite",
+      "snapshotTerminationReason",
     ]);
   });
 
@@ -91,5 +94,30 @@ describe("buildChanges", () => {
 
     expect(changes.rfc).toEqual({ from: null, to: "XAXX010101000" });
     expect(changes.nombres).toBeUndefined();
+  });
+});
+
+describe("maskAuditCompensation", () => {
+  it("masks salaries and the finiquito amount at any depth, keeping the rest", async () => {
+    const { maskAuditCompensation } = await import("@/lib/audit");
+
+    expect(
+      maskAuditCompensation({
+        summary: "Finiquito pagado",
+        changes: {
+          finiquitoMonto: { from: null, to: "15000.00" },
+          finiquitoEstado: { from: null, to: "pagado" },
+        },
+        after: { salarioDiario: "500.00", status: "terminado" },
+      }),
+    ).toEqual({
+      summary: "Finiquito pagado",
+      changes: {
+        finiquitoMonto: { from: null, to: "•••" },
+        finiquitoEstado: { from: null, to: "pagado" },
+      },
+      after: { salarioDiario: "•••", status: "terminado" },
+    });
+    expect(maskAuditCompensation(null)).toBeNull();
   });
 });

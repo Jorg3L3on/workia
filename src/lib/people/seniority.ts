@@ -39,3 +39,46 @@ export const formatSeniority = (
 
   return pieces.length > 0 ? pieces.join(", ") : "menos de un mes";
 };
+
+/** What seniorityDate() reads of an employment period. */
+export type SeniorityPeriod = {
+  fechaIngreso: string | null;
+  /** «Reconocer antigüedad previa» chosen on the rehire that opened it. */
+  reconoceAntiguedad: boolean;
+  fechaAntiguedadReconocida?: string | null;
+};
+
+/**
+ * The one date seniority counts from (Iniciativa 2), for the constancia, the
+ * `antiguedad` contract token, the KPIs, filters and the export. Periods in
+ * any order; the latest by ingreso is the current (or last) one.
+ *
+ * - Without «Reconocer antigüedad previa» (the default) it restarts at the
+ *   period's ingreso.
+ * - With it, the explicit recognized date if HR gave one, else it carries
+ *   over from the previous period's own seniority date: the first period's
+ *   ingreso when every rehire recognized it.
+ *
+ * Without periods (data before the backfill) it is the person's fecha_ingreso.
+ */
+export const seniorityDate = (
+  periods: ReadonlyArray<SeniorityPeriod>,
+  fallbackFechaIngreso: string | null = null,
+): string | null => {
+  const ordered = [...periods].sort((a, b) =>
+    (a.fechaIngreso ?? "").localeCompare(b.fechaIngreso ?? ""),
+  );
+  let date: string | null = null;
+
+  for (const [index, period] of ordered.entries()) {
+    if (period.reconoceAntiguedad && period.fechaAntiguedadReconocida) {
+      date = period.fechaAntiguedadReconocida;
+    } else if (index === 0 || !period.reconoceAntiguedad) {
+      date = period.fechaIngreso;
+    } else {
+      date = date ?? period.fechaIngreso;
+    }
+  }
+
+  return ordered.length > 0 ? date : fallbackFechaIngreso;
+};

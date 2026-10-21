@@ -71,8 +71,20 @@ const ConstanciaPage = async ({ params }: ConstanciaPageProps) => {
           {certificate.fechaIngreso ? (
             <>
               ingresó a laborar el{" "}
-              <strong>{formatContractDate(certificate.fechaIngreso)}</strong> y
-              al {formatContractDate(today)} cuenta con una antigüedad de{" "}
+              <strong>{formatContractDate(certificate.fechaIngreso)}</strong>
+              {certificate.fechaAntiguedad &&
+              certificate.fechaAntiguedad !== certificate.fechaIngreso ? (
+                <>
+                  , con antigüedad reconocida desde el{" "}
+                  <strong>
+                    {formatContractDate(certificate.fechaAntiguedad)}
+                  </strong>
+                  ,
+                </>
+              ) : null}{" "}
+              y al {formatContractDate(certificate.until)}{" "}
+              {certificate.until === today ? "cuenta" : "contaba"} con una
+              antigüedad de{" "}
               <strong>{certificate.antiguedad ?? "menos de un mes"}</strong>
             </>
           ) : (

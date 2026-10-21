@@ -115,6 +115,7 @@ const PII_KEYS = new Set([
   // Compensation and expediente México in audit payloads.
   "salarioDiario",
   "salarioMensual",
+  "finiquitoMonto",
   "domicilioCalle",
   "domicilioNumeroExterior",
   "domicilioNumeroInterior",

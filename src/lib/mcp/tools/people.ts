@@ -8,6 +8,11 @@ import {
   listPersonBeneficiaries,
   PERSON_MISSING_FIELDS,
 } from "@/lib/people";
+import {
+  listEmploymentPeriods,
+  listEmploymentSummaries,
+  summarizePeriods,
+} from "@/lib/people/employment";
 import { listAssetsByPerson } from "@/lib/resguardo";
 
 import {
@@ -33,6 +38,12 @@ import {
 } from "./common";
 import { horarioBloques, horarioBloquesSchema } from "./schedule";
 import { datosMexico, datosMexicoSchema } from "./mexico";
+import {
+  employmentPeriod,
+  employmentPeriodSchema,
+  employmentSummary,
+  employmentSummarySchema,
+} from "./employment";
 
 const siteRefSchema = z
   .object({ id: z.string(), name: z.string(), kind: z.string() })
@@ -48,6 +59,14 @@ const personListItem = z.object({
   sucursal: siteRefSchema,
   fecha_ingreso: z.string().nullable(),
   fecha_ingreso_mx: z.string().nullable(),
+  fecha_antiguedad: z
+    .string()
+    .nullable()
+    .describe("Desde cuándo cuenta su antigüedad (seniorityDate)."),
+  fecha_baja: z
+    .string()
+    .nullable()
+    .describe("Fecha de la última baja; null si nunca se ha dado de baja."),
   url: z.string(),
 });
 
@@ -116,6 +135,10 @@ export const listPeopleTool = defineTool({
       limit,
     });
     const page = pageOf(rows, limit, hash, (row) => row.apellidoPaterno);
+    const employment = await listEmploymentSummaries(
+      ctx.companyId,
+      page.items.map((row) => row.id),
+    );
 
     return {
       items: page.items.map((row) => ({
@@ -132,6 +155,9 @@ export const listPeopleTool = defineTool({
           : null,
         fecha_ingreso: row.fechaIngreso,
         fecha_ingreso_mx: mx(row.fechaIngreso),
+        fecha_antiguedad:
+          employment.get(row.id)?.fechaAntiguedad ?? row.fechaIngreso,
+        fecha_baja: employment.get(row.id)?.fechaBaja ?? null,
         url: appUrl(ctx, `/app/personas/${row.id}`),
       })),
       next_cursor: page.next_cursor,
@@ -140,12 +166,18 @@ export const listPeopleTool = defineTool({
   },
 });
 
-const INCLUDES = ["horario", "contratos", "activos", "actividades"] as const;
+const INCLUDES = [
+  "horario",
+  "contratos",
+  "activos",
+  "actividades",
+  "periodos",
+] as const;
 
 export const getPersonTool = defineTool({
   name: "get_person",
   title: "Ver expediente",
-  description: `Expediente de una persona: datos, área, puesto, sucursal, jefe, datos México (domicilio, estado civil, INE y beneficiarios; sólo con el scope pii, si no dice qué está capturado) y, según include, horario, contratos, activos en resguardo y actividades del puesto. RFC, CURP, NSS, teléfono, correo y fecha de nacimiento salen enmascarados sin el scope pii (pii_masked). ${FREE_TEXT_NOTE}`,
+  description: `Expediente de una persona: datos, área, puesto, sucursal, jefe, datos México (domicilio, estado civil, INE y beneficiarios; sólo con el scope pii, si no dice qué está capturado), periodo laboral vigente o último (fecha de antigüedad, baja con tipo, motivo, comentario, recontratable y finiquito; el monto sólo con el scope pii y compensation:read) y, según include, horario, contratos, activos en resguardo, actividades del puesto y todos los periodos laborales (reingresos). RFC, CURP, NSS, teléfono, correo y fecha de nacimiento salen enmascarados sin el scope pii (pii_masked). ${FREE_TEXT_NOTE}`,
   kind: "read",
   scope: "read",
   permission: "people:read",
@@ -154,7 +186,9 @@ export const getPersonTool = defineTool({
     include: z
       .array(z.enum(INCLUDES))
       .default(["horario"])
-      .describe("Secciones extra: horario, contratos, activos, actividades."),
+      .describe(
+        "Secciones extra: horario, contratos, activos, actividades, periodos.",
+      ),
   }),
   output: z.object({
     person: z.object({
@@ -183,6 +217,8 @@ export const getPersonTool = defineTool({
       url: z.string(),
     }),
     datos_mexico: datosMexicoSchema,
+    periodo_laboral: employmentSummarySchema,
+    periodos_laborales: z.array(employmentPeriodSchema).optional(),
     horario: z
       .object({
         entrada: z.string().nullable(),
@@ -234,20 +270,22 @@ export const getPersonTool = defineTool({
       throw notFound("La persona");
     }
 
-    const [contracts, assets, activities, beneficiaries] = await Promise.all([
-      wants.has("contratos")
-        ? listContractsByPerson(ctx.companyId, person.id)
-        : null,
-      wants.has("activos")
-        ? listAssetsByPerson(ctx.companyId, person.id)
-        : null,
-      wants.has("actividades") && person.positionId
-        ? listActivitiesForPosition(ctx.companyId, person.positionId)
-        : wants.has("actividades")
-          ? []
+    const [contracts, assets, activities, beneficiaries, periods] =
+      await Promise.all([
+        wants.has("contratos")
+          ? listContractsByPerson(ctx.companyId, person.id)
           : null,
-      listPersonBeneficiaries(ctx.companyId, person.id),
-    ]);
+        wants.has("activos")
+          ? listAssetsByPerson(ctx.companyId, person.id)
+          : null,
+        wants.has("actividades") && person.positionId
+          ? listActivitiesForPosition(ctx.companyId, person.positionId)
+          : wants.has("actividades")
+            ? []
+            : null,
+        listPersonBeneficiaries(ctx.companyId, person.id),
+        listEmploymentPeriods(ctx.companyId, person.id),
+      ]);
     const ingreso = dateFields(person.fechaIngreso);
 
     return {
@@ -271,6 +309,14 @@ export const getPersonTool = defineTool({
         url: appUrl(ctx, `/app/personas/${person.id}`),
       },
       datos_mexico: datosMexico(person, beneficiaries, ctx.piiUnmasked),
+      periodo_laboral: employmentSummary(summarizePeriods(periods), ctx),
+      ...(wants.has("periodos")
+        ? {
+            periodos_laborales: periods.map((period) =>
+              employmentPeriod(period, ctx),
+            ),
+          }
+        : {}),
       ...(wants.has("horario")
         ? {
             horario: person.schedule

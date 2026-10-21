@@ -19,6 +19,7 @@ const contractStatusLabel = {
   renovado: "Renovado",
   no_renovado: "No renovado",
   vencido: "Vencido",
+  terminado: "Terminado",
 } as const;
 
 /** `2024-03-05` -> `05/03/2024`; anything else passes through. */

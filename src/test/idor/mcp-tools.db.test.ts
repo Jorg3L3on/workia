@@ -31,6 +31,7 @@ import type { McpScope } from "@/lib/mcp/scopes";
 import { generateToken } from "@/lib/mcp/tokens";
 import { listPeopleKeyset } from "@/lib/people";
 import { createRegion } from "@/lib/regions";
+import { createTerminationReason } from "@/lib/termination-reasons";
 import { onboardings } from "@/lib/db/schema";
 import { setSiteRegion } from "@/lib/sites";
 import { listAssetsKeyset } from "@/lib/resguardo";
@@ -175,7 +176,7 @@ beforeAll(async () => {
 });
 
 describe("protocol surface", () => {
-  it("lists the 38 tools, the 4 resources and the 3 prompts", async () => {
+  it("lists the 39 tools, the 4 resources and the 3 prompts", async () => {
     const tools = (await rpc(tokens.aRead, "tools/list")).result.tools;
     const resources = (await rpc(tokens.aRead, "resources/list")).result
       .resources;
@@ -183,8 +184,9 @@ describe("protocol surface", () => {
       .result.resourceTemplates;
     const prompts = (await rpc(tokens.aRead, "prompts/list")).result.prompts;
 
-    // 18 reads (phase 1) + 13 writes (phase 2) + phase 3 (3 reads, 4 writes).
-    expect(tools).toHaveLength(38);
+    // 18 reads (phase 1) + 13 writes (phase 2) + phase 3 (3 reads, 4 writes)
+    // + list_termination_reasons (Iniciativa 2).
+    expect(tools).toHaveLength(39);
     expect(resources.map((r: { uri: string }) => r.uri).sort()).toEqual([
       "workia://catalogo",
       "workia://glosario",
@@ -478,6 +480,24 @@ describe("catalog", () => {
     const own = await call(tokens.aRead, "list_sites");
     expect(own.isError).toBeFalsy();
     expect(own.structuredContent.items.length).toBeGreaterThan(0);
+  });
+
+  it("mcp:list_termination_reasons", async () => {
+    const reason = await createTerminationReason(
+      a.companyId,
+      { name: "Motivo MCP A", active: true },
+      a.admin.id,
+    );
+
+    const other = await call(tokens.bAll, "list_termination_reasons");
+    expect(JSON.stringify(other)).not.toContain(reason.id);
+
+    const own = await call(tokens.aRead, "list_termination_reasons");
+    expect(own.structuredContent.items).toContainEqual({
+      id: reason.id,
+      name: "Motivo MCP A",
+      active: true,
+    });
   });
 
   it("mcp:list_regions", async () => {
@@ -854,6 +874,7 @@ describe("PII sweep and output contracts", () => {
     list_activities: {},
     list_sites: {},
     list_regions: {},
+    list_termination_reasons: {},
     get_seniority_certificate: { person_id: a.person.id },
     list_contracts: { person_id: a.person.id },
     list_expiring_contracts: { within_days: 365 },

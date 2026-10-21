@@ -15,6 +15,10 @@ const ERROR_MESSAGES: Record<string, string> = {
     "Una de las actividades ya no está activa. Revisa las actividades del puesto.",
   "position-missing": "El puesto ya no existe en esta empresa.",
   "not-found": "El registro ya no existe en esta empresa.",
+  "termination-reason-in-use":
+    "Ese motivo ya se usó en una baja: desactívalo en lugar de eliminarlo.",
+  "termination-reasons-forbidden":
+    "No tienes permiso para editar los motivos de baja.",
 };
 
 type CatalogStatusMessagesProps = {

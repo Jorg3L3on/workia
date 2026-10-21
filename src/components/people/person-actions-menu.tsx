@@ -1,35 +1,52 @@
 "use client";
 
 import { useState } from "react";
-import { useFormStatus } from "react-dom";
 import {
   FileSignatureIcon,
   FileTextIcon,
+  ReceiptTextIcon,
   RotateCcwIcon,
   Trash2Icon,
   UserCheckIcon,
   UserMinusIcon,
 } from "lucide-react";
 
+import { FiniquitoDialog } from "@/components/people/finiquito-dialog";
+import { RehireDialog } from "@/components/people/rehire-dialog";
 import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
+  TerminationDialog,
+  type EmploymentFormAction,
+} from "@/components/people/termination-dialog";
 import { RowMenu } from "@/components/ui/data-table";
 import type { PersonStatusValue } from "@/lib/people/schema";
+
+/** What the baja, reingreso and finiquito dialogs need (Iniciativa 2). */
+export type PersonEmploymentMenuData = {
+  /** Active motivos de baja of the company. */
+  reasons: { id: string; name: string }[];
+  /** Ingreso of the open period, or of the last one. */
+  fechaIngreso: string | null;
+  /** The last closed period, if any: for «Reingresar» and «Finiquito». */
+  lastBaja: {
+    fechaBaja: string | null;
+    recontratable: boolean | null;
+    finiquitoEstado: string | null;
+    finiquitoFecha: string | null;
+    /** Null unless the viewer has compensation:read. */
+    finiquitoMonto: string | null;
+    hasFiniquitoMonto: boolean;
+  } | null;
+  canSeeCompensation: boolean;
+};
 
 type PersonActionsMenuProps = {
   personId: string;
   personName: string;
   status: PersonStatusValue;
   /** Bound server actions; absent when the user may not use them. */
-  statusAction?: () => Promise<void>;
+  statusAction?: EmploymentFormAction;
+  finiquitoAction?: EmploymentFormAction;
+  employment?: PersonEmploymentMenuData;
   deleteAction?: () => Promise<void>;
   showConstancia: boolean;
   /** «Iniciar alta» (RH → Nóminas) when the user may start one. */
@@ -38,38 +55,27 @@ type PersonActionsMenuProps = {
   emitContractHref?: string;
 };
 
-const ConfirmButton = ({
-  label,
-  variant,
-}: {
-  label: string;
-  variant: "primary" | "destructive";
-}) => {
-  const { pending } = useFormStatus();
-
-  return (
-    <Button disabled={pending} type="submit" variant={variant}>
-      {pending ? "Guardando…" : label}
-    </Button>
-  );
-};
-
 /**
- * The expediente's ⋯ menu: constancia, iniciar alta, baja or reactivation
- * (with its own dialog) and, last, the delete behind a confirmation.
+ * The expediente's ⋯ menu: constancia, iniciar alta, «Dar de baja» or
+ * «Reingresar» and «Finiquito» (each with its own dialog) and, last, the
+ * delete behind a confirmation.
  */
 export const PersonActionsMenu = ({
   personId,
   personName,
   status,
   statusAction,
+  finiquitoAction,
+  employment,
   deleteAction,
   showConstancia,
   showStartAlta = false,
   emitContractHref,
 }: PersonActionsMenuProps) => {
   const [statusOpen, setStatusOpen] = useState(false);
+  const [finiquitoOpen, setFiniquitoOpen] = useState(false);
   const isBaja = status === "baja";
+  const lastBaja = employment?.lastBaja ?? null;
 
   return (
     <>
@@ -91,11 +97,18 @@ export const PersonActionsMenu = ({
             icon: UserCheckIcon,
             href: `/app/altas?persona=${personId}#iniciar-alta`,
           },
-          statusAction && {
-            label: isBaja ? "Reactivar" : "Dar de baja",
-            icon: isBaja ? RotateCcwIcon : UserMinusIcon,
-            onSelect: () => setStatusOpen(true),
-          },
+          statusAction &&
+            employment && {
+              label: isBaja ? "Reingresar" : "Dar de baja",
+              icon: isBaja ? RotateCcwIcon : UserMinusIcon,
+              onSelect: () => setStatusOpen(true),
+            },
+          finiquitoAction &&
+            lastBaja && {
+              label: "Finiquito",
+              icon: ReceiptTextIcon,
+              onSelect: () => setFiniquitoOpen(true),
+            },
           deleteAction && {
             label: "Eliminar expediente",
             icon: Trash2Icon,
@@ -114,32 +127,43 @@ export const PersonActionsMenu = ({
         variant="secondary"
       />
 
-      {statusAction ? (
-        <AlertDialog onOpenChange={setStatusOpen} open={statusOpen}>
-          <AlertDialogContent>
-            <form action={statusAction} className="contents">
-              <AlertDialogHeader>
-                <AlertDialogTitle>
-                  {isBaja
-                    ? `Reactivar a ${personName}`
-                    : `Dar de baja a ${personName}`}
-                </AlertDialogTitle>
-                <AlertDialogDescription>
-                  {isBaja
-                    ? "Vuelve a estar activa en las listas, altas y contratos."
-                    : "Deja de estar activa en las listas, altas y contratos. El expediente no se borra: sus datos, contratos e historial siguen disponibles, y borrarlo es una acción aparte."}
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel type="button">Cancelar</AlertDialogCancel>
-                <ConfirmButton
-                  label={isBaja ? "Reactivar" : "Dar de baja"}
-                  variant={isBaja ? "primary" : "destructive"}
-                />
-              </AlertDialogFooter>
-            </form>
-          </AlertDialogContent>
-        </AlertDialog>
+      {statusAction && employment && !isBaja ? (
+        <TerminationDialog
+          action={statusAction}
+          canSeeCompensation={employment.canSeeCompensation}
+          fechaIngreso={employment.fechaIngreso}
+          onOpenChange={setStatusOpen}
+          open={statusOpen}
+          personName={personName}
+          reasons={employment.reasons}
+        />
+      ) : null}
+
+      {statusAction && employment && isBaja ? (
+        <RehireDialog
+          action={statusAction}
+          lastBaja={lastBaja}
+          onOpenChange={setStatusOpen}
+          open={statusOpen}
+          personName={personName}
+        />
+      ) : null}
+
+      {finiquitoAction && employment && lastBaja ? (
+        <FiniquitoDialog
+          action={finiquitoAction}
+          canSeeCompensation={employment.canSeeCompensation}
+          fechaBaja={lastBaja.fechaBaja}
+          hasAmount={lastBaja.hasFiniquitoMonto}
+          initial={{
+            estado: lastBaja.finiquitoEstado,
+            fecha: lastBaja.finiquitoFecha,
+            monto: lastBaja.finiquitoMonto,
+          }}
+          onOpenChange={setFiniquitoOpen}
+          open={finiquitoOpen}
+          personName={personName}
+        />
       ) : null}
     </>
   );

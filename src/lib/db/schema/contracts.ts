@@ -39,6 +39,8 @@ export const contractStatusEnum = pgEnum("contract_status", [
   "renovado",
   "no_renovado",
   "vencido",
+  // The vigente contract of a person given de baja (migration 0025).
+  "terminado",
 ]);
 
 /** Compensation frozen in the contract (WRK-I5-2). */

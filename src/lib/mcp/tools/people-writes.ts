@@ -1,14 +1,26 @@
 import { z } from "zod";
 
 import { getVigenteContractForPerson } from "@/lib/contracts";
+import { catalogKey } from "@/lib/import/format";
 import {
   createPerson,
   getPersonWithRelations,
+  setPersonStatus,
   updatePerson,
   upsertPersonSchedule,
+  type PersonStatusChange,
   type PersonWithRelations as MaybePerson,
 } from "@/lib/people";
+import { listEmploymentPeriods, rehireWarnings } from "@/lib/people/employment";
+import {
+  FINIQUITO_STATUSES,
+  rehireSchema,
+  TERMINATION_TYPES,
+  terminationSchema,
+  terminationTypeLabels,
+} from "@/lib/people/employment-schema";
 import { listAssetsByPerson } from "@/lib/resguardo";
+import { listTerminationReasons } from "@/lib/termination-reasons";
 import {
   formatHorarioToken,
   personFormSchema,
@@ -22,6 +34,7 @@ import {
   type WorkiaToolContext,
 } from "../run-tool";
 import { appUrl, fullName, isoDate, mx, uuid } from "./common";
+import { assertCompensationAccess } from "./compensation";
 import { MEXICO_FIELD_MAP, mexicoWriteFields } from "./mexico";
 import {
   bloquesInput,
@@ -453,60 +466,232 @@ export const updatePersonTool = defineWriteTool({
   },
 });
 
-export const setPersonStatusTool = defineWriteTool({
-  name: "set_person_status",
-  title: "Baja o reactivación",
-  description:
-    "Da de baja laboral o reactiva a una persona (estatus activa | baja). No es borrar: el expediente sigue ahí. La vista previa avisa si tiene contrato vigente o activos en resguardo. Primero responde una vista previa; repite con confirmation_token para hacerlo.",
-  scope: "write:people",
-  permission: "people:update",
-  input: z.object({
-    person_id: uuid("Persona."),
-    status: z.enum(["activa", "baja"]),
-    motivo: z.string().trim().max(300).optional(),
-  }),
-  output: z.object({ person: personRef, warnings: z.array(z.string()) }),
-  annotations: writeAnnotations("Baja o reactivación", { destructive: true }),
-  preview: async ({ person_id, status, motivo }, ctx) => {
-    const person = await loadPerson(ctx, person_id);
+const statusInput = z.object({
+  person_id: uuid("Persona."),
+  status: z.enum(["activa", "baja"]),
+  // Baja: fecha, tipo, motivo and recontratable are required.
+  fecha_baja: isoDate(
+    "Baja: fecha de baja (aaaa-mm-dd), no antes del ingreso.",
+  ).optional(),
+  tipo_baja: z
+    .enum(TERMINATION_TYPES)
+    .optional()
+    .describe("Baja: voluntaria, despido, termino_contrato u otra."),
+  motivo_id: uuid("Baja: id del motivo (list_termination_reasons).").optional(),
+  motivo: z
+    .string()
+    .trim()
+    .max(300)
+    .optional()
+    .describe(
+      "Baja: nombre del motivo del catálogo, si no envías motivo_id. Un texto que no está en el catálogo es un error que lista los motivos.",
+    ),
+  comentario: z
+    .string()
+    .trim()
+    .max(1000)
+    .optional()
+    .describe("Baja: texto libre."),
+  recontratable: z.boolean().optional().describe("Baja: obligatorio."),
+  finiquito: z
+    .object({
+      estado: z.enum(FINIQUITO_STATUSES).optional(),
+      fecha: isoDate("Fecha del finiquito.").optional(),
+      monto: z
+        .number()
+        .min(0)
+        .max(99_999_999.99)
+        .optional()
+        .describe("Pesos. Sólo con el scope pii y compensation:read."),
+    })
+    .optional()
+    .describe(
+      "Baja: finiquito opcional; se puede actualizar después en la app.",
+    ),
+  // Reingreso.
+  fecha_ingreso: isoDate(
+    "Reingreso: fecha de ingreso del nuevo periodo (aaaa-mm-dd); por defecto hoy.",
+  ).optional(),
+  reconocer_antiguedad: z
+    .boolean()
+    .default(false)
+    .describe(
+      "Reingreso: true acumula la antigüedad de los periodos anteriores; false (por defecto) la reinicia.",
+    ),
+  fecha_antiguedad_reconocida: isoDate(
+    "Reingreso con reconocer_antiguedad: desde cuándo cuenta; vacío = el primer ingreso.",
+  ).optional(),
+});
 
-    if (person.status === status) {
-      throw new McpToolError(
-        "CONFLICT",
-        `La persona ya está ${status === "baja" ? "dada de baja" : "activa"}.`,
+type StatusArgs = z.infer<typeof statusInput>;
+
+/** The baja or reingreso the call asks for, validated as the app's dialogs do. */
+const resolveStatusChange = async (
+  args: StatusArgs,
+  ctx: WorkiaToolContext,
+): Promise<{ change: PersonStatusChange; motivoName: string | null }> => {
+  const issues = (list: { path: string; message: string }[]) =>
+    new McpToolError("VALIDATION", "Faltan datos para el cambio de estatus.", {
+      details: { issues: list },
+    });
+
+  if (args.status === "activa") {
+    const parsed = rehireSchema.safeParse({
+      fechaIngreso: args.fecha_ingreso ?? ctx.today,
+      reconoceAntiguedad: args.reconocer_antiguedad,
+      fechaAntiguedadReconocida: args.fecha_antiguedad_reconocida ?? null,
+    });
+
+    if (!parsed.success) {
+      throw issues(
+        parsed.error.issues.map((issue) => ({
+          path: issue.path.join("."),
+          message: issue.message,
+        })),
       );
     }
 
-    const warnings = await statusWarnings(ctx, person.id, status);
+    return { change: { status: "activa", ...parsed.data }, motivoName: null };
+  }
+
+  if (args.finiquito?.monto !== undefined) {
+    assertCompensationAccess(ctx, "el monto del finiquito");
+  }
+
+  const reasons = await listTerminationReasons(ctx.companyId, {
+    activeOnly: true,
+  });
+  const reason = args.motivo_id
+    ? reasons.find((item) => item.id === args.motivo_id)
+    : args.motivo
+      ? reasons.find(
+          (item) => catalogKey(item.name) === catalogKey(args.motivo!),
+        )
+      : undefined;
+  const missing = [
+    !args.fecha_baja && {
+      path: "fecha_baja",
+      message: "Indica la fecha de baja.",
+    },
+    !args.tipo_baja && {
+      path: "tipo_baja",
+      message: "Indica el tipo de baja.",
+    },
+    !reason && {
+      path: args.motivo_id ? "motivo_id" : "motivo",
+      message: `Elige un motivo del catálogo: ${reasons.map((item) => item.name).join(", ")}.`,
+    },
+    args.recontratable === undefined && {
+      path: "recontratable",
+      message: "Indica si la persona es recontratable.",
+    },
+  ].filter((issue): issue is { path: string; message: string } =>
+    Boolean(issue),
+  );
+
+  if (missing.length > 0) {
+    throw issues(missing);
+  }
+
+  const parsed = terminationSchema.safeParse({
+    fechaBaja: args.fecha_baja,
+    tipoBaja: args.tipo_baja,
+    motivoBajaId: reason!.id,
+    comentario: args.comentario ?? null,
+    recontratable: args.recontratable,
+    finiquito: args.finiquito
+      ? {
+          estado: args.finiquito.estado ?? null,
+          fecha: args.finiquito.fecha ?? null,
+          ...(args.finiquito.monto === undefined
+            ? {}
+            : { monto: args.finiquito.monto }),
+        }
+      : undefined,
+  });
+
+  if (!parsed.success) {
+    throw issues(
+      parsed.error.issues.map((issue) => ({
+        path: issue.path.join("."),
+        message: issue.message,
+      })),
+    );
+  }
+
+  return {
+    change: { status: "baja", ...parsed.data },
+    motivoName: reason!.name,
+  };
+};
+
+export const setPersonStatusTool = defineWriteTool({
+  name: "set_person_status",
+  title: "Baja o reingreso",
+  description:
+    "Da de baja laboral o reingresa a una persona (estatus activa | baja). No es borrar: el expediente sigue ahí. Baja: fecha_baja, tipo_baja, motivo (motivo_id de list_termination_reasons, o su nombre en motivo) y recontratable son obligatorios; comentario y finiquito opcionales (el monto sólo con el scope pii y compensation:read). Cierra el periodo laboral y el contrato vigente queda «terminado» en la fecha de baja. Reingreso (status activa): abre un nuevo periodo en el mismo expediente con fecha_ingreso (por defecto hoy) y reconocer_antiguedad (por defecto false: la antigüedad reinicia). La vista previa avisa si tiene contrato vigente, activos en resguardo o si su última baja dice no recontratable. Primero responde una vista previa; repite con confirmation_token para hacerlo.",
+  scope: "write:people",
+  permission: "people:update",
+  input: statusInput,
+  output: z.object({
+    person: personRef,
+    warnings: z.array(z.string()),
+    contrato_terminado: z
+      .string()
+      .nullable()
+      .describe("Id del contrato que quedó «terminado» con la baja."),
+  }),
+  annotations: writeAnnotations("Baja o reingreso", { destructive: true }),
+  preview: async (args, ctx) => {
+    const person = await loadPerson(ctx, args.person_id);
+
+    if (person.status === args.status) {
+      throw new McpToolError(
+        "CONFLICT",
+        `La persona ya está ${args.status === "baja" ? "dada de baja" : "activa"}.`,
+      );
+    }
+
+    const { change, motivoName } = await resolveStatusChange(args, ctx);
+    const warnings = await statusWarnings(ctx, person.id, args.status);
 
     return {
-      summary: `${status === "baja" ? "Baja laboral" : "Reactivación"} de ${fullName(person)}${motivo ? ` · Motivo: ${motivo}` : ""}.`,
+      summary:
+        change.status === "baja"
+          ? `Baja laboral de ${fullName(person)} el ${mx(change.fechaBaja)} · ${terminationTypeLabels[change.tipoBaja]} · Motivo: ${motivoName} · ${change.recontratable ? "recontratable" : "no recontratable"}.`
+          : `Reingreso de ${fullName(person)} el ${mx(change.fechaIngreso)} · ${change.reconoceAntiguedad ? "reconoce la antigüedad previa" : "la antigüedad reinicia"}.`,
       warnings: warnings.length > 0 ? warnings : undefined,
     };
   },
-  handler: async ({ person_id, status }, ctx) => {
-    const person = await loadPerson(ctx, person_id);
+  handler: async (args, ctx) => {
+    const person = await loadPerson(ctx, args.person_id);
 
-    if (person.status === status) {
+    if (person.status === args.status) {
       throw new McpToolError(
         "CONFLICT",
-        `La persona ya está ${status === "baja" ? "dada de baja" : "activa"}.`,
+        `La persona ya está ${args.status === "baja" ? "dada de baja" : "activa"}.`,
       );
     }
 
-    const warnings = await statusWarnings(ctx, person.id, status);
-    const updated = await updatePerson(
+    const { change } = await resolveStatusChange(args, ctx);
+    const warnings = await statusWarnings(ctx, person.id, args.status);
+    const result = await setPersonStatus(
       ctx.companyId,
       person.id,
-      parseForm({ ...formFromPerson(person), status }, ["status"]),
+      change,
       ctx.userId,
     );
 
-    if (!updated) {
+    if (!result) {
       throw notFound("La persona");
     }
 
-    return { person: toRef(ctx, updated), warnings };
+    return {
+      person: toRef(ctx, result.person),
+      warnings,
+      contrato_terminado:
+        "contract" in result && result.contract ? result.contract.id : null,
+    };
   },
 });
 
@@ -516,7 +701,8 @@ const statusWarnings = async (
   status: "activa" | "baja",
 ) => {
   if (status !== "baja") {
-    return [];
+    const periods = await listEmploymentPeriods(ctx.companyId, personId);
+    return rehireWarnings(periods.at(-1));
   }
 
   const [contract, assets] = await Promise.all([
@@ -526,7 +712,7 @@ const statusWarnings = async (
 
   return [
     contract
-      ? `Tiene un contrato vigente${contract.endDate ? ` hasta el ${mx(contract.endDate)}` : ""}.`
+      ? `Tiene un contrato vigente${contract.endDate ? ` hasta el ${mx(contract.endDate)}` : ""}: quedará «Terminado» en la fecha de baja.`
       : null,
     assets.length > 0
       ? `Tiene ${assets.length} ${assets.length === 1 ? "activo" : "activos"} en resguardo: ${assets.map((asset) => asset.identifier).join(", ")}.`

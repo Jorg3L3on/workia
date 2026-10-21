@@ -77,7 +77,7 @@ export type NormalizedContract = {
   startDate: string;
   endDate: string | null;
   noticeWindow: "1" | "2" | "3" | "6" | "no_avisar";
-  status: "vigente" | "renovado" | "no_renovado" | "vencido";
+  status: "vigente" | "renovado" | "no_renovado" | "vencido" | "terminado";
   templateId: string | null;
   templateName: string | null;
 };

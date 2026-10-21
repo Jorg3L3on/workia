@@ -11,6 +11,7 @@ import {
   AUDIT_RESOURCE_TYPES,
   AUDIT_SOURCES,
   auditActionLabels,
+  auditFieldLabels,
   auditResourceTypeLabels,
   auditSourceLabels,
   type AuditAction,
@@ -68,7 +69,7 @@ const renderChanges = (payload: AuditPayload | null) => {
   return Object.entries(payload.changes)
     .map(
       ([field, change]) =>
-        `${field}: ${formatChangeValue(change.from)} → ${formatChangeValue(change.to)}`,
+        `${auditFieldLabels[field] ?? field}: ${formatChangeValue(change.from)} → ${formatChangeValue(change.to)}`,
     )
     .join(" · ");
 };

@@ -1,9 +1,15 @@
-import { and, asc, desc, eq, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, or } from "drizzle-orm";
 
 import { recordAuditEvent } from "@/lib/audit";
-import { tdb, withTransaction } from "@/lib/db";
+import { tdb, withTransaction, type DbExecutor } from "@/lib/db";
+import { isUniqueViolation } from "@/lib/db/errors";
 import { onboardings, people } from "@/lib/db/schema";
 import type { Onboarding, OnboardingStage } from "@/lib/db/schema";
+import {
+  isOpenPeriod,
+  listEmploymentPeriods,
+  syncEmploymentPeriods,
+} from "@/lib/people/employment";
 import { withTenant } from "@/lib/tenant/scope";
 
 import {
@@ -69,6 +75,7 @@ export const getOnboardingById = async (companyId: string, id: string) => {
   return row ?? null;
 };
 
+/** The person's most recent alta (a rehired person may have one per period). */
 export const getOnboardingByPerson = async (
   companyId: string,
   personId: string,
@@ -79,11 +86,54 @@ export const getOnboardingByPerson = async (
     .where(
       withTenant(onboardings, companyId, eq(onboardings.personId, personId)),
     )
+    .orderBy(desc(onboardings.createdAt))
     .limit(1);
   return row ?? null;
 };
 
-/** Starts the alta of an active person of the company; one per person. */
+/**
+ * The alta that blocks starting another one (Iniciativa 2): the one of the
+ * person's open employment period, or one still in progress from an earlier
+ * period. Without periods yet (before the backfill), any alta of the person,
+ * as before migration 0025.
+ */
+export const findBlockingOnboarding = async (
+  companyId: string,
+  personId: string,
+  executor: DbExecutor = tdb(companyId),
+) => {
+  const periods = await listEmploymentPeriods(companyId, personId, executor);
+  const open = periods.find(isOpenPeriod);
+  const ofPerson = eq(onboardings.personId, personId);
+  const [row] = await executor
+    .select()
+    .from(onboardings)
+    .where(
+      withTenant(
+        onboardings,
+        companyId,
+        ofPerson,
+        open
+          ? or(
+              eq(onboardings.employmentPeriodId, open.id),
+              inArray(onboardings.stage, ["rh_captura", "pendiente_nominas"]),
+              // Recorded before the person's periods existed: their first period.
+              periods.length === 1
+                ? isNull(onboardings.employmentPeriodId)
+                : undefined,
+            )
+          : undefined,
+      ),
+    )
+    .orderBy(desc(onboardings.createdAt))
+    .limit(1);
+  return row ?? null;
+};
+
+/**
+ * Starts the alta of an active person of the company: one per employment
+ * period, so a rehired person can get a new one.
+ */
 export const startOnboarding = async (
   companyId: string,
   personId: string,
@@ -111,20 +161,33 @@ export const startOnboarding = async (
     throw new OnboardingError("La persona está dada de baja.");
   }
 
-  if (await getOnboardingByPerson(companyId, personId)) {
-    throw new OnboardingError("Esta persona ya tiene un alta.");
-  }
-
   return withTransaction(async (tx) => {
+    // The alta belongs to the open employment period (opened here if missing).
+    await syncEmploymentPeriods(tx, companyId, [personId], actorUserId);
+
+    if (await findBlockingOnboarding(companyId, personId, tx)) {
+      throw new OnboardingError("Esta persona ya tiene un alta.");
+    }
+
+    const open = (await listEmploymentPeriods(companyId, personId, tx)).find(
+      isOpenPeriod,
+    );
     const [created] = await tx
       .insert(onboardings)
       .values({
         companyId,
         personId,
+        employmentPeriodId: open?.id ?? null,
         createdBy: actorUserId,
         ...(input ? captureValues(input) : {}),
       })
-      .returning();
+      .returning()
+      .catch((error: unknown) => {
+        if (isUniqueViolation(error)) {
+          throw new OnboardingError("Esta persona ya tiene un alta.");
+        }
+        throw error;
+      });
 
     await recordAuditEvent(
       {

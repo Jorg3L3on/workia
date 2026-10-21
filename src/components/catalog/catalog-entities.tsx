@@ -39,6 +39,11 @@ import {
   updateSiteAction,
 } from "@/lib/sites/actions";
 import { SITE_KINDS, siteKindLabels } from "@/lib/sites/schema";
+import {
+  createTerminationReasonAction,
+  deleteTerminationReasonAction,
+  updateTerminationReasonAction,
+} from "@/lib/termination-reasons/actions";
 
 type Option = { id: string; name: string };
 
@@ -471,6 +476,63 @@ export const RegionesCatalog = (props: EntityProps<RegionCatalogRow>) => {
     updateAction: (id) => updateRegionAction.bind(null, id),
     keepFields: (row) => <Hidden name="name" value={row.name} />,
     deleteAction: (id) => deleteRegionAction.bind(null, id),
+  };
+
+  return <CatalogPage schema={schema} {...props} />;
+};
+
+// ── Motivos de baja ────────────────────────────────────────────────────
+
+export type MotivoBajaCatalogRow = CatalogRowBase & { useCount: number };
+
+/**
+ * Motivos de baja (Iniciativa 2): the company's own list over a seeded base.
+ * One already used in a baja can be renamed or deactivated, not deleted.
+ */
+export const MotivosBajaCatalog = (
+  props: EntityProps<MotivoBajaCatalogRow>,
+) => {
+  const schema: CatalogSchema<MotivoBajaCatalogRow> = {
+    title: "Motivos de baja",
+    description:
+      "Los motivos que se eligen al dar de baja a una persona; uno inactivo no aparece en bajas nuevas.",
+    noun: "motivo",
+    createLabel: "Nuevo motivo",
+    editTitle: "Editar motivo",
+    searchPlaceholder: "Buscar motivo",
+    emptyTitle: "Sin motivos de baja registrados.",
+    status: MASCULINE_STATUS,
+    columns: [
+      {
+        id: "uses",
+        header: "Bajas",
+        accessor: (row) => row.useCount,
+        variant: "muted",
+        cell: (row) =>
+          row.useCount > 0 ? (
+            plural(row.useCount, "baja", "bajas")
+          ) : (
+            <EmptyValue />
+          ),
+      },
+    ],
+    mobileSubtitle: (row) => plural(row.useCount, "baja", "bajas"),
+    fields: (row) => (
+      <>
+        <NameField
+          defaultValue={row?.name}
+          placeholder="Ej. Renuncia voluntaria"
+        />
+        <CatalogStatusField
+          defaultActive={row?.active ?? true}
+          label="Activo"
+        />
+      </>
+    ),
+    createAction: createTerminationReasonAction,
+    updateAction: (id) => updateTerminationReasonAction.bind(null, id),
+    keepFields: (row) => <Hidden name="name" value={row.name} />,
+    deleteAction: (id) => deleteTerminationReasonAction.bind(null, id),
   };
 
   return <CatalogPage schema={schema} {...props} />;

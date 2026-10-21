@@ -64,7 +64,9 @@ import { deletedTone, toneFor } from "@/lib/ui/status-tone";
 import {
   deletePersonAction,
   setPersonStatusAction,
+  updateFiniquitoAction,
 } from "@/lib/people/actions";
+import { getPersonEmploymentMenuData } from "@/lib/people/employment-menu";
 
 export const metadata: Metadata = {
   title: pageTitles.expediente,
@@ -205,6 +207,13 @@ const PersonaDetailPage = async ({
   const today = isoToday();
   const canEdit = canUpdate && !isDeleted;
   const canEmit = canCreateContracts && canReadContracts && !isDeleted;
+  const employment = canEdit
+    ? await getPersonEmploymentMenuData(
+        session.companyId,
+        person.id,
+        canSeeCompensation,
+      )
+    : undefined;
   const vigente = personContracts.find((item) => item.status === "vigente");
   // «Decidir renovación» needs positions only when there is something to decide.
   const renewalPositions =
@@ -321,6 +330,12 @@ const PersonaDetailPage = async ({
                 showConstancia={canReadContracts}
                 showStartAlta={canEdit && person.status === "activa"}
                 status={person.status}
+                employment={employment}
+                finiquitoAction={
+                  canEdit
+                    ? updateFiniquitoAction.bind(null, person.id)
+                    : undefined
+                }
                 statusAction={
                   canEdit
                     ? setPersonStatusAction.bind(
@@ -690,7 +705,11 @@ const PersonaDetailPage = async ({
             title="Historial de cambios"
           >
             <Suspense fallback={<SectionSkeleton rows={3} />}>
-              <PersonHistory companyId={session.companyId} personId={id} />
+              <PersonHistory
+                companyId={session.companyId}
+                compensation={canSeeCompensation}
+                personId={id}
+              />
             </Suspense>
           </DetailCard>
         ) : null}
