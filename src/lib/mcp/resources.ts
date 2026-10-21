@@ -35,7 +35,7 @@ export const GLOSARIO = `# Glosario de Workia
 - **Estatus:** «activa» o «baja» (baja laboral). No es borrar.
 - **Borrado:** expediente oculto por borrado lógico; sólo se ve con visibility «deleted» o «todos».
 - **Contrato determinado:** con fecha de fin. **Indeterminado:** sin fecha de fin.
-- **Estado de contrato:** vigente, renovado, no_renovado, vencido.
+- **Estado de contrato:** vigente, renovado, no_renovado, vencido, terminado (el contrato vigente de una persona dada de baja; termina en la fecha de baja).
 - **Aviso (notice_window):** cuántos meses antes del fin entra a la bandeja: 1, 2, 3, 6 o «no avisar».
 - **Bandeja de renovación:** determinados vigentes dentro de su ventana de aviso; RRHH decide renovar o no renovar.
 - **Resguardo:** activos de la empresa entregados a una persona (entrega/devolución con condición).
@@ -305,7 +305,7 @@ export const registerWorkiaPrompts = (server: McpServer) => {
     },
     ({ persona }) =>
       userMessage(
-        `Prepara el checklist de baja de «${persona}» en Workia, sin hacer cambios. Usa get_person (include contratos y activos) y list_assets con holder_id. Lista: contrato vigente y su fin, activos por devolver (identificador y desde cuándo), y pendientes. La baja se hace en la app de Workia o con Grok Bot, con confirmación.`,
+        `Prepara el checklist de baja de «${persona}» en Workia, sin hacer cambios. Usa get_person (include contratos y activos) y list_assets con holder_id. Lista: contrato vigente y su fin (quedará «terminado» en la fecha de baja), activos por devolver (identificador y desde cuándo), y pendientes. Para la baja hacen falta fecha, tipo (voluntaria, despido, término de contrato u otra), motivo del catálogo (list_termination_reasons) y si es recontratable; el finiquito es opcional. La baja se hace en la app de Workia o con Grok Bot, con confirmación.`,
       ),
   );
 };

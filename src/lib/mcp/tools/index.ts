@@ -39,6 +39,7 @@ import {
   getOnboardingTool,
   startOnboardingTool,
 } from "./onboarding";
+import { listTerminationReasonsTool } from "./employment";
 import { getPersonTool, listPeopleTool } from "./people";
 import {
   createPersonTool,
@@ -76,6 +77,8 @@ export const WORKIA_TOOLS: WorkiaTool[] = [
   listAssetsTool,
   getAssetTool,
   listAuditEventsTool,
+  // Iniciativa 2: motivos de baja for set_person_status.
+  listTerminationReasonsTool,
   // Phase 2: writes (preview + confirmation + idempotency).
   createPersonTool,
   updatePersonTool,

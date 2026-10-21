@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   approveOnboardingStep,
   getOnboardingById,
+  findBlockingOnboarding,
   getOnboardingByPerson,
   OnboardingError,
   startOnboarding,
@@ -184,7 +185,7 @@ export const startOnboardingTool = defineWriteTool({
   preview: async (args, ctx) => {
     const capture = parseCapture(args, ctx);
 
-    if (await getOnboardingByPerson(ctx.companyId, args.person_id)) {
+    if (await findBlockingOnboarding(ctx.companyId, args.person_id)) {
       throw new McpToolError("CONFLICT", "Esta persona ya tiene un alta.");
     }
 

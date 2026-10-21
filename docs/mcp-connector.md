@@ -105,7 +105,7 @@ America/Mexico_City. Las listas grandes paginan con `cursor` opaco y firmado
 | `search` | Búsqueda en toda la empresa: personas (por nombre o correo), sus contratos vigentes, activos (por nombre o identificador), puestos, áreas y sucursales. | `read` (Leer) | `people:read` |
 | `fetch` | Trae el documento completo de un resultado de search por su id «tipo:uuid» (person, contract, asset, position, area, site, activity, template). | `read` (Leer) | `people:read` |
 | `list_people` | Lista expedientes de personas con filtros por estatus, área, puesto, sucursal, región y datos faltantes (missing), ordenados por apellido. | `read` (Leer) | `people:read` |
-| `get_person` | Expediente de una persona: datos, área, puesto, sucursal, jefe, datos México (domicilio, estado civil, INE y beneficiarios; sólo con el scope pii, si no dice qué está capturado) y, según include, horario, contratos, activos en resguardo y actividades del puesto. | `read` (Leer) | `people:read` |
+| `get_person` | Expediente de una persona: datos, área, puesto, sucursal, jefe, datos México (domicilio, estado civil, INE y beneficiarios; sólo con el scope pii, si no dice qué está capturado), periodo laboral vigente o último (fecha de antigüedad, baja con tipo, motivo, comentario, recontratable y finiquito; el monto sólo con el scope pii y compensation:read) y, según include, horario, contratos, activos en resguardo, actividades del puesto y todos los periodos laborales (reingresos). | `read` (Leer) | `people:read` |
 | `list_areas` | Áreas de la empresa con su área padre. | `read` (Leer) | `areas:read` |
 | `list_positions` | Puestos de la empresa con su área y, opcionalmente, sus actividades. | `read` (Leer) | `positions:read` |
 | `list_activities` | Actividades del catálogo (se asignan a puestos). | `read` (Leer) | `positions:read` |
@@ -117,13 +117,14 @@ America/Mexico_City. Las listas grandes paginan con `cursor` opaco y firmado
 | `get_contract` | Detalle de un contrato: horario y compensación congelados al emitir (los montos sólo con el scope pii y compensation:read), cadena de renovaciones y, si include_text, el texto generado. | `read` (Leer) | `contracts:read` |
 | `list_contract_templates` | Plantillas de contrato y los tokens que Workia sabe llenar ({{nombres}}, {{puesto}}, {{curp}}, {{domicilio}}, {{salario_diario}}, {{antiguedad}}, {{empresa_razon_social}}…) con lo que imprime cada uno. | `read` (Leer) | `contract_templates:read` |
 | `preview_contract` | Simula la emisión de un contrato sin guardar nada: el texto que saldría, los tokens que quedarían vacíos (p. | `read` (Leer) | `contracts:read` |
-| `get_seniority_certificate` | Constancia de antigüedad de una persona, igual que la de la app: fecha de ingreso original, antigüedad a hoy y cadena de contratos, más el texto listo para imprimir. | `read` (Leer) | `contracts:read` |
+| `get_seniority_certificate` | Constancia de antigüedad de una persona, igual que la de la app: fecha de ingreso, fecha de antigüedad (reinicia en un reingreso salvo que RRHH reconozca la previa), antigüedad a hoy (o a la fecha de baja) y cadena de contratos, más el texto listo para imprimir. | `read` (Leer) | `contracts:read` |
 | `list_assets` | Activos en resguardo con su resguardante actual. | `read` (Leer) | `assets:read` |
 | `get_asset` | Un activo con su resguardante y el historial de entregas y devoluciones (fecha, condición, notas). | `read` (Leer) | `assets:read` |
 | `list_audit_events` | Bitácora de cambios (append-only), más reciente primero: quién, qué recurso, qué acción, origen (app, seed, system, import, mcp) y el antes/después. | `audit` (Auditoría) | `audit:read` |
+| `list_termination_reasons` | Motivos de baja del catálogo de la empresa. | `read` (Leer) | `people:read` |
 | `create_person` | Da de alta un expediente con las mismas reglas que la app (D-04). | `write:people` (Escribir personas) | `people:create` |
 | `update_person` | Edita sólo los campos enviados en changes (null borra el dato); el resto del expediente y el horario no cambian. | `write:people` (Escribir personas) | `people:update` |
-| `set_person_status` | Da de baja laboral o reactiva a una persona (estatus activa \| baja). | `write:people` (Escribir personas) | `people:update` |
+| `set_person_status` | Da de baja laboral o reingresa a una persona (estatus activa \| baja). | `write:people` (Escribir personas) | `people:update` |
 | `update_person_schedule` | Obsoleta: usa update_person_schedule_blocks (horario por bloques, día de descanso). | `write:people` (Escribir personas) | `people:update` |
 | `update_person_schedule_blocks` | Captura el horario por bloques de una persona: cada bloque con días (lun…dom), entrada, salida y comida opcional, más el día de descanso. | `write:people` (Escribir personas) | `people:update` |
 | `get_onboarding` | Estado de un alta RH → Nóminas por person_id u onboarding_id: etapa, checklist, lo que falta, Infonavit/Fonacot (número y montos sólo con el scope pii) y quién ya aprobó. | `read` (Leer) | `people:read` |

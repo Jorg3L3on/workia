@@ -52,6 +52,8 @@ const PHASE_3_READ_TOOLS = [
   "list_regions",
   "get_seniority_certificate",
   "get_onboarding",
+  // Iniciativa 2: baja y periodos laborales.
+  "list_termination_reasons",
 ];
 const PHASE_3_WRITE_TOOLS = [
   "update_person_schedule_blocks",

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { listAuditEventsKeyset } from "@/lib/audit";
+import { listAuditEventsKeyset, maskAuditCompensation } from "@/lib/audit";
 import {
   AUDIT_ACTIONS,
   AUDIT_RESOURCE_TYPES,
@@ -21,6 +21,7 @@ import { McpToolError } from "../errors";
 import { maskDeep } from "../mask";
 import { defineTool, readAnnotations } from "../run-tool";
 import { FREE_TEXT_NOTE, mxDateTime, nextCursorSchema, uuid } from "./common";
+import { compensationVisible } from "./compensation";
 
 const SOURCES = ["app", "seed", "system", "import", "mcp"] as const;
 
@@ -118,7 +119,10 @@ export const listAuditEventsTool = defineTool({
           payload:
             payload && !ctx.piiUnmasked
               ? (maskDeep(payload) as Record<string, unknown>)
-              : payload,
+              : payload && !compensationVisible(ctx)
+                ? // pii but no compensation:read: salaries and finiquito as «•••».
+                  maskAuditCompensation(payload)
+                : payload,
         };
       }),
       next_cursor: page.next_cursor,
