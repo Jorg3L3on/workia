@@ -159,7 +159,8 @@ const SearchBox = ({ search }: { search: FilterBarSearch }) => {
   );
 };
 
-const chipClassName = (active: boolean) =>
+/** The chip look, shared with the Personas filter chips. */
+export const chipClassName = (active: boolean) =>
   cn(
     "inline-flex h-9 items-center gap-1.5 rounded-lg border px-3 text-sm whitespace-nowrap transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
     active
@@ -168,7 +169,7 @@ const chipClassName = (active: boolean) =>
   );
 
 /** The chip's ✕: clears that one filter without opening it. */
-const ChipClear = ({
+export const ChipClear = ({
   label,
   onClear,
 }: {

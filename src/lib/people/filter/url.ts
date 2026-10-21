@@ -4,12 +4,13 @@
  * `deleted=1`, as before. Links from before this filter (`status`, `region`,
  * and the export's `area`/`site`) are read into it.
  *
- *   f=1~st.i.baja~ar.i.<id>.<id>~in.b.20250101.20260930~je.it.<id>~ve.n.30
+ *   f=1*st.i.baja*ar.i.<id>.<id>*in.b.20250101.20260930*je.it.<id>*ve.n.30
  *
- * After the version, `~` separates conditions; inside one, `.` separates the
+ * After the version, `*` separates conditions; inside one, `.` separates the
  * field key, the operator code and its arguments. Uuids are written in
  * base64url (22 characters instead of 36) and dates as YYYYMMDD. Every
- * character is URL-safe, so nothing is percent-encoded.
+ * character is left as is by URLSearchParams and encodeURIComponent, so
+ * nothing is percent-encoded.
  */
 
 import { parseListPaging } from "@/lib/list/paging";
@@ -123,7 +124,7 @@ export const serializeFilterConditions = (filter: PeopleFilter) =>
     : [
         PEOPLE_FILTER_URL_VERSION,
         ...coercePeopleFilter(filter).conditions.map(encodeCondition),
-      ].join("~");
+      ].join("*");
 
 const decodeCondition = (part: string): unknown => {
   const [key, code, ...args] = part.split(".");
@@ -164,7 +165,7 @@ const decodeCondition = (part: string): unknown => {
 export const parseFilterConditions = (param: string | null | undefined) => {
   if (!param || param.length > MAX_FILTER_PARAM_LENGTH) return [];
 
-  const [version, ...parts] = param.split("~");
+  const [version, ...parts] = param.split("*");
 
   if (version !== PEOPLE_FILTER_URL_VERSION) return [];
 

@@ -58,12 +58,13 @@ describe("serializeFilterConditions / parseFilterConditions", () => {
       ]),
     );
 
-    expect(f.startsWith("1~")).toBe(true);
+    expect(f.startsWith("1*")).toBe(true);
     expect(f).toContain("st.i.baja");
     expect(f).toContain("in.b.20250101.20260930");
     expect(f).toContain(`je.it.${uuidToToken(BOSS)}`);
     expect(f).toContain("ve.n.30");
     expect(encodeURIComponent(f)).toBe(f);
+    expect(new URLSearchParams({ f }).toString()).toBe(`f=${f}`);
   });
 
   it("reads back exactly what it wrote", () => {
@@ -103,7 +104,7 @@ describe("serializeFilterConditions / parseFilterConditions", () => {
   });
 
   it("ignores another version, unknown parts and broken values", () => {
-    expect(parseFilterConditions("2~st.i.baja")).toEqual([]);
+    expect(parseFilterConditions("2*st.i.baja")).toEqual([]);
     expect(parseFilterConditions(null)).toEqual([]);
 
     const parsed = parsePeopleFilterParams(
@@ -117,7 +118,7 @@ describe("serializeFilterConditions / parseFilterConditions", () => {
           "ve.n.9999", // more than a year
           "su.q.x", // unknown operator
           "pu.e",
-        ].join("~"),
+        ].join("*"),
       }),
     );
 
@@ -126,27 +127,27 @@ describe("serializeFilterConditions / parseFilterConditions", () => {
 
   it("refuses an operator the field does not have", () => {
     const parsed = parsePeopleFilterParams(
-      new URLSearchParams({ f: "1~ve.i.x~st.b.20260101.20260102" }),
+      new URLSearchParams({ f: "1*ve.i.x*st.b.20260101.20260102" }),
     );
     expect(parsed.conditions).toEqual([]);
   });
 
   it("drops a range whose start is after its end", () => {
     const parsed = parsePeopleFilterParams(
-      new URLSearchParams({ f: "1~in.b.20261231.20260101" }),
+      new URLSearchParams({ f: "1*in.b.20261231.20260101" }),
     );
     expect(parsed.conditions).toEqual([]);
   });
 
   it("ignores a parameter longer than the limit", () => {
-    const long = `1~${Array.from({ length: 400 }, () => "pu.e").join("~")}`;
+    const long = `1*${Array.from({ length: 400 }, () => "pu.e").join("*")}`;
     expect(long.length).toBeGreaterThan(MAX_FILTER_PARAM_LENGTH);
     expect(parseFilterConditions(long)).toEqual([]);
   });
 
   it("keeps the last condition when a field repeats", () => {
     const parsed = parsePeopleFilterParams(
-      new URLSearchParams({ f: "1~st.i.activa~st.i.baja" }),
+      new URLSearchParams({ f: "1*st.i.activa*st.i.baja" }),
     );
     expect(parsed.conditions).toEqual([
       { field: "relacion", op: "is", values: ["baja"] },
@@ -227,7 +228,7 @@ describe("writePeopleFilterParams", () => {
     expect(params.get("status")).toBeNull();
     expect(params.get("region")).toBeNull();
     expect(params.get("q")).toBe("ana");
-    expect(params.get("f")).toBe("1~st.i.baja");
+    expect(params.get("f")).toBe("1*st.i.baja");
     expect(params.get("view")).toBe("v");
     expect(params.get("cols")).toBe("rfc");
     expect(params.get("pageSize")).toBe("50");
