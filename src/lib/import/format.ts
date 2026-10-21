@@ -1,4 +1,8 @@
 import { parseFlexibleDateToIso, toIsoDate } from "@/lib/format/date";
+import {
+  TERMINATION_TYPES,
+  terminationTypeLabels,
+} from "@/lib/people/employment-schema";
 
 /**
  * Personas import/export file format. Shared by the template, the browser
@@ -51,10 +55,16 @@ export type ImportColumn = {
   width: number;
   /** Fixed values (list columns) or the catalog it is validated against. */
   options?: readonly string[];
-  catalog?: "areas" | "positions" | "sites" | "templates";
+  catalog?:
+    "areas" | "positions" | "sites" | "templates" | "terminationReasons";
 };
 
 export const PERSON_STATUS_OPTIONS = ["Activa", "Baja"] as const;
+/** Tipo de baja as the baja dialog labels it. */
+export const TERMINATION_TYPE_OPTIONS = TERMINATION_TYPES.map(
+  (type) => terminationTypeLabels[type],
+);
+export const RECONTRATABLE_OPTIONS = ["Sí", "No"] as const;
 export const CONTRACT_TYPE_OPTIONS = ["Determinado", "Indeterminado"] as const;
 export const NOTICE_OPTIONS = ["1", "2", "3", "6", "No avisar"] as const;
 export const CONTRACT_STATUS_OPTIONS = [
@@ -124,6 +134,19 @@ export const IMPORT_COLUMNS: Record<ImportSheetKey, ImportColumn[]> = {
       kind: "date",
       help: "AAAA-MM-DD, DD/MM/AAAA (día primero) o fecha de Excel.",
       width: 18,
+    },
+    {
+      key: "fechaAntiguedad",
+      label: "Fecha de antigüedad",
+      aliases: [
+        "fecha_antiguedad",
+        "antiguedad",
+        "antigüedad",
+        "fecha de antiguedad reconocida",
+      ],
+      kind: "date",
+      help: "Opcional, solo para personas activas. Escríbela solo si la antigüedad cuenta desde antes del ingreso (por ejemplo, un reingreso que reconoce la antigüedad previa); no puede ser posterior a la Fecha de ingreso. Vacía o igual a la Fecha de ingreso: la antigüedad cuenta desde el ingreso.",
+      width: 20,
     },
     {
       key: "area",
@@ -199,6 +222,49 @@ export const IMPORT_COLUMNS: Record<ImportSheetKey, ImportColumn[]> = {
       options: PERSON_STATUS_OPTIONS,
       help: "Activa o Baja. Vacío equivale a Activa.",
       width: 12,
+    },
+    {
+      key: "fechaBaja",
+      label: "Fecha de baja",
+      aliases: ["fecha_baja", "fecha de salida", "fecha de egreso", "egreso"],
+      kind: "date",
+      help: "Solo con Estatus Baja. AAAA-MM-DD o DD/MM/AAAA (día primero), no antes de la Fecha de ingreso. Con fecha, llena también Tipo de baja, Motivo de baja y Recontratable. Sin datos de baja, la baja queda «sin fecha» para revisarla en Workia.",
+      width: 16,
+    },
+    {
+      key: "tipoBaja",
+      label: "Tipo de baja",
+      aliases: ["tipo_baja", "tipo de salida"],
+      kind: "list",
+      options: TERMINATION_TYPE_OPTIONS,
+      help: `Solo con Estatus Baja: ${TERMINATION_TYPE_OPTIONS.join(", ")}.`,
+      width: 20,
+    },
+    {
+      key: "motivoBaja",
+      label: "Motivo de baja",
+      aliases: ["motivo", "motivo_baja", "motivo de salida"],
+      kind: "list",
+      catalog: "terminationReasons",
+      help: "Solo con Estatus Baja. Nombre exacto de un motivo activo del catálogo (Catálogo > Motivos de baja).",
+      width: 30,
+    },
+    {
+      key: "comentarioBaja",
+      label: "Comentario de baja",
+      aliases: ["comentario_baja", "comentario"],
+      kind: "text",
+      help: "Opcional, solo con Estatus Baja. Hasta 1,000 caracteres.",
+      width: 30,
+    },
+    {
+      key: "recontratable",
+      label: "Recontratable",
+      aliases: ["es recontratable", "rehirable"],
+      kind: "list",
+      options: RECONTRATABLE_OPTIONS,
+      help: "Solo con Estatus Baja: Sí o No. Obligatorio si hay Fecha de baja.",
+      width: 14,
     },
     {
       key: "idWorkia",
@@ -525,4 +591,25 @@ export const parseContractStatus = (value: unknown) => {
     ? null
     : (match.toLowerCase().replace(" ", "_") as
         "vigente" | "renovado" | "no_renovado" | "vencido" | "terminado");
+};
+
+export const parseTerminationType = (value: unknown) => {
+  const lookup = new Map(
+    TERMINATION_TYPES.flatMap((type) => [
+      [catalogKey(terminationTypeLabels[type]), type],
+      [catalogKey(type), type],
+    ]),
+  );
+
+  return lookup.get(catalogKey(value)) ?? null;
+};
+
+/** Sí/No (also «si», «s», «n»); null for anything else. */
+export const parseYesNo = (value: unknown) => {
+  const key = catalogKey(value);
+
+  if (["si", "s"].includes(key)) return true;
+  if (["no", "n"].includes(key)) return false;
+
+  return null;
 };

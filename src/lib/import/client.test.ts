@@ -10,6 +10,7 @@ import {
   type ReadWorkbook,
 } from "./client";
 import { parseCsv } from "./csv";
+import { IMPORT_COLUMNS } from "./format";
 import { buildImportTemplate } from "./template";
 import { uploadParsedFile } from "./upload";
 
@@ -346,8 +347,9 @@ describe("error report round trip", () => {
     const parsed = await parseImportFile(file, readWorkbook);
     const personas = parsed.sheets.find((s) => s.sheet === "personas")!;
 
+    // Errores goes right after the import columns.
     expect(personas.mapping.unknown).toEqual([
-      { index: 16, header: "Errores" },
+      { index: IMPORT_COLUMNS.personas.length, header: "Errores" },
     ]);
     expect(personas.rows).toHaveLength(1);
     expect(personas.rows[0].cells).toMatchObject({
