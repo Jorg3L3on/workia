@@ -29,6 +29,28 @@ const text = (cells: Cells, key: string) => {
   return value === null || value === undefined ? "" : String(value).trim();
 };
 
+/**
+ * The form's messages say what is wrong; in a spreadsheet the person also
+ * needs to know how to fix the cell.
+ */
+const IMPORT_MESSAGES: Record<string, string> = {
+  "Los nombres son obligatorios":
+    "Los nombres son obligatorios. Escríbelos en Nombres.",
+  "El apellido paterno es obligatorio":
+    "El apellido paterno es obligatorio. Escríbelo en Apellido paterno.",
+  "Máximo 120 caracteres": "Máximo 120 caracteres. Acorta el texto.",
+  "Correo electrónico inválido":
+    "Correo electrónico inválido. Escribe uno como nombre@empresa.mx o deja la celda vacía.",
+  "Fecha inválida":
+    "Fecha inválida. Escríbela como AAAA-MM-DD o DD/MM/AAAA (día primero), por ejemplo 2026-04-03.",
+  "RFC inválido":
+    "RFC inválido. Escribe los 13 caracteres de persona física, como en la constancia del SAT.",
+  "CURP inválida":
+    "CURP inválida. Escribe los 18 caracteres tal como vienen en el documento (el último es el dígito verificador).",
+  "NSS inválido":
+    "NSS inválido. Escribe el NSS como texto: 11 dígitos, con ceros al inicio.",
+};
+
 /** Form field -> import column key, so errors point at the right column. */
 const FIELD_TO_COLUMN: Record<string, string> = {
   areaId: "area",
@@ -61,7 +83,7 @@ const resolveCatalogs = (
       else
         errors.push({
           field: "area",
-          message: `Área "${area}" no existe en el catálogo.`,
+          message: `Área "${area}" no existe en el catálogo. Elígela de la lista o marca «Crear áreas, puestos y sucursales que no existan».`,
         });
     }
   }
@@ -76,16 +98,22 @@ const resolveCatalogs = (
     if (chosen) {
       positionId = chosen.id;
     } else if (candidates.length > 1) {
+      const areaNames = [
+        ...new Set(candidates.flatMap((c) => (c.areaName ? [c.areaName] : []))),
+      ];
+
       errors.push({
         field: "puesto",
-        message: `Puesto "${position}" existe en varias áreas; indica el área.`,
+        message: areaNames.length
+          ? `Puesto "${position}" existe en varias áreas; escribe en Área una de estas: ${areaNames.join(", ")}.`
+          : `Puesto "${position}" existe en varias áreas; indica el área.`,
       });
     } else if (options.createMissingCatalogs) {
       missing.position = position;
     } else {
       errors.push({
         field: "puesto",
-        message: `Puesto "${position}" no existe en el catálogo.`,
+        message: `Puesto "${position}" no existe en el catálogo. Elígelo de la lista o marca «Crear áreas, puestos y sucursales que no existan».`,
       });
     }
   }
@@ -98,7 +126,7 @@ const resolveCatalogs = (
       else
         errors.push({
           field: "sucursal",
-          message: `Sucursal "${site}" no existe en el catálogo.`,
+          message: `Sucursal "${site}" no existe en el catálogo. Elígela de la lista o marca «Crear áreas, puestos y sucursales que no existan».`,
         });
     }
   }
@@ -126,14 +154,19 @@ export const normalizePersonRow = (
   if (statusText && !status) {
     errors.push({
       field: "estatus",
-      message: 'Estatus debe ser "Activa" o "Baja".',
+      message:
+        'Estatus debe ser "Activa" o "Baja". Elígelo de la lista o déjalo vacío para Activa.',
     });
   }
 
   const idWorkia = text(cells, "idWorkia") || null;
 
   if (idWorkia && !isUuid(idWorkia)) {
-    errors.push({ field: "idWorkia", message: "ID Workia inválido." });
+    errors.push({
+      field: "idWorkia",
+      message:
+        "ID Workia inválido. Déjalo vacío en altas nuevas o cópialo tal cual de una exportación.",
+    });
   }
 
   const parsed = personFormSchema.safeParse({
@@ -163,7 +196,10 @@ export const normalizePersonRow = (
 
       if (!seen.has(column)) {
         seen.add(column);
-        errors.push({ field: column, message: issue.message });
+        errors.push({
+          field: column,
+          message: IMPORT_MESSAGES[issue.message] ?? issue.message,
+        });
       }
     }
   }
@@ -278,7 +314,8 @@ export const matchPerson = (
   if (normalized.idWorkia && !byId) {
     errors.push({
       field: "idWorkia",
-      message: "No existe una persona con ese ID Workia.",
+      message:
+        "No existe una persona con ese ID Workia. Déjalo vacío para darla de alta o cópialo de una exportación.",
     });
 
     return { person: null, errors };
@@ -287,7 +324,8 @@ export const matchPerson = (
   if (byId?.deletedAt) {
     errors.push({
       field: "idWorkia",
-      message: "Esa persona está borrada; restáurala antes de importar.",
+      message:
+        "Esa persona está borrada; restáurala antes de importar o quita el ID Workia para darla de alta.",
     });
 
     return { person: null, errors };
@@ -296,21 +334,24 @@ export const matchPerson = (
   if (byId && byCurp && byId.id !== byCurp.id) {
     errors.push({
       field: "curp",
-      message: "La CURP pertenece a otra persona activa.",
+      message:
+        "La CURP pertenece a otra persona activa. Revisa la CURP o el ID Workia de esta fila.",
     });
   }
 
   if (byId && byRfc && byId.id !== byRfc.id) {
     errors.push({
       field: "rfc",
-      message: "El RFC pertenece a otra persona activa.",
+      message:
+        "El RFC pertenece a otra persona activa. Revisa el RFC o el ID Workia de esta fila.",
     });
   }
 
   if (!byId && byCurp && byRfc && byCurp.id !== byRfc.id) {
     errors.push({
       field: "rfc",
-      message: "CURP y RFC corresponden a personas distintas.",
+      message:
+        "CURP y RFC corresponden a personas distintas. Revisa cuál de los dos está mal.",
     });
   }
 
@@ -396,7 +437,7 @@ export const findFileDuplicates = (rows: KeyedRow[]) => {
       } else if (!duplicates.has(row.rowNumber)) {
         duplicates.set(row.rowNumber, {
           field,
-          message: `${labels[field]}: ya aparece en la fila ${first}.`,
+          message: `${labels[field]}: ya aparece en la fila ${first}. Deja una sola fila por persona.`,
         });
       }
     }

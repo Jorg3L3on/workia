@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNull, or, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, ne, or, sql } from "drizzle-orm";
 
 import { tdb, type DbExecutor } from "@/lib/db";
 import {
@@ -10,6 +10,7 @@ import {
   positions,
   sites,
   type ImportJobCounts,
+  type ImportJobOptions,
   type ImportRowError,
 } from "@/lib/db/schema";
 import { contracts, contractTemplates } from "@/lib/db/schema";
@@ -100,13 +101,18 @@ export const loadCatalogIndex = async (
       .where(and(eq(sites.companyId, companyId), isNull(sites.deletedAt))),
   ]);
   const positionIndex: CatalogIndex["positions"] = new Map();
+  const areaNames = new Map(areaRows.map((row) => [row.id, row.name]));
 
   for (const row of positionRows) {
     const key = catalogKey(row.name);
 
     positionIndex.set(key, [
       ...(positionIndex.get(key) ?? []),
-      { id: row.id, areaId: row.areaId },
+      {
+        id: row.id,
+        areaId: row.areaId,
+        areaName: row.areaId ? (areaNames.get(row.areaId) ?? null) : null,
+      },
     ]);
   }
 
@@ -120,13 +126,93 @@ export const loadCatalogIndex = async (
 const str = (value: unknown) =>
   typeof value === "string" && value.trim() ? value.trim() : null;
 
-/** ID/CURP/RFC of every Personas row in the job, for duplicates and managers. */
-const loadFileKeys = async (companyId: string, jobId: string) => {
+/** Whitespace that JS `\s` and `trim()` remove, restricted to ASCII. */
+const ASCII_SPACES = sql.raw(
+  "' ' || chr(9) || chr(10) || chr(11) || chr(12) || chr(13)",
+);
+
+/**
+ * Rows whose `idWorkia` or `curp` cell may match one of these keys (ID Workia
+ * lower-cased, CURP normalized). SQL mirrors the JS normalization only for
+ * ASCII text cells, so non-ASCII and non-text cells always pass; callers apply
+ * the exact JS key afterwards. This keeps the result identical to reading
+ * every row while only the rows that can match leave the database.
+ */
+const mayMatchPeople = (ids: string[], curps: string[]) => {
+  const cell = (field: "idWorkia" | "curp") => ({
+    json: sql`${importRows.raw} -> ${field}`,
+    text: sql`${importRows.raw} ->> ${field}`,
+  });
+  const loose = (field: "idWorkia" | "curp") =>
+    or(
+      sql`jsonb_typeof(${cell(field).json}) not in ('string', 'null')`,
+      sql`octet_length(${cell(field).text}) <> char_length(${cell(field).text})`,
+    );
+  const id = cell("idWorkia").text;
+  const curp = cell("curp").text;
+
+  return or(
+    loose("idWorkia"),
+    loose("curp"),
+    ids.length
+      ? inArray(sql`lower(btrim(${id}, ${ASCII_SPACES}) collate "C")`, ids)
+      : undefined,
+    curps.length
+      ? inArray(
+          sql`upper(translate(${curp}, ${ASCII_SPACES}, '') collate "C")`,
+          curps,
+        )
+      : undefined,
+  );
+};
+
+/** Only the key cells of `raw`, so file-wide reads stay small. */
+const keyCells = sql<Record<string, unknown>>`jsonb_build_object(
+  'idWorkia', ${importRows.raw} -> 'idWorkia',
+  'curp', ${importRows.raw} -> 'curp',
+  'rfc', ${importRows.raw} -> 'rfc',
+  'nss', ${importRows.raw} -> 'nss'
+)`;
+
+const fileKeyOf = (row: {
+  id: string;
+  rowNumber: number;
+  raw: Record<string, unknown>;
+  action: RowOutcome["action"];
+  targetPersonId: string | null;
+}): FileKey => ({
+  id: row.id,
+  action: row.action,
+  targetPersonId: row.targetPersonId,
+  rowNumber: row.rowNumber,
+  idWorkia: str(row.raw.idWorkia),
+  curp: identifierOrNull(str(row.raw.curp)),
+  rfc: identifierOrNull(str(row.raw.rfc)),
+  nss: normalizeNss(str(row.raw.nss)) || null,
+});
+
+/**
+ * ID/CURP/RFC/NSS of the Personas rows in the job. With `people`, only the
+ * rows that are one of those people (by ID Workia or CURP), so a Horarios or
+ * Contratos chunk reads what it needs instead of the whole file.
+ */
+const loadFileKeys = async (
+  companyId: string,
+  jobId: string,
+  people?: { ids: string[]; curps: string[] },
+) => {
+  const ids = [...new Set(people?.ids ?? [])];
+  const curps = [...new Set(people?.curps ?? [])];
+
+  if (people && ids.length === 0 && curps.length === 0) {
+    return [];
+  }
+
   const rows = await tdb(companyId)
     .select({
       id: importRows.id,
       rowNumber: importRows.rowNumber,
-      raw: importRows.raw,
+      raw: keyCells,
       action: importRows.action,
       targetPersonId: importRows.targetPersonId,
     })
@@ -136,20 +222,60 @@ const loadFileKeys = async (companyId: string, jobId: string) => {
         eq(importRows.companyId, companyId),
         eq(importRows.jobId, jobId),
         eq(importRows.sheet, "personas"),
+        people ? mayMatchPeople(ids, curps) : undefined,
       ),
     )
     .orderBy(asc(importRows.rowNumber));
+  const keys = rows.map(fileKeyOf);
 
-  return rows.map((row): FileKey => ({
-    id: row.id,
-    action: row.action,
-    targetPersonId: row.targetPersonId,
-    rowNumber: row.rowNumber,
-    idWorkia: str(row.raw.idWorkia),
-    curp: identifierOrNull(str(row.raw.curp)),
-    rfc: identifierOrNull(str(row.raw.rfc)),
-    nss: normalizeNss(str(row.raw.nss)) || null,
-  }));
+  if (!people) {
+    return keys;
+  }
+
+  const wantedIds = new Set(ids);
+  const wantedCurps = new Set(curps);
+
+  return keys.filter(
+    (key) =>
+      (key.idWorkia !== null && wantedIds.has(key.idWorkia.toLowerCase())) ||
+      (key.curp !== null && wantedCurps.has(key.curp)),
+  );
+};
+
+/**
+ * File-wide duplicate pass, once per validation run: rows repeating an ID,
+ * CURP, RFC or NSS of an earlier row are saved as errors before the first
+ * chunk, so later chunks never need the whole file again.
+ */
+const rejectFileDuplicates = async (companyId: string, jobId: string) => {
+  const [started] = await tdb(companyId)
+    .select({ id: importRows.id })
+    .from(importRows)
+    .where(
+      and(
+        eq(importRows.companyId, companyId),
+        eq(importRows.jobId, jobId),
+        eq(importRows.sheet, "personas"),
+        ne(importRows.action, "pending"),
+      ),
+    )
+    .limit(1);
+
+  if (started) {
+    return;
+  }
+
+  const keys = await loadFileKeys(companyId, jobId);
+  const duplicates = findFileDuplicates(keys);
+
+  await saveOutcomes(
+    companyId,
+    keys.flatMap((key) => {
+      const dup = duplicates.get(key.rowNumber);
+
+      return dup ? [{ id: key.id, outcome: errorOutcome([dup]) }] : [];
+    }),
+  );
 };
 
 /** Active people of the company already holding one of these NSS: nss -> person id. */
@@ -341,6 +467,8 @@ export const validatePersonasChunk = async (
     throw new Error("La importación no está en validación.");
   }
 
+  await rejectFileDuplicates(companyId, jobId);
+
   const pending = await tdb(companyId)
     .select({
       id: importRows.id,
@@ -363,13 +491,9 @@ export const validatePersonasChunk = async (
     return { processed: 0, remaining: await countPending(companyId, jobId) };
   }
 
-  const [catalogs, fileKeys] = await Promise.all([
-    loadCatalogIndex(companyId),
-    loadFileKeys(companyId, jobId),
-  ]);
-  const duplicates = findFileDuplicates(fileKeys);
-  const chunkKeys = fileKeys.filter((key) =>
-    pending.some((row) => row.id === key.id),
+  const catalogs = await loadCatalogIndex(companyId);
+  const chunkKeys = pending.map((row) =>
+    fileKeyOf({ ...row, action: "pending", targetPersonId: null }),
   );
   const lookups = await loadLookups(companyId, chunkKeys);
   const options = {
@@ -384,13 +508,6 @@ export const validatePersonasChunk = async (
   }[] = [];
 
   for (const row of pending) {
-    const dup = duplicates.get(row.rowNumber);
-
-    if (dup) {
-      updates.push({ id: row.id, outcome: errorOutcome([dup]) });
-      continue;
-    }
-
     const { normalized, errors } = normalizePersonRow(
       row.raw as Cells,
       catalogs,
@@ -436,7 +553,8 @@ export const validatePersonasChunk = async (
       update.outcome = errorOutcome([
         {
           field: "nss",
-          message: "Ya existe una persona activa con este NSS en Workia.",
+          message:
+            "Ya hay otra persona activa con este NSS en Workia. Revisa el NSS; si es la misma persona, agrega su CURP o ID Workia para actualizarla.",
         },
       ]);
     }
@@ -479,10 +597,27 @@ type PersonRow = {
   errors: ImportRowError[] | null;
 };
 
+/** Accent- and case-insensitive full name, to find a manager by name. */
+const fullNameKey = (person: {
+  nombres: string;
+  apellidoPaterno: string;
+  apellidoMaterno: string | null;
+}) =>
+  catalogKey(
+    [person.nombres, person.apellidoPaterno, person.apellidoMaterno]
+      .filter(Boolean)
+      .join(" "),
+  );
+
+const pushTo = <K, V>(map: Map<K, V[]>, key: K, value: V) =>
+  map.set(key, [...(map.get(key) ?? []), value]);
+
 /**
- * Second pass: resolves each row's direct manager (a CURP/ID of another file
- * row or an existing person), rejects self-references, unknown managers and
- * cycles, and records the manager change in the row's diff.
+ * Second pass: resolves each row's direct manager (an ID Workia or CURP, else
+ * a full name, of another file row or an existing person), rejects
+ * self-references, unknown or ambiguous managers and cycles, and records the
+ * manager change in the row's diff. A name only resolves when exactly one
+ * person has it; errors never name anyone else.
  */
 export const resolveManagers = async (companyId: string, jobId: string) => {
   const rows = (await tdb(companyId)
@@ -513,6 +648,7 @@ export const resolveManagers = async (companyId: string, jobId: string) => {
   }
 
   const fileByKey = new Map<string, PersonRow>();
+  const fileByName = new Map<string, PersonRow[]>();
 
   for (const row of rows) {
     const raw = row.normalized;
@@ -520,6 +656,7 @@ export const resolveManagers = async (companyId: string, jobId: string) => {
     if (!raw) continue;
     if (raw.idWorkia) fileByKey.set(`id:${raw.idWorkia.toLowerCase()}`, row);
     if (raw.values.curp) fileByKey.set(`curp:${raw.values.curp}`, row);
+    pushTo(fileByName, fullNameKey(raw.values), row);
   }
 
   const inputs = withManager.map((row) => row.normalized!.managerInput!);
@@ -544,10 +681,21 @@ export const resolveManagers = async (companyId: string, jobId: string) => {
           )
       : Promise.resolve([] as { id: string; curp: string | null }[]),
     tdb(companyId)
-      .select({ id: people.id, managerId: people.managerId })
+      .select({
+        id: people.id,
+        managerId: people.managerId,
+        nombres: people.nombres,
+        apellidoPaterno: people.apellidoPaterno,
+        apellidoMaterno: people.apellidoMaterno,
+      })
       .from(people)
       .where(and(eq(people.companyId, companyId), isNull(people.deletedAt))),
   ]);
+  const existingByName = new Map<string, string[]>();
+
+  for (const link of links) {
+    pushTo(existingByName, fullNameKey(link), link.id);
+  }
 
   const existingById = new Map(existingManagers.map((p) => [p.id, p]));
   const existingByCurp = new Map(
@@ -566,40 +714,71 @@ export const resolveManagers = async (companyId: string, jobId: string) => {
     ),
   );
 
+  /** File row or existing person with this full name, if exactly one. */
+  const byName = (input: string) => {
+    const name = catalogKey(input);
+    const candidates = new Map<string, PersonRow | string>();
+
+    for (const fileRow of fileByName.get(name) ?? []) {
+      candidates.set(nodeOf(fileRow), fileRow);
+    }
+
+    for (const id of existingByName.get(name) ?? []) {
+      // A file row updating that person is the same candidate.
+      if (!candidates.has(id)) candidates.set(id, id);
+    }
+
+    return candidates.size === 1
+      ? { match: [...candidates.values()][0], ambiguous: false }
+      : { match: null, ambiguous: candidates.size > 1 };
+  };
+
   for (const row of withManager) {
     const input = row.normalized!.managerInput!;
     const key = isUuid(input)
       ? `id:${input.toLowerCase()}`
       : `curp:${identifierOrNull(input)}`;
-    const fileRow = fileByKey.get(key);
+    let fileRow = fileByKey.get(key);
+    let existing = isUuid(input)
+      ? existingById.get(input.toLowerCase())
+      : existingByCurp.get(identifierOrNull(input)!);
     let ref: ManagerRef | null = null;
     let message: string | null = null;
 
-    if (fileRow) {
+    if (!fileRow && !existing && !isUuid(input)) {
+      const named = byName(input);
+
+      if (typeof named.match === "string") {
+        existing = { id: named.match, curp: null };
+      } else if (named.match) {
+        fileRow = named.match;
+      } else if (named.ambiguous) {
+        message = `Hay varias personas llamadas "${input}". Escribe la CURP o el ID Workia del jefe directo.`;
+      }
+    }
+
+    if (message) {
+      // Ambiguous name: reported below.
+    } else if (fileRow) {
       if (fileRow.action === "error") {
-        message = `El jefe directo (fila ${fileRow.rowNumber}) tiene errores.`;
+        message = `El jefe directo (fila ${fileRow.rowNumber}) tiene errores. Corrige esa fila primero.`;
       } else if (fileRow.targetPersonId) {
         ref = { type: "person", id: fileRow.targetPersonId };
       } else {
         ref = { type: "row", rowNumber: fileRow.rowNumber };
       }
+    } else if (existing) {
+      ref = { type: "person", id: existing.id };
     } else {
-      const existing = isUuid(input)
-        ? existingById.get(input.toLowerCase())
-        : existingByCurp.get(identifierOrNull(input)!);
-
-      if (existing) {
-        ref = { type: "person", id: existing.id };
-      } else {
-        message = `No encontramos al jefe directo "${input}".`;
-      }
+      message = `No encontramos al jefe directo "${input}". Escribe su nombre completo como está en Workia, su CURP o su ID Workia.`;
     }
 
     const target =
       ref?.type === "person" ? ref.id : ref ? `row:${ref.rowNumber}` : null;
 
     if (target && target === nodeOf(row)) {
-      message = "Una persona no puede ser su propio jefe directo.";
+      message =
+        "Una persona no puede ser su propio jefe directo. Deja la celda vacía o escribe a otra persona.";
     }
 
     if (message || !ref || !target) {
@@ -620,7 +799,8 @@ export const resolveManagers = async (companyId: string, jobId: string) => {
       refs.delete(row.id);
       failed.set(row.id, {
         field: "jefeDirecto",
-        message: "El jefe directo forma un ciclo (A reporta a B y B a A).",
+        message:
+          "El jefe directo forma un ciclo (A reporta a B y B a A). Cambia el jefe de una de esas filas.",
       });
     }
   }
@@ -664,6 +844,14 @@ export const resolveManagers = async (companyId: string, jobId: string) => {
 
   await saveOutcomes(companyId, updates);
 };
+
+/** The people a chunk refers to, as `loadFileKeys` expects them. */
+const peopleOf = (keys: KeyedRow[]) => ({
+  ids: keys.flatMap((key) =>
+    key.idWorkia ? [key.idWorkia.toLowerCase()] : [],
+  ),
+  curps: keys.flatMap((key) => (key.curp ? [key.curp] : [])),
+});
 
 const TIME_FIELDS = [
   "entrada",
@@ -712,7 +900,7 @@ export const validateHorariosChunk = async (
   }));
   const [lookups, fileKeys] = await Promise.all([
     loadLookups(companyId, keys),
-    loadFileKeys(companyId, jobId),
+    loadFileKeys(companyId, jobId, peopleOf(keys)),
   ]);
   const fileByCurp = new Map(
     fileKeys.flatMap((k) => (k.curp ? [[k.curp, k] as const] : [])),
@@ -750,7 +938,8 @@ export const validateHorariosChunk = async (
     if (!idWorkia && !curp) {
       errors.push({
         field: "curp",
-        message: "Indica el ID Workia o la CURP de la persona.",
+        message:
+          "Indica el ID Workia o la CURP de la persona. Cópialos de la hoja Personas.",
       });
     }
 
@@ -760,7 +949,11 @@ export const validateHorariosChunk = async (
       times[field] = value;
 
       if (value && !TIME_RE.test(value)) {
-        errors.push({ field, message: "Hora inválida (usa HH:MM, 24 horas)." });
+        errors.push({
+          field,
+          message:
+            "Hora inválida (usa HH:MM, 24 horas). Escríbela como 08:30 o 17:00.",
+        });
       }
     }
 
@@ -775,7 +968,8 @@ export const validateHorariosChunk = async (
     if (errors.length === 0 && !person && !inFile) {
       errors.push({
         field: curp ? "curp" : "idWorkia",
-        message: "No encontramos a la persona (ni en el archivo ni en Workia).",
+        message:
+          "No encontramos a la persona (ni en el archivo ni en Workia). Revisa la CURP o el ID Workia: debe estar en la hoja Personas o ya existir en Workia.",
       });
     }
 
@@ -855,7 +1049,30 @@ export const validateContratosChunk = async (
   }
 
   const today = new Date().toISOString().slice(0, 10);
-  const [templateRows, allRows, fileKeys] = await Promise.all([
+  const keys: KeyedRow[] = pending.map((row) => {
+    const key = personKeyOf(row.raw as Cells);
+
+    return {
+      rowNumber: row.rowNumber,
+      idWorkia: key.idWorkia,
+      curp: key.curp,
+      rfc: null,
+    };
+  });
+  const chunkPeople = peopleOf(keys);
+  const personOf = (cells: Cells) => {
+    const key = personKeyOf(cells);
+
+    return key.idWorkia?.toLowerCase() ?? key.curp;
+  };
+  const chunkPersons = new Set(
+    pending.flatMap((row) => {
+      const person = personOf(row.raw as Cells);
+
+      return person ? [person] : [];
+    }),
+  );
+  const [templateRows, personRows, fileKeys] = await Promise.all([
     tdb(companyId)
       .select({ id: contractTemplates.id, name: contractTemplates.name })
       .from(contractTemplates)
@@ -865,29 +1082,30 @@ export const validateContratosChunk = async (
           isNull(contractTemplates.deletedAt),
         ),
       ),
-    tdb(companyId)
-      .select({ rowNumber: importRows.rowNumber, raw: importRows.raw })
-      .from(importRows)
-      .where(
-        and(
-          eq(importRows.companyId, companyId),
-          eq(importRows.jobId, jobId),
-          eq(importRows.sheet, "contratos"),
-        ),
-      )
-      .orderBy(asc(importRows.rowNumber)),
-    loadFileKeys(companyId, jobId),
+    // File-level rules only relate rows of the same person, so the rows of
+    // this chunk's people are all they need, wherever they are in the file.
+    chunkPersons.size
+      ? tdb(companyId)
+          .select({ rowNumber: importRows.rowNumber, raw: importRows.raw })
+          .from(importRows)
+          .where(
+            and(
+              eq(importRows.companyId, companyId),
+              eq(importRows.jobId, jobId),
+              eq(importRows.sheet, "contratos"),
+              mayMatchPeople([...chunkPersons], [...chunkPersons]),
+            ),
+          )
+          .orderBy(asc(importRows.rowNumber))
+      : Promise.resolve([]),
+    loadFileKeys(companyId, jobId, chunkPeople),
   ]);
   const templates = new Map(
     templateRows.map((t) => [catalogKey(t.name), { id: t.id, name: t.name }]),
   );
-
-  // File-level rules need every contract row of the file, not just this chunk.
-  const personOf = (cells: Cells) => {
-    const key = personKeyOf(cells);
-
-    return key.idWorkia?.toLowerCase() ?? key.curp;
-  };
+  const allRows = personRows.filter((row) =>
+    chunkPersons.has(personOf(row.raw as Cells) ?? ""),
+  );
   const fileRows: ContractFileRow[] = allRows.map((row) => {
     const cells = row.raw as Cells;
     const { normalized } = normalizeContractRow(cells, { today, templates });
@@ -908,16 +1126,6 @@ export const validateContratosChunk = async (
     ),
   );
 
-  const keys: KeyedRow[] = pending.map((row) => {
-    const key = personKeyOf(row.raw as Cells);
-
-    return {
-      rowNumber: row.rowNumber,
-      idWorkia: key.idWorkia,
-      curp: key.curp,
-      rfc: null,
-    };
-  });
   const lookups = await loadLookups(companyId, keys);
   const fileByCurp = new Map(
     fileKeys.flatMap((k) => (k.curp ? [[k.curp, k] as const] : [])),
@@ -1011,7 +1219,7 @@ export const validateContratosChunk = async (
         outcome: errorOutcome([
           {
             field: "curp",
-            message: `La persona (fila ${inFile.rowNumber} de Personas) tiene errores.`,
+            message: `La persona (fila ${inFile.rowNumber} de Personas) tiene errores. Corrige esa fila primero.`,
           },
         ]),
       });
@@ -1025,7 +1233,7 @@ export const validateContratosChunk = async (
           {
             field: curp ? "curp" : "idWorkia",
             message:
-              "No encontramos a la persona (ni en el archivo ni en Workia).",
+              "No encontramos a la persona (ni en el archivo ni en Workia). Revisa la CURP o el ID Workia: debe estar en la hoja Personas o ya existir en Workia.",
           },
         ]),
       });
@@ -1060,7 +1268,7 @@ export const validateContratosChunk = async (
               message:
                 "La persona ya tiene un contrato vigente en Workia (inicio " +
                 blocking.startDate +
-                ").",
+                "). Marca uno de los dos con otro estatus, por ejemplo Renovado o Vencido.",
             },
           ]),
         });
@@ -1165,14 +1373,17 @@ export const validateJobStep = async (companyId: string, jobId: string) => {
   return { done: true, remaining: 0, counts };
 };
 
-/** Back to pending, e.g. after changing the review options. */
+/**
+ * Back to pending, e.g. after changing the review options. Any earlier
+ * "validate again before applying" mark is dropped unless `options` sets it.
+ */
 export const restartValidation = async (
   companyId: string,
   jobId: string,
-  options: {
-    createMissingCatalogs?: boolean;
-    mode?: "all_or_nothing" | "valid_only";
-  },
+  options: Pick<
+    ImportJobOptions,
+    "createMissingCatalogs" | "mode" | "revalidating"
+  >,
 ) => {
   await tdb(companyId)
     .update(importRows)
@@ -1190,7 +1401,7 @@ export const restartValidation = async (
     .update(importJobs)
     .set({
       status: "validating",
-      options: sql`${importJobs.options} || ${JSON.stringify(options)}::jsonb`,
+      options: sql`(${importJobs.options} - 'revalidating') || ${JSON.stringify(options)}::jsonb`,
     })
     .where(
       and(
