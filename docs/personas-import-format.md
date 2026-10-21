@@ -8,8 +8,9 @@ Plania: WRK-I3.
 
 - **XLSX** (primary): sheets `Instrucciones`, `Ejemplo`, `Personas`,
   `Horarios`, `Contratos` and `Catálogos`. Dropdowns on Área, Puesto,
-  Sucursal, Estatus, Tipo, Aviso and Plantilla come from `Catálogos` (live
-  catalogs) and refuse other values (`errorStyle: stop`); the server still
+  Sucursal, Estatus, Tipo de baja, Motivo de baja, Recontratable, Tipo, Aviso
+  and Plantilla come from `Catálogos` (live catalogs; Motivo de baja lists the
+  company's active motivos) and refuse other values (`errorStyle: stop`); the server still
   validates everything, because pasted values, LibreOffice and Google Sheets
   skip Excel's checks.
 - **CSV** (UTF-8 with BOM): `Personas` only, same columns.
@@ -26,8 +27,8 @@ Plania: WRK-I3.
 
 ## Template
 
-- **Ejemplo**: three fictional people (fictional `XEXX…` identifiers) in the
-  Personas layout, under a banner that says the sheet is not imported. The
+- **Ejemplo**: four fictional people (fictional `XEXX…` identifiers), one of
+  them de baja with its data, in the Personas layout, under a banner that says the sheet is not imported. The
   reader only reads sheets named Personas, Horarios and Contratos, and never
   reads `Ejemplo` as Personas, even when it is the only sheet.
 - **Headers**: required columns in dark blue (white text), optional ones in
@@ -65,20 +66,26 @@ birth match an existing one. Horarios and Contratos rows find their person by
 
 ## Personas
 
-| Header (canonical)                      | Key               | Notes                                               |
-| --------------------------------------- | ----------------- | --------------------------------------------------- |
-| Nombres \*                              | `nombres`         | Required                                            |
-| Apellido paterno \*                     | `apellidoPaterno` | Required                                            |
-| Apellido materno                        | `apellidoMaterno` |                                                     |
-| Correo electrónico                      | `email`           |                                                     |
-| Teléfono                                | `telefono`        |                                                     |
-| Fecha de nacimiento                     | `fechaNacimiento` | Date                                                |
-| Fecha de ingreso                        | `fechaIngreso`    | Date                                                |
-| Área / Puesto / Sucursal                | `area` ...        | Catalog names; unknown name = error unless creating |
-| Jefe directo (nombre, CURP o ID Workia) | `jefeDirecto`     | See below; resolved in a second pass                |
-| RFC / CURP / NSS                        | `rfc` ...         | Normalized (uppercase, no spaces) and validated     |
-| Estatus                                 | `estatus`         | `Activa` (default) or `Baja`                        |
-| ID Workia                               | `idWorkia`        | Empty for new people; last column                   |
+| Header (canonical)                      | Key               | Notes                                                  |
+| --------------------------------------- | ----------------- | ------------------------------------------------------ |
+| Nombres \*                              | `nombres`         | Required                                               |
+| Apellido paterno \*                     | `apellidoPaterno` | Required                                               |
+| Apellido materno                        | `apellidoMaterno` |                                                        |
+| Correo electrónico                      | `email`           |                                                        |
+| Teléfono                                | `telefono`        |                                                        |
+| Fecha de nacimiento                     | `fechaNacimiento` | Date                                                   |
+| Fecha de ingreso                        | `fechaIngreso`    | Date                                                   |
+| Área / Puesto / Sucursal                | `area` ...        | Catalog names; unknown name = error unless creating    |
+| Jefe directo (nombre, CURP o ID Workia) | `jefeDirecto`     | See below; resolved in a second pass                   |
+| RFC / CURP / NSS                        | `rfc` ...         | Normalized (uppercase, no spaces) and validated        |
+| Fecha de antigüedad                     | `fechaAntiguedad` | Date; see «Bajas y antigüedad»                         |
+| Estatus                                 | `estatus`         | `Activa` (default) or `Baja`                           |
+| Fecha de baja                           | `fechaBaja`       | Date; only with Estatus Baja                           |
+| Tipo de baja                            | `tipoBaja`        | `Voluntaria`, `Despido`, `Término de contrato`, `Otra` |
+| Motivo de baja                          | `motivoBaja`      | Name in Catálogo > Motivos de baja                     |
+| Comentario de baja                      | `comentarioBaja`  | Optional, ≤ 1,000 characters                           |
+| Recontratable                           | `recontratable`   | `Sí` / `No`                                            |
+| ID Workia                               | `idWorkia`        | Empty for new people; last column                      |
 
 Jefe directo accepts, in this order: an ID Workia, a CURP, or a full name
 (nombres + apellidos, ignoring case and accents). Each is looked up among the
@@ -87,6 +94,57 @@ only when exactly one person has it; otherwise the row gets an error that
 says to use the CURP or ID Workia, and never names the other people. Old
 headers (`Jefe directo (CURP)`, `Jefe directo (CURP o ID Workia)`) still map
 to this column.
+
+## Bajas y antigüedad
+
+The baja columns go through the employment domain (`src/lib/people/employment.ts`),
+inside the import's batch transaction, with the same rules and audit as the
+«Dar de baja» dialog (audit source `import`). What a row does, decided by
+`planEmployment()` in `person-rows.ts` against the person's current (or last)
+employment period:
+
+- **Estatus Baja with the baja columns** on someone active (or a new person):
+  `recordTermination()` closes the open period with fecha, tipo, motivo,
+  comentario and recontratable, sets the person de baja and turns the vigente
+  contract into «Terminado» ending on the fecha de baja.
+- **Estatus Baja with the baja columns on someone already de baja**:
+  `correctTermination()` writes them on the last period. A blank cell keeps
+  the stored value, as in every column; a baja «sin fecha» that gets its date
+  ends the vigente contract, and stops needing review.
+- In both cases Fecha de baja, Tipo de baja, Motivo de baja and Recontratable
+  must all be known (in the row or already stored); the error names the
+  missing ones. The fecha de baja cannot be before the fecha de ingreso, and
+  the fecha de ingreso of someone de baja cannot move after the baja.
+- **Estatus Baja without baja columns** on someone active keeps the old
+  behaviour: the open period closes «sin fecha» and is marked for review
+  (`requiere_revision`). The row gets a warning, not an error.
+- Baja columns with Estatus Activa (or blank on someone active) are an error:
+  write Baja or clear them.
+- **Motivo de baja** is matched by name (case and accents ignored) among the
+  company's motivos only; a name or id of another company never resolves. A
+  new motivo must be active; a motivo deactivated after the baja is accepted
+  unchanged, so old exports still import.
+- **Fecha de antigüedad** is only stored for active people, as the open
+  period's recognized seniority (`reconoce_antiguedad`,
+  `fecha_antiguedad_reconocida`, `recognizeSeniority()`), and only when it
+  differs from the fecha de ingreso and from the date seniority already
+  counts from. It cannot be after the fecha de ingreso. On someone de baja a
+  different value is ignored with a warning.
+- The **finiquito** is not an import column, in either direction: it is
+  captured in the expediente, and its amount needs `compensation:read`.
+
+The export writes Fecha de antigüedad for everyone (`seniorityDate()` of the
+current period) and the baja columns for people de baja, from
+`listEmploymentSummaries()`; re-importing it changes nothing.
+
+**Undo**: before writing, the import stores the person's periods and vigente
+contracts in the row's `previous_snapshot.employment` (for rows that change
+the status, the ingreso, the baja or the antigüedad). Undo deletes the
+periods the import opened, restores the others field by field (closed ones
+first, so at most one is open) and puts the contracts back to vigente with
+their end date. Undo is refused when, after the import, someone edited a
+period of that person (a finiquito, a reingreso), a snapshotted contract, or
+started an alta a nómina on a period the import opened.
 
 ## Horarios
 
@@ -98,7 +156,8 @@ to this column.
 `CURP` or `ID Workia`, `Tipo` \* (`Determinado`/`Indeterminado`),
 `Fecha de inicio` \*, `Fecha de fin` (required when determinado),
 `Aviso (meses)` (`1`, `2`, `3`, `6`, `No avisar`), `Estatus` (`Vigente`,
-`Renovado`, `No renovado`, `Vencido`; empty is derived from the dates),
+`Renovado`, `No renovado`, `Vencido`, `Terminado`; empty is derived from the
+dates),
 `Plantilla` (optional for historical contracts).
 
 ## Headers
