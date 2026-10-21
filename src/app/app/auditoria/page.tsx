@@ -17,6 +17,7 @@ import {
   type AuditResourceType,
 } from "@/lib/audit/types";
 import { parseListPaging } from "@/lib/list/paging";
+import { userHasPermission } from "@/lib/rbac";
 
 export const dynamic = "force-dynamic";
 
@@ -69,9 +70,15 @@ const AuditoriaPage = async ({ searchParams }: AuditoriaPageProps) => {
     query: filters.q,
   };
 
+  // Salaries and finiquito amounts in the details only with compensation:read.
+  const compensation = await userHasPermission(
+    session.user.id,
+    "compensation:read",
+  );
   const [events, total, actorOptions] = await Promise.all([
     listAuditEvents({
       ...auditFilters,
+      compensation,
       limit: pageSize,
       offset: (page - 1) * pageSize,
     }),

@@ -9,7 +9,9 @@ import {
   missingChecklist,
   onboardingStageLabels,
 } from "@/lib/onboarding/schema";
+import { blocksNewOnboarding } from "@/lib/onboarding/eligibility";
 import { listActivePeopleForSelect } from "@/lib/people";
+import { listEmploymentSummaries } from "@/lib/people/employment";
 import { requirePeopleRead } from "@/lib/people/auth";
 import { formatPersonName } from "@/lib/people/schema";
 import { userHasPermission } from "@/lib/rbac";
@@ -32,12 +34,25 @@ const AltasPage = async ({ searchParams }: AltasPageProps) => {
     listOnboardings(session.companyId),
     userHasPermission(session.user.id, "people:update"),
   ]);
-  const withAlta = new Set(rows.map((row) => row.onboarding.personId));
-  const candidates = canStart
-    ? (await listActivePeopleForSelect(session.companyId)).filter(
-        (person) => !withAlta.has(person.id),
-      )
-    : [];
+  // One alta per employment period: a rehired person can get a new one.
+  const [active, periods] = canStart
+    ? await Promise.all([
+        listActivePeopleForSelect(session.companyId),
+        listEmploymentSummaries(session.companyId),
+      ])
+    : [[], new Map()];
+  const candidates = active.filter((person) => {
+    const summary = periods.get(person.id);
+    const open = summary?.abierto
+      ? { id: summary.periodId, periodCount: summary.periodCount }
+      : null;
+
+    return !rows.some(
+      (row) =>
+        row.onboarding.personId === person.id &&
+        blocksNewOnboarding(row.onboarding, open),
+    );
+  });
 
   return (
     <div className="flex flex-col gap-6">

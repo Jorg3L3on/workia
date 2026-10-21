@@ -46,7 +46,9 @@ import { deletedTone, toneFor } from "@/lib/ui/status-tone";
 import {
   deletePersonAction,
   setPersonStatusAction,
+  updateFiniquitoAction,
 } from "@/lib/people/actions";
+import { getPersonEmploymentMenuData } from "@/lib/people/employment-menu";
 
 export const metadata: Metadata = {
   title: pageTitles.expediente,
@@ -87,14 +89,18 @@ type PersonaDetailPageProps = {
 const PersonHistory = async ({
   companyId,
   personId,
+  compensation,
 }: {
   companyId: string;
   personId: string;
+  /** compensation:read: finiquito amounts in clear. */
+  compensation: boolean;
 }) => {
   const auditEvents = await listAuditEvents({
     companyId,
     resourceType: "person",
     resourceId: personId,
+    compensation,
     limit: 50,
   });
 
@@ -194,6 +200,14 @@ const PersonaDetailPage = async ({
   }
 
   const canEmit = canCreateContracts && canReadContracts && !isDeleted;
+  const employment =
+    canUpdate && !isDeleted
+      ? await getPersonEmploymentMenuData(
+          session.companyId,
+          person.id,
+          canSeeCompensation,
+        )
+      : undefined;
   // «Decidir renovación» needs positions only when there is something to decide.
   const renewalPositions =
     canUpdateContracts &&
@@ -240,6 +254,12 @@ const PersonaDetailPage = async ({
               canUpdate && !isDeleted && person.status === "activa"
             }
             status={person.status}
+            employment={employment}
+            finiquitoAction={
+              canUpdate && !isDeleted
+                ? updateFiniquitoAction.bind(null, person.id)
+                : undefined
+            }
             statusAction={
               canUpdate && !isDeleted
                 ? setPersonStatusAction.bind(
@@ -504,7 +524,11 @@ const PersonaDetailPage = async ({
                 </p>
               </div>
               <Suspense fallback={<SectionSkeleton rows={3} />}>
-                <PersonHistory companyId={session.companyId} personId={id} />
+                <PersonHistory
+                  companyId={session.companyId}
+                  compensation={canSeeCompensation}
+                  personId={id}
+                />
               </Suspense>
             </section>
           ) : undefined
