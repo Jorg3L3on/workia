@@ -38,6 +38,14 @@ import { CompanyReferenceError, isUniqueViolation } from "@/lib/db/errors";
 import { withTenant } from "@/lib/tenant/scope";
 
 import {
+  rehirePerson,
+  syncEmploymentPeriods,
+  terminatePerson,
+  type RehireResult,
+  type TerminationResult,
+} from "./employment";
+import type { RehireValues, TerminationValues } from "./employment-schema";
+import {
   DuplicateIdentityError,
   identifierOrNull,
   normalizeNss,
@@ -827,6 +835,8 @@ export const createPerson = async (
         summary: `Alta de persona: ${created.nombres} ${created.apellidoPaterno}`,
       },
     });
+    // Its first employment period opens with the alta (Iniciativa 2).
+    await syncEmploymentPeriods(tx, companyId, [created.id], actorUserId);
 
     await upsertPersonSchedule(companyId, created.id, input, actorUserId, tx, {
       schedule: null,
@@ -919,6 +929,11 @@ export const updatePerson = async (
       payload: { before, after, changes },
     });
 
+    if (changes.status || changes.fechaIngreso) {
+      // The current employment period follows the ingreso (and the status).
+      await syncEmploymentPeriods(tx, companyId, [id], actorUserId);
+    }
+
     await upsertPersonSchedule(companyId, id, input, actorUserId, tx, {
       schedule: current?.schedule?.id ? current.schedule : null,
     });
@@ -928,52 +943,26 @@ export const updatePerson = async (
   }, companyId);
 };
 
-/** Baja laboral or reactivation alone: the rest of the expediente stays as is. */
+/** What «Dar de baja» or «Reingresar» captures (Iniciativa 2). */
+export type PersonStatusChange =
+  | ({ status: "baja" } & TerminationValues)
+  | ({ status: "activa" } & RehireValues);
+
+/**
+ * Baja laboral or reingreso alone: the rest of the expediente stays as is.
+ * A baja closes the employment period (terminatePerson); a reingreso opens a
+ * new one in the same expediente (rehirePerson). Null for a person outside
+ * the company or borrado; an EmploymentError when a rule refuses it.
+ */
 export const setPersonStatus = async (
   companyId: string,
   id: string,
-  status: PersonStatus,
+  change: PersonStatusChange,
   actorUserId?: string | null,
-) => {
-  return withTransaction(async (tx) => {
-    const existing = await getPersonById(companyId, id, false, tx);
-
-    if (!existing || existing.status === status) {
-      return existing;
-    }
-
-    const before = snapshotPerson(existing);
-    const [updated] = await tx
-      .update(people)
-      .set({ status })
-      .where(withTenant(people, companyId, eq(people.id, id)))
-      .returning();
-
-    if (!updated) {
-      return null;
-    }
-
-    const after = snapshotPerson(updated);
-
-    await recordAuditEvent(
-      {
-        companyId,
-        actorUserId,
-        resourceType: "person",
-        resourceId: id,
-        action: status === "baja" ? "baja" : "reactivate",
-        payload: {
-          before,
-          after,
-          changes: buildChanges(before, after, ["status"]),
-        },
-      },
-      tx,
-    );
-
-    return updated;
-  }, companyId);
-};
+): Promise<TerminationResult | RehireResult | null> =>
+  change.status === "baja"
+    ? terminatePerson(companyId, id, change, actorUserId)
+    : rehirePerson(companyId, id, change, actorUserId);
 
 export const softDeletePerson = async (
   companyId: string,

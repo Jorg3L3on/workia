@@ -123,7 +123,7 @@ export const normalizeContractRow = (
     errors.push({
       field: "estatus",
       message:
-        'Estatus debe ser "Vigente", "Renovado", "No renovado" o "Vencido".',
+        'Estatus debe ser "Vigente", "Renovado", "No renovado", "Vencido" o "Terminado".',
     });
   }
 

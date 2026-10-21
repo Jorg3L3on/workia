@@ -50,6 +50,7 @@ export const CONTRACT_STATUS_OPTIONS = [
   "Renovado",
   "No renovado",
   "Vencido",
+  "Terminado",
 ] as const;
 
 export const IMPORT_COLUMNS: Record<ImportSheetKey, ImportColumn[]> = {
@@ -304,7 +305,7 @@ export const IMPORT_COLUMNS: Record<ImportSheetKey, ImportColumn[]> = {
       aliases: ["estado", "status"],
       kind: "list",
       options: CONTRACT_STATUS_OPTIONS,
-      help: "Vigente, Renovado, No renovado o Vencido. Vacío se deduce de las fechas.",
+      help: "Vigente, Renovado, No renovado, Vencido o Terminado. Vacío se deduce de las fechas.",
       width: 14,
     },
     {
@@ -510,5 +511,5 @@ export const parseContractStatus = (value: unknown) => {
   return match === null
     ? null
     : (match.toLowerCase().replace(" ", "_") as
-        "vigente" | "renovado" | "no_renovado" | "vencido");
+        "vigente" | "renovado" | "no_renovado" | "vencido" | "terminado");
 };

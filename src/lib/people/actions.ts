@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import type { z } from "zod";
 
 import { CompanyReferenceError } from "@/lib/db/errors";
 import { AuthorizationError } from "@/lib/rbac/errors";
@@ -10,6 +11,14 @@ import {
   writableCompanyIdFromForm,
 } from "@/lib/tenant/scope";
 
+import { userHasPermission } from "@/lib/rbac";
+
+import { EmploymentError, updateFiniquito } from "./employment";
+import {
+  finiquitoSchema,
+  rehireSchema,
+  terminationSchema,
+} from "./employment-schema";
 import { DuplicateIdentityError } from "./identity";
 import {
   createPerson,
@@ -19,6 +28,7 @@ import {
   setPersonStatus,
   softDeletePerson,
   updatePerson,
+  type PersonStatusChange,
 } from "./index";
 import {
   requirePeopleCreate,
@@ -300,6 +310,10 @@ export const updatePersonAction = async (
       return referenceState(error);
     }
 
+    if (error instanceof EmploymentError && error.field === "fechaIngreso") {
+      return { fieldErrors: { fechaIngreso: error.message } };
+    }
+
     throw error;
   }
 
@@ -307,36 +321,222 @@ export const updatePersonAction = async (
   redirect(`/app/personas/${personId}?saved=1`);
 };
 
-/** «Dar de baja» / «Reactivar» from the expediente's actions menu. */
+export type EmploymentActionState = {
+  error?: string;
+  fieldErrors?: Record<string, string>;
+};
+
+const formText = (formData: FormData, name: string) => {
+  const value = formData.get(name);
+  return value === null ? undefined : String(value).trim();
+};
+
+const formAmount = (formData: FormData, name: string) => {
+  const value = formText(formData, name);
+
+  if (value === undefined) return undefined;
+  if (value === "") return null;
+
+  const parsed = Number(value.replace(/[$,\s]/g, ""));
+  return Number.isFinite(parsed) ? parsed : Number.NaN;
+};
+
+/**
+ * The finiquito fields of a dialog. The amount is read only for a user with
+ * compensation:read: anyone else leaves the stored one untouched.
+ */
+const finiquitoFromForm = (formData: FormData, canSeeAmount: boolean) => ({
+  estado: formText(formData, "finiquitoEstado") || null,
+  fecha: formText(formData, "finiquitoFecha") || null,
+  ...(canSeeAmount ? { monto: formAmount(formData, "finiquitoMonto") } : {}),
+});
+
+const issuesToState = (issues: z.core.$ZodIssue[]): EmploymentActionState => {
+  const fieldErrors: Record<string, string> = {};
+
+  for (const issue of issues) {
+    const field = issue.path.join(".");
+    fieldErrors[field] ??= issue.message;
+  }
+
+  return { error: issues[0]?.message, fieldErrors };
+};
+
+const parseStatusChange = (
+  status: PersonStatusValue,
+  formData: FormData,
+  canSeeAmount: boolean,
+) => {
+  if (status === "baja") {
+    const recontratable = formText(formData, "recontratable");
+    const hasFiniquito =
+      formText(formData, "finiquitoEstado") ||
+      formText(formData, "finiquitoFecha") ||
+      (canSeeAmount && formText(formData, "finiquitoMonto"));
+
+    return terminationSchema.safeParse({
+      fechaBaja: formText(formData, "fechaBaja") ?? "",
+      tipoBaja: formText(formData, "tipoBaja") || undefined,
+      motivoBajaId: formText(formData, "motivoBajaId") || undefined,
+      comentario: formText(formData, "comentario") || null,
+      recontratable:
+        recontratable === "si"
+          ? true
+          : recontratable === "no"
+            ? false
+            : undefined,
+      finiquito: hasFiniquito
+        ? finiquitoFromForm(formData, canSeeAmount)
+        : undefined,
+    });
+  }
+
+  const reconoce = formText(formData, "reconoceAntiguedad");
+
+  return rehireSchema.safeParse({
+    fechaIngreso: formText(formData, "fechaIngreso") ?? "",
+    reconoceAntiguedad:
+      reconoce === "on" || reconoce === "true" || reconoce === "si",
+    fechaAntiguedadReconocida:
+      formText(formData, "fechaAntiguedadReconocida") || null,
+  });
+};
+
+/**
+ * «Dar de baja» / «Reingresar» from the expediente's actions menu, with the
+ * dialog's fields (people:update). A baja needs fecha, tipo, motivo and
+ * recontratable; the finiquito amount is only taken with compensation:read.
+ */
 export const setPersonStatusAction = async (
   personId: string,
   status: PersonStatusValue,
-): Promise<void> => {
+  _prevState: EmploymentActionState,
+  formData: FormData,
+): Promise<EmploymentActionState> => {
   let session;
 
   try {
     session = await requirePeopleUpdate();
   } catch (error) {
     if (error instanceof AuthorizationError) {
-      redirect(`/app/personas/${personId}?error=status-forbidden`);
+      return {
+        error: "No tienes permiso para dar de baja o reingresar personas.",
+      };
     }
 
     redirect("/login");
   }
 
-  const updated = await setPersonStatus(
-    session.companyId,
-    personId,
-    status,
+  let companyId: string;
+
+  try {
+    companyId = writableCompanyIdFromForm(session, formData);
+  } catch {
+    return { error: STALE_COMPANY_MESSAGE };
+  }
+
+  const canSeeAmount = await userHasPermission(
     session.user.id,
+    "compensation:read",
   );
+  const parsed = parseStatusChange(status, formData, canSeeAmount);
+
+  if (!parsed.success) {
+    return issuesToState(parsed.error.issues);
+  }
+
+  let updated;
+
+  try {
+    updated = await setPersonStatus(
+      companyId,
+      personId,
+      { status, ...parsed.data } as PersonStatusChange,
+      session.user.id,
+    );
+  } catch (error) {
+    if (error instanceof EmploymentError) {
+      return {
+        error: error.message,
+        fieldErrors: error.field ? { [error.field]: error.message } : undefined,
+      };
+    }
+
+    throw error;
+  }
 
   if (!updated) {
-    redirect("/app/personas?error=not-found");
+    return { error: "No encontramos a esta persona." };
   }
 
   revalidatePersonPaths(personId);
-  redirect(`/app/personas/${personId}`);
+  revalidatePath("/app/contratos");
+  redirect(
+    `/app/personas/${personId}?${status === "baja" ? "baja=1" : "reingreso=1"}`,
+  );
+};
+
+/** «Finiquito» of the last baja, after it too (people:update; the amount needs compensation:read). */
+export const updateFiniquitoAction = async (
+  personId: string,
+  _prevState: EmploymentActionState,
+  formData: FormData,
+): Promise<EmploymentActionState> => {
+  let session;
+
+  try {
+    session = await requirePeopleUpdate();
+  } catch (error) {
+    if (error instanceof AuthorizationError) {
+      return { error: "No tienes permiso para actualizar el finiquito." };
+    }
+
+    redirect("/login");
+  }
+
+  let companyId: string;
+
+  try {
+    companyId = writableCompanyIdFromForm(session, formData);
+  } catch {
+    return { error: STALE_COMPANY_MESSAGE };
+  }
+
+  const canSeeAmount = await userHasPermission(
+    session.user.id,
+    "compensation:read",
+  );
+  const parsed = finiquitoSchema.safeParse(
+    finiquitoFromForm(formData, canSeeAmount),
+  );
+
+  if (!parsed.success) {
+    return issuesToState(parsed.error.issues);
+  }
+
+  let updated;
+
+  try {
+    updated = await updateFiniquito(
+      companyId,
+      personId,
+      parsed.data,
+      session.user.id,
+    );
+  } catch (error) {
+    if (error instanceof EmploymentError) {
+      return { error: error.message };
+    }
+
+    throw error;
+  }
+
+  if (!updated) {
+    return { error: "No encontramos a esta persona." };
+  }
+
+  revalidatePersonPaths(personId);
+  redirect(`/app/personas/${personId}?finiquito=1`);
 };
 
 export const deletePersonAction = async (personId: string): Promise<void> => {

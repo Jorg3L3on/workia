@@ -117,6 +117,7 @@ export const contractStatusLabels: Record<ContractStatus, string> = {
   renovado: "Renovado",
   no_renovado: "No renovado",
   vencido: "Vencido",
+  terminado: "Terminado",
 };
 
 export const PAYMENT_METHODS = ["transferencia", "efectivo", "cheque"] as const;
@@ -437,6 +438,8 @@ export type TemplateFillContext = {
   formaPago?: string | null;
   periodicidad?: string | null;
   fechaIngreso?: string | null;
+  /** seniorityDate() of the person; {{antiguedad}} counts from it (default: fechaIngreso). */
+  fechaAntiguedad?: string | null;
   empresa?: string | null;
   empresaRazonSocial?: string | null;
   empresaRfc?: string | null;
@@ -501,7 +504,12 @@ export const templateTokenValues = (
     fecha_ingreso: context.fechaIngreso
       ? formatContractDate(context.fechaIngreso) || null
       : null,
-    antiguedad: formatSeniority(context.fechaIngreso, context.fechaInicio),
+    antiguedad: formatSeniority(
+      context.fechaAntiguedad === undefined
+        ? context.fechaIngreso
+        : context.fechaAntiguedad,
+      context.fechaInicio,
+    ),
     empresa: text(context.empresa),
     empresa_razon_social: text(context.empresaRazonSocial),
     empresa_rfc: text(context.empresaRfc),
