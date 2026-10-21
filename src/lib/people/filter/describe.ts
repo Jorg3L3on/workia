@@ -71,6 +71,8 @@ export const describeCondition = (
     value = formatDateMx(condition.from);
   } else if (condition.op === "next_days") {
     value = condition.days === 1 ? "1 día" : `${condition.days} días`;
+  } else if (condition.op === "min_years" || condition.op === "max_years") {
+    value = condition.years === 1 ? "1 año" : `${condition.years} años`;
   }
 
   return { field: field.label, operator, value };

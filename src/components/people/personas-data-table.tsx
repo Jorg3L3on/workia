@@ -87,8 +87,6 @@ const MUTED_COLUMNS = new Set<PeopleColumnId>([
   "curp",
   "nss",
   "telefono",
-  "ingreso",
-  "finContrato",
 ]);
 const TRUNCATED_COLUMNS = new Set<PeopleColumnId>([
   "area",
@@ -97,6 +95,7 @@ const TRUNCATED_COLUMNS = new Set<PeopleColumnId>([
   "region",
   "jefe",
   "email",
+  "motivoBaja",
 ]);
 
 const toColumn = (id: PeopleColumnId): DataTableColumn<PersonaListRow> => {
@@ -123,6 +122,16 @@ const toColumn = (id: PeopleColumnId): DataTableColumn<PersonaListRow> => {
     };
   }
 
+  if (PEOPLE_COLUMNS[id].date) {
+    return {
+      id,
+      header,
+      accessor: (row) => row.cells[id] ?? "",
+      cell: (row) => (row.cells[id] ? formatDateMx(row.cells[id]) : undefined),
+      variant: "muted",
+    };
+  }
+
   return {
     id,
     header,
@@ -135,7 +144,7 @@ const toColumn = (id: PeopleColumnId): DataTableColumn<PersonaListRow> => {
 const cardValue = (row: PersonaListRow, id: PeopleColumnId) =>
   PEOPLE_COLUMNS[id].payroll
     ? money(row.cells[id])
-    : id === "ingreso" || id === "finContrato"
+    : PEOPLE_COLUMNS[id].date
       ? formatDateMx(row.cells[id])
       : row.cells[id];
 

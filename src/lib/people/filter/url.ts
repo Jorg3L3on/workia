@@ -5,6 +5,7 @@
  * and the export's `area`/`site`) are read into it.
  *
  *   f=1*st.i.baja*ar.i.<id>.<id>*in.b.20250101.20260930*je.it.<id>*ve.n.30
+ *   f=1*an.ya.5*fb.b.20260101.20260630*mb.i.<id>
  *
  * After the version, `*` separates conditions; inside one, `.` separates the
  * field key, the operator code and its arguments. Uuids are written in
@@ -39,6 +40,8 @@ const OP_CODES: Record<PeopleFilterOperator, string> = {
   empty: "e",
   not_empty: "ne",
   next_days: "n",
+  min_years: "ya",
+  max_years: "yb",
 };
 /** «es» / «no es» with the whole team below (Jefe). */
 const TEAM_CODES = { is: "it", is_not: "xt" } as const;
@@ -112,6 +115,8 @@ const encodeCondition = (condition: PeopleFilterCondition) => {
     args.push(dateToToken(condition.from!));
   } else if (condition.op === "next_days") {
     args.push(String(condition.days));
+  } else if (condition.op === "min_years" || condition.op === "max_years") {
+    args.push(String(condition.years));
   }
 
   return [field.urlKey, code, ...args].join(".");
@@ -150,6 +155,8 @@ const decodeCondition = (part: string): unknown => {
     condition.from = tokenToDate(args[0] ?? "");
   } else if (op === "next_days") {
     condition.days = /^\d{1,3}$/.test(args[0] ?? "") ? Number(args[0]) : null;
+  } else if (op === "min_years" || op === "max_years") {
+    condition.years = /^\d{1,2}$/.test(args[0] ?? "") ? Number(args[0]) : null;
   }
 
   // Null fields fail validation and the condition is dropped.

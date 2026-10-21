@@ -77,7 +77,7 @@ const nullableColumn =
   };
 
 const dateColumn =
-  (column: AnyPgColumn): FieldSql =>
+  (column: AnyPgColumn | SQL): FieldSql =>
   (condition, { today }) => {
     switch (condition.op) {
       case "between":
@@ -151,6 +151,82 @@ const contractStates = ({ companyId, today }: FieldSqlArgs) =>
     ["sin_contrato", sql`not ${contractExists(companyId, sql`true`)}`],
   ]);
 
+/**
+ * The current (or last) employment period of the outer person, as
+ * summarizePeriods() (@/lib/people/employment) picks it: the open one (no
+ * fecha_baja and not «sin fecha»), else the latest by ingreso, then by when
+ * it was recorded. One lookup on employment_periods_person_id_idx per person.
+ */
+const currentPeriod = (companyId: string) => sql`(
+  select e.* from employment_periods e
+  where e.company_id = ${companyId} and e.person_id = ${people.id}
+  order by (e.fecha_baja is null and not e.baja_sin_fecha) desc, e.fecha_ingreso desc nulls last, e.created_at desc
+  limit 1
+)`;
+
+/** `condition` (on `ep.…`) holds for the current period; false without periods. */
+const inCurrentPeriod = (companyId: string, condition: SQL) =>
+  sql`exists (select 1 from ${currentPeriod(companyId)} ep where ${condition})`;
+
+/** One column (`ep.…`) of the current period; null without periods. */
+export const currentPeriodValue = (companyId: string, column: SQL) =>
+  sql`(select ${column} from ${currentPeriod(companyId)} ep)`;
+
+/**
+ * The seniority date: the stored fecha_antiguedad of the current period
+ * (seniorityDate() of Iniciativa 2), people.fecha_ingreso without periods.
+ */
+const seniorityDateSql = (companyId: string) =>
+  sql`coalesce(${currentPeriodValue(companyId, sql`ep.fecha_antiguedad`)}, ${people.fechaIngreso})`;
+
+/**
+ * The day seniority counts up to: today, or the fecha de baja of a person de
+ * baja (as the constancia de antigüedad does).
+ */
+const seniorityUntilSql = (companyId: string, today: string) =>
+  sql`(case when ${people.status} = 'baja' then least(coalesce(${currentPeriodValue(companyId, sql`ep.fecha_baja`)}, ${today}::date), ${today}::date) else ${today}::date end)`;
+
+/**
+ * Fecha de baja: the current period's, and only people de baja. The IN over
+ * (company_id, fecha_baja) lets a narrow range start from that index; the
+ * current-period check keeps an older baja of a rehired person out.
+ */
+const fechaBajaSql: FieldSql = (condition, args) => {
+  const { companyId } = args;
+  const onPeriod = dateColumn(sql`ep.fecha_baja`)(condition, args);
+
+  if (!onPeriod) return undefined;
+
+  const ranged =
+    condition.op === "between" ||
+    condition.op === "before" ||
+    condition.op === "after";
+
+  return and(
+    eq(people.status, "baja"),
+    ranged
+      ? sql`${people.id} in (select ep.person_id from employment_periods ep where ep.company_id = ${companyId} and ${onPeriod})`
+      : undefined,
+    condition.op === "empty"
+      ? not(inCurrentPeriod(companyId, sql`ep.fecha_baja is not null`))
+      : inCurrentPeriod(companyId, onPeriod),
+  );
+};
+
+const REVIEW_FLAGS: Record<string, SQL> = {
+  sin_fecha: sql`e.baja_sin_fecha`,
+  inferida: sql`e.fecha_baja_inferida`,
+  revision: sql`e.requiere_revision`,
+};
+
+/** Any period of the person (not only the current one) carries a review flag. */
+export const periodFlagged = (companyId: string, flag: string) => {
+  const column = REVIEW_FLAGS[flag];
+  return column
+    ? sql`exists (select 1 from employment_periods e where e.company_id = ${companyId} and e.person_id = ${people.id} and ${column})`
+    : undefined;
+};
+
 const MISSING_IDENTIFIER: Record<string, AnyPgColumn> = {
   curp: people.curp,
   nss: people.nss,
@@ -204,6 +280,61 @@ const FIELD_SQL: Record<PeopleFilterFieldId, FieldSql> = {
     return nullableColumn(people.managerId)(condition, args);
   },
   ingreso: dateColumn(people.fechaIngreso),
+  antiguedad: (condition, args) => {
+    const { companyId, today } = args;
+    const since = seniorityDateSql(companyId);
+
+    if (condition.op === "min_years" || condition.op === "max_years") {
+      // N years completed on the day it counts up to, like seniorityParts().
+      const threshold = sql`(${seniorityUntilSql(companyId, today)} - make_interval(years => ${condition.years}::int))::date`;
+      return condition.op === "min_years"
+        ? sql`${since} <= ${threshold}`
+        : sql`${since} > ${threshold}`;
+    }
+
+    return dateColumn(since)(condition, args);
+  },
+  baja: fechaBajaSql,
+  tipoBaja: (condition, { companyId }) => {
+    const typed = inCurrentPeriod(
+      companyId,
+      sql`ep.tipo_baja::text in (${list(condition.values ?? [])})`,
+    );
+    return condition.op === "is_not" ? not(typed) : typed;
+  },
+  motivoBaja: (condition, { companyId }) => {
+    // Scoped by the period's company: another company's reason matches nothing.
+    const values = list(condition.values ?? []);
+    const reason = inCurrentPeriod(
+      companyId,
+      sql`ep.motivo_baja_id in (${values})`,
+    );
+
+    if (condition.op === "is_not") return not(reason);
+
+    // Starts from employment_periods_motivo_baja_id_idx, like Fecha de baja.
+    return and(
+      sql`${people.id} in (select ep.person_id from employment_periods ep where ep.company_id = ${companyId} and ep.motivo_baja_id in (${values}))`,
+      reason,
+    );
+  },
+  recontratable: (condition, { companyId }) => {
+    const values = condition.values ?? [];
+    const accepted = [
+      ...(values.includes("si") ? [sql`ep.recontratable`] : []),
+      ...(values.includes("no") ? [sql`not ep.recontratable`] : []),
+    ];
+
+    return accepted.length > 0
+      ? inCurrentPeriod(companyId, or(...accepted)!)
+      : undefined;
+  },
+  revisionBaja: (condition, { companyId }) =>
+    or(
+      ...(condition.values ?? []).map((value) =>
+        periodFlagged(companyId, value),
+      ),
+    ),
   tipoContrato: (condition, { companyId, today }) => {
     const typed = contractExists(
       companyId,

@@ -39,6 +39,7 @@ import { PeopleFilterFieldEditor } from "./people-filter-field-editor";
 const SECTIONS = [
   { id: "persona", label: "Persona" },
   { id: "organizacion", label: "Organización" },
+  { id: "baja", label: "Baja" },
   { id: "contrato", label: "Contrato" },
 ] as const;
 
