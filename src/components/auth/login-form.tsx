@@ -66,11 +66,22 @@ export const LoginForm = () => {
     setError(null);
     setIsStamped(false);
 
-    const result = await signIn("credentials", {
-      email: values.email,
-      password: values.password,
-      redirect: false,
-    });
+    const signInWithCredentials = () =>
+      signIn("credentials", {
+        email: values.email,
+        password: values.password,
+        redirect: false,
+      });
+
+    // On a first visit there is no CSRF cookie yet, so every Auth.js request
+    // in flight (the SessionProvider's /session among them) sets a fresh one.
+    // If one of those lands after /csrf, the token signIn posts no longer
+    // matches the cookie and Auth.js answers MissingCSRF. By then the cookie
+    // has settled, so a single retry signs in.
+    let result = await signInWithCredentials();
+    if (result?.error === "MissingCSRF") {
+      result = await signInWithCredentials();
+    }
 
     if (result?.error || result?.ok === false) {
       setError("Correo o contraseña incorrectos.");

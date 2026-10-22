@@ -42,6 +42,10 @@ vi.mock("@/lib/people/index", () => ({
   getPersonById: getPersonByIdMock,
 }));
 
+vi.mock("@/lib/rbac", () => ({
+  userHasPermission: vi.fn(async () => false),
+}));
+
 vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),
 }));

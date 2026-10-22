@@ -34,6 +34,7 @@ const toolLabels: Record<string, string> = {
   list_activities: "Listar actividades",
   list_sites: "Listar sucursales",
   list_regions: "Listar regiones",
+  list_termination_reasons: "Listar motivos de baja",
   create_catalog_item: "Crear en catálogo",
   link_position_activity: "Asignar actividad a puesto",
   unlink_position_activity: "Quitar actividad de puesto",

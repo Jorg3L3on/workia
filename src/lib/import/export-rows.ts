@@ -1,3 +1,6 @@
+import type { EmploymentSummary } from "@/lib/people/employment";
+import { terminationTypeLabels } from "@/lib/people/employment-schema";
+
 import { IMPORT_COLUMNS, type ImportSheetKey } from "./format";
 
 /** Pure row building for the export, so the file matches the import format. */
@@ -19,6 +22,7 @@ const contractStatusLabel = {
   renovado: "Renovado",
   no_renovado: "No renovado",
   vencido: "Vencido",
+  terminado: "Terminado",
 } as const;
 
 /** `2024-03-05` -> `05/03/2024`; anything else passes through. */
@@ -68,7 +72,50 @@ export type ExportContract = {
 
 export type ExportRow = Record<string, string>;
 
-export const personExportRow = (person: ExportPerson): ExportRow => ({
+/** What the export reads of the current (or last) employment period. */
+export type ExportEmployment = Pick<
+  EmploymentSummary,
+  | "abierto"
+  | "fechaAntiguedad"
+  | "fechaBaja"
+  | "tipoBaja"
+  | "motivoBaja"
+  | "comentarioBaja"
+  | "recontratable"
+>;
+
+/**
+ * Fecha de antigüedad always; the baja columns only for someone de baja.
+ * Never the finiquito: it is not an import column.
+ */
+const employmentCells = (
+  person: Pick<ExportPerson, "status">,
+  employment: ExportEmployment | null | undefined,
+): ExportRow => {
+  const baja =
+    person.status === "baja" && employment && !employment.abierto
+      ? employment
+      : null;
+
+  return {
+    fechaAntiguedad: formatExportDate(employment?.fechaAntiguedad),
+    fechaBaja: formatExportDate(baja?.fechaBaja),
+    tipoBaja: baja?.tipoBaja ? terminationTypeLabels[baja.tipoBaja] : "",
+    motivoBaja: baja?.motivoBaja ?? "",
+    comentarioBaja: baja?.comentarioBaja ?? "",
+    recontratable:
+      baja?.recontratable === null || baja?.recontratable === undefined
+        ? ""
+        : baja.recontratable
+          ? "Sí"
+          : "No",
+  };
+};
+
+export const personExportRow = (
+  person: ExportPerson,
+  employment?: ExportEmployment | null,
+): ExportRow => ({
   idWorkia: person.id,
   nombres: person.nombres,
   apellidoPaterno: person.apellidoPaterno,
@@ -86,6 +133,7 @@ export const personExportRow = (person: ExportPerson): ExportRow => ({
   curp: person.curp ?? "",
   nss: person.nss ?? "",
   estatus: statusLabel[person.status],
+  ...employmentCells(person, employment),
 });
 
 export const scheduleExportRow = (

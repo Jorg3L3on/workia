@@ -27,6 +27,11 @@ vi.mock("@/lib/regions/actions", () => ({
   deleteRegionAction: async () => undefined,
   updateRegionAction: async () => undefined,
 }));
+vi.mock("@/lib/termination-reasons/actions", () => ({
+  createTerminationReasonAction: async () => undefined,
+  deleteTerminationReasonAction: async () => undefined,
+  updateTerminationReasonAction: async () => undefined,
+}));
 vi.mock("@/lib/sites/actions", () => ({
   createSiteAction: async () => undefined,
   deleteSiteAction: async () => undefined,

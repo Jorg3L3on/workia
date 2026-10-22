@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, notInArray, sql } from "drizzle-orm";
 
 import { tdb } from "@/lib/db";
 import {
@@ -10,6 +10,7 @@ import {
 } from "@/lib/db/schema";
 
 import type { AppendImportRowsBody, CreateImportJobBody } from "./api-schemas";
+import { IMPORT_LIMITS, SHEET_NAMES, type ImportSheetKey } from "./format";
 
 const PREVIOUS_STATUSES: ImportJobStatus[] = [
   "validating",
@@ -71,15 +72,56 @@ export const getImportJob = async (
   return job ?? null;
 };
 
+/** Message for a sheet that holds more rows than one import accepts. */
+export const sheetLimitMessage = (sheet: ImportSheetKey) => {
+  const max = IMPORT_LIMITS.maxRowsPerSheet[sheet].toLocaleString("es-MX");
+
+  return sheet === "personas"
+    ? `El archivo tiene más de ${max} personas. Divídelo en varios archivos.`
+    : `La hoja ${SHEET_NAMES[sheet]} tiene más de ${max} filas. Divídela en varios archivos.`;
+};
+
+/** A chunk would take a sheet of the job past its row limit. */
+export class ImportRowLimitError extends Error {
+  constructor(public readonly sheet: ImportSheetKey) {
+    super(sheetLimitMessage(sheet));
+    this.name = "ImportRowLimitError";
+  }
+}
+
 /**
  * Stores one chunk. Re-sending a chunk (a retry after a dropped connection)
- * replaces the same rows instead of duplicating them.
+ * replaces the same rows instead of duplicating them. The row limit counts the
+ * rows already stored for the sheet, never what the browser announced.
  */
 export const appendImportRows = async (
   companyId: string,
   jobId: string,
   body: AppendImportRowsBody,
 ) => {
+  const [stored] = await tdb(companyId)
+    .select({ count: sql<number>`count(*)::int` })
+    .from(importRows)
+    .where(
+      and(
+        eq(importRows.companyId, companyId),
+        eq(importRows.jobId, jobId),
+        eq(importRows.sheet, body.sheet),
+        // Rows of this chunk that are already stored get replaced, not added.
+        notInArray(
+          importRows.rowNumber,
+          body.rows.map((row) => row.rowNumber),
+        ),
+      ),
+    );
+
+  if (
+    (stored?.count ?? 0) + body.rows.length >
+    IMPORT_LIMITS.maxRowsPerSheet[body.sheet]
+  ) {
+    throw new ImportRowLimitError(body.sheet);
+  }
+
   await tdb(companyId)
     .insert(importRows)
     .values(
@@ -119,7 +161,8 @@ export const countStagedRows = async (companyId: string, jobId: string) => {
 
 /**
  * Closes the upload. The job only moves to validation when every announced row
- * is staged, so a chunk that never arrived cannot be validated as a whole file.
+ * is staged, so a chunk that never arrived cannot be validated as a whole file,
+ * and when no sheet holds more rows than its limit (counted on what was stored).
  */
 export const finalizeImportUpload = async (
   companyId: string,
@@ -128,9 +171,13 @@ export const finalizeImportUpload = async (
 ) => {
   const staged = await countStagedRows(companyId, jobId);
   const total = Object.values(staged).reduce((sum, n) => sum + n, 0);
+  const overLimit =
+    (Object.keys(IMPORT_LIMITS.maxRowsPerSheet) as ImportSheetKey[]).find(
+      (sheet) => (staged[sheet] ?? 0) > IMPORT_LIMITS.maxRowsPerSheet[sheet],
+    ) ?? null;
 
-  if (total < expectedRows) {
-    return { job: null, staged, total };
+  if (total < expectedRows || overLimit) {
+    return { job: null, staged, total, overLimit };
   }
 
   const [job] = await tdb(companyId)
@@ -145,7 +192,7 @@ export const finalizeImportUpload = async (
     )
     .returning();
 
-  return { job: job ?? null, staged, total };
+  return { job: job ?? null, staged, total, overLimit };
 };
 
 export type ReviewRowFilters = {

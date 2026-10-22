@@ -1,17 +1,7 @@
 import { PassThrough } from "node:stream";
 
 import ExcelJS from "exceljs";
-import {
-  and,
-  asc,
-  eq,
-  gt,
-  ilike,
-  inArray,
-  isNotNull,
-  isNull,
-  or,
-} from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
 import { tdb } from "@/lib/db";
@@ -23,12 +13,29 @@ import {
   positions,
   sites,
 } from "@/lib/db/schema";
+import {
+  PEOPLE_COLUMNS,
+  canSeePeopleColumn,
+  type PeopleColumnId,
+} from "@/lib/people/filter/columns";
+import {
+  buildPeopleWhere,
+  peopleFilterContext,
+  type PeopleFilterContext,
+} from "@/lib/people/filter/query";
+import {
+  coercePeopleFilter,
+  type PeopleFilter,
+} from "@/lib/people/filter/schema";
+import { listEmploymentSummaries } from "@/lib/people/employment";
+import { listPeopleFilteredAfter, peopleColumnValue } from "@/lib/people/list";
 
 import {
   CSV_BOM,
   contractExportRow,
   csvLine,
   exportHeaders,
+  formatExportDate,
   orderedValues,
   personExportRow,
   scheduleExportRow,
@@ -40,51 +47,90 @@ import { IMPORT_COLUMNS, SHEET_NAMES, type ImportSheetKey } from "./format";
 
 export const EXPORT_PAGE_SIZE = 500;
 
+/**
+ * The export's original filters (scripts, old callers). They become a
+ * PeopleFilter, so they search and filter exactly as the list does.
+ */
 export type ExportFilters = {
   status?: "activa" | "baja";
   deleted?: boolean;
   areaId?: string;
   siteId?: string;
+  /** Only people whose site is in this region (E1). */
+  regionId?: string;
   query?: string;
 };
+
+/** ExportFilters as the Personas filter. */
+export const exportFiltersToPeopleFilter = (
+  filters: ExportFilters,
+): PeopleFilter =>
+  coercePeopleFilter({
+    q: filters.query ?? "",
+    deleted: Boolean(filters.deleted),
+    conditions: [
+      filters.status && {
+        field: "relacion",
+        op: "is",
+        values: [filters.status],
+      },
+      filters.areaId && { field: "area", op: "is", values: [filters.areaId] },
+      filters.siteId && {
+        field: "sucursal",
+        op: "is",
+        values: [filters.siteId],
+      },
+      filters.regionId && {
+        field: "region",
+        op: "is",
+        values: [filters.regionId],
+      },
+    ],
+  });
 
 export type ExportOptions = {
   /** Only this company's people are exported. */
   companyId: string;
   format: "xlsx" | "csv";
-  filters: ExportFilters;
+  /**
+   * The Personas filter, read by the same WHERE as the list (buildPeopleWhere):
+   * search, borrados, región and every other condition (E1, E4). Wins over
+   * `filters`.
+   */
+  filter?: PeopleFilter;
+  filters?: ExportFilters;
+  /**
+   * Today and the user's permissions (contract conditions need
+   * contracts:read). Without it, no permission-bound condition applies.
+   */
+  context?: PeopleFilterContext;
   /** Contracts need contracts:read; the caller decides. */
   includeContracts: boolean;
+  /**
+   * «Exportar (N)»: one Personas sheet with these columns, in this order
+   * (after Nombre). Columns the user may not see are dropped here too.
+   * Without it, the import format (Personas, Horarios and Contratos).
+   */
+  columns?: readonly PeopleColumnId[];
 };
 
-const manager = alias(people, "manager");
+type ResolvedExportOptions = ExportOptions & {
+  filter: PeopleFilter;
+  context: PeopleFilterContext;
+};
 
-const buildWhere = (
-  companyId: string,
-  filters: ExportFilters,
-  afterId?: string,
-) =>
-  and(
-    eq(people.companyId, companyId),
-    filters.deleted ? isNotNull(people.deletedAt) : isNull(people.deletedAt),
-    filters.status ? eq(people.status, filters.status) : undefined,
-    filters.areaId ? eq(people.areaId, filters.areaId) : undefined,
-    filters.siteId ? eq(people.siteId, filters.siteId) : undefined,
-    filters.query?.trim()
-      ? or(
-          ilike(people.nombres, `%${filters.query.trim()}%`),
-          ilike(people.apellidoPaterno, `%${filters.query.trim()}%`),
-          ilike(people.curp, `%${filters.query.trim()}%`),
-          ilike(people.rfc, `%${filters.query.trim()}%`),
-        )
-      : undefined,
-    afterId ? gt(people.id, afterId) : undefined,
-  );
+const resolveOptions = (options: ExportOptions): ResolvedExportOptions => ({
+  ...options,
+  filter: options.filter ?? exportFiltersToPeopleFilter(options.filters ?? {}),
+  context: options.context ?? peopleFilterContext(new Set()),
+});
+
+const manager = alias(people, "manager");
 
 /** Keyset page ordered by id: stable under concurrent edits, no OFFSET scans. */
 const fetchPeoplePage = async (
   companyId: string,
-  filters: ExportFilters,
+  options: ResolvedExportOptions,
   afterId?: string,
 ): Promise<ExportPerson[]> =>
   tdb(companyId)
@@ -112,7 +158,12 @@ const fetchPeoplePage = async (
     .leftJoin(positions, eq(people.positionId, positions.id))
     .leftJoin(sites, eq(people.siteId, sites.id))
     .leftJoin(manager, eq(people.managerId, manager.id))
-    .where(buildWhere(companyId, filters, afterId))
+    .where(
+      and(
+        buildPeopleWhere(companyId, options.filter, options.context),
+        afterId ? gt(people.id, afterId) : undefined,
+      ),
+    )
     .orderBy(asc(people.id))
     .limit(EXPORT_PAGE_SIZE);
 
@@ -226,8 +277,14 @@ const csvSink = (stream: PassThrough): Sink => {
  */
 export const writeExport = async (
   stream: PassThrough,
-  options: ExportOptions,
+  input: ExportOptions,
 ) => {
+  const options = resolveOptions(input);
+
+  if (options.columns) {
+    return writeColumnsExport(stream, { ...options, columns: options.columns });
+  }
+
   const sink =
     options.format === "csv"
       ? csvSink(stream)
@@ -237,15 +294,12 @@ export const writeExport = async (
   let written = 0;
 
   for (;;) {
-    const page = await fetchPeoplePage(
-      options.companyId,
-      options.filters,
-      afterId,
-    );
+    const page = await fetchPeoplePage(options.companyId, options, afterId);
 
     if (page.length === 0) break;
 
     const ids = page.map((person) => person.id);
+    const employment = await listEmploymentSummaries(options.companyId, ids);
     const [schedules, contractRows] = needsExtras
       ? await Promise.all([
           fetchSchedules(options.companyId, ids),
@@ -265,7 +319,13 @@ export const writeExport = async (
     }
 
     for (const person of page) {
-      sink.row("personas", orderedValues("personas", personExportRow(person)));
+      sink.row(
+        "personas",
+        orderedValues(
+          "personas",
+          personExportRow(person, employment.get(person.id)),
+        ),
+      );
 
       const schedule = scheduleByPerson.get(person.id);
 
@@ -291,6 +351,92 @@ export const writeExport = async (
   }
 
   await sink.finish();
+
+  return written;
+};
+
+/** Header and values of «Exportar (N)»: Nombre plus the visible columns. */
+/**
+ * «Exportar (N)»: the people of the filter with the columns the list shows,
+ * in one sheet (XLSX) or one CSV. Same WHERE and same rows as the list.
+ */
+const writeColumnsExport = async (
+  stream: PassThrough,
+  options: ResolvedExportOptions & { columns: readonly PeopleColumnId[] },
+) => {
+  const columns = options.columns.filter((id) =>
+    canSeePeopleColumn(id, options.context.permissions),
+  );
+  const headers = [
+    "ID Workia",
+    "Nombre",
+    ...columns.map((id) => PEOPLE_COLUMNS[id].label),
+  ];
+  let row: (values: string[]) => void;
+  let finish: () => Promise<void>;
+
+  if (options.format === "csv") {
+    stream.write(CSV_BOM + csvLine(headers));
+    row = (values) => stream.write(csvLine(values));
+    finish = async () => {
+      stream.end();
+    };
+  } else {
+    const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
+      stream,
+      useStyles: true,
+    });
+    const sheet = workbook.addWorksheet(SHEET_NAMES.personas, {
+      views: [{ state: "frozen", ySplit: 1 }],
+    });
+
+    sheet.columns = headers.map((header, index) => ({
+      header,
+      key: `c${index}`,
+      width: index === 1 ? 32 : 18,
+    }));
+    sheet.getRow(1).font = { bold: true };
+    row = (values) => sheet.addRow(values).commit();
+    finish = async () => {
+      sheet.commit();
+      await workbook.commit();
+    };
+  }
+
+  let afterId: string | undefined;
+  let written = 0;
+
+  for (;;) {
+    const page = await listPeopleFilteredAfter(options.companyId, {
+      filter: options.filter,
+      context: options.context,
+      columns,
+      afterId,
+      limit: EXPORT_PAGE_SIZE,
+    });
+
+    if (page.length === 0) break;
+
+    for (const person of page) {
+      row([
+        person.id,
+        [person.nombres, person.apellidoPaterno, person.apellidoMaterno]
+          .filter(Boolean)
+          .join(" "),
+        ...columns.map((id) => {
+          const value = peopleColumnValue(person, id) ?? "";
+          return PEOPLE_COLUMNS[id].date ? formatExportDate(value) : value;
+        }),
+      ]);
+    }
+
+    written += page.length;
+    afterId = page[page.length - 1].id;
+
+    if (page.length < EXPORT_PAGE_SIZE) break;
+  }
+
+  await finish();
 
   return written;
 };

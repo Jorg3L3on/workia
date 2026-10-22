@@ -5,6 +5,7 @@ export const CATALOG_PATHS = {
   actividades: "/app/catalogo/actividades",
   sucursales: "/app/catalogo/sucursales",
   regiones: "/app/catalogo/regiones",
+  motivosBaja: "/app/catalogo/motivos-baja",
 } as const;
 
 export type CatalogPath = (typeof CATALOG_PATHS)[keyof typeof CATALOG_PATHS];
@@ -28,4 +29,5 @@ export const CATALOG_NAV_CHILDREN = [
   { title: "Actividades", href: CATALOG_PATHS.actividades },
   { title: "Sucursales", href: CATALOG_PATHS.sucursales },
   { title: "Regiones", href: CATALOG_PATHS.regiones },
+  { title: "Motivos de baja", href: CATALOG_PATHS.motivosBaja },
 ] as const;

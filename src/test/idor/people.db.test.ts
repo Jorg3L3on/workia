@@ -31,6 +31,7 @@ import {
   updatePersonAction,
 } from "@/lib/people/actions";
 import type { PersonFormValues } from "@/lib/people/schema";
+import { listTerminationReasons } from "@/lib/termination-reasons";
 
 import {
   idsIn,
@@ -71,6 +72,25 @@ const formData = (values: Record<string, string>) => {
   const data = new FormData();
   for (const [key, value] of Object.entries(values)) data.set(key, value);
   return data;
+};
+
+/** A complete «Dar de baja» with a motivo of the given company's catalog. */
+const bajaOf = async (companyId: string) => ({
+  status: "baja" as const,
+  fechaBaja: "2026-06-30",
+  tipoBaja: "voluntaria" as const,
+  motivoBajaId: (await listTerminationReasons(companyId))[0].id,
+  recontratable: true,
+});
+
+const bajaForm = async (companyId: string) => {
+  const baja = await bajaOf(companyId);
+  return formData({
+    fechaBaja: baja.fechaBaja,
+    tipoBaja: baja.tipoBaja,
+    motivoBajaId: baja.motivoBajaId,
+    recontratable: "si",
+  });
 };
 
 const noLeak = (value: unknown) => {
@@ -216,7 +236,12 @@ describe("people writes cannot reach another company", () => {
 
   it("lib:people/setPersonStatus", async () => {
     expect(
-      await setPersonStatus(b.companyId, a.person.id, "baja", b.admin.id),
+      await setPersonStatus(
+        b.companyId,
+        a.person.id,
+        await bajaOf(b.companyId),
+        b.admin.id,
+      ),
     ).toBeNull();
     expect((await getPersonById(a.companyId, a.person.id))?.status).toBe(
       "activa",
@@ -280,12 +305,14 @@ describe("people actions with company B's session", () => {
 
   it("action:people/setPersonStatusAction", async () => {
     actAs(b.admin);
-    await expect(
-      setPersonStatusAction(a.person.id, "baja"),
-    ).rejects.toMatchObject({
-      kind: "redirect",
-      url: "/app/personas?error=not-found",
-    });
+    expect(
+      await setPersonStatusAction(
+        a.person.id,
+        "baja",
+        {},
+        await bajaForm(b.companyId),
+      ),
+    ).toEqual({ error: "No encontramos a esta persona." });
     expect((await getPersonById(a.companyId, a.person.id))?.status).toBe(
       "activa",
     );
@@ -349,11 +376,16 @@ describe("people permissions", () => {
 
   it("rbac:action:people/setPersonStatusAction", async () => {
     actAs(b.viewer);
-    await expect(
-      setPersonStatusAction(b.person.id, "baja"),
-    ).rejects.toMatchObject({
-      url: `/app/personas/${b.person.id}?error=status-forbidden`,
-    });
+    expect(
+      (
+        await setPersonStatusAction(
+          b.person.id,
+          "baja",
+          {},
+          await bajaForm(b.companyId),
+        )
+      ).error,
+    ).toMatch(/permiso/);
     expect((await getPersonById(b.companyId, b.person.id))?.status).toBe(
       "activa",
     );

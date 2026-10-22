@@ -1,4 +1,8 @@
 import { parseFlexibleDateToIso, toIsoDate } from "@/lib/format/date";
+import {
+  TERMINATION_TYPES,
+  terminationTypeLabels,
+} from "@/lib/people/employment-schema";
 
 /**
  * Personas import/export file format. Shared by the template, the browser
@@ -17,12 +21,24 @@ export const SHEET_NAMES: Record<ImportSheetKey, string> = {
 
 export const INSTRUCTIONS_SHEET_NAME = "Instrucciones";
 export const CATALOGS_SHEET_NAME = "Catálogos";
+/** Filled-in sample rows; never read by the importer. */
+export const EXAMPLE_SHEET_NAME = "Ejemplo";
 
 export const IMPORT_LIMITS = {
+  /** People per file (Personas rows). */
   maxRows: 5000,
+  /** Rows per sheet, enforced by the browser and on the rows the server stored. */
+  maxRowsPerSheet: { personas: 5000, horarios: 5000, contratos: 10_000 },
+  /** Last row of an Excel sheet; a row number past it cannot come from a file. */
+  maxRowNumber: 1_048_576,
   maxFileBytes: 10 * 1024 * 1024,
   chunkRows: 500,
 } as const;
+
+/** Sum of the per-sheet limits: the most rows one file can stage. */
+export const MAX_ROWS_PER_FILE = Object.values(
+  IMPORT_LIMITS.maxRowsPerSheet,
+).reduce((sum, n) => sum + n, 0);
 
 export type ColumnKind = "text" | "date" | "time" | "list";
 
@@ -39,10 +55,16 @@ export type ImportColumn = {
   width: number;
   /** Fixed values (list columns) or the catalog it is validated against. */
   options?: readonly string[];
-  catalog?: "areas" | "positions" | "sites" | "templates";
+  catalog?:
+    "areas" | "positions" | "sites" | "templates" | "terminationReasons";
 };
 
 export const PERSON_STATUS_OPTIONS = ["Activa", "Baja"] as const;
+/** Tipo de baja as the baja dialog labels it. */
+export const TERMINATION_TYPE_OPTIONS = TERMINATION_TYPES.map(
+  (type) => terminationTypeLabels[type],
+);
+export const RECONTRATABLE_OPTIONS = ["Sí", "No"] as const;
 export const CONTRACT_TYPE_OPTIONS = ["Determinado", "Indeterminado"] as const;
 export const NOTICE_OPTIONS = ["1", "2", "3", "6", "No avisar"] as const;
 export const CONTRACT_STATUS_OPTIONS = [
@@ -50,18 +72,11 @@ export const CONTRACT_STATUS_OPTIONS = [
   "Renovado",
   "No renovado",
   "Vencido",
+  "Terminado",
 ] as const;
 
 export const IMPORT_COLUMNS: Record<ImportSheetKey, ImportColumn[]> = {
   personas: [
-    {
-      key: "idWorkia",
-      label: "ID Workia",
-      aliases: ["id", "id_workia", "workia id"],
-      kind: "text",
-      help: "Identificador de Workia. Déjalo vacío para personas nuevas; viene lleno en una exportación.",
-      width: 38,
-    },
     {
       key: "nombres",
       label: "Nombres",
@@ -101,7 +116,7 @@ export const IMPORT_COLUMNS: Record<ImportSheetKey, ImportColumn[]> = {
       label: "Teléfono",
       aliases: ["tel", "celular", "phone"],
       kind: "text",
-      help: "Opcional.",
+      help: "Opcional. Se guarda como texto, así no se pierden ceros ni la lada.",
       width: 16,
     },
     {
@@ -109,7 +124,7 @@ export const IMPORT_COLUMNS: Record<ImportSheetKey, ImportColumn[]> = {
       label: "Fecha de nacimiento",
       aliases: ["fecha_nacimiento", "nacimiento", "birth date"],
       kind: "date",
-      help: "AAAA-MM-DD, DD/MM/AAAA o fecha de Excel.",
+      help: "AAAA-MM-DD, DD/MM/AAAA (día primero) o fecha de Excel.",
       width: 20,
     },
     {
@@ -117,8 +132,21 @@ export const IMPORT_COLUMNS: Record<ImportSheetKey, ImportColumn[]> = {
       label: "Fecha de ingreso",
       aliases: ["fecha_ingreso", "ingreso", "alta"],
       kind: "date",
-      help: "AAAA-MM-DD, DD/MM/AAAA o fecha de Excel.",
+      help: "AAAA-MM-DD, DD/MM/AAAA (día primero) o fecha de Excel.",
       width: 18,
+    },
+    {
+      key: "fechaAntiguedad",
+      label: "Fecha de antigüedad",
+      aliases: [
+        "fecha_antiguedad",
+        "antiguedad",
+        "antigüedad",
+        "fecha de antiguedad reconocida",
+      ],
+      kind: "date",
+      help: "Opcional, solo para personas activas. Escríbela solo si la antigüedad cuenta desde antes del ingreso (por ejemplo, un reingreso que reconoce la antigüedad previa); no puede ser posterior a la Fecha de ingreso. Vacía o igual a la Fecha de ingreso: la antigüedad cuenta desde el ingreso.",
+      width: 20,
     },
     {
       key: "area",
@@ -135,7 +163,7 @@ export const IMPORT_COLUMNS: Record<ImportSheetKey, ImportColumn[]> = {
       aliases: ["position", "posicion", "posición", "cargo"],
       kind: "list",
       catalog: "positions",
-      help: "Nombre exacto de un puesto del catálogo.",
+      help: "Nombre exacto de un puesto del catálogo. La lista muestra los puestos del Área de la fila.",
       width: 24,
     },
     {
@@ -149,17 +177,18 @@ export const IMPORT_COLUMNS: Record<ImportSheetKey, ImportColumn[]> = {
     },
     {
       key: "jefeDirecto",
-      label: "Jefe directo (CURP)",
+      label: "Jefe directo (nombre, CURP o ID Workia)",
       aliases: [
         "jefe_directo",
         "jefe directo",
         "jefe",
         "manager",
+        "jefe directo (curp)",
         "jefe directo (curp o id workia)",
       ],
       kind: "text",
-      help: "CURP o ID Workia de otra fila del archivo o de una persona existente.",
-      width: 24,
+      help: "Nombre completo, CURP o ID Workia del jefe: otra fila del archivo o una persona que ya está en Workia. Si hay dos personas con el mismo nombre, usa su CURP o ID Workia.",
+      width: 32,
     },
     {
       key: "rfc",
@@ -182,7 +211,7 @@ export const IMPORT_COLUMNS: Record<ImportSheetKey, ImportColumn[]> = {
       label: "NSS",
       aliases: ["numero seguro social", "imss"],
       kind: "text",
-      help: "11 dígitos.",
+      help: "11 dígitos, escritos como texto para conservar los ceros al inicio.",
       width: 16,
     },
     {
@@ -194,16 +223,59 @@ export const IMPORT_COLUMNS: Record<ImportSheetKey, ImportColumn[]> = {
       help: "Activa o Baja. Vacío equivale a Activa.",
       width: 12,
     },
-  ],
-  horarios: [
+    {
+      key: "fechaBaja",
+      label: "Fecha de baja",
+      aliases: ["fecha_baja", "fecha de salida", "fecha de egreso", "egreso"],
+      kind: "date",
+      help: "Solo con Estatus Baja. AAAA-MM-DD o DD/MM/AAAA (día primero), no antes de la Fecha de ingreso. Con fecha, llena también Tipo de baja, Motivo de baja y Recontratable. Sin datos de baja, la baja queda «sin fecha» para revisarla en Workia.",
+      width: 16,
+    },
+    {
+      key: "tipoBaja",
+      label: "Tipo de baja",
+      aliases: ["tipo_baja", "tipo de salida"],
+      kind: "list",
+      options: TERMINATION_TYPE_OPTIONS,
+      help: `Solo con Estatus Baja: ${TERMINATION_TYPE_OPTIONS.join(", ")}.`,
+      width: 20,
+    },
+    {
+      key: "motivoBaja",
+      label: "Motivo de baja",
+      aliases: ["motivo", "motivo_baja", "motivo de salida"],
+      kind: "list",
+      catalog: "terminationReasons",
+      help: "Solo con Estatus Baja. Nombre exacto de un motivo activo del catálogo (Catálogo > Motivos de baja).",
+      width: 30,
+    },
+    {
+      key: "comentarioBaja",
+      label: "Comentario de baja",
+      aliases: ["comentario_baja", "comentario"],
+      kind: "text",
+      help: "Opcional, solo con Estatus Baja. Hasta 1,000 caracteres.",
+      width: 30,
+    },
+    {
+      key: "recontratable",
+      label: "Recontratable",
+      aliases: ["es recontratable", "rehirable"],
+      kind: "list",
+      options: RECONTRATABLE_OPTIONS,
+      help: "Solo con Estatus Baja: Sí o No. Obligatorio si hay Fecha de baja.",
+      width: 14,
+    },
     {
       key: "idWorkia",
       label: "ID Workia",
       aliases: ["id", "id_workia", "workia id"],
       kind: "text",
-      help: "Persona a la que pertenece el horario (ID Workia o CURP; al menos uno).",
+      help: "Déjalo vacío en altas nuevas. Viene lleno en una exportación y sirve para actualizar a esa persona.",
       width: 38,
     },
+  ],
+  horarios: [
     {
       key: "curp",
       label: "CURP",
@@ -244,16 +316,16 @@ export const IMPORT_COLUMNS: Record<ImportSheetKey, ImportColumn[]> = {
       help: "HH:MM, 24 horas.",
       width: 12,
     },
-  ],
-  contratos: [
     {
       key: "idWorkia",
       label: "ID Workia",
       aliases: ["id", "id_workia", "workia id"],
       kind: "text",
-      help: "Persona del contrato (ID Workia o CURP; al menos uno).",
+      help: "Persona a la que pertenece el horario (ID Workia o CURP; al menos uno).",
       width: 38,
     },
+  ],
+  contratos: [
     {
       key: "curp",
       label: "CURP",
@@ -304,7 +376,7 @@ export const IMPORT_COLUMNS: Record<ImportSheetKey, ImportColumn[]> = {
       aliases: ["estado", "status"],
       kind: "list",
       options: CONTRACT_STATUS_OPTIONS,
-      help: "Vigente, Renovado, No renovado o Vencido. Vacío se deduce de las fechas.",
+      help: "Vigente, Renovado, No renovado, Vencido o Terminado. Vacío se deduce de las fechas.",
       width: 14,
     },
     {
@@ -315,6 +387,14 @@ export const IMPORT_COLUMNS: Record<ImportSheetKey, ImportColumn[]> = {
       catalog: "templates",
       help: "Opcional. Si falta, se guarda como contrato importado.",
       width: 24,
+    },
+    {
+      key: "idWorkia",
+      label: "ID Workia",
+      aliases: ["id", "id_workia", "workia id"],
+      kind: "text",
+      help: "Persona del contrato (ID Workia o CURP; al menos uno).",
+      width: 38,
     },
   ],
 };
@@ -510,5 +590,26 @@ export const parseContractStatus = (value: unknown) => {
   return match === null
     ? null
     : (match.toLowerCase().replace(" ", "_") as
-        "vigente" | "renovado" | "no_renovado" | "vencido");
+        "vigente" | "renovado" | "no_renovado" | "vencido" | "terminado");
+};
+
+export const parseTerminationType = (value: unknown) => {
+  const lookup = new Map(
+    TERMINATION_TYPES.flatMap((type) => [
+      [catalogKey(terminationTypeLabels[type]), type],
+      [catalogKey(type), type],
+    ]),
+  );
+
+  return lookup.get(catalogKey(value)) ?? null;
+};
+
+/** Sí/No (also «si», «s», «n»); null for anything else. */
+export const parseYesNo = (value: unknown) => {
+  const key = catalogKey(value);
+
+  if (["si", "s"].includes(key)) return true;
+  if (["no", "n"].includes(key)) return false;
+
+  return null;
 };

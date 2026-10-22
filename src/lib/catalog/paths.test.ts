@@ -13,15 +13,17 @@ describe("catalog paths", () => {
     expect(CATALOG_PATHS.actividades).toBe("/app/catalogo/actividades");
     expect(CATALOG_PATHS.sucursales).toBe("/app/catalogo/sucursales");
     expect(CATALOG_PATHS.regiones).toBe("/app/catalogo/regiones");
+    expect(CATALOG_PATHS.motivosBaja).toBe("/app/catalogo/motivos-baja");
   });
 
-  it("lists áreas, puestos, actividades, sucursales and regiones", () => {
+  it("lists áreas, puestos, actividades, sucursales, regiones and motivos de baja", () => {
     expect(CATALOG_NAV_CHILDREN.map((child) => child.title)).toEqual([
       "Áreas",
       "Puestos",
       "Actividades",
       "Sucursales",
       "Regiones",
+      "Motivos de baja",
     ]);
   });
 

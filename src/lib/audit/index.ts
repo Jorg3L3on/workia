@@ -11,7 +11,7 @@ import { escapeLike } from "@/lib/db/like";
 import { auditEvents, users } from "@/lib/db/schema";
 
 import { currentAuditContext, noteAuditEvent } from "./context";
-import type { AuditPayload } from "./types";
+import { AUDIT_COMPENSATION_FIELDS, type AuditPayload } from "./types";
 import type { ListAuditEventsOptions, RecordAuditEventInput } from "./types";
 
 /**
@@ -131,9 +131,59 @@ export const listAuditEvents = async (options: ListAuditEventsOptions) => {
     .then((rows) =>
       rows.map((row) => ({
         ...row,
-        payload: row.payload as AuditPayload | null,
+        payload: options.compensation
+          ? (row.payload as AuditPayload | null)
+          : maskAuditCompensation(row.payload as AuditPayload | null),
       })),
     );
+};
+
+const COMPENSATION_MASK = "•••";
+const compensationKeys = new Set<string>(AUDIT_COMPENSATION_FIELDS);
+
+const maskAmount = (value: unknown) =>
+  value === null || value === undefined || value === ""
+    ? value
+    : COMPENSATION_MASK;
+
+/**
+ * Payroll amounts (salaries, finiquito) of an audit payload as «•••», at any
+ * depth: for a viewer without compensation:read (Historial, Auditoría, MCP).
+ */
+export const maskAuditCompensation = <T>(payload: T): T => {
+  const walk = (node: unknown): unknown => {
+    if (Array.isArray(node)) {
+      return node.map(walk);
+    }
+
+    if (!node || typeof node !== "object" || node instanceof Date) {
+      return node;
+    }
+
+    return Object.fromEntries(
+      Object.entries(node).map(([key, value]) => {
+        if (!compensationKeys.has(key)) {
+          return [key, walk(value)];
+        }
+
+        if (
+          value &&
+          typeof value === "object" &&
+          ("from" in value || "to" in value)
+        ) {
+          const change = value as { from?: unknown; to?: unknown };
+          return [
+            key,
+            { from: maskAmount(change.from), to: maskAmount(change.to) },
+          ];
+        }
+
+        return [key, maskAmount(value)];
+      }),
+    );
+  };
+
+  return walk(payload) as T;
 };
 
 /** Users who have acted in this company, for the actor filter (never other companies' users). */
@@ -258,6 +308,35 @@ export const snapshotSite = (site: Record<string, unknown>) => ({
   kind: site.kind,
   regionId: site.regionId ?? null,
   deletedAt: site.deletedAt,
+});
+
+export const snapshotTerminationReason = (reason: Record<string, unknown>) => ({
+  name: reason.name,
+  active: reason.active,
+  deletedAt: reason.deletedAt,
+});
+
+/**
+ * An employment period as Historial compares it (Iniciativa 2); the motivo by
+ * name so the history reads without the catalog. finiquitoMonto is payroll
+ * data: lists mask it without compensation:read.
+ */
+export const snapshotEmploymentPeriod = (
+  period: Record<string, unknown>,
+  motivoName?: string | null,
+) => ({
+  fechaIngreso: period.fechaIngreso ?? null,
+  reconoceAntiguedad: period.reconoceAntiguedad ?? false,
+  fechaAntiguedadReconocida: period.fechaAntiguedadReconocida ?? null,
+  fechaAntiguedad: period.fechaAntiguedad ?? null,
+  fechaBaja: period.fechaBaja ?? null,
+  tipoBaja: period.tipoBaja ?? null,
+  motivoBaja: motivoName ?? null,
+  comentarioBaja: period.comentarioBaja ?? null,
+  recontratable: period.recontratable ?? null,
+  finiquitoEstado: period.finiquitoEstado ?? null,
+  finiquitoFecha: period.finiquitoFecha ?? null,
+  finiquitoMonto: period.finiquitoMonto ?? null,
 });
 
 export const snapshotRegion = (region: Record<string, unknown>) => ({

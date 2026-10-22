@@ -4,10 +4,16 @@ import { PassThrough, Readable } from "node:stream";
 import { NextResponse } from "next/server";
 
 import { recordAuditEvent } from "@/lib/audit";
-import { writeExport, type ExportFilters } from "@/lib/import/export";
-import { isUuid } from "@/lib/import/person-rows";
+import { isoToday } from "@/lib/format/date";
+import { writeExport } from "@/lib/import/export";
 import { requirePeopleExport } from "@/lib/people/auth";
-import { userHasPermission } from "@/lib/rbac";
+import { coercePeopleColumns } from "@/lib/people/filter/columns";
+import { peopleFilterContext } from "@/lib/people/filter/query";
+import { restrictPeopleFilter } from "@/lib/people/filter/schema";
+import {
+  parsePeopleFilterParams,
+  serializeFilterConditions,
+} from "@/lib/people/filter/url";
 import { AuthorizationError } from "@/lib/rbac/errors";
 
 export const dynamic = "force-dynamic";
@@ -18,20 +24,13 @@ const CONTENT_TYPES = {
   csv: "text/csv; charset=utf-8",
 } as const;
 
-const parseFilters = (params: URLSearchParams): ExportFilters => {
-  const status = params.get("status");
-  const area = params.get("area") ?? "";
-  const site = params.get("site") ?? "";
-
-  return {
-    status: status === "activa" || status === "baja" ? status : undefined,
-    deleted: params.get("deleted") === "1",
-    areaId: isUuid(area) ? area : undefined,
-    siteId: isUuid(site) ? site : undefined,
-    query: params.get("q") ?? undefined,
-  };
-};
-
+/**
+ * The Personas export. It reads the list's own URL (q, f, deleted, and the
+ * old status/region/area/site), so the file has the rows the list shows.
+ * With `cols` (Exportar (N)) it writes those columns; without, the import
+ * format. Contract conditions and columns need contracts:read, payroll
+ * columns compensation:read: dropped on the server, whatever the URL says.
+ */
 export const GET = async (request: Request) => {
   let session;
 
@@ -45,19 +44,25 @@ export const GET = async (request: Request) => {
 
   const params = new URL(request.url).searchParams;
   const format = params.get("format") === "csv" ? "csv" : "xlsx";
-  const filters = parseFilters(params);
-  const includeContracts = await userHasPermission(
-    session.user.id,
-    "contracts:read",
+  const filter = restrictPeopleFilter(
+    parsePeopleFilterParams(params),
+    session.permissions,
   );
+  const context = peopleFilterContext(session.permissions, isoToday());
+  const columns = params.has("cols")
+    ? coercePeopleColumns(params.get("cols"), session.permissions)
+    : undefined;
+  const includeContracts = session.permissions.has("contracts:read");
   const stream = new PassThrough();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = context.today;
 
   void writeExport(stream, {
     companyId: session.companyId,
     format,
-    filters,
+    filter,
+    context,
     includeContracts,
+    columns,
   })
     .then((count) =>
       recordAuditEvent({
@@ -68,7 +73,18 @@ export const GET = async (request: Request) => {
         action: "export",
         payload: {
           summary: `Exportación de ${count} personas (${format.toUpperCase()})`,
-          after: { format, filters, includeContracts, count },
+          after: {
+            format,
+            filter: {
+              q: filter.q,
+              deleted: filter.deleted,
+              f: serializeFilterConditions(filter),
+              conditions: filter.conditions,
+            },
+            columns: columns ?? "formato de importación",
+            includeContracts,
+            count,
+          },
         },
       }),
     )
