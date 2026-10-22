@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { expect, test, type Page } from "@playwright/test";
+import ExcelJS from "exceljs";
 
 import { generateImportFixture } from "../src/lib/import/testing/fixture";
 
@@ -138,4 +139,106 @@ test("imports, exports, re-imports unchanged and undoes", async ({ page }) => {
 
   await page.goto(`/app/personas?q=${lastName}`);
   await expect(page.getByText("Fx")).toHaveCount(0);
+});
+
+test("fills the downloaded template and applies it all or nothing", async ({
+  page,
+}) => {
+  test.setTimeout(180_000);
+
+  const stamp = Date.now();
+  const lastName = `Plantilla${stamp}`;
+
+  await loginAsAdmin(page);
+
+  const download = await page.request.get("/app/personas/plantilla");
+
+  expect(download.ok()).toBe(true);
+
+  const workbook = new ExcelJS.Workbook();
+
+  await workbook.xlsx.load(new Uint8Array(await download.body()).buffer);
+  expect(workbook.worksheets.map((sheet) => sheet.name)).toEqual([
+    "Instrucciones",
+    "Ejemplo",
+    "Personas",
+    "Horarios",
+    "Contratos",
+    "Catálogos",
+  ]);
+
+  const personas = workbook.getWorksheet("Personas")!;
+  const headers = (personas.getRow(1).values as unknown[]).slice(1);
+  const column = (label: string) => headers.indexOf(label) + 1;
+
+  expect(headers.at(-1)).toBe("ID Workia");
+  expect(headers).toContain("Jefe directo (nombre, CURP o ID Workia)");
+
+  // A new boss and someone who reports to her by name; ID Workia stays empty.
+  const add = (values: Record<string, string>) => {
+    const row = personas.addRow([]);
+
+    for (const [label, value] of Object.entries(values)) {
+      row.getCell(column(label)).value = value;
+    }
+  };
+
+  add({ Nombres: "Jefa", "Apellido paterno": lastName });
+  add({
+    Nombres: "Equipo",
+    "Apellido paterno": lastName,
+    "Jefe directo (nombre, CURP o ID Workia)": `Jefa ${lastName}`,
+  });
+
+  // Someone who already left, with the baja columns and a motivo of the
+  // company's catalog (Catálogos lists the active ones).
+  const catalogs = workbook.getWorksheet("Catálogos")!;
+  const motivoColumn = (catalogs.getRow(1).values as unknown[]).indexOf(
+    "Motivos de baja",
+  );
+  const motivo = String(catalogs.getRow(2).getCell(motivoColumn).value);
+
+  add({
+    Nombres: "Salida",
+    "Apellido paterno": lastName,
+    "Fecha de ingreso": "2021-01-04",
+    Estatus: "Baja",
+    "Fecha de baja": "2025-11-28",
+    "Tipo de baja": "Voluntaria",
+    "Motivo de baja": motivo,
+    Recontratable: "Sí",
+  });
+
+  await stageAndValidate(
+    page,
+    {
+      name: `plantilla-${stamp}.xlsx`,
+      mimeType:
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      buffer: Buffer.from(await workbook.xlsx.writeBuffer()),
+    },
+    { createCatalogs: false },
+  );
+  expect(await counter(page, "Crear")).toBe(3);
+  expect(await counter(page, "Con errores")).toBe(0);
+
+  await page
+    .getByLabel("Todo o nada: si hay errores no se aplica nada")
+    .check();
+  await page
+    .getByRole("button", { name: "Volver a validar con estas opciones" })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Revisa antes de aplicar" }),
+  ).toBeVisible({ timeout: 90_000 });
+  await page.getByRole("button", { name: "Continuar", exact: true }).click();
+  await page.getByRole("button", { name: "Aplicar importación" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Importación aplicada" }),
+  ).toBeVisible({ timeout: 120_000 });
+
+  await page.goto(`/app/personas?q=${lastName}`);
+  await expect(
+    page.getByText("Equipo").locator("visible=true").first(),
+  ).toBeVisible();
 });

@@ -17,6 +17,7 @@ export const AUDIT_RESOURCE_TYPES = [
   "mcp_connection",
   "mcp_settings",
   "onboarding",
+  "termination_reason",
 ] as const;
 
 export type AuditResourceType = (typeof AUDIT_RESOURCE_TYPES)[number];
@@ -42,6 +43,10 @@ export const AUDIT_ACTIONS = [
   "revoke",
   "approve",
   "reject",
+  // Iniciativa 2: baja y periodos laborales.
+  "reingreso",
+  "finiquito_actualizado",
+  "terminado",
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
@@ -67,6 +72,9 @@ export const auditActionLabels: Record<AuditAction, string> = {
   revoke: "Revocación",
   approve: "Aprobación",
   reject: "Rechazo",
+  reingreso: "Reingreso",
+  finiquito_actualizado: "Finiquito actualizado",
+  terminado: "Contrato terminado",
 };
 
 export const auditResourceTypeLabels: Record<AuditResourceType, string> = {
@@ -88,6 +96,7 @@ export const auditResourceTypeLabels: Record<AuditResourceType, string> = {
   mcp_connection: "Conexión de asistente (MCP)",
   mcp_settings: "Escrituras del conector (MCP)",
   onboarding: "Alta (RH → Nóminas)",
+  termination_reason: "Motivo de baja",
 };
 
 export const AUDIT_SOURCES = [
@@ -106,6 +115,37 @@ export const auditSourceLabels: Record<(typeof AUDIT_SOURCES)[number], string> =
     seed: "Datos iniciales",
     system: "Sistema",
   };
+
+/**
+ * Readable names of the fields a baja, reingreso or finiquito records in
+ * `changes`; Historial falls back to the raw key for the rest.
+ */
+export const auditFieldLabels: Record<string, string> = {
+  status: "Estatus",
+  fechaIngreso: "Fecha de ingreso",
+  fechaBaja: "Fecha de baja",
+  tipoBaja: "Tipo de baja",
+  motivoBaja: "Motivo de baja",
+  comentarioBaja: "Comentario",
+  recontratable: "Recontratable",
+  reconoceAntiguedad: "Reconoce antigüedad previa",
+  fechaAntiguedadReconocida: "Antigüedad reconocida desde",
+  fechaAntiguedad: "Fecha de antigüedad",
+  finiquitoEstado: "Finiquito",
+  finiquitoFecha: "Fecha del finiquito",
+  finiquitoMonto: "Monto del finiquito",
+  endDate: "Fin",
+};
+
+/**
+ * Payroll amounts inside audit payloads: shown only with compensation:read
+ * (maskAuditCompensation); everyone else sees «•••».
+ */
+export const AUDIT_COMPENSATION_FIELDS = [
+  "salarioDiario",
+  "salarioMensual",
+  "finiquitoMonto",
+] as const;
 
 export type AuditPayload = {
   before?: Record<string, unknown> | null;
@@ -151,6 +191,8 @@ export type ListAuditEventsOptions = {
   to?: Date;
   /** Free text over the event's summary, changes and actor name or email. */
   query?: string;
+  /** compensation:read: payroll amounts (salaries, finiquito) in clear; masked otherwise. */
+  compensation?: boolean;
   limit?: number;
   offset?: number;
 };

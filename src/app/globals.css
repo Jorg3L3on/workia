@@ -305,6 +305,155 @@
     0 0 0 1px color-mix(in srgb, var(--workia-accent-blue) 28%, transparent);
 }
 
+/* Expediente «Credencial»: the person's badge, key facts and section cards.
+   Solid teal tokens, no gradients, no colored bar on any card side. */
+.workia-field-label {
+  color: var(--workia-ink-muted);
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.09em;
+  line-height: 1rem;
+  text-transform: uppercase;
+}
+
+.workia-credential {
+  overflow: hidden;
+  border-radius: calc(var(--radius) * 1.5);
+}
+
+.workia-credential-avatar {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: color-mix(
+    in srgb,
+    var(--workia-accent-blue) 12%,
+    var(--workia-badge-a)
+  );
+  box-shadow: inset 0 0 0 1px
+    color-mix(in srgb, var(--workia-accent-blue) 24%, transparent);
+  color: var(--workia-accent-blue);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+/* Baja or deleted: the badge goes grey (dashed edge, grey avatar). */
+.workia-credential:is([data-status="baja"], [data-status="borrado"]) {
+  border-style: dashed;
+  border-color: var(--workia-line-strong);
+}
+
+.workia-credential:is([data-status="baja"], [data-status="borrado"])
+  .workia-credential-avatar {
+  background: var(--workia-badge-b);
+  box-shadow: inset 0 0 0 1px var(--workia-line-strong);
+  color: var(--workia-ink-muted);
+}
+
+/* 1 px rules between facts: the strip's background shows through the gap. */
+.workia-credential-facts {
+  gap: 1px;
+  border-top: 1px solid var(--workia-line);
+  background: var(--workia-line);
+}
+
+.workia-credential-fact {
+  background: var(--workia-badge-a);
+}
+
+.workia-detail-card {
+  scroll-margin-top: 1rem;
+  outline: none;
+  transition: box-shadow var(--duration-md) var(--ease-out-product);
+}
+
+/* Phones: clear the sticky row of chips. */
+@media (max-width: 767px) {
+  .workia-detail-card {
+    scroll-margin-top: 4rem;
+  }
+}
+
+.workia-detail-card:focus-visible,
+.workia-detail-card[data-highlight="true"] {
+  box-shadow:
+    0 1px 2px var(--workia-shadow),
+    0 0 0 2px color-mix(in srgb, var(--workia-accent-blue) 55%, transparent);
+}
+
+/* Cards inside a section card (contrato vigente, historial) stay flat. */
+.workia-detail-card .workia-pass-card {
+  box-shadow: none;
+}
+
+.workia-chip {
+  display: inline-flex;
+  height: 2rem;
+  align-items: center;
+  border: 1px solid var(--workia-line-strong);
+  border-radius: 9999px;
+  background: var(--workia-badge-a);
+  padding: 0 0.75rem;
+  color: var(--workia-ink);
+  font-size: 0.875rem;
+  white-space: nowrap;
+  transition:
+    background-color var(--duration-md) var(--ease-out-product),
+    border-color var(--duration-md) var(--ease-out-product);
+}
+
+.workia-chip:hover {
+  border-color: var(--workia-accent-blue);
+  background: var(--workia-badge-b);
+}
+
+.workia-chip:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .workia-detail-grid .workia-detail-card {
+    animation: workia-card-in var(--duration-md) var(--ease-out-product) both;
+  }
+
+  .workia-detail-grid .workia-detail-card:nth-child(2) {
+    animation-delay: 50ms;
+  }
+
+  .workia-detail-grid .workia-detail-card:nth-child(3) {
+    animation-delay: 100ms;
+  }
+
+  .workia-detail-grid .workia-detail-card:nth-child(4) {
+    animation-delay: 150ms;
+  }
+
+  .workia-detail-grid .workia-detail-card:nth-child(n + 5) {
+    animation-delay: 200ms;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workia-detail-card,
+  .workia-chip {
+    transition: none;
+  }
+}
+
+@keyframes workia-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 .login-ambient-blob {
   position: absolute;
   border-radius: 50%;

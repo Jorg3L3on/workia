@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { appendImportRowsSchema } from "@/lib/import/api-schemas";
 import {
+  ImportRowLimitError,
   appendImportRows,
   getImportJob,
   listImportRows,
@@ -41,7 +42,18 @@ export const POST = async (request: Request, { params }: Context) => {
     return NextResponse.json({ error: "Solicitud inválida." }, { status: 400 });
   }
 
-  await appendImportRows(session.companyId, jobId, parsed.data);
+  try {
+    await appendImportRows(session.companyId, jobId, parsed.data);
+  } catch (error) {
+    if (error instanceof ImportRowLimitError) {
+      return NextResponse.json(
+        { error: error.message, code: "too_many_rows" },
+        { status: 413 },
+      );
+    }
+
+    throw error;
+  }
 
   return NextResponse.json({ stored: parsed.data.rows.length });
 };

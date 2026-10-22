@@ -161,6 +161,9 @@ export const people = pgTable(
     index("people_company_live_updated_idx")
       .on(table.companyId, table.updatedAt)
       .where(sql`${table.deletedAt} is null`),
+    index("people_company_fecha_ingreso_idx")
+      .on(table.companyId, table.fechaIngreso)
+      .where(sql`${table.deletedAt} is null`),
     index("people_company_status_family_idx")
       .on(table.companyId, table.status, table.apellidoPaterno)
       .where(sql`${table.deletedAt} is null`),

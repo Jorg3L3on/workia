@@ -56,6 +56,7 @@ const CONTRACT_STATUSES = [
   "renovado",
   "no_renovado",
   "vencido",
+  "terminado",
 ] as const;
 const CONTRACT_TYPES = ["determinado", "indeterminado"] as const;
 
@@ -522,7 +523,7 @@ export const previewContractTool = defineTool({
 export const getSeniorityCertificateTool = defineTool({
   name: "get_seniority_certificate",
   title: "Constancia de antigüedad",
-  description: `Constancia de antigüedad de una persona, igual que la de la app: fecha de ingreso original, antigüedad a hoy y cadena de contratos, más el texto listo para imprimir. Sin el scope pii la CURP del texto sale enmascarada. ${FREE_TEXT_NOTE}`,
+  description: `Constancia de antigüedad de una persona, igual que la de la app: fecha de ingreso, fecha de antigüedad (reinicia en un reingreso salvo que RRHH reconozca la previa), antigüedad a hoy (o a la fecha de baja) y cadena de contratos, más el texto listo para imprimir. Sin el scope pii la CURP del texto sale enmascarada. ${FREE_TEXT_NOTE}`,
   kind: "read",
   scope: "read",
   permission: "contracts:read",
@@ -531,6 +532,12 @@ export const getSeniorityCertificateTool = defineTool({
     person: personRefSchema,
     fecha_ingreso: z.string().nullable(),
     fecha_ingreso_mx: z.string().nullable(),
+    fecha_antiguedad: z
+      .string()
+      .nullable()
+      .describe(
+        "Desde cuándo cuenta la antigüedad: el último ingreso, o una fecha anterior si RRHH reconoció la antigüedad previa al reingresar.",
+      ),
     antiguedad: z.string().nullable(),
     as_of: z.string(),
     as_of_mx: z.string().nullable(),
@@ -566,6 +573,7 @@ export const getSeniorityCertificateTool = defineTool({
       person: { id: person.id, nombre_completo: fullName(person) },
       fecha_ingreso: certificate.fechaIngreso,
       fecha_ingreso_mx: mx(certificate.fechaIngreso),
+      fecha_antiguedad: certificate.fechaAntiguedad,
       antiguedad: certificate.antiguedad,
       as_of: certificate.asOf,
       as_of_mx: mx(certificate.asOf),

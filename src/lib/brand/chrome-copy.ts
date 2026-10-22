@@ -41,6 +41,7 @@ export const pageTitles = {
   actividades: "Actividades",
   sucursales: "Sucursales",
   regiones: "Regiones",
+  motivosBaja: "Motivos de baja",
   auditoria: "Auditoría",
   administracion: "Administración",
   rbac: "Roles y permisos",

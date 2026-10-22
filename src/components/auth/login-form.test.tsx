@@ -65,6 +65,27 @@ describe("LoginForm", () => {
     expect(assign).toHaveBeenCalledWith("/app");
   });
 
+  it("retries once when the first-visit CSRF cookie raced the sign-in", async () => {
+    signIn
+      .mockResolvedValueOnce({ error: "MissingCSRF", ok: true })
+      .mockResolvedValueOnce({ error: undefined, ok: true });
+
+    render(<LoginForm />);
+
+    fireEvent.change(screen.getByLabelText("Correo electrónico"), {
+      target: { value: "persona@empresa.local" },
+    });
+    fireEvent.change(screen.getByLabelText("Contraseña"), {
+      target: { value: "password12" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Iniciar sesión" }));
+
+    await waitFor(() => {
+      expect(assign).toHaveBeenCalledWith("/app");
+    });
+    expect(signIn).toHaveBeenCalledTimes(2);
+  });
+
   it("does not render the authenticated sticky chrome header", () => {
     render(<LoginForm />);
 

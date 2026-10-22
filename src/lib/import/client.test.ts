@@ -10,6 +10,7 @@ import {
   type ReadWorkbook,
 } from "./client";
 import { parseCsv } from "./csv";
+import { IMPORT_COLUMNS } from "./format";
 import { buildImportTemplate } from "./template";
 import { uploadParsedFile } from "./upload";
 
@@ -163,6 +164,129 @@ describe("parseImportFile", () => {
   });
 });
 
+describe("template example and column order", () => {
+  const OLD_PERSONAS_HEADERS = [
+    "ID Workia",
+    "Nombres",
+    "Apellido paterno",
+    "Apellido materno",
+    "Correo electrónico",
+    "Teléfono",
+    "Fecha de nacimiento",
+    "Fecha de ingreso",
+    "Área",
+    "Puesto",
+    "Sucursal",
+    "Jefe directo (CURP)",
+    "RFC",
+    "CURP",
+    "NSS",
+    "Estatus",
+  ];
+
+  it("ignores the Ejemplo sheet of the template", async () => {
+    const template = new ExcelJS.Workbook();
+
+    await template.xlsx.load(
+      await buildImportTemplate({
+        areas: ["Ventas"],
+        positions: ["Vendedor"],
+        sites: ["Matriz"],
+        templates: [],
+      }),
+    );
+    template.getWorksheet("Personas")!.addRow(["Luis", "Pérez"]);
+
+    const parsed = await parseImportFile(
+      makeFile(await template.xlsx.writeBuffer(), "plantilla.xlsx"),
+      readWorkbook,
+    );
+
+    expect(parsed.sheets.map((sheet) => sheet.sourceName)).toEqual([
+      "Personas",
+      "Horarios",
+      "Contratos",
+    ]);
+    expect(parsed.totalRows).toBe(1);
+    expect(parsed.sheets[0].rows[0].cells).toMatchObject({
+      nombres: "Luis",
+      apellidoPaterno: "Pérez",
+    });
+  });
+
+  it("never reads a lone Ejemplo sheet as Personas", async () => {
+    const workbook = new ExcelJS.Workbook();
+
+    workbook.addWorksheet("Ejemplo").addRows([
+      ["Nombres", "Apellido paterno"],
+      ["Laura", "Méndez"],
+    ]);
+
+    await expect(
+      parseImportFile(
+        makeFile(await workbook.xlsx.writeBuffer(), "ejemplo.xlsx"),
+        readWorkbook,
+      ),
+    ).rejects.toMatchObject({ code: "no_personas_sheet" });
+  });
+
+  it("still imports a file with the old column order and headers", async () => {
+    const id = "11111111-1111-4111-8111-111111111111";
+    const file = await workbookFile([
+      OLD_PERSONAS_HEADERS,
+      [
+        id,
+        "Ana",
+        "López",
+        null,
+        null,
+        "5512345678",
+        null,
+        null,
+        null,
+        null,
+        null,
+        "HEGG560427MVZRRL04",
+        null,
+        null,
+        "04123456784",
+        "Activa",
+      ],
+    ]);
+    const personas = (await parseImportFile(file, readWorkbook)).sheets[0];
+
+    expect(personas.mapping.unknown).toEqual([]);
+    expect(personas.mapping.missingRequired).toEqual([]);
+    expect(personas.rows[0].cells).toMatchObject({
+      idWorkia: id,
+      nombres: "Ana",
+      telefono: "5512345678",
+      jefeDirecto: "HEGG560427MVZRRL04",
+      nss: "04123456784",
+      estatus: "Activa",
+    });
+  });
+
+  it("rejects a Horarios or Contratos sheet over its row limit", async () => {
+    const horarios = [
+      ["CURP", "Entrada"],
+      ...Array.from({ length: 5001 }, (_, i) => [`C${i}`, "08:00"]),
+    ];
+    const file = await workbookFile(
+      [
+        ["Nombres", "Apellido paterno"],
+        ["Ana", "López"],
+      ],
+      { Horarios: horarios },
+    );
+
+    await expect(parseImportFile(file, readWorkbook)).rejects.toMatchObject({
+      code: "too_many_rows",
+      message: expect.stringContaining("Horarios"),
+    });
+  });
+});
+
 describe("upload", () => {
   it("chunks 5,000 rows, retries a failed chunk and finalizes", async () => {
     const csv = `Nombres,Apellido paterno\n${Array.from({ length: 5000 }, (_, i) => `P${i},X`).join("\n")}`;
@@ -223,8 +347,9 @@ describe("error report round trip", () => {
     const parsed = await parseImportFile(file, readWorkbook);
     const personas = parsed.sheets.find((s) => s.sheet === "personas")!;
 
+    // Errores goes right after the import columns.
     expect(personas.mapping.unknown).toEqual([
-      { index: 16, header: "Errores" },
+      { index: IMPORT_COLUMNS.personas.length, header: "Errores" },
     ]);
     expect(personas.rows).toHaveLength(1);
     expect(personas.rows[0].cells).toMatchObject({

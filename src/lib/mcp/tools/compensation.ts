@@ -39,16 +39,15 @@ export const compensacionInput = z
 
 export type CompensacionInput = z.infer<typeof compensacionInput>;
 
-export const assertCanCapture = (
+/** Payroll data (salaries, the finiquito amount) needs pii + compensation:read. */
+export const assertCompensationAccess = (
   ctx: WorkiaToolContext,
-  compensacion: CompensacionInput | undefined,
+  what = "la compensación",
 ) => {
-  if (!compensacion) return;
-
   if (!ctx.piiUnmasked) {
     throw new McpToolError(
       "FORBIDDEN_SCOPE",
-      "Para capturar la compensación la conexión necesita el scope pii.",
+      `Para capturar ${what} la conexión necesita el scope pii.`,
       { details: { required_scope: "pii" } },
     );
   }
@@ -56,10 +55,19 @@ export const assertCanCapture = (
   if (!ctx.permissions.has("compensation:read")) {
     throw new McpToolError(
       "FORBIDDEN_RBAC",
-      "Tu rol no puede ver ni capturar la compensación.",
+      `Tu rol no puede ver ni capturar ${what}.`,
       { details: { required_permission: "compensation:read" } },
     );
   }
+};
+
+export const assertCanCapture = (
+  ctx: WorkiaToolContext,
+  compensacion: CompensacionInput | undefined,
+) => {
+  if (!compensacion) return;
+
+  assertCompensationAccess(ctx);
 };
 
 /** The form values the contract schemas expect. */

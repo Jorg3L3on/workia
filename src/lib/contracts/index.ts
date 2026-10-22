@@ -34,6 +34,7 @@ import {
   maritalStatusLabels,
 } from "@/lib/people/schema";
 import { siteKindLabels } from "@/lib/sites/schema";
+import { getEmploymentSummary } from "@/lib/people/employment";
 import { formatSeniority } from "@/lib/people/seniority";
 import { getCompanyById } from "@/lib/tenant/companies";
 
@@ -83,9 +84,10 @@ const resolveTemplateFillContext = async (
   /** The position the contract is for, when it changes with it (WRK-I5-6). */
   puesto?: string,
 ) => {
-  const [person, company] = await Promise.all([
+  const [person, company, employment] = await Promise.all([
     getPersonWithRelations(companyId, personId),
     getCompanyById(companyId),
+    getEmploymentSummary(companyId, personId),
   ]);
 
   if (!person) {
@@ -119,6 +121,10 @@ const resolveTemplateFillContext = async (
       formaPago: compensation?.formaPago ?? null,
       periodicidad: compensation?.periodicidadPago ?? null,
       fechaIngreso: person.fechaIngreso,
+      // {{antiguedad}} counts from the seniority date (Iniciativa 2).
+      fechaAntiguedad: employment
+        ? employment.fechaAntiguedad
+        : person.fechaIngreso,
       empresa: company?.name ?? null,
       empresaRazonSocial: company?.legalName ?? null,
       empresaRfc: company?.rfc ?? null,
@@ -384,10 +390,11 @@ export const getSeniorityCertificate = async (
   personId: string,
   asOf: string,
 ) => {
-  const [person, company, chain] = await Promise.all([
+  const [person, company, chain, employment] = await Promise.all([
     getPersonWithRelations(companyId, personId, true),
     getCompanyById(companyId),
     listContractsByPerson(companyId, personId),
+    getEmploymentSummary(companyId, personId),
   ]);
 
   if (!person) {
@@ -404,12 +411,25 @@ export const getSeniorityCertificate = async (
       endDate: contract.endDate,
     }));
   const name = formatPersonName(person);
-  const antiguedad = formatSeniority(person.fechaIngreso, asOf);
+  // Seniority from seniorityDate(): restarts on a rehire unless HR recognized it.
+  const fechaAntiguedad = employment
+    ? employment.fechaAntiguedad
+    : person.fechaIngreso;
+  const recognized =
+    fechaAntiguedad !== null && fechaAntiguedad !== person.fechaIngreso;
+  // A person de baja counts up to the fecha de baja, not to today.
+  const until =
+    person.status === "baja" &&
+    employment?.fechaBaja &&
+    employment.fechaBaja < asOf
+      ? employment.fechaBaja
+      : asOf;
+  const antiguedad = formatSeniority(fechaAntiguedad, until);
   const companyName = company?.legalName || company?.name || "La empresa";
   const text = [
     "CONSTANCIA DE ANTIGÜEDAD",
     "",
-    `${companyName}${company?.rfc ? `, con RFC ${company.rfc},` : ""} hace constar que ${name}${person.curp ? ` (CURP ${person.curp})` : ""} ${person.fechaIngreso ? `ingresó a laborar el ${formatContractDate(person.fechaIngreso)} y al ${formatContractDate(asOf)} cuenta con una antigüedad de ${antiguedad ?? "menos de un mes"}` : "no tiene fecha de ingreso capturada"}${person.position?.name ? `, con el puesto de ${person.position.name}` : ""}.`,
+    `${companyName}${company?.rfc ? `, con RFC ${company.rfc},` : ""} hace constar que ${name}${person.curp ? ` (CURP ${person.curp})` : ""} ${person.fechaIngreso ? `ingresó a laborar el ${formatContractDate(person.fechaIngreso)}${recognized ? `, con antigüedad reconocida desde el ${formatContractDate(fechaAntiguedad)},` : ""} y al ${formatContractDate(until)} ${until === asOf ? "cuenta" : "contaba"} con una antigüedad de ${antiguedad ?? "menos de un mes"}` : "no tiene fecha de ingreso capturada"}${person.position?.name ? `, con el puesto de ${person.position.name}` : ""}.`,
     "",
     contratos.length > 0 ? "Contratos:" : "Sin contratos registrados.",
     ...contratos.map(
@@ -424,6 +444,9 @@ export const getSeniorityCertificate = async (
     person,
     company,
     fechaIngreso: person.fechaIngreso,
+    fechaAntiguedad,
+    /** The date the seniority is counted to: today, or the fecha de baja. */
+    until,
     antiguedad,
     asOf,
     contratos,

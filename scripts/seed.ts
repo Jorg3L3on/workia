@@ -252,6 +252,12 @@ const seed = async () => {
     console.log(`Second demo company seeded: ${secondCompany.name}.`);
   }
 
+  // Seeded people get their employment periods (Iniciativa 2); idempotent.
+  const { backfillEmploymentPeriods } =
+    await import("@/lib/people/employment-backfill");
+  const periods = await backfillEmploymentPeriods({ apply: true });
+  console.log(`Employment periods opened for ${periods.people} people.`);
+
   console.log("Seed finished. Use demo credentials documented in README.");
 };
 

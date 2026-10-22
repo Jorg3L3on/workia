@@ -16,6 +16,8 @@ export const statusTone = {
     renovado: "neutral",
     no_renovado: "neutral",
     vencido: "danger",
+    // Ended by the person's baja: closed, not overdue.
+    terminado: "neutral",
   },
   renewal: { vencido: "danger", proximo: "warning", en_ventana: "neutral" },
   company: { activa: "success", suspendida: "danger" },

@@ -29,6 +29,12 @@ import {
   type BeneficiaryRow,
 } from "@/components/people/beneficiaries-editor";
 import { ManagerPicker } from "@/components/people/manager-picker";
+import type { PersonFormSection } from "@/components/people/person-detail-model";
+import {
+  prefersReducedMotion,
+  scrollerOf,
+  scrollToElement,
+} from "@/components/people/section-scroll";
 import { ScheduleBlocksEditor } from "@/components/people/schedule-blocks-editor";
 import {
   createPersonAction,
@@ -59,6 +65,10 @@ type PersonFormProps = {
   /** Current manager, shown in the picker; other candidates load as the user types. */
   initialManager?: ManagerOption | null;
   beneficiaries?: BeneficiaryRow[];
+  /** Edit only: open at this section (`?seccion=`), scrolled to and focused. */
+  initialSection?: PersonFormSection;
+  /** With `initialSection`: the control to focus (`?campo=curp`). */
+  initialField?: string;
 };
 
 const stateOptions = (empty: string) => [
@@ -99,7 +109,11 @@ const SECTIONS = [
     title: "Beneficiarios",
     help: "Quién recibe las prestaciones; los porcentajes suman 100.",
   },
-] as const;
+] as const satisfies readonly {
+  id: PersonFormSection;
+  title: string;
+  help: string;
+}[];
 
 type SectionId = (typeof SECTIONS)[number]["id"];
 
@@ -137,10 +151,6 @@ const FormSection = ({
     </section>
   );
 };
-
-/** Pages under /app scroll inside the shell, not the document. */
-const scrollerOf = (element: Element) =>
-  element.closest<HTMLElement>("[data-slot=shell-main-scroll]");
 
 /** Space the sticky chips take above a section on phones. */
 const sectionOffset = (root: HTMLElement) => {
@@ -220,27 +230,23 @@ const useActiveSection = (rootRef: RefObject<HTMLElement | null>) => {
     };
   }, [rootRef]);
 
-  const goTo = (id: SectionId) => {
-    const root = rootRef.current;
-    const element = root?.querySelector<HTMLElement>(`#${sectionDomId(id)}`);
+  const goTo = useCallback(
+    (id: SectionId, smooth = true) => {
+      const root = rootRef.current;
+      const element = root?.querySelector<HTMLElement>(`#${sectionDomId(id)}`);
 
-    if (!root || !element) {
-      return;
-    }
+      if (!root || !element) {
+        return null;
+      }
 
-    pinned.current = id;
-    setActive(id);
+      pinned.current = id;
+      setActive(id);
+      scrollToElement(element, { offset: sectionOffset(root), smooth });
 
-    // Scroll only the shell's scroller: scrollIntoView would also shift the
-    // shell's overflow-hidden wrapper once the scroller reaches its end.
-    const scroller = scrollerOf(element);
-    const delta =
-      element.getBoundingClientRect().top -
-      (scroller?.getBoundingClientRect().top ?? 0) -
-      sectionOffset(root);
-
-    (scroller ?? window).scrollBy({ top: delta, behavior: "smooth" });
-  };
+      return element;
+    },
+    [rootRef],
+  );
 
   // Phones: keep the current chip inside the horizontal strip.
   useEffect(() => {
@@ -258,7 +264,7 @@ const useActiveSection = (rootRef: RefObject<HTMLElement | null>) => {
 
       nav.scrollTo({
         left: left - (nav.clientWidth - chip.offsetWidth) / 2,
-        behavior: "smooth",
+        behavior: prefersReducedMotion() ? "auto" : "smooth",
       });
     }
   }, [active, rootRef]);
@@ -299,6 +305,8 @@ export const PersonForm = ({
   sites,
   initialManager = null,
   beneficiaries = [],
+  initialSection,
+  initialField,
 }: PersonFormProps) => {
   const action =
     mode === "create"
@@ -366,6 +374,27 @@ export const PersonForm = ({
   );
 
   useEffect(refreshPending, [refreshPending]);
+
+  // «Editar» on a card of the expediente opens the form at its section and
+  // focuses the field it names, or else the section's first control.
+  useEffect(() => {
+    if (!initialSection) {
+      return;
+    }
+
+    const section = goToSection(initialSection, false);
+    const named = initialField ? document.getElementById(initialField) : null;
+    const field = named && section?.contains(named) ? named : null;
+    const target =
+      field ??
+      section?.querySelector<HTMLElement>(
+        "input:not([type=hidden]), select, textarea, button",
+      );
+
+    target?.focus({ preventScroll: true });
+    // Only on open: later edits keep the user where they are.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const cancelHref =
     mode === "create" ? "/app/personas" : `/app/personas/${person!.id}`;

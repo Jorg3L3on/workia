@@ -176,6 +176,20 @@
       "when": 1787814000000,
       "tag": "0024_onboardings",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1787817600000,
+      "tag": "0025_employment_periods",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1787821200000,
+      "tag": "0026_people_views",
+      "breakpoints": true
     }
   ]
 }
