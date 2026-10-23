@@ -430,6 +430,19 @@ describe("exports and views", () => {
     });
   });
 
+  it("renders the dashboard as a PDF on the server", async () => {
+    actAs(a.admin);
+    const started = Date.now();
+    const response = await exportRoute(new Request(exportUrl("pdf")));
+    const file = Buffer.from(await response.arrayBuffer());
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Content-Type")).toBe("application/pdf");
+    expect(file.subarray(0, 5).toString()).toBe("%PDF-");
+    expect(file.length).toBeLessThan(1_000_000);
+    expect(Date.now() - started).toBeLessThan(3_000);
+  });
+
   it("saves views of the report apart from the Personas views, presets relative", async () => {
     const view = await createTurnoverView(
       a.companyId,

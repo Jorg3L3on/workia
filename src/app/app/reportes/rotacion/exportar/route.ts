@@ -13,6 +13,7 @@ import {
   turnoverSheets,
   writeTurnoverExport,
 } from "@/lib/reports/turnover/export";
+import { renderTurnoverPdf } from "@/lib/reports/turnover/pdf";
 import {
   parseTurnoverParam,
   serializeTurnoverFilter,
@@ -26,11 +27,15 @@ export const runtime = "nodejs";
 const CONTENT_TYPES = {
   xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   csv: "text/csv; charset=utf-8",
+  pdf: "application/pdf",
 } as const;
 
+const FORMATS = ["xlsx", "csv", "pdf"] as const;
+
 /**
- * Export of the turnover report (WRK-I12): Excel with every sheet or the
- * bajas as CSV, from the same URL filter the dashboard reads. Needs
+ * Export of the turnover report (WRK-I12): Excel with every sheet, the
+ * bajas as CSV or the dashboard as PDF (generated here with
+ * @react-pdf/renderer), from the same URL filter the dashboard reads. Needs
  * reports:read and people:export (the file names people); the finiquito
  * columns only with compensation:read. Audited as report_export.
  */
@@ -50,7 +55,8 @@ export const GET = async (request: Request) => {
   }
 
   const params = new URL(request.url).searchParams;
-  const format = params.get("format") === "csv" ? "csv" : "xlsx";
+  const format =
+    FORMATS.find((value) => value === params.get("format")) ?? "xlsx";
   const today = isoToday();
   const filter = parseTurnoverParam(
     params.get(TURNOVER_URL_PARAM) ?? undefined,
@@ -67,42 +73,70 @@ export const GET = async (request: Request) => {
     labels,
     Object.fromEntries(reasons.map((reason) => [reason.id, reason.name])),
   );
+  const generatedAt = formatDateTimeMx(new Date());
+  const audit = (count: number) =>
+    recordAuditEvent({
+      companyId,
+      actorUserId: session.user.id,
+      resourceType: "report_export",
+      resourceId: randomUUID(),
+      action: "export",
+      payload: {
+        summary: `Reporte de rotación (${format.toUpperCase()}): ${count} bajas del ${filter.from} al ${filter.to}`,
+        after: {
+          report: "rotacion",
+          format,
+          r: serializeTurnoverFilter(filter),
+          filter: filterText || "Sin filtros",
+          includeFiniquito: withFiniquito,
+          count,
+        },
+      },
+    });
+  const headers = {
+    "Content-Type": CONTENT_TYPES[format],
+    "Content-Disposition": `attachment; filename="rotacion-${session.membership.companySlug}-${filter.from}-${filter.to}.${format}"`,
+    "Cache-Control": "no-store",
+  };
+
+  if (format === "pdf") {
+    const finiquitoPaid = finiquitos
+      ? finiquitos
+          .filter(
+            (item) =>
+              item.estado === "pagado" &&
+              item.fecha !== null &&
+              item.fecha >= filter.from &&
+              item.fecha <= filter.to,
+          )
+          .reduce((sum, item) => sum + (item.monto ?? 0), 0)
+      : null;
+    const file = await renderTurnoverPdf(report, {
+      companyName: session.membership.companyName,
+      filterText,
+      generatedAt,
+      generatedBy: session.user.name ?? session.user.email ?? "Workia",
+      finiquitoPaid,
+    });
+
+    await audit(report.summary.exits);
+
+    return new NextResponse(new Uint8Array(file), { headers });
+  }
+
   const sheets = turnoverSheets(report, labels, {
     companyName: session.membership.companyName,
     filterText,
-    generatedAt: formatDateTimeMx(new Date()),
+    generatedAt,
     finiquitos,
   });
   const stream = new PassThrough();
 
   void writeTurnoverExport(stream, format, sheets)
-    .then((count) =>
-      recordAuditEvent({
-        companyId,
-        actorUserId: session.user.id,
-        resourceType: "report_export",
-        resourceId: randomUUID(),
-        action: "export",
-        payload: {
-          summary: `Reporte de rotación (${format.toUpperCase()}): ${count} bajas del ${filter.from} al ${filter.to}`,
-          after: {
-            report: "rotacion",
-            format,
-            r: serializeTurnoverFilter(filter),
-            filter: filterText || "Sin filtros",
-            includeFiniquito: withFiniquito,
-            count,
-          },
-        },
-      }),
-    )
+    .then(audit)
     .catch((error) => stream.destroy(error as Error));
 
   return new NextResponse(Readable.toWeb(stream) as ReadableStream, {
-    headers: {
-      "Content-Type": CONTENT_TYPES[format],
-      "Content-Disposition": `attachment; filename="rotacion-${session.membership.companySlug}-${filter.from}-${filter.to}.${format}"`,
-      "Cache-Control": "no-store",
-    },
+    headers,
   });
 };

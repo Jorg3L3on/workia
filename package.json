@@ -38,6 +38,7 @@
     "@hookform/resolvers": "^5.9.1",
     "@modelcontextprotocol/server": "2.3.1",
     "@neondatabase/serverless": "^1.1.0",
+    "@react-pdf/renderer": "^4.9.0",
     "@t3-oss/env-nextjs": "^0.13.11",
     "@tanstack/react-table": "^8.21.3",
     "bcryptjs": "^3.0.3",

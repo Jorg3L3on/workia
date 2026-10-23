@@ -65,7 +65,6 @@ const RotacionPage = async ({ searchParams }: RotacionPageProps) => {
         primary={
           <TurnoverToolbar
             canExport={canExport}
-            canExportPdf={false}
             companyId={companyId}
             filter={filter}
             today={today}

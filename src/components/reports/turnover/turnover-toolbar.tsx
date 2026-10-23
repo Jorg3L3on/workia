@@ -52,14 +52,12 @@ export const TurnoverToolbar = ({
   today,
   views,
   canExport,
-  canExportPdf,
 }: {
   companyId: string;
   filter: TurnoverFilter;
   today: string;
   views: TurnoverViewSummary[];
   canExport: boolean;
-  canExportPdf: boolean;
 }) => {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
@@ -184,14 +182,12 @@ export const TurnoverToolbar = ({
                 CSV de las bajas
               </a>
             </DropdownMenuItem>
-            {canExportPdf ? (
-              <DropdownMenuItem asChild>
-                <a download href={exportHref("pdf")}>
-                  <FileTextIcon aria-hidden />
-                  PDF del tablero
-                </a>
-              </DropdownMenuItem>
-            ) : null}
+            <DropdownMenuItem asChild>
+              <a download href={exportHref("pdf")}>
+                <FileTextIcon aria-hidden />
+                PDF del tablero
+              </a>
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       ) : null}
