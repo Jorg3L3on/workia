@@ -35,6 +35,7 @@ export default async function AppLayout({ children }: AppLayoutProps) {
         session.permissions.has("mcp_connections:create") ||
         session.permissions.has("mcp_connections:manage")
       }
+      canReadReports={session.permissions.has("reports:read")}
       isPlatformAdmin={session.isPlatformAdmin}
     >
       {children}

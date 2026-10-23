@@ -82,13 +82,13 @@ export const loadTurnoverFacts = async (
       asc(employmentPeriods.createdAt),
     );
 
-  let previous: (typeof rows)[number] | null = null;
-
-  return rows.map((row) => {
+  return rows.map((row, index) => {
     const closed = row.fechaBaja !== null || row.bajaSinFecha;
     const hasFrozen = Object.values(row.frozen).some((value) => value !== null);
+    const previous = index > 0 ? rows[index - 1] : null;
     const samePerson = previous?.personId === row.personId;
-    const fact: TurnoverFact = {
+
+    return {
       id: row.id,
       personId: row.personId,
       personName: formatPersonName(row),
@@ -105,11 +105,8 @@ export const loadTurnoverFacts = async (
       ...(closed && hasFrozen ? row.frozen : row.current),
       firstOfPerson: !samePerson,
       previousRecontratable: samePerson ? previous!.recontratable : null,
-    };
-
-    previous = row;
-
-    return fact;
+      hasLaterPeriod: rows[index + 1]?.personId === row.personId,
+    } satisfies TurnoverFact;
   });
 };
 

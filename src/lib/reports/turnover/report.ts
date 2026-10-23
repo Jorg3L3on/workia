@@ -57,10 +57,12 @@ export type TurnoverDetailRow = {
   fechaBaja: string | null;
   days: number | null;
   tipoBaja: TurnoverFact["tipoBaja"];
+  motivoId: string | null;
   motivo: string | null;
   classification: TerminationClassification | null;
   recontratable: boolean | null;
   firstOfPerson: boolean;
+  hasLaterPeriod: boolean;
   areaId: string | null;
   siteId: string | null;
   positionId: string | null;
@@ -96,9 +98,14 @@ export type TurnoverReport = {
     inferidas: number;
     sinIngreso: number;
     requiereRevision: number;
+    /** Periods with any of the three flags, each counted once. */
+    toReview: number;
     unclassifiedReasons: number;
   };
-  /** Bajas and ingresos of the range (filled only for people:read). */
+  /**
+   * Bajas and ingresos of the range and of the trend's months (only for
+   * people:read): the drill-down filters them by what was clicked.
+   */
   detail: { exits: TurnoverDetailRow[]; hires: TurnoverDetailRow[] } | null;
 };
 
@@ -174,10 +181,12 @@ const detailRow = (fact: TurnoverFact): TurnoverDetailRow => ({
       ? daysBetween(fact.fechaIngreso, fact.fechaBaja) + 1
       : null,
   tipoBaja: fact.tipoBaja,
+  motivoId: fact.motivoId,
   motivo: fact.motivoName,
   classification: fact.fechaBaja ? exitClassification(fact) : null,
   recontratable: fact.recontratable,
   firstOfPerson: fact.firstOfPerson,
+  hasLaterPeriod: fact.hasLaterPeriod,
   areaId: fact.areaId,
   siteId: fact.siteId,
   positionId: fact.positionId,
@@ -214,6 +223,8 @@ export const buildTurnoverReport = (
     ? monthsBetween(filter.from, filter.to).length
     : (daysBetween(filter.from, filter.to) + 1) / 30.4;
   const exits = exitsIn(population, filter.from, filter.to).filter(isCounted);
+  const trendFrom = `${trendMonths[0]}-01`;
+  const detailFrom = trendFrom < filter.from ? trendFrom : filter.from;
 
   return {
     filter,
@@ -265,12 +276,20 @@ export const buildTurnoverReport = (
         .length,
       requiereRevision: population.filter((fact) => fact.requiereRevision)
         .length,
+      toReview: population.filter(
+        (fact) =>
+          fact.bajaSinFecha || fact.fechaBajaInferida || fact.requiereRevision,
+      ).length,
       unclassifiedReasons: context.unclassifiedReasons,
     },
     detail: context.withDetail
       ? {
-          exits: exits.map(detailRow),
-          hires: hiresIn(population, filter.from, filter.to).map(detailRow),
+          // The range and the trend's 12 months, so every bar, point and
+          // cohort of the dashboard can list its people.
+          exits: exitsIn(population, detailFrom, filter.to)
+            .filter(isCounted)
+            .map(detailRow),
+          hires: hiresIn(population, detailFrom, filter.to).map(detailRow),
         }
       : null,
   };

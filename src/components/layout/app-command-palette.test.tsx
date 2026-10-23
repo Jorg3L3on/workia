@@ -34,7 +34,11 @@ afterEach(() => {
 });
 
 const openPalette = (
-  access = { canReadMembers: true, canUseConnections: true },
+  access = {
+    canReadMembers: true,
+    canUseConnections: true,
+    canReadReports: true,
+  },
 ) => {
   render(<AppCommandPalette access={access} />);
   act(() => openAppCommandPalette());
@@ -64,11 +68,16 @@ describe("AppCommandPalette", () => {
     expect(labels).not.toContain("Inventario");
   });
 
-  it("hides Miembros and Conexiones without access", () => {
-    openPalette({ canReadMembers: false, canUseConnections: false });
+  it("hides Miembros, Conexiones and Rotación without access", () => {
+    openPalette({
+      canReadMembers: false,
+      canUseConnections: false,
+      canReadReports: false,
+    });
 
     expect(optionLabels()).not.toContain("Miembros");
     expect(optionLabels()).not.toContain("Conexiones");
+    expect(optionLabels()).not.toContain("Rotación");
   });
 
   it("finds people by RFC as you type and opens the expediente", async () => {

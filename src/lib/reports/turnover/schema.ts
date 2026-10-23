@@ -95,4 +95,6 @@ export type TurnoverFact = {
   firstOfPerson: boolean;
   /** recontratable of the person's period before this one. */
   previousRecontratable: boolean | null;
+  /** The person came back after this period (Personas shows the later one). */
+  hasLaterPeriod: boolean;
 };

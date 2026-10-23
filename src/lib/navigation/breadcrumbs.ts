@@ -56,6 +56,10 @@ export const resolveBreadcrumbs = (
     ];
   }
 
+  if (path === "/app/reportes/rotacion") {
+    return [{ label: "Reportes" }, { label: "Rotación" }];
+  }
+
   if (path === "/app/contratos") {
     return [{ label: "Contratos" }];
   }

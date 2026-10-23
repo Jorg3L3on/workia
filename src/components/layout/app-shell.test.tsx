@@ -53,6 +53,7 @@ const renderShell = (
   access: {
     canReadMembers?: boolean;
     canUseConnections?: boolean;
+    canReadReports?: boolean;
     isPlatformAdmin?: boolean;
   } = {},
 ) =>
@@ -198,8 +199,12 @@ describe("AppShell", () => {
     expect(headersContainBreadcrumb()).toBe(true);
   });
 
-  it("groups the sidebar into Operación, Catálogo and Empresa", () => {
-    renderShell({ canReadMembers: true, canUseConnections: true });
+  it("groups the sidebar into Operación, Reportes, Catálogo and Empresa", () => {
+    renderShell({
+      canReadMembers: true,
+      canUseConnections: true,
+      canReadReports: true,
+    });
 
     const sidebar = within(
       document.querySelector('[data-slot="sidebar"]') as HTMLElement,
@@ -216,6 +221,7 @@ describe("AppShell", () => {
       "Altas",
       "Resguardo",
     ]);
+    expect(linksIn("Reportes")).toEqual(["Rotación"]);
     expect(linksIn("Empresa")).toEqual(["Miembros", "Conexiones", "Auditoría"]);
     expect(sidebar.getByRole("button", { name: "Catálogo" })).toBeTruthy();
     expect(sidebar.queryByText("Expediente")).toBeNull();
@@ -230,6 +236,7 @@ describe("AppShell", () => {
     );
     expect(sidebar.queryByRole("link", { name: "Miembros" })).toBeNull();
     expect(sidebar.queryByRole("link", { name: "Conexiones" })).toBeNull();
+    expect(sidebar.queryByRole("link", { name: "Rotación" })).toBeNull();
     expect(sidebar.getByRole("link", { name: "Auditoría" })).toBeTruthy();
   });
 

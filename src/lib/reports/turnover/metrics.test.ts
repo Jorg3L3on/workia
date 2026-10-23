@@ -49,6 +49,7 @@ const fact = (overrides: Partial<TurnoverFact> = {}): TurnoverFact => {
     managerId: null,
     firstOfPerson: true,
     previousRecontratable: null,
+    hasLaterPeriod: false,
     ...overrides,
   };
 };
@@ -466,6 +467,37 @@ describe("dates", () => {
 });
 
 describe("buildTurnoverReport", () => {
+  it("counts each period to review once", () => {
+    const report = buildTurnoverReport(
+      [
+        ...active(5),
+        fact({ bajaSinFecha: true, requiereRevision: true }),
+        exit("2026-03-10", { fechaBajaInferida: true, requiereRevision: true }),
+      ],
+      turnoverFilterSchema.parse({ from: "2026-03-01", to: "2026-03-31" }),
+      {
+        labels: {
+          areas: {},
+          sites: {},
+          positions: {},
+          managers: {},
+          reportsOf: {},
+        },
+        goal: null,
+        today: "2026-04-15",
+        unclassifiedReasons: 0,
+        withDetail: false,
+      },
+    );
+
+    expect(report.quality).toMatchObject({
+      sinFecha: 1,
+      inferidas: 1,
+      requiereRevision: 2,
+      toReview: 2,
+    });
+  });
+
   it("puts the goal on the range and the history start on the first baja", () => {
     const report = buildTurnoverReport(
       [...active(20), exit("2026-02-10"), exit("2026-03-10")],
@@ -492,6 +524,7 @@ describe("buildTurnoverReport", () => {
     expect(report.breakdowns.area[0].label).toBe("Almacén");
     expect(report.detail?.exits).toHaveLength(2);
     expect(report.quality.unclassifiedReasons).toBe(1);
+    expect(report.quality.toReview).toBe(0);
     expect(report.trend).toHaveLength(12);
   });
 });
