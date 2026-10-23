@@ -2,14 +2,7 @@
 
 import Link from "next/link";
 import { MoreHorizontalIcon, type LucideIcon } from "lucide-react";
-import {
-  Fragment,
-  isValidElement,
-  useRef,
-  useState,
-  type ReactElement,
-  type ReactNode,
-} from "react";
+import { Fragment, Suspense, useRef, useState, type ReactNode } from "react";
 
 import {
   AlertDialog,
@@ -30,10 +23,39 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { IconButton } from "@/components/ui/icon-button";
 
+const FORWARD_REF = Symbol.for("react.forward_ref");
+const MEMO = Symbol.for("react.memo");
+
+/**
+ * Lucide icons are component types. A server header builds `<Icon />` and
+ * passes that node across the Flight boundary. In a production build the
+ * node can arrive as a lazy element (`$$typeof` react.lazy) that resolves to
+ * an element, not a component. `isValidElement` is false for that wrapper, so
+ * rendering it as `<Icon />` throws minified React error #306.
+ */
+const isIconComponent = (icon: unknown): icon is LucideIcon => {
+  if (typeof icon === "function") return true;
+  if (!icon || typeof icon !== "object" || !("$$typeof" in icon)) return false;
+
+  const type = (icon as { $$typeof?: unknown }).$$typeof;
+
+  return type === FORWARD_REF || type === MEMO;
+};
+
+const MenuIcon = ({ icon }: { icon: LucideIcon | ReactNode }) => {
+  if (!isIconComponent(icon)) {
+    return <Suspense fallback={null}>{icon}</Suspense>;
+  }
+
+  const Icon = icon;
+
+  return <Icon aria-hidden />;
+};
+
 export type RowMenuAction = {
   label: string;
-  /** A component, or an element when a server component builds the menu. */
-  icon: LucideIcon | ReactElement;
+  /** A Lucide component, or a node when a server component builds the menu. */
+  icon: LucideIcon | ReactNode;
   /** Navigates. */
   href?: string;
   /** With `href`: a file download, not a page. */
@@ -119,10 +141,9 @@ export const RowMenu = ({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="min-w-48">
           {ordered.map((item, index) => {
-            const Icon = item.icon;
             const content = (
               <>
-                {isValidElement(Icon) ? Icon : <Icon aria-hidden />}
+                <MenuIcon icon={item.icon} />
                 {item.label}
               </>
             );
