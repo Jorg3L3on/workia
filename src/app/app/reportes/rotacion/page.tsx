@@ -3,6 +3,7 @@ import { forbidden } from "next/navigation";
 
 import { PageHeader } from "@/components/layout/page-header";
 import { TurnoverDashboard } from "@/components/reports/turnover/turnover-dashboard";
+import { TurnoverToolbar } from "@/components/reports/turnover/turnover-toolbar";
 import { pageTitles } from "@/lib/brand/chrome-copy";
 import { isoToday } from "@/lib/format/date";
 import { getTurnoverReport } from "@/lib/reports/turnover";
@@ -10,6 +11,7 @@ import {
   parseTurnoverParam,
   TURNOVER_URL_PARAM,
 } from "@/lib/reports/turnover/url";
+import { listTurnoverViews } from "@/lib/reports/turnover/views";
 import { requireCompanyPage } from "@/lib/tenant/context";
 import { listTerminationReasons } from "@/lib/termination-reasons";
 
@@ -45,18 +47,31 @@ const RotacionPage = async ({ searchParams }: RotacionPageProps) => {
     (await searchParams)[TURNOVER_URL_PARAM],
     today,
   );
-  const [{ report, labels }, reasons] = await Promise.all([
+  const [{ report, labels }, reasons, views] = await Promise.all([
     getTurnoverReport(companyId, filter, {
       withDetail: permissions.has("people:read"),
       today,
     }),
     listTerminationReasons(companyId),
+    listTurnoverViews(companyId, session.user.id, today),
   ]);
+  const canExport =
+    permissions.has("people:export") && permissions.has("people:read");
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
         description="Cuánta gente se va, de dónde, por qué y cuántos no pasan la prueba de 90 días."
+        primary={
+          <TurnoverToolbar
+            canExport={canExport}
+            canExportPdf={false}
+            companyId={companyId}
+            filter={filter}
+            today={today}
+            views={views}
+          />
+        }
         title="Rotación"
       />
       <TurnoverDashboard

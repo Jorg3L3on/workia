@@ -1,4 +1,4 @@
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { and, asc, eq, isNotNull, isNull } from "drizzle-orm";
 
 import { buildChanges, recordAuditEvent } from "@/lib/audit";
 import { tdb } from "@/lib/db";
@@ -218,3 +218,39 @@ export const setTurnoverGoal = async (
 
   return { goal };
 };
+
+export type TurnoverFiniquito = {
+  periodId: string;
+  estado: "pendiente" | "pagado" | "no_aplica" | null;
+  fecha: string | null;
+  monto: number | null;
+};
+
+/**
+ * Finiquitos of the company's periods, for the export only and only with
+ * compensation:read (the caller checks it): payroll data never reaches the
+ * dashboard.
+ */
+export const loadTurnoverFiniquitos = async (
+  companyId: string,
+): Promise<TurnoverFiniquito[]> =>
+  (
+    await tdb(companyId)
+      .select({
+        periodId: employmentPeriods.id,
+        estado: employmentPeriods.finiquitoEstado,
+        fecha: employmentPeriods.finiquitoFecha,
+        monto: employmentPeriods.finiquitoMonto,
+      })
+      .from(employmentPeriods)
+      .where(
+        withTenant(
+          employmentPeriods,
+          companyId,
+          isNotNull(employmentPeriods.finiquitoEstado),
+        ),
+      )
+  ).map((row) => ({
+    ...row,
+    monto: row.monto === null ? null : Number(row.monto),
+  }));
