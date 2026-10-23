@@ -17,6 +17,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   "not-found": "El registro ya no existe en esta empresa.",
   "termination-reason-in-use":
     "Ese motivo ya se usó en una baja: desactívalo en lugar de eliminarlo.",
+  "termination-reason-classification":
+    "Elige si el motivo es voluntario, involuntario u otro.",
   "termination-reasons-forbidden":
     "No tienes permiso para editar los motivos de baja.",
 };

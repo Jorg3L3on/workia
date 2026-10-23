@@ -39,3 +39,21 @@ describe("people import/export permissions", () => {
     }
   });
 });
+
+describe("reports permission", () => {
+  it("is granted to super_admin and admin only", async () => {
+    const { PERMISSIONS, ROLES } = await import("@/lib/db/schema/types");
+
+    expect(PERMISSIONS.map((permission) => permission.slug)).toContain(
+      "reports:read",
+    );
+
+    for (const role of ROLES) {
+      const permissions: readonly string[] = role.permissions;
+
+      expect(permissions.includes("reports:read")).toBe(
+        ["super_admin", "admin"].includes(role.slug),
+      );
+    }
+  });
+});

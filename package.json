@@ -20,6 +20,7 @@
     "db:seed": "tsx scripts/seed.ts",
     "db:cleanup-borrados": "tsx scripts/cleanup-borrados-residue.ts",
     "db:backfill-employment-periods": "tsx scripts/backfill-employment-periods.ts",
+    "db:backfill-turnover-dimensions": "tsx scripts/backfill-turnover-dimensions.ts",
     "db:report-identity-duplicates": "tsx scripts/report-identity-duplicates.ts",
     "import:budgets": "NODE_OPTIONS=--expose-gc tsx scripts/measure-import-budgets.ts",
     "db:migrate": "tsx scripts/db-migrate.ts",

@@ -9,6 +9,7 @@ describe("permissionLabel", () => {
       "Gestionar conexiones",
     );
     expect(permissionLabel("payroll:approve")).toBe("Aprobar altas de Nóminas");
+    expect(permissionLabel("reports:read")).toBe("Leer reportes");
   });
 
   it("returns an unknown slug unchanged", () => {

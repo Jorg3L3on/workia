@@ -46,6 +46,7 @@ import { backfillEmploymentPeriods } from "@/lib/people/employment-backfill";
 import { getPersonEmploymentMenuData } from "@/lib/people/employment-menu";
 import type { PersonFormValues } from "@/lib/people/schema";
 import {
+  countUnclassifiedTerminationReasons,
   createTerminationReason,
   ensureTerminationReasons,
   getTerminationReasonById,
@@ -163,7 +164,9 @@ describe("motivos de baja catalog", () => {
     const names = (await listTerminationReasons(a.companyId)).map(
       (reason) => reason.name,
     );
-    expect([...names].sort()).toEqual([...TERMINATION_REASON_SEED].sort());
+    expect([...names].sort()).toEqual(
+      TERMINATION_REASON_SEED.map((reason) => reason.name).sort(),
+    );
     await ensureTerminationReasons(a.companyId);
     expect(await listTerminationReasons(a.companyId)).toHaveLength(
       TERMINATION_REASON_SEED.length,
@@ -174,13 +177,21 @@ describe("motivos de baja catalog", () => {
   it("renames, deactivates and refuses to delete a motivo in use", async () => {
     const created = await createTerminationReason(
       a.companyId,
-      { name: "Cierre de sucursal", active: true },
+      {
+        name: "Cierre de sucursal",
+        classification: "involuntaria",
+        active: true,
+      },
       a.admin.id,
     );
     await expect(
       createTerminationReason(
         a.companyId,
-        { name: "cierre de sucursal", active: true },
+        {
+          name: "cierre de sucursal",
+          classification: "involuntaria",
+          active: true,
+        },
         a.admin.id,
       ),
     ).rejects.toMatchObject({ name: "DuplicateNameError" });
@@ -213,12 +224,85 @@ describe("motivos de baja catalog", () => {
     ).toMatchObject({ id: created.id });
     expect((await reasonRow(created.id)).deletedAt).not.toBeNull();
   });
+
+  it("classifies reasons: required to create, kept on edit, counted while missing", async () => {
+    const seeded = await listTerminationReasons(a.companyId);
+    expect(
+      seeded.find((reason) => reason.name === "No aprobó el periodo de prueba")
+        ?.classification,
+    ).toBe("involuntaria");
+    expect(seeded.every((reason) => reason.classification !== null)).toBe(true);
+
+    await expect(
+      createTerminationReason(
+        a.companyId,
+        { name: "Sin clasificación", active: true },
+        a.admin.id,
+      ),
+    ).rejects.toMatchObject({ name: "TerminationReasonClassificationError" });
+
+    // A reason from before migration 0027 that nobody classified yet.
+    const [legacy] = await ownerDb
+      .insert(terminationReasons)
+      .values({ companyId: a.companyId, name: "Motivo heredado" })
+      .returning();
+    expect(await countUnclassifiedTerminationReasons(a.companyId)).toBe(1);
+    expect(await countUnclassifiedTerminationReasons(b.companyId)).toBe(0);
+
+    // Editing only its status keeps it sin clasificar; choosing one sticks.
+    await updateTerminationReason(
+      a.companyId,
+      legacy.id,
+      { name: legacy.name, active: false },
+      a.admin.id,
+    );
+    expect((await reasonRow(legacy.id)).classification).toBeNull();
+    await updateTerminationReason(
+      a.companyId,
+      legacy.id,
+      { name: legacy.name, classification: "voluntaria", active: true },
+      a.admin.id,
+    );
+    expect((await reasonRow(legacy.id)).classification).toBe("voluntaria");
+    expect(await countUnclassifiedTerminationReasons(a.companyId)).toBe(0);
+    await updateTerminationReason(
+      a.companyId,
+      legacy.id,
+      { name: legacy.name, active: true },
+      a.admin.id,
+    );
+    expect((await reasonRow(legacy.id)).classification).toBe("voluntaria");
+
+    const events = await ownerDb
+      .select({ payload: auditEvents.payload })
+      .from(auditEvents)
+      .where(
+        and(
+          eq(auditEvents.resourceType, "termination_reason"),
+          eq(auditEvents.resourceId, legacy.id),
+        ),
+      );
+    expect(
+      events.some(
+        (event) =>
+          (event.payload as { changes?: Record<string, unknown> }).changes
+            ?.classification,
+      ),
+    ).toBe(true);
+  });
 });
 
 describe("employment periods stay inside the company", () => {
   it("lib:termination-reasons/ensureTerminationReasons", async () => {
     await ensureTerminationReasons(b.companyId);
     noLeakOf(await listTerminationReasons(b.companyId));
+  });
+
+  it("lib:termination-reasons/countUnclassifiedTerminationReasons", async () => {
+    await ownerDb
+      .insert(terminationReasons)
+      .values({ companyId: a.companyId, name: "Sólo de A sin clasificar" });
+    expect(await countUnclassifiedTerminationReasons(b.companyId)).toBe(0);
   });
 
   it("lib:termination-reasons/listTerminationReasons", async () => {
@@ -238,7 +322,7 @@ describe("employment periods stay inside the company", () => {
   it("lib:termination-reasons/createTerminationReason", async () => {
     const created = await createTerminationReason(
       b.companyId,
-      { name: reasonA.name + " B", active: true },
+      { name: reasonA.name + " B", classification: "otra", active: true },
       b.admin.id,
     );
     expect(created.companyId).toBe(b.companyId);
@@ -853,6 +937,11 @@ describe("importing people (Iniciativa 2 hook)", () => {
             apellidoPaterno: "Baja",
             fechaIngreso: "2020-02-01",
             estatus: "Baja",
+            // A baja always carries its data (WRK-I12).
+            fechaBaja: "2024-05-31",
+            tipoBaja: "Voluntaria",
+            motivoBaja: reasonA.name,
+            recontratable: "Sí",
           },
         },
       ],
@@ -885,8 +974,9 @@ describe("importing people (Iniciativa 2 hook)", () => {
     expect(byName.get("Baja")!.status).toBe("baja");
     expect((await periodsOf(byName.get("Baja")!.id))[0]).toMatchObject({
       fechaIngreso: "2020-02-01",
-      bajaSinFecha: true,
-      requiereRevision: true,
+      fechaBaja: "2024-05-31",
+      motivoBajaId: reasonA.id,
+      bajaSinFecha: false,
     });
   });
 });

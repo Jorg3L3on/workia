@@ -50,7 +50,7 @@ export const ensureTerminationReasons = async (
 
   await executor
     .insert(terminationReasons)
-    .values(TERMINATION_REASON_SEED.map((name) => ({ companyId, name })))
+    .values(TERMINATION_REASON_SEED.map((reason) => ({ companyId, ...reason })))
     .onConflictDoNothing();
 };
 
@@ -72,6 +72,28 @@ export const listTerminationReasons = async (
       ),
     )
     .orderBy(asc(terminationReasons.name));
+};
+
+/**
+ * Live reasons nobody classified yet (created before migration 0027): the
+ * turnover report counts them as «otra» and warns about them.
+ */
+export const countUnclassifiedTerminationReasons = async (
+  companyId: string,
+) => {
+  const [row] = await tdb(companyId)
+    .select({ total: count() })
+    .from(terminationReasons)
+    .where(
+      withTenant(
+        terminationReasons,
+        companyId,
+        isNull(terminationReasons.deletedAt),
+        isNull(terminationReasons.classification),
+      ),
+    );
+
+  return row?.total ?? 0;
 };
 
 /** Reasons with how many bajas (employment periods) use each one. */
@@ -115,16 +137,32 @@ export const getTerminationReasonById = async (
 
 const DUPLICATE = "Ya existe un motivo de baja activo con ese nombre.";
 
+export class TerminationReasonClassificationError extends Error {
+  constructor() {
+    super("Elige si el motivo es voluntario, involuntario u otro.");
+    this.name = "TerminationReasonClassificationError";
+  }
+}
+
 export const createTerminationReason = async (
   companyId: string,
   input: TerminationReasonFormValues,
   actorUserId?: string | null,
 ) => {
+  if (!input.classification) {
+    throw new TerminationReasonClassificationError();
+  }
+
   await ensureTerminationReasons(companyId);
 
   const [created] = await tdb(companyId)
     .insert(terminationReasons)
-    .values({ companyId, name: input.name, active: input.active })
+    .values({
+      companyId,
+      name: input.name,
+      classification: input.classification,
+      active: input.active,
+    })
     .returning()
     .catch(rethrowDuplicate(DUPLICATE));
 
@@ -143,7 +181,11 @@ export const createTerminationReason = async (
   return created;
 };
 
-/** Rename or (de)activate; a past baja keeps pointing at it either way. */
+/**
+ * Rename, reclassify or (de)activate; a past baja keeps pointing at it either
+ * way, and the turnover report reads the classification it has now.
+ * A classified reason cannot go back to «sin clasificar».
+ */
 export const updateTerminationReason = async (
   companyId: string,
   id: string,
@@ -158,7 +200,11 @@ export const updateTerminationReason = async (
 
   const [updated] = await tdb(companyId)
     .update(terminationReasons)
-    .set({ name: input.name, active: input.active })
+    .set({
+      name: input.name,
+      active: input.active,
+      classification: input.classification ?? existing.classification,
+    })
     .where(
       withTenant(terminationReasons, companyId, eq(terminationReasons.id, id)),
     )
@@ -181,7 +227,11 @@ export const updateTerminationReason = async (
     payload: {
       before,
       after,
-      changes: buildChanges(before, after, ["name", "active"]),
+      changes: buildChanges(before, after, [
+        "name",
+        "classification",
+        "active",
+      ]),
       summary: `Motivo de baja editado: ${updated.name}`,
     },
   });

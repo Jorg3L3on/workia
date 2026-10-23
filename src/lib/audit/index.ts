@@ -312,6 +312,7 @@ export const snapshotSite = (site: Record<string, unknown>) => ({
 
 export const snapshotTerminationReason = (reason: Record<string, unknown>) => ({
   name: reason.name,
+  classification: reason.classification ?? null,
   active: reason.active,
   deletedAt: reason.deletedAt,
 });

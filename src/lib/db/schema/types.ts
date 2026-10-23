@@ -26,7 +26,8 @@ export type PermissionResource =
   | "members"
   | "mcp_connections"
   | "compensation"
-  | "payroll";
+  | "payroll"
+  | "reports";
 
 export type PermissionSlug = `${PermissionResource}:${PermissionAction}`;
 
@@ -405,6 +406,14 @@ export const PERMISSIONS: Array<{
       "Give Payroll's approval to a hiring (alta) after HR approved it",
   },
   {
+    slug: "reports:read",
+    name: "Read Reports",
+    resource: "reports",
+    action: "read",
+    description:
+      "See the company reports (turnover: bajas, motivos and the 90-day trial)",
+  },
+  {
     slug: "companies:read",
     name: "Read Companies",
     resource: "companies",
@@ -501,6 +510,7 @@ export const ROLES = [
       "mcp_connections:manage",
       "compensation:read",
       "payroll:approve",
+      "reports:read",
     ] satisfies PermissionSlug[],
   },
   {

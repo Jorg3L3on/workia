@@ -135,6 +135,7 @@ export const auditFieldLabels: Record<string, string> = {
   finiquitoFecha: "Fecha del finiquito",
   finiquitoMonto: "Monto del finiquito",
   endDate: "Fin",
+  classification: "Clasificación",
 };
 
 /**

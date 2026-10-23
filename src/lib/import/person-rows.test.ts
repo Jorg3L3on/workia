@@ -500,13 +500,15 @@ describe("baja columns", () => {
       lookupsOf(),
     );
 
-    expect(bare.action).toBe("create");
+    // A baja without its motivo is refused (WRK-I12).
+    expect(bare.action).toBe("error");
     expect(bare.errors).toEqual([
       expect.objectContaining({
-        severity: "warning",
-        message: expect.stringContaining("«sin fecha»"),
+        field: "motivoBaja",
+        message: expect.stringContaining("Motivo de baja"),
       }),
     ]);
+    expect(bare.errors[0]).not.toHaveProperty("severity", "warning");
   });
 
   it("asks for the missing baja columns, recontratable included", () => {
