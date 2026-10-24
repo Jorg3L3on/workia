@@ -29,6 +29,7 @@ const resourceLabels: Record<string, string> = {
   people: "personas",
   permissions: "permisos",
   positions: "puestos",
+  reports: "reportes",
   roles: "roles",
   settings: "configuración",
   sites: "sucursales",

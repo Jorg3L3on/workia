@@ -12,6 +12,7 @@ import { requireTerminationReasonsManage } from "./auth";
 import {
   createTerminationReason,
   softDeleteTerminationReason,
+  TerminationReasonClassificationError,
   TerminationReasonInUseError,
   updateTerminationReason,
 } from "./index";
@@ -30,6 +31,8 @@ const back: (query: Record<string, string>) => never = (query) =>
 const parseReasonForm = (formData: FormData) =>
   terminationReasonFormSchema.safeParse({
     name: String(formData.get("name") ?? ""),
+    // An empty select keeps a reason from before migration 0027 sin clasificar.
+    classification: String(formData.get("classification") ?? "") || null,
     active:
       formData.get("active") === null
         ? true
@@ -72,7 +75,13 @@ export const createTerminationReasonAction = async (formData: FormData) => {
   }
 
   await createTerminationReason(companyId, parsed.data, session.user.id).catch(
-    onDuplicate,
+    (error: unknown) => {
+      if (error instanceof TerminationReasonClassificationError) {
+        back({ error: "termination-reason-classification" });
+      }
+
+      return onDuplicate(error);
+    },
   );
   revalidateReasons();
   back({ saved: "termination-reason" });

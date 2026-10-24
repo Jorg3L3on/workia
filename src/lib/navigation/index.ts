@@ -1,4 +1,5 @@
 import {
+  ChartLineIcon,
   FileTextIcon,
   FolderTreeIcon,
   HomeIcon,
@@ -24,6 +25,7 @@ import { CATALOG_NAV_CHILDREN, CATALOG_PATHS } from "@/lib/catalog/paths";
 export type NavAccess = {
   canReadMembers: boolean;
   canUseConnections: boolean;
+  canReadReports: boolean;
 };
 
 export type NavLink = {
@@ -80,6 +82,18 @@ export const NAV_GROUPS: readonly NavGroup[] = [
         href: "/app/resguardo",
         icon: LaptopIcon,
         keywords: ["activos", "equipo"],
+      },
+    ],
+  },
+  {
+    label: "Reportes",
+    items: [
+      {
+        title: "Rotación",
+        href: "/app/reportes/rotacion",
+        icon: ChartLineIcon,
+        keywords: ["bajas", "rotación", "prueba", "90 días", "motivos"],
+        requires: "canReadReports",
       },
     ],
   },

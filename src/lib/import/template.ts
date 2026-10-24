@@ -219,7 +219,7 @@ const instructionRows = (maxDate: string): InstructionRow[] => {
       "Para dar de baja: Estatus Baja, Fecha de baja, Tipo de baja, Motivo de baja y Recontratable (el Comentario es opcional). Se cierra el periodo laboral vigente y el contrato vigente queda «Terminado», igual que al dar de baja en Workia.",
     ),
     text(
-      "Si escribes solo Estatus Baja, la baja queda «sin fecha» y marcada para revisión en el expediente; la revisión de la importación te lo avisa en la fila.",
+      "Toda baja lleva su motivo: una fila con Estatus Baja sin Fecha, Tipo, Motivo y Recontratable se rechaza. Para cargar bajas pasadas (el historial del reporte de rotación), escribe una fila por persona con su última baja.",
     ),
     text(
       "Para corregir una baja ya registrada, cambia esas columnas en la fila de la persona. Una celda vacía no borra lo guardado.",

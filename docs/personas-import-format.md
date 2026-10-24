@@ -115,9 +115,14 @@ employment period:
   must all be known (in the row or already stored); the error names the
   missing ones. The fecha de baja cannot be before the fecha de ingreso, and
   the fecha de ingreso of someone de baja cannot move after the baja.
-- **Estatus Baja without baja columns** on someone active keeps the old
-  behaviour: the open period closes «sin fecha» and is marked for review
-  (`requiere_revision`). The row gets a warning, not an error.
+- **Estatus Baja without baja columns** on someone active (or a new person)
+  is an error: a baja always carries its motivo (WRK-I12, decision 088ddeff),
+  so the import no longer closes periods «sin fecha». Bajas «sin fecha» left
+  by the backfill are completed by writing the baja columns on their row.
+- **Past bajas for the turnover report:** one row per person with their last
+  baja (Estatus Baja plus the four columns) creates the person already de
+  baja with a dated, closed period. Earlier periods of a rehired person
+  cannot be loaded this way (one row per person).
 - Baja columns with Estatus Activa (or blank on someone active) are an error:
   write Baja or clear them.
 - **Motivo de baja** is matched by name (case and accents ignored) among the

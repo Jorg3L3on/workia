@@ -54,6 +54,8 @@ type AppShellProps = {
   canReadMembers?: boolean;
   /** mcp_connections:create or :manage in the active company: shows Conexiones. */
   canUseConnections?: boolean;
+  /** reports:read in the active company: shows Reportes. */
+  canReadReports?: boolean;
   /** Platform admins also get a link to the platform console. */
   isPlatformAdmin?: boolean;
   user: {
@@ -70,9 +72,10 @@ export const AppShell = ({
   companies,
   canReadMembers = false,
   canUseConnections = false,
+  canReadReports = false,
   isPlatformAdmin = false,
 }: AppShellProps) => {
-  const access = { canReadMembers, canUseConnections };
+  const access = { canReadMembers, canUseConnections, canReadReports };
   const groups = visibleNavGroups(access);
   const initials = (user.name ?? "RRHH")
     .split(" ")

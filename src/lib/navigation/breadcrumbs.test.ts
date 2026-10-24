@@ -29,6 +29,13 @@ describe("resolveBreadcrumbs", () => {
     ]);
   });
 
+  it("puts Rotación under Reportes", () => {
+    expect(resolveBreadcrumbs("/app/reportes/rotacion")).toEqual([
+      { label: "Reportes" },
+      { label: "Rotación" },
+    ]);
+  });
+
   it("nests a resguardo asset under Resguardo", () => {
     expect(
       resolveBreadcrumbs(

@@ -175,7 +175,7 @@ beforeAll(async () => {
   reasons = await listTerminationReasons(a.companyId, { activeOnly: true });
   onlyInB = await createTerminationReason(
     b.companyId,
-    { name: "Motivo solo de B", active: true },
+    { name: "Motivo solo de B", classification: "otra", active: true },
     b.admin.id,
   );
 });
@@ -335,34 +335,24 @@ describe("a baja with its data", () => {
 });
 
 describe("a baja without its data", () => {
-  it("keeps the «sin fecha» period for review with a warning, and undo reopens it", async () => {
-    const person = await newPerson("SinFecha");
+  it("is refused: a baja always carries its motivo (WRK-I12)", async () => {
+    const person = await newPerson("SinMotivo");
     const job = await stage([rowOf(person, { estatus: "Baja" })]);
     const [row] = await validateAll(job.id);
 
-    expect(row.action).toBe("update");
+    expect(row.action).toBe("error");
     expect(row.errors).toEqual([
       expect.objectContaining({
-        severity: "warning",
-        message: expect.stringContaining("«sin fecha»"),
+        field: "motivoBaja",
+        message: expect.stringContaining("Motivo de baja"),
       }),
     ]);
 
     await applyAll(job.id);
 
-    expect(await periodsOf(person.id)).toEqual([
-      expect.objectContaining({
-        fechaBaja: null,
-        bajaSinFecha: true,
-        requiereRevision: true,
-      }),
-    ]);
-
-    await undoAll(job.id);
-
     expect((await personRow(person.id)).status).toBe("activa");
     expect(await periodsOf(person.id)).toEqual([
-      expect.objectContaining({ bajaSinFecha: false, requiereRevision: false }),
+      expect.objectContaining({ fechaBaja: null, bajaSinFecha: false }),
     ]);
   });
 
@@ -557,10 +547,15 @@ describe("round trip", () => {
       a.admin.id,
     );
 
-    const sinFechaJob = await stage([rowOf(sinFecha, { estatus: "Baja" })]);
-
-    await validateAll(sinFechaJob.id);
-    await applyAll(sinFechaJob.id);
+    // A baja «sin fecha» from the backfill (the import no longer makes them).
+    await ownerDb
+      .update(people)
+      .set({ status: "baja" })
+      .where(eq(people.id, sinFecha.id));
+    await ownerDb
+      .update(employmentPeriods)
+      .set({ bajaSinFecha: true, requiereRevision: true })
+      .where(eq(employmentPeriods.personId, sinFecha.id));
 
     const stream = new PassThrough();
     const chunks: Buffer[] = [];

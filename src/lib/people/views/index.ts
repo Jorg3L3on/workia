@@ -89,6 +89,9 @@ const toSummary = (
 const visibleTo = (actor: PeopleViewActor) =>
   or(eq(peopleViews.ownerUserId, actor.userId), eq(peopleViews.shared, true));
 
+/** Views of the Personas list only: the turnover report keeps its own (0027). */
+const ofPersonas = eq(peopleViews.kind, "people");
+
 /** The actor's views first, then the shared ones of others; by name. */
 export const listPeopleViews = async (
   companyId: string,
@@ -98,7 +101,7 @@ export const listPeopleViews = async (
     .select(viewSelection)
     .from(peopleViews)
     .leftJoin(users, eq(peopleViews.ownerUserId, users.id))
-    .where(withTenant(peopleViews, companyId, visibleTo(actor)))
+    .where(withTenant(peopleViews, companyId, ofPersonas, visibleTo(actor)))
     .orderBy(
       desc(eq(peopleViews.ownerUserId, actor.userId)),
       asc(peopleViews.name),
@@ -122,6 +125,7 @@ export const getPeopleView = async (
       withTenant(
         peopleViews,
         companyId,
+        ofPersonas,
         eq(peopleViews.id, viewId),
         visibleTo(actor),
       ),
@@ -157,6 +161,7 @@ export const createPeopleView = async (
       withTenant(
         peopleViews,
         companyId,
+        ofPersonas,
         eq(peopleViews.ownerUserId, actor.userId),
       ),
     );
@@ -187,6 +192,7 @@ export const updatePeopleView = async (
       withTenant(
         peopleViews,
         companyId,
+        ofPersonas,
         eq(peopleViews.id, viewId),
         eq(peopleViews.ownerUserId, actor.userId),
       ),
@@ -206,7 +212,12 @@ export const deletePeopleView = async (
     .delete(peopleViews)
     .where(
       and(
-        withTenant(peopleViews, companyId, eq(peopleViews.id, viewId)),
+        withTenant(
+          peopleViews,
+          companyId,
+          ofPersonas,
+          eq(peopleViews.id, viewId),
+        ),
         eq(peopleViews.ownerUserId, actor.userId),
       ),
     )

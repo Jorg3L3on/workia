@@ -246,7 +246,7 @@ export const IMPORT_COLUMNS: Record<ImportSheetKey, ImportColumn[]> = {
       aliases: ["motivo", "motivo_baja", "motivo de salida"],
       kind: "list",
       catalog: "terminationReasons",
-      help: "Solo con Estatus Baja. Nombre exacto de un motivo activo del catálogo (Catálogo > Motivos de baja).",
+      help: "Obligatorio con Estatus Baja. Nombre exacto de un motivo activo del catálogo (Catálogo > Motivos de baja).",
       width: 30,
     },
     {
