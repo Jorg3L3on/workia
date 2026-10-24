@@ -226,3 +226,47 @@ export const backfillEmploymentPeriods = async (
     // One company also works under row-level security; every company needs
     // the owner connection (as db:migrate), which the script uses.
   }, options.companyId);
+
+/**
+ * Backfill of the dimensions a closed period keeps (WRK-I12, migration 0027):
+ * área, sucursal, puesto and jefe, taken from the person as they are now, for
+ * closed periods (with a fecha de baja or «sin fecha») that have none yet.
+ * Periods closed after 0027 got them from the domain. Idempotent: a period
+ * whose values already match is left alone. Dry run unless `apply`.
+ */
+export const backfillTurnoverDimensions = async (
+  options: { apply?: boolean; companyId?: string } = {},
+): Promise<{ periods: number; applied: boolean }> =>
+  withTransaction(async (tx) => {
+    const pending = sql`
+      ep.company_id = p.company_id and ep.person_id = p.id
+      and (ep.fecha_baja is not null or ep.baja_sin_fecha)
+      and ep.area_id is null and ep.site_id is null
+      and ep.position_id is null and ep.manager_id is null
+      and (p.area_id, p.site_id, p.position_id, p.manager_id)
+        is distinct from (null::uuid, null::uuid, null::uuid, null::uuid)
+      ${options.companyId ? sql`and ep.company_id = ${options.companyId}` : sql``}
+    `;
+
+    if (!options.apply) {
+      const [row] = (
+        await tx.execute<{ total: number }>(sql`
+          select count(*)::int as total
+          from ${employmentPeriods} ep, ${people} p
+          where ${pending}
+        `)
+      ).rows;
+
+      return { periods: row?.total ?? 0, applied: false };
+    }
+
+    const updated = await tx.execute(sql`
+      update ${employmentPeriods} ep
+      set area_id = p.area_id, site_id = p.site_id,
+        position_id = p.position_id, manager_id = p.manager_id
+      from ${people} p
+      where ${pending}
+    `);
+
+    return { periods: updated.rowCount ?? 0, applied: true };
+  }, options.companyId);

@@ -444,8 +444,9 @@ const BAJA_COLUMNS = [
  *   corrects the last baja of someone already de baja. Fecha, Tipo, Motivo
  *   and Recontratable are then all needed (stored values count); a new
  *   motivo must be active, a stored one may have been deactivated since.
- * - Estatus Baja without them keeps the old behaviour: the period closes
- *   «sin fecha» for review, with a warning on the row.
+ * - Estatus Baja without them on someone active is an error: a baja always
+ *   carries its motivo (WRK-I12), so the import no longer closes periods
+ *   «sin fecha».
  * - «Fecha de antigüedad» becomes the open period's recognized seniority
  *   only when it differs from the fecha de ingreso (and from what it already
  *   counts from).
@@ -476,11 +477,11 @@ export const planEmployment = (
         "Fecha de baja, Tipo de baja, Motivo de baja, Comentario de baja y Recontratable solo aplican con Estatus Baja. Escribe Baja en Estatus o borra esas celdas.",
     });
   } else if (becomesBaja && !baja) {
+    // A baja always carries its motivo (WRK-I12, decision 088ddeff).
     plan.errors.push({
-      field: "fechaBaja",
-      severity: "warning",
+      field: "motivoBaja",
       message:
-        "Baja sin fecha: el periodo laboral se cierra «sin fecha» y queda para revisión. Para registrar la baja completa escribe Fecha de baja, Tipo de baja, Motivo de baja y Recontratable.",
+        "Para dar de baja falta Fecha de baja, Tipo de baja, Motivo de baja, Recontratable. Llena esas columnas o cambia el Estatus.",
     });
   } else if (baja) {
     const merged = {

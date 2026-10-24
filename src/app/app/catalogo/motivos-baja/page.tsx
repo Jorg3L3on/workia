@@ -41,6 +41,7 @@ const MotivosBajaCatalogPage = async ({
         id: reason.id,
         name: reason.name,
         active: reason.active,
+        classification: reason.classification,
         useCount: reason.useCount,
         references: [{ count: reason.useCount, one: "baja", many: "bajas" }],
       }))}

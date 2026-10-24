@@ -18,6 +18,7 @@ export const AUDIT_RESOURCE_TYPES = [
   "mcp_settings",
   "onboarding",
   "termination_reason",
+  "report_export",
 ] as const;
 
 export type AuditResourceType = (typeof AUDIT_RESOURCE_TYPES)[number];
@@ -97,6 +98,7 @@ export const auditResourceTypeLabels: Record<AuditResourceType, string> = {
   mcp_settings: "Escrituras del conector (MCP)",
   onboarding: "Alta (RH → Nóminas)",
   termination_reason: "Motivo de baja",
+  report_export: "Exportación de reporte",
 };
 
 export const AUDIT_SOURCES = [
@@ -135,6 +137,7 @@ export const auditFieldLabels: Record<string, string> = {
   finiquitoFecha: "Fecha del finiquito",
   finiquitoMonto: "Monto del finiquito",
   endDate: "Fin",
+  classification: "Clasificación",
 };
 
 /**

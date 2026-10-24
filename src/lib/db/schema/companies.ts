@@ -1,7 +1,9 @@
 import { relations, sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   index,
+  numeric,
   pgEnum,
   pgTable,
   text,
@@ -38,6 +40,8 @@ export const companies = pgTable(
     rfc: text("rfc"),
     slug: text("slug").notNull(),
     status: companyStatusEnum("status").notNull().default("activa"),
+    /** Monthly turnover goal in % (migration 0027); no goal, no goal line. */
+    turnoverGoalPct: numeric("turnover_goal_pct", { precision: 5, scale: 2 }),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
@@ -47,7 +51,13 @@ export const companies = pgTable(
       .notNull()
       .$onUpdate(() => new Date()),
   },
-  (table) => [uniqueIndex("companies_slug_unique").on(table.slug)],
+  (table) => [
+    uniqueIndex("companies_slug_unique").on(table.slug),
+    check(
+      "companies_turnover_goal_pct_check",
+      sql`${table.turnoverGoalPct} IS NULL OR (${table.turnoverGoalPct} > 0 AND ${table.turnoverGoalPct} <= 100)`,
+    ),
+  ],
 );
 
 /** A user's access to one company, with the role they have there. */

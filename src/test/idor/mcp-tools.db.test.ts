@@ -485,7 +485,7 @@ describe("catalog", () => {
   it("mcp:list_termination_reasons", async () => {
     const reason = await createTerminationReason(
       a.companyId,
-      { name: "Motivo MCP A", active: true },
+      { name: "Motivo MCP A", classification: "otra", active: true },
       a.admin.id,
     );
 

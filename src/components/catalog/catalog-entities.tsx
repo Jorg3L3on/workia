@@ -39,11 +39,16 @@ import {
   updateSiteAction,
 } from "@/lib/sites/actions";
 import { SITE_KINDS, siteKindLabels } from "@/lib/sites/schema";
+import type { TerminationClassification } from "@/lib/db/schema/employment";
 import {
   createTerminationReasonAction,
   deleteTerminationReasonAction,
   updateTerminationReasonAction,
 } from "@/lib/termination-reasons/actions";
+import {
+  TERMINATION_CLASSIFICATIONS,
+  terminationClassificationLabels,
+} from "@/lib/termination-reasons/schema";
 
 type Option = { id: string; name: string };
 
@@ -483,11 +488,23 @@ export const RegionesCatalog = (props: EntityProps<RegionCatalogRow>) => {
 
 // ── Motivos de baja ────────────────────────────────────────────────────
 
-export type MotivoBajaCatalogRow = CatalogRowBase & { useCount: number };
+export type MotivoBajaCatalogRow = CatalogRowBase & {
+  useCount: number;
+  /** Null: created before migration 0027 and not classified yet. */
+  classification: TerminationClassification | null;
+};
+
+const classificationLabel = (
+  classification: TerminationClassification | null,
+) =>
+  classification
+    ? terminationClassificationLabels[classification]
+    : "Sin clasificar";
 
 /**
  * Motivos de baja (Iniciativa 2): the company's own list over a seeded base.
  * One already used in a baja can be renamed or deactivated, not deleted.
+ * Its classification (WRK-I12) splits the turnover report by who decided.
  */
 export const MotivosBajaCatalog = (
   props: EntityProps<MotivoBajaCatalogRow>,
@@ -504,6 +521,17 @@ export const MotivosBajaCatalog = (
     status: MASCULINE_STATUS,
     columns: [
       {
+        id: "classification",
+        header: "Clasificación",
+        accessor: (row) => classificationLabel(row.classification),
+        cell: (row) =>
+          row.classification ? (
+            classificationLabel(row.classification)
+          ) : (
+            <Tag>Sin clasificar</Tag>
+          ),
+      },
+      {
         id: "uses",
         header: "Bajas",
         accessor: (row) => row.useCount,
@@ -516,13 +544,33 @@ export const MotivosBajaCatalog = (
           ),
       },
     ],
-    mobileSubtitle: (row) => plural(row.useCount, "baja", "bajas"),
+    mobileSubtitle: (row) =>
+      `${classificationLabel(row.classification)} · ${plural(row.useCount, "baja", "bajas")}`,
     fields: (row) => (
       <>
         <NameField
           defaultValue={row?.name}
           placeholder="Ej. Renuncia voluntaria"
         />
+        <div className="space-y-2">
+          <Label htmlFor="catalog-classification">Clasificación</Label>
+          <FormSelect
+            defaultValue={row?.classification ?? ""}
+            id="catalog-classification"
+            name="classification"
+            options={TERMINATION_CLASSIFICATIONS.map((classification) => ({
+              value: classification,
+              label: terminationClassificationLabels[classification],
+            }))}
+            placeholder="Elige quién decidió la baja"
+            required
+            variant="field"
+          />
+          <p className="text-muted-foreground text-xs">
+            Voluntaria: decide la persona. Involuntaria: decide la empresa.
+            Otra: jubilación, fallecimiento.
+          </p>
+        </div>
         <CatalogStatusField
           defaultActive={row?.active ?? true}
           label="Activo"
@@ -531,7 +579,12 @@ export const MotivosBajaCatalog = (
     ),
     createAction: createTerminationReasonAction,
     updateAction: (id) => updateTerminationReasonAction.bind(null, id),
-    keepFields: (row) => <Hidden name="name" value={row.name} />,
+    keepFields: (row) => (
+      <>
+        <Hidden name="name" value={row.name} />
+        <Hidden name="classification" value={row.classification ?? ""} />
+      </>
+    ),
     deleteAction: (id) => deleteTerminationReasonAction.bind(null, id),
   };
 

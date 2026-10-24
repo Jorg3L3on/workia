@@ -250,6 +250,10 @@ export const syncEmploymentPeriods = async (
       id: people.id,
       status: people.status,
       fechaIngreso: people.fechaIngreso,
+      areaId: people.areaId,
+      siteId: people.siteId,
+      positionId: people.positionId,
+      managerId: people.managerId,
     })
     .from(people)
     .where(withTenant(people, companyId, inArray(people.id, personIds)));
@@ -292,6 +296,7 @@ export const syncEmploymentPeriods = async (
         fechaAntiguedad: person.fechaIngreso,
         bajaSinFecha: true,
         requiereRevision: true,
+        ...frozenDimensions(person),
         createdBy: actorUserId ?? null,
       });
       firstPeriodOf.push(person.id);
@@ -301,7 +306,11 @@ export const syncEmploymentPeriods = async (
     if (person.status === "baja" && open) {
       await tx
         .update(employmentPeriods)
-        .set({ bajaSinFecha: true, requiereRevision: true })
+        .set({
+          bajaSinFecha: true,
+          requiereRevision: true,
+          ...frozenDimensions(person),
+        })
         .where(
           withTenant(
             employmentPeriods,
@@ -383,6 +392,23 @@ const lockPerson = async (tx: DbTransaction, companyId: string, id: string) => {
 
   return person ?? null;
 };
+
+/**
+ * Área, sucursal, puesto and jefe a period keeps when it closes (WRK-I12):
+ * the person's as they are at the baja, so the turnover report does not move
+ * when the person is edited or rehired elsewhere later.
+ */
+const frozenDimensions = (person: {
+  areaId: string | null;
+  siteId: string | null;
+  positionId: string | null;
+  managerId: string | null;
+}) => ({
+  areaId: person.areaId,
+  siteId: person.siteId,
+  positionId: person.positionId,
+  managerId: person.managerId,
+});
 
 /** finiquito columns to write; the amount only when it was sent. */
 const finiquitoValues = (finiquito: FiniquitoValues | undefined) => {
@@ -607,6 +633,7 @@ export const recordTermination = async (
       comentarioBaja: input.comentario?.trim() || null,
       recontratable: input.recontratable,
       ...finiquitoValues(input.finiquito),
+      ...frozenDimensions(existing),
     })
     .where(
       withTenant(
@@ -731,6 +758,13 @@ export const correctTermination = async (
       comentarioBaja: input.comentario?.trim() || null,
       recontratable: input.recontratable,
       ...finiquitoValues(input.finiquito),
+      // What the period froze when it closed stays; only gaps take today's.
+      ...frozenDimensions({
+        areaId: last.areaId ?? existing.areaId,
+        siteId: last.siteId ?? existing.siteId,
+        positionId: last.positionId ?? existing.positionId,
+        managerId: last.managerId ?? existing.managerId,
+      }),
     })
     .where(
       withTenant(
