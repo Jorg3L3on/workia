@@ -343,6 +343,13 @@ const PersonaDetailPage = async ({
         voidAction: voidVacationAction,
       }
     : undefined;
+  const vacationConstanciaHref =
+    canReadVacations &&
+    canReadContracts &&
+    vacation.entitlementDays !== null &&
+    vacation.serviceYearsCompleted !== null
+      ? `/app/personas/${person.id}/vacaciones/constancia?anio=${vacation.serviceYearsCompleted}`
+      : null;
   const editAction = (
     section: Parameters<typeof personEditHref>[1],
     field?: string,
@@ -692,7 +699,11 @@ const PersonaDetailPage = async ({
               />
             </DetailCard>
 
-            <PersonVacationCard ledger={vacationLedger} view={vacation} />
+            <PersonVacationCard
+              constanciaHref={vacationConstanciaHref}
+              ledger={vacationLedger}
+              view={vacation}
+            />
 
             <DetailCard
               action={editAction("identificadores", "telefono")}

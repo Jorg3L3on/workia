@@ -14,6 +14,11 @@ import {
 type PersonVacationCardProps = {
   /** "loading" is the skeleton while the expediente is still resolving. */
   view: VacationEntitlementView | "loading";
+  /**
+   * Printable constancia for the service year on screen. The page passes it
+   * only when the session has vacations:read and contracts:read.
+   */
+  constanciaHref?: string | null;
   /** Days taken, the balance and the register dialog. Omitted without a vacation permission. */
   ledger?: VacationLedgerModel & {
     takenHalves: number | null;
@@ -151,8 +156,16 @@ const VacationBody = ({
 export const PersonVacationCard = ({
   view,
   ledger,
+  constanciaHref = null,
 }: PersonVacationCardProps) => (
-  <DetailCard id="vacaciones">
+  <DetailCard
+    action={
+      view !== "loading" && constanciaHref
+        ? { href: constanciaHref, label: "Constancia" }
+        : null
+    }
+    id="vacaciones"
+  >
     {view === "loading" ? (
       <VacationSkeleton />
     ) : (

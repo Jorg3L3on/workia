@@ -8,6 +8,7 @@ import {
   VACATION_TABLE_EFFECTIVE_FROM,
   entitlementDaysForServiceYear,
   vacationPeriodFor,
+  vacationPeriodForCompletedYear,
 } from "@/lib/people/vacation";
 
 describe("entitlementDaysForServiceYear", () => {
@@ -191,6 +192,26 @@ describe("vacationPeriodFor", () => {
       "proportionalOnly",
       "serviceYearsCompleted",
     ]);
+  });
+
+  it("reads one completed service year on the anniversary that closes it", () => {
+    expect(vacationPeriodForCompletedYear(seniority, 3)).toEqual(
+      vacationPeriodFor(seniority, "2026-03-01"),
+    );
+    expect(vacationPeriodForCompletedYear("2024-02-29", 1)).toEqual(
+      vacationPeriodFor("2024-02-29", "2025-03-01"),
+    );
+  });
+
+  it("is null before the first year and before the reformed table", () => {
+    expect(vacationPeriodForCompletedYear(seniority, 0)).toBeNull();
+    expect(vacationPeriodForCompletedYear(seniority, 1.5)).toBeNull();
+    expect(vacationPeriodForCompletedYear(null, 1)).toBeNull();
+    // Year 1 of 2020-03-01 closed on 2021-03-01, before the table.
+    expect(vacationPeriodForCompletedYear("2020-03-01", 1)).toBeNull();
+    expect(vacationPeriodForCompletedYear("2020-03-01", 3)).toEqual(
+      vacationPeriodFor("2020-03-01", "2023-03-01"),
+    );
   });
 
   it("does not read the clock or the database", () => {

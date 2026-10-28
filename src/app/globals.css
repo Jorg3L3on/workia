@@ -592,3 +592,51 @@
     transform: none;
   }
 }
+
+/*
+ * One printed sheet. A4 is the page size (Mexico). The vacation constancia
+ * stays short enough that the same sheet also fits US Letter, which is the
+ * shorter page. Navigation chrome (sidebar, top bar, print button) is not
+ * part of the document.
+ */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 14mm;
+  }
+
+  html,
+  body,
+  .workia-shell,
+  [data-slot="sidebar-wrapper"],
+  [data-slot="sidebar-inset"] {
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    background: #fff !important;
+  }
+
+  [data-slot="sidebar"],
+  [data-slot="sidebar-gap"],
+  [data-slot="sidebar-container"],
+  [data-slot="sidebar-rail"],
+  [data-slot="shell-top-nav"],
+  .workia-route-progress,
+  [data-print-hide] {
+    display: none !important;
+  }
+
+  [data-slot="shell-main-scroll"],
+  [data-slot="shell-content-column"] {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    padding: 0 !important;
+  }
+
+  .vacation-constancia {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
