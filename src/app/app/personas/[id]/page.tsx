@@ -6,6 +6,8 @@ import { FileSignatureIcon, PencilIcon } from "lucide-react";
 import { pageTitles } from "@/lib/brand/chrome-copy";
 
 import { PersonContractsSection } from "@/components/contracts/person-contracts-section";
+import { PersonDocumentsCard } from "@/components/documents/person-documents-card";
+import { PersonDocumentsLoader } from "@/components/documents/person-documents-loader";
 import { PersonAssetsSection } from "@/components/resguardo/person-assets-section";
 import { PersonActionsMenu } from "@/components/people/person-actions-menu";
 import { PersonBajaCard } from "@/components/people/person-baja-card";
@@ -166,6 +168,8 @@ const PersonaDetailPage = async ({
     canReadVacations,
     canCreateVacations,
     canUpdateVacations,
+    canReadDocuments,
+    canManageDocuments,
     positionActivities,
     beneficiaries,
     periods,
@@ -182,6 +186,8 @@ const PersonaDetailPage = async ({
     userHasPermission(session.user.id, "vacations:read"),
     userHasPermission(session.user.id, "vacations:create"),
     userHasPermission(session.user.id, "vacations:update"),
+    userHasPermission(session.user.id, "documents:read"),
+    userHasPermission(session.user.id, "documents:manage"),
     listActivitiesForPersonPosition(session.companyId, id),
     listPersonBeneficiaries(session.companyId, id),
     listEmploymentPeriods(session.companyId, id),
@@ -423,6 +429,9 @@ const PersonaDetailPage = async ({
     "laboral",
     "vacaciones",
     "contacto",
+    ...(canReadDocuments || canManageDocuments
+      ? (["documentos"] as const)
+      : []),
     ...(canReadContracts ? (["contrato"] as const) : []),
     "fiscal",
     "datos-mexico",
@@ -719,6 +728,16 @@ const PersonaDetailPage = async ({
             </DetailCard>
           </div>
           <div className="flex min-w-0 flex-col gap-4">
+            {canReadDocuments || canManageDocuments ? (
+              <Suspense fallback={<PersonDocumentsCard view="loading" />}>
+                <PersonDocumentsLoader
+                  canManage={canManageDocuments && !isDeleted}
+                  companyId={session.companyId}
+                  personId={person.id}
+                  today={today}
+                />
+              </Suspense>
+            ) : null}
             {canReadContracts ? (
               <DetailCard
                 action={
