@@ -7,9 +7,17 @@ import { missingGlyphs } from "@/lib/contracts/glyphs";
 import {
   ContractPdfGlyphError,
   contractPdfPlainText,
+  groupLines,
   renderContractPdf,
 } from "@/lib/contracts/pdf";
-import { extractPdfPages, extractPdfText } from "@/test/pdf-text";
+import {
+  extractPdfMarks,
+  extractPdfPages,
+  extractPdfText,
+} from "@/test/pdf-text";
+
+/** Signature columns are drawn in a row; the copy keeps a double space. */
+const printed = (value: string) => value.replace(/ {2,}/g, "  ");
 
 const schedule = contractScheduleText({
   scheduleEntrada: "08:00",
@@ -37,6 +45,7 @@ const signature = [
 describe("contract PDF", () => {
   it("lists glyphs Noto Sans cannot draw and keeps the ones it can", () => {
     expect(missingGlyphs("año ñ № Ł ✓ 李")).toEqual(["✓", "李"]);
+    expect(missingGlyphs("\t")).toEqual(["\t"]);
   });
 
   it("fails visibly when the text uses glyphs the font does not cover", async () => {
@@ -71,11 +80,11 @@ describe("contract PDF", () => {
     });
     const extracted = extractPdfText(file);
 
-    expect(extracted).toBe(
-      contractPdfPlainText({ generatedText, scheduleText: schedule }),
+    expect(printed(extracted)).toBe(
+      printed(contractPdfPlainText({ generatedText, scheduleText: schedule })),
     );
-    expect(extracted).toBe(
-      `${generatedText}\n\nANEXO A. HORARIO\n\n${schedule}`,
+    expect(printed(extracted)).toBe(
+      printed(`${generatedText}\n\nANEXO A. HORARIO\n\n${schedule}`),
     );
     expect(extracted).toContain("30 días");
     expect(extracted).not.toContain("90");
@@ -140,12 +149,102 @@ describe("contract PDF", () => {
       `Linea ${String(bodyCount - 1).padStart(3, "0")}`,
     );
     expect(
-      extractPdfText(
-        await renderContractPdf({
-          generatedText,
-          scheduleText: "—",
-        }),
+      printed(
+        extractPdfText(
+          await renderContractPdf({
+            generatedText,
+            scheduleText: "—",
+          }),
+        ),
       ),
-    ).toBe(contractPdfPlainText({ generatedText, scheduleText: "—" }));
+    ).toBe(printed(contractPdfPlainText({ generatedText, scheduleText: "—" })));
+  });
+
+  it("finishes when a signature line also contains the annex marker", () => {
+    expect(groupLines(["ANEXO A ________________"])).toEqual([
+      { signature: true, lines: ["ANEXO A ________________"] },
+    ]);
+    expect(
+      groupLines(["Cláusula.", "Firma ANEXO A ____________", "LA EMPRESA"]),
+    ).toEqual([
+      { signature: false, lines: ["Cláusula."] },
+      {
+        signature: true,
+        lines: ["Firma ANEXO A ____________", "LA EMPRESA"],
+      },
+    ]);
+  });
+
+  it("prints the schedule when ANEXO A is only mentioned mid-sentence", async () => {
+    const generatedText = [
+      "El horario queda conforme al ANEXO A de este contrato.",
+      "ANEXO AB no es el encabezado del horario.",
+      "",
+      "Firma ANEXO A ____________",
+    ].join("\n");
+    const extracted = extractPdfText(
+      await renderContractPdf({ generatedText, scheduleText: schedule }),
+    );
+
+    expect(printed(extracted)).toBe(
+      printed(`${generatedText}\n\nANEXO A. HORARIO\n\n${schedule}`),
+    );
+    expect(extracted).toContain("Mié");
+    expect(extracted).toContain("Firma ANEXO A ____________");
+  });
+
+  it("turns tabs into spaces instead of dropping them", async () => {
+    const generatedText = "Columna\tinicial y eñe ñ.";
+    const extracted = extractPdfText(
+      await renderContractPdf({ generatedText, scheduleText: "—" }),
+    );
+
+    expect(extracted).toBe(
+      contractPdfPlainText({ generatedText, scheduleText: "—" }),
+    );
+    expect(extracted).toContain("Columna    inicial");
+    expect(extracted).not.toContain("\t");
+  });
+
+  it("places each signature name under its own line", async () => {
+    const file = await renderContractPdf({
+      generatedText: signature,
+      scheduleText: "—",
+    });
+    const marks = extractPdfMarks(file).flat();
+    const rules = marks
+      .filter((mark) => mark.text.startsWith("___"))
+      .sort((left, right) => left.x - right.x);
+    const empresa = marks.find((mark) => mark.text === "LA EMPRESA");
+    const persona = marks.find(
+      (mark) => mark.text === "LA PERSONA TRABAJADORA",
+    );
+    const left = rules[0];
+    const right = rules.at(-1);
+
+    expect(rules.length).toBeGreaterThanOrEqual(2);
+    expect(left && right && empresa && persona).toBeTruthy();
+    expect(Math.abs((empresa?.x ?? 0) - (left?.x ?? 0))).toBeLessThan(8);
+    expect(Math.abs((persona?.x ?? 0) - (right?.x ?? 0))).toBeLessThan(8);
+    expect((persona?.y ?? 0) < (left?.y ?? 0)).toBe(true);
+    expect((right?.x ?? 0) - (left?.x ?? 0)).toBeGreaterThan(80);
+  });
+
+  it("splits a signature taller than one page instead of overflowing", async () => {
+    const rows = Array.from({ length: 70 }, (_, index) => {
+      const label = String(index).padStart(2, "0");
+      return `Firmante ${label}                    Testigo ${label}`;
+    });
+    const generatedText = [signature.split("\n")[0], ...rows].join("\n");
+    const file = await renderContractPdf({
+      generatedText,
+      scheduleText: "—",
+    });
+    const pages = extractPdfPages(file);
+    const last = "Testigo 69";
+
+    expect(extractPdfText(file)).toContain(last);
+    expect(pages[0]).not.toContain(last);
+    expect(pages.some((page) => page.includes(last))).toBe(true);
   });
 });

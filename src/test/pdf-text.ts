@@ -206,15 +206,17 @@ const pageText = (stream: string, map: Map<number, string>) => {
 
   items.sort((left, right) => right.y - left.y || left.x - right.x);
 
-  const lines: { y: number; text: string }[] = [];
+  const lines: { x: number; y: number; text: string }[] = [];
 
   for (const item of items) {
     const last = lines.at(-1);
 
     if (last && Math.abs(last.y - item.y) < 0.8) {
-      last.text += item.text;
+      // A second column starts well to the right of the previous fragment.
+      last.text += item.x - last.x > 24 ? `  ${item.text}` : item.text;
+      if (item.x > last.x) last.x = item.x;
     } else {
-      lines.push({ y: item.y, text: item.text });
+      lines.push({ x: item.x, y: item.y, text: item.text });
     }
   }
 
@@ -237,7 +239,7 @@ const pageText = (stream: string, map: Map<number, string>) => {
     page += wrapped ? text : `${"\n".repeat(Math.max(gap, 1))}${text}`;
   }
 
-  return page;
+  return { text: page, marks: items };
 };
 
 const streamsOf = (buffer: Buffer) => {
@@ -261,9 +263,7 @@ const streamsOf = (buffer: Buffer) => {
   return streams;
 };
 
-/** Text of each page, in order, reconstructed from the PDF content streams. */
-export const extractPdfPages = (buffer: Buffer) => {
-  const streams = streamsOf(buffer);
+const unicodeMap = (streams: string[]) => {
   const map = new Map<number, string>();
 
   for (const stream of streams) {
@@ -274,10 +274,27 @@ export const extractPdfPages = (buffer: Buffer) => {
     for (const [code, value] of toUnicodeMap(stream)) map.set(code, value);
   }
 
+  return map;
+};
+
+const pageStreams = (buffer: Buffer) => {
+  const streams = streamsOf(buffer);
+  const map = unicodeMap(streams);
+
   return streams
     .filter((stream) => stream.includes("BT") && stream.includes("TJ"))
     .map((stream) => pageText(stream, map));
 };
+
+/** Text of each page, in order, reconstructed from the PDF content streams. */
+export const extractPdfPages = (buffer: Buffer) =>
+  pageStreams(buffer).map((page) => page.text);
+
+export type PdfMark = { x: number; y: number; text: string };
+
+/** Positioned text fragments, one array per page. */
+export const extractPdfMarks = (buffer: Buffer) =>
+  pageStreams(buffer).map((page) => page.marks);
 
 /** The contract text a reader copies out of the PDF. */
 export const extractPdfText = (buffer: Buffer) => {

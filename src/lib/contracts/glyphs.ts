@@ -151,9 +151,9 @@ export const missingGlyphs = (text: string) => {
   for (const char of text) {
     const codePoint = char.codePointAt(0);
 
+    // Tab is a missing glyph in Noto Sans. Newlines are structure, not ink.
     if (
       codePoint === undefined ||
-      codePoint === 9 ||
       codePoint === 10 ||
       codePoint === 13 ||
       seen.has(codePoint)

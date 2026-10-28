@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 
 import { recordAuditEvent } from "@/lib/audit";
 import { requireContractsRead } from "@/lib/contracts/auth";
 import { getContractById } from "@/lib/contracts";
 import { contractScheduleText } from "@/lib/contracts/schema";
 import { ContractPdfGlyphError, renderContractPdf } from "@/lib/contracts/pdf";
+
+const contractIdParam = z.string().uuid();
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -25,6 +28,11 @@ export const GET = async (_request: Request, { params }: Context) => {
   }
 
   const { id: personId, contractId } = await params;
+
+  if (!contractIdParam.safeParse(contractId).success) {
+    return new NextResponse(null, { status: 404 });
+  }
+
   const contract = await getContractById(session.companyId, contractId);
 
   if (!contract || contract.personId !== personId) {
@@ -67,7 +75,7 @@ export const GET = async (_request: Request, { params }: Context) => {
   return new NextResponse(new Uint8Array(file), {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": 'attachment; filename="contrato.pdf"',
+      "Content-Disposition": `attachment; filename="contrato-${contract.id.slice(0, 8)}.pdf"`,
       "Cache-Control": "no-store",
     },
   });

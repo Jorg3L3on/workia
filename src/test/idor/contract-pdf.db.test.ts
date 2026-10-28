@@ -90,6 +90,9 @@ describe("contract PDF stays inside the company", () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get("Content-Type")).toBe("application/pdf");
+    expect(response.headers.get("Content-Disposition")).toBe(
+      `attachment; filename="contrato-${contract.id.slice(0, 8)}.pdf"`,
+    );
     expect(bytes.subarray(0, 5).toString()).toBe("%PDF-");
     expect(extracted).toBe(
       `${contract.generatedText}\n\nANEXO A. HORARIO\n\n${schedule}`,
@@ -217,5 +220,12 @@ describe("contract PDF stays inside the company", () => {
       );
 
     expect(exports).toHaveLength(0);
+  });
+
+  it("answers 404 when the contract id is not a uuid", async () => {
+    actAs(a.admin);
+    const response = await callPdf(a.person.id, "no-es-uuid");
+
+    expect(response.status).toBe(404);
   });
 });
