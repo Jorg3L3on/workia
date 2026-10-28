@@ -111,7 +111,12 @@ export const PersonContractsSection = ({
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <ContractPdfLink contractId={vigente.id} personId={personId} />
+                {canSeeCompensation ? (
+                  <ContractPdfLink
+                    contractId={vigente.id}
+                    personId={personId}
+                  />
+                ) : null}
                 <Badge tone={toneFor("contract", vigente.status)}>
                   {contractStatusLabels[vigente.status]}
                 </Badge>
@@ -233,10 +238,12 @@ export const PersonContractsSection = ({
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <ContractPdfLink
-                      contractId={contract.id}
-                      personId={personId}
-                    />
+                    {canSeeCompensation ? (
+                      <ContractPdfLink
+                        contractId={contract.id}
+                        personId={personId}
+                      />
+                    ) : null}
                     <Badge tone={toneFor("contract", contract.status)}>
                       {contractStatusLabels[contract.status]}
                     </Badge>

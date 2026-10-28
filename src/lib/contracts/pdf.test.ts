@@ -206,6 +206,28 @@ describe("contract PDF", () => {
     expect(extracted).not.toContain("\t");
   });
 
+  it("keeps a lone right-column name on the right", async () => {
+    const rule =
+      "______________________________          ______________________________";
+    const generatedText = [
+      rule,
+      "                                        Solo derecha",
+    ].join("\n");
+    const marks = extractPdfMarks(
+      await renderContractPdf({ generatedText, scheduleText: "—" }),
+    ).flat();
+    const rules = marks
+      .filter((mark) => mark.text.startsWith("___"))
+      .sort((left, right) => left.x - right.x);
+    const name = marks.find((mark) => mark.text.includes("Solo derecha"));
+    const left = rules[0];
+    const right = rules.at(-1);
+
+    expect(name && left && right).toBeTruthy();
+    expect(Math.abs((name?.x ?? 0) - (right?.x ?? 0))).toBeLessThan(8);
+    expect((name?.x ?? 0) - (left?.x ?? 0)).toBeGreaterThan(80);
+  });
+
   it("places each signature name under its own line", async () => {
     const file = await renderContractPdf({
       generatedText: signature,

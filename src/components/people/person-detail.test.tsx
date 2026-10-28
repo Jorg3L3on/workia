@@ -509,6 +509,9 @@ describe("PersonContractsSection compensation", () => {
       "Capturada (requiere el permiso de compensación)",
     );
     expect(document.body).not.toHaveTextContent(/987|29,?629/);
+    expect(
+      screen.queryByRole("link", { name: "Descargar PDF del contrato" }),
+    ).toBeNull();
   });
 
   it("shows it with compensation:read", () => {
@@ -526,7 +529,7 @@ describe("PersonContractsSection compensation", () => {
   });
 
   it("links each contract to its PDF", () => {
-    renderSection(false);
+    renderSection(true);
 
     expect(
       screen

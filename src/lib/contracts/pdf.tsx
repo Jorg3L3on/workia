@@ -147,9 +147,11 @@ export const groupLines = (lines: string[]): LineGroup[] => {
 };
 
 const signatureCells = (line: string) => {
-  const cells = line.split(/\s{2,}/).filter((cell) => cell.length > 0);
+  // Leading spaces are an empty left column. Dropping them would print a
+  // right-hand name on the left.
+  const cells = line.split(/\s{2,}/);
 
-  return cells.length > 0 ? cells : [NBSP];
+  return cells.length > 0 ? cells : [""];
 };
 
 const SignatureBlock = ({ lines }: { lines: string[] }) => (
@@ -162,7 +164,7 @@ const SignatureBlock = ({ lines }: { lines: string[] }) => (
           {cells.map((cell, cellIndex) => (
             <View key={cellIndex} style={styles.signatureCell}>
               <Text hyphenationCallback={keepWord} style={styles.line}>
-                {cell}
+                {cell.length === 0 ? NBSP : cell}
               </Text>
             </View>
           ))}
