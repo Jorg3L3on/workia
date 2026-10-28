@@ -24,6 +24,7 @@ import {
   DataTable,
   RowMenu,
   type DataTableColumn,
+  type RowMenuAction,
 } from "@/components/ui/data-table";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -76,6 +77,8 @@ export type CatalogSchema<TRow extends CatalogRowBase> = {
   deleteAction: (id: string) => () => void | Promise<void>;
   /** What else goes with the record (e.g. its activities), named in the confirmation. */
   deleteImpact?: (row: TRow) => string | null;
+  /** Extra ⋯ actions, after Editar. The menu shows even without update or delete. */
+  rowActions?: (row: TRow) => (RowMenuAction | false | null | undefined)[];
 };
 
 type CatalogPageProps<TRow extends CatalogRowBase> = {
@@ -286,7 +289,7 @@ export const CatalogPage = <TRow extends CatalogRowBase>({
         })}
         onRowOpen={canUpdate ? (row) => setEditing(row) : undefined}
         rowMenu={
-          canUpdate || canDelete
+          canUpdate || canDelete || schema.rowActions
             ? (row) => (
                 <RowMenu
                   actions={[
@@ -295,6 +298,7 @@ export const CatalogPage = <TRow extends CatalogRowBase>({
                       icon: PencilIcon,
                       onSelect: () => setEditing(row),
                     },
+                    ...(schema.rowActions?.(row) ?? []),
                     canUpdate &&
                       status &&
                       schema.keepFields && {
