@@ -4086,6 +4086,8 @@ exports[`/api/mcp transport > keeps the tools/list contract (snapshot) 1`] = `
             "onboarding",
             "termination_reason",
             "report_export",
+            "document_requirement",
+            "person_document",
           ],
           "type": "string",
         },

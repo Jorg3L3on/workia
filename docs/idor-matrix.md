@@ -41,6 +41,8 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `action:contracts/deleteContractTemplateAction`            | ✅     | `src/test/idor/contracts.db.test.ts`                                                                   | `contract_templates:delete` |
 | `action:contracts/noRenewContractAction`                   | ✅     | `src/test/idor/contracts.db.test.ts`                                                                   | `contracts:update`          |
 | `action:contracts/updateContractTemplateAction`            | ✅     | `src/test/idor/contracts.db.test.ts`                                                                   | `contract_templates:update` |
+| `action:documents/recordDeliveryAction`                    | ✅     | `src/test/idor/documents.db.test.ts`                                                                   | `documents:manage`          |
+| `action:documents/setRequirementsAction`                   | ✅     | `src/test/idor/documents.db.test.ts`                                                                   | `documents:manage`          |
 | `action:mcp/approveConsentAction`                          | ✅     | `src/test/idor/mcp.db.test.ts`                                                                         | `mcp_connections:create`    |
 | `action:mcp/createPersonalTokenAction`                     | ✅     | `src/test/idor/mcp.db.test.ts`                                                                         | `mcp_connections:create`    |
 | `action:mcp/denyConsentAction`                             | ✅     | `src/test/idor/mcp.db.test.ts`                                                                         | —                           |
@@ -171,6 +173,12 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `lib:contracts/softDeleteContractTemplate`                    | ✅     | `src/test/idor/contracts.db.test.ts`          | —       |
 | `lib:contracts/softDeleteContract`                            | ✅     | `src/test/idor/contracts.db.test.ts`          | —       |
 | `lib:contracts/updateContractTemplate`                        | ✅     | `src/test/idor/contracts.db.test.ts`          | —       |
+| `lib:documents/activateDocumentRequirements`                  | ✅     | `src/test/idor/documents.db.test.ts`          | —       |
+| `lib:documents/getDocumentRequirementById`                    | ✅     | `src/test/idor/documents.db.test.ts`          | —       |
+| `lib:documents/listDocumentRequirements`                      | ✅     | `src/test/idor/documents.db.test.ts`          | —       |
+| `lib:documents/listPersonDocuments`                           | ✅     | `src/test/idor/documents.db.test.ts`          | —       |
+| `lib:documents/recordDelivery`                                | ✅     | `src/test/idor/documents.db.test.ts`          | —       |
+| `lib:documents/setRequirements`                               | ✅     | `src/test/idor/documents.db.test.ts`          | —       |
 | `lib:import/apply/applyJobStep`                               | ✅     | `src/test/idor/import.db.test.ts`             | —       |
 | `lib:import/apply/pauseApply`                                 | ✅     | `src/test/idor/import.db.test.ts`             | —       |
 | `lib:import/error-report/buildErrorReport`                    | ✅     | `src/test/idor/import.db.test.ts`             | —       |
