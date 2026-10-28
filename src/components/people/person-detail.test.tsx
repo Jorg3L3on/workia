@@ -524,4 +524,17 @@ describe("PersonContractsSection compensation", () => {
 
     expect(screen.queryByRole("heading", { name: "Contratos" })).toBeNull();
   });
+
+  it("links each contract to its PDF", () => {
+    renderSection(false);
+
+    expect(
+      screen
+        .getAllByRole("link", { name: "Descargar PDF del contrato" })
+        .map((link) => link.getAttribute("href")),
+    ).toEqual([
+      "/app/personas/p-1/contratos/contract-01/pdf",
+      "/app/personas/p-1/contratos/contract-01/pdf",
+    ]);
+  });
 });

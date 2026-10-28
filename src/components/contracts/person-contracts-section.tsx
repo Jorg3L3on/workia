@@ -4,6 +4,7 @@ import { formatMoney } from "@/components/contracts/compensation-fields";
 import { ContractForm } from "@/components/contracts/contract-form";
 import { RenewalDecisionButton } from "@/components/contracts/renewal-decision-button";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import type { Contract, ContractTemplate } from "@/lib/db/schema";
 import {
   contractNoticeWindowLabels,
@@ -41,6 +42,24 @@ type PersonContractsSectionProps = {
   /** Inside the expediente's Contrato card, which carries the heading. */
   showHeading?: boolean;
 };
+
+const ContractPdfLink = ({
+  personId,
+  contractId,
+}: {
+  personId: string;
+  contractId: string;
+}) => (
+  <Button asChild size="sm" variant="secondary">
+    <a
+      aria-label="Descargar PDF del contrato"
+      download
+      href={`/app/personas/${personId}/contratos/${contractId}/pdf`}
+    >
+      PDF
+    </a>
+  </Button>
+);
 
 export const PersonContractsSection = ({
   personId,
@@ -92,6 +111,7 @@ export const PersonContractsSection = ({
                 </p>
               </div>
               <div className="flex items-center gap-2">
+                <ContractPdfLink contractId={vigente.id} personId={personId} />
                 <Badge tone={toneFor("contract", vigente.status)}>
                   {contractStatusLabels[vigente.status]}
                 </Badge>
@@ -212,9 +232,15 @@ export const PersonContractsSection = ({
                       {contractStatusLabels[contract.status]}
                     </p>
                   </div>
-                  <Badge tone={toneFor("contract", contract.status)}>
-                    {contractStatusLabels[contract.status]}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <ContractPdfLink
+                      contractId={contract.id}
+                      personId={personId}
+                    />
+                    <Badge tone={toneFor("contract", contract.status)}>
+                      {contractStatusLabels[contract.status]}
+                    </Badge>
+                  </div>
                 </li>
               ))}
             </ul>
