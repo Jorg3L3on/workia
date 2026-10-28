@@ -8,11 +8,15 @@ import {
  *
  * Days follow the Ley Federal del Trabajo as reformed by the decree published
  * in the Diario Oficial de la Federación on 27 December 2022 (articles 76 and
- * 78). Article 76 grants 12 working days after the first service year, then
- * two more each year through the fifth (14, 16, 18, 20). From the sixth year
- * it adds two days for every five years of service. The block reading — 22
- * (years 6–10), 24 (11–15), 26 (16–20), 28 (21–25), 30 (26–30), and the same
- * step after year 30 — is pending confirmation by an accountant.
+ * 78). Reformed article 76 is in force from `VACATION_TABLE_EFFECTIVE_FROM`
+ * (2023-01-01). This module calculates only with that table. Before that day
+ * it does not apply, and the previous scale is not implemented.
+ *
+ * Article 76: 12 working days the first service year, then 14, 16, 18 and 20
+ * through the fifth. From the sixth year, two more days for every five years
+ * of service: 22 (years 6–10), 24 (11–15), 26 (16–20), 28 (21–25), 30 (26–30).
+ * The same step continues with no cap after year 30. That reading matches
+ * PROFEDET.
  *
  * Article 78 requires at least twelve of those days to be continuous; this
  * module only counts them. Article 81: grant the vacation within six months
@@ -21,7 +25,14 @@ import {
  *
  * Completed years come only from `seniorityDate` / `seniorityParts`. The
  * accrual basis is explicit and defaults to `anniversary` (article 81).
+ * No free-text field: a note here could capture health data.
  */
+
+/**
+ * First day the reformed article 76 table is in force. Before this day the
+ * table does not apply; this module does not calculate the previous scale.
+ */
+export const VACATION_TABLE_EFFECTIVE_FROM = "2023-01-01";
 
 /** Days for service years 1–5 (article 76). */
 const ENTITLEMENT_FIRST_FIVE_YEARS = [12, 14, 16, 18, 20] as const;
@@ -127,9 +138,8 @@ const addMonths = (iso: string, monthsToAdd: number) => {
 };
 
 /**
- * Working days the statute assigns to a completed service year.
- * Year 6 and later use the five-year blocks above; that reading is pending
- * confirmation by an accountant.
+ * Working days for one completed service year on the reformed table.
+ * From year 6 the count steps up by two days every five years, with no cap.
  */
 export const entitlementDaysForServiceYear = (serviceYear: number) => {
   if (!Number.isInteger(serviceYear) || serviceYear < 1) {
@@ -150,6 +160,12 @@ const periodOnAnniversary = (
   asOf: string,
 ): VacationPeriod | null => {
   if (!parseIsoDate(seniority) || !parseIsoDate(asOf)) {
+    return null;
+  }
+
+  // Both values are `yyyy-mm-dd`, so order is chronological. The reformed
+  // table does not apply before it is in force.
+  if (asOf < VACATION_TABLE_EFFECTIVE_FROM) {
     return null;
   }
 
@@ -190,8 +206,9 @@ const PERIOD_FOR_BASIS: Record<
  * Entitlement for the service year that contains `asOf`. `seniorityDate` is
  * the date `seniorityDate()` already resolved (ISO `yyyy-mm-dd`). `asOf` is
  * an ISO date too: pass it in; this function does not read the clock.
- * Null without a seniority date, with a date that is not a calendar day, or
- * when `asOf` is before the seniority date.
+ * Null without a seniority date, with a date that is not a calendar day,
+ * when `asOf` is before the seniority date, or when `asOf` is before
+ * `VACATION_TABLE_EFFECTIVE_FROM`.
  */
 export const vacationPeriodFor = (
   seniorityDate: string | null | undefined,

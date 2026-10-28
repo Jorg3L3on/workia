@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import { seniorityParts } from "@/lib/people/seniority";
 import {
+  VACATION_TABLE_EFFECTIVE_FROM,
   entitlementDaysForServiceYear,
   vacationPeriodFor,
 } from "@/lib/people/vacation";
@@ -29,7 +30,7 @@ describe("entitlementDaysForServiceYear", () => {
     },
   );
 
-  it("keeps the same unverified five-year step through year 30 and past it", () => {
+  it("follows the PROFEDET blocks and keeps adding two days every five years after year 30", () => {
     expect(entitlementDaysForServiceYear(15)).toBe(24);
     expect(entitlementDaysForServiceYear(16)).toBe(26);
     expect(entitlementDaysForServiceYear(20)).toBe(26);
@@ -38,6 +39,8 @@ describe("entitlementDaysForServiceYear", () => {
     expect(entitlementDaysForServiceYear(26)).toBe(30);
     expect(entitlementDaysForServiceYear(30)).toBe(30);
     expect(entitlementDaysForServiceYear(31)).toBe(32);
+    expect(entitlementDaysForServiceYear(35)).toBe(32);
+    expect(entitlementDaysForServiceYear(36)).toBe(34);
   });
 
   it("is zero before the first completed year", () => {
@@ -79,30 +82,41 @@ describe("vacationPeriodFor", () => {
   });
 
   it("moves 29 February to 1 March when that anniversary is not a leap day", () => {
-    const leap = "2020-02-29";
+    const leap = "2024-02-29";
 
-    expect(vacationPeriodFor(leap, "2021-02-28")).toEqual({
+    expect(vacationPeriodFor(leap, "2025-02-28")).toEqual({
       serviceYearsCompleted: 0,
-      currentAnniversary: "2020-02-29",
-      nextAnniversary: "2021-03-01",
-      entitlementDays: 0,
-      grantBy: "2020-08-29",
-      proportionalOnly: true,
-    });
-    expect(vacationPeriodFor(leap, "2021-03-01")).toEqual({
-      serviceYearsCompleted: 1,
-      currentAnniversary: "2021-03-01",
-      nextAnniversary: "2022-03-01",
-      entitlementDays: 12,
-      grantBy: "2021-09-01",
-      proportionalOnly: false,
-    });
-    expect(vacationPeriodFor(leap, "2024-02-29")).toEqual({
-      serviceYearsCompleted: 4,
       currentAnniversary: "2024-02-29",
       nextAnniversary: "2025-03-01",
-      entitlementDays: 18,
+      entitlementDays: 0,
       grantBy: "2024-08-29",
+      proportionalOnly: true,
+    });
+    expect(vacationPeriodFor(leap, "2025-03-01")).toEqual({
+      serviceYearsCompleted: 1,
+      currentAnniversary: "2025-03-01",
+      nextAnniversary: "2026-03-01",
+      entitlementDays: 12,
+      grantBy: "2025-09-01",
+      proportionalOnly: false,
+    });
+    expect(vacationPeriodFor(leap, "2028-02-29")).toEqual({
+      serviceYearsCompleted: 4,
+      currentAnniversary: "2028-02-29",
+      nextAnniversary: "2029-03-01",
+      entitlementDays: 18,
+      grantBy: "2028-08-29",
+      proportionalOnly: false,
+    });
+  });
+
+  it("does not apply the reformed table before it is in force", () => {
+    expect(VACATION_TABLE_EFFECTIVE_FROM).toBe("2023-01-01");
+    expect(vacationPeriodFor("2020-03-01", "2022-12-31")).toBeNull();
+    expect(vacationPeriodFor("2020-03-01", "2023-01-01")).toMatchObject({
+      serviceYearsCompleted: 2,
+      currentAnniversary: "2022-03-01",
+      entitlementDays: 14,
       proportionalOnly: false,
     });
   });
@@ -163,6 +177,20 @@ describe("vacationPeriodFor", () => {
     expect(vacationPeriodFor(seniority, "2026-03-02", "anniversary")).toEqual(
       vacationPeriodFor(seniority, "2026-03-02"),
     );
+  });
+
+  it("returns only the entitlement fields, with no free-text note", () => {
+    const period = vacationPeriodFor(seniority, "2026-03-02");
+
+    expect(period).not.toBeNull();
+    expect(Object.keys(period!).sort()).toEqual([
+      "currentAnniversary",
+      "entitlementDays",
+      "grantBy",
+      "nextAnniversary",
+      "proportionalOnly",
+      "serviceYearsCompleted",
+    ]);
   });
 
   it("does not read the clock or the database", () => {
