@@ -16,7 +16,13 @@ import {
  * through the fifth. From the sixth year, two more days for every five years
  * of service: 22 (years 6–10), 24 (11–15), 26 (16–20), 28 (21–25), 30 (26–30).
  * The same step continues with no cap after year 30. That reading matches
- * PROFEDET.
+ * PROFEDET and is pending confirmation by an accountant or a labor lawyer,
+ * both for those blocks and for the extension past year 30.
+ *
+ * A service period that opened before 2023-01-01, but whose `asOf` is already
+ * on or after that day, is calculated with the reformed table. Example:
+ * anniversary 2022-03-01 evaluated on 2023-01-01. That transitional treatment
+ * is also pending confirmation.
  *
  * Article 78 requires at least twelve of those days to be continuous; this
  * module only counts them. Article 81: grant the vacation within six months
@@ -60,8 +66,9 @@ export type VacationPeriod = {
   nextAnniversary: string;
   entitlementDays: number;
   /**
-   * Six months after `currentAnniversary` (article 81). There is nothing to
-   * grant yet when `proportionalOnly` is true.
+   * Six months after `currentAnniversary` (article 81). When `proportionalOnly`
+   * is true this is not a real deadline — the first one falls a full year of
+   * service plus six months later — and the UI must hide it.
    */
   grantBy: string;
   /** True when less than one year of service is complete. */

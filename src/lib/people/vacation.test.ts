@@ -197,7 +197,9 @@ describe("vacationPeriodFor", () => {
     const source = readFileSync(
       join(process.cwd(), "src/lib/people/vacation.ts"),
       "utf8",
-    );
+    )
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/^\s*\/\/.*$/gm, "");
 
     expect(source).not.toMatch(/\bDate\b/);
     expect(source).not.toMatch(/prisma|@\/lib\/db|node:fs|node:net/);
