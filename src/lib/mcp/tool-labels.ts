@@ -24,6 +24,7 @@ const toolLabels: Record<string, string> = {
   mark_contract_no_renew: "Marcar no renovación",
   decide_contract_renewal: "Decidir renovación",
   get_seniority_certificate: "Constancia de antigüedad",
+  get_vacation_entitlement: "Derecho a vacaciones",
   list_assets: "Listar resguardo",
   get_asset: "Ver activo",
   register_asset: "Registrar activo",

@@ -34,6 +34,7 @@ import { PersonForm } from "@/components/people/person-form";
 import { PersonHistory } from "@/components/people/person-history";
 import { PersonRehireButton } from "@/components/people/person-rehire-button";
 import { PersonSectionNav } from "@/components/people/person-section-nav";
+import { PersonVacationCard } from "@/components/people/person-vacation-card";
 import { SectionSkeleton } from "@/components/loading/page-skeletons";
 import { PageBreadcrumbLabel } from "@/components/layout/app-breadcrumbs";
 import { Badge } from "@/components/ui/badge";
@@ -76,6 +77,7 @@ import {
   listEmploymentPeriods,
   summarizePeriods,
 } from "@/lib/people/employment";
+import { vacationEntitlementForPerson } from "@/lib/people/vacation-card";
 import { getPersonEmploymentMenuData } from "@/lib/people/employment-menu";
 
 export const metadata: Metadata = {
@@ -270,6 +272,15 @@ const PersonaDetailPage = async ({
     .filter(Boolean)
     .join(" · ");
   const horario = formatHorarioToken(person.schedule);
+  // people:read (requirePeopleRead). asOf is explicit: today, or the baja.
+  const vacation = vacationEntitlementForPerson({
+    seniorityDate: employmentSummary
+      ? employmentSummary.fechaAntiguedad
+      : person.fechaIngreso,
+    status: person.status,
+    fechaBaja: employmentSummary?.fechaBaja ?? null,
+    today,
+  });
   const editAction = (
     section: Parameters<typeof personEditHref>[1],
     field?: string,
@@ -348,6 +359,7 @@ const PersonaDetailPage = async ({
     ...(isBaja ? (["baja"] as const) : []),
     "identidad",
     "laboral",
+    "vacaciones",
     "contacto",
     ...(canReadContracts ? (["contrato"] as const) : []),
     "fiscal",
@@ -617,6 +629,8 @@ const PersonaDetailPage = async ({
                 personId={person.id}
               />
             </DetailCard>
+
+            <PersonVacationCard view={vacation} />
 
             <DetailCard
               action={editAction("identificadores", "telefono")}

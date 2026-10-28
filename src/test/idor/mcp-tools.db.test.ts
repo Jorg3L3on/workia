@@ -20,6 +20,7 @@ import {
 import {
   auditEvents,
   contracts,
+  employmentPeriods,
   mcpConnections,
   mcpToolCalls,
   people,
@@ -27,6 +28,10 @@ import {
   personSchedules,
 } from "@/lib/db/schema";
 import { isoToday } from "@/lib/format/date";
+import {
+  vacationEntitlementForPerson,
+  vacationToolFields,
+} from "@/lib/people/vacation-card";
 import type { McpScope } from "@/lib/mcp/scopes";
 import { generateToken } from "@/lib/mcp/tokens";
 import { listPeopleKeyset } from "@/lib/people";
@@ -185,8 +190,9 @@ describe("protocol surface", () => {
     const prompts = (await rpc(tokens.aRead, "prompts/list")).result.prompts;
 
     // 18 reads (phase 1) + 13 writes (phase 2) + phase 3 (3 reads, 4 writes)
-    // + list_termination_reasons (Iniciativa 2).
-    expect(tools).toHaveLength(39);
+    // + list_termination_reasons (Iniciativa 2)
+    // + get_vacation_entitlement (WRK-I14-2).
+    expect(tools).toHaveLength(40);
     expect(resources.map((r: { uri: string }) => r.uri).sort()).toEqual([
       "workia://catalogo",
       "workia://glosario",
@@ -876,6 +882,7 @@ describe("PII sweep and output contracts", () => {
     list_regions: {},
     list_termination_reasons: {},
     get_seniority_certificate: { person_id: a.person.id },
+    get_vacation_entitlement: { person_id: a.person.id },
     list_contracts: { person_id: a.person.id },
     list_expiring_contracts: { within_days: 365 },
     list_renewal_tray: {},
@@ -1106,5 +1113,99 @@ describe("official tokens and seniority certificate (WRK-I1-12)", () => {
     expect(full.structuredContent.contract.generated_text).toBe(
       "Salario $650.00.",
     );
+  });
+});
+
+describe("vacation entitlement (WRK-I14-2)", () => {
+  it("mcp:get_vacation_entitlement", async () => {
+    const today = isoToday();
+    const [person] = await ownerDb
+      .insert(people)
+      .values({
+        companyId: a.companyId,
+        nombres: "Persona",
+        apellidoPaterno: "Vacaciones",
+        fechaIngreso: "2023-03-01",
+        status: "activa",
+      })
+      .returning();
+    await ownerDb.insert(employmentPeriods).values({
+      companyId: a.companyId,
+      personId: person.id,
+      fechaIngreso: "2023-03-01",
+      fechaAntiguedad: "2023-03-01",
+    });
+
+    const foreign = await call(tokens.bAll, "get_vacation_entitlement", {
+      person_id: person.id,
+    });
+    expect(errorCode(foreign)).toBe("NOT_FOUND");
+    expectNoLeak(foreign);
+
+    const own = await call(tokens.aRead, "get_vacation_entitlement", {
+      person_id: person.id,
+    });
+    const entitled = vacationEntitlementForPerson({
+      seniorityDate: "2023-03-01",
+      status: "activa",
+      fechaBaja: null,
+      today,
+    });
+
+    expect(own.isError).toBeFalsy();
+    expect(own.structuredContent).toEqual({
+      ...vacationToolFields(entitled),
+      url: `${ORIGIN}/app/personas/${person.id}`,
+    });
+    expect(own.structuredContent.prima_vacacional).toBe(
+      "Prima vacacional: no menor al 25% (Art. 80 LFT)",
+    );
+    expect(own.structuredContent).not.toHaveProperty("notes");
+    expect(JSON.stringify(own.structuredContent)).not.toMatch(
+      /tomados|saldo|pendiente de confirmación/i,
+    );
+
+    const [closedPerson] = await ownerDb
+      .insert(people)
+      .values({
+        companyId: a.companyId,
+        nombres: "Persona",
+        apellidoPaterno: "Cerrada",
+        fechaIngreso: "2020-03-01",
+        status: "baja",
+      })
+      .returning();
+    await ownerDb.insert(employmentPeriods).values({
+      companyId: a.companyId,
+      personId: closedPerson.id,
+      fechaIngreso: "2020-03-01",
+      fechaAntiguedad: "2020-03-01",
+      fechaBaja: "2022-06-01",
+      bajaSinFecha: false,
+    });
+
+    const closed = await call(tokens.aRead, "get_vacation_entitlement", {
+      person_id: closedPerson.id,
+    });
+    const closedView = vacationEntitlementForPerson({
+      seniorityDate: "2020-03-01",
+      status: "baja",
+      fechaBaja: "2022-06-01",
+      today,
+    });
+
+    expect(closed.structuredContent).toEqual({
+      ...vacationToolFields(closedView),
+      url: `${ORIGIN}/app/personas/${closedPerson.id}`,
+    });
+    expect(closed.structuredContent.state).toBe("before_table");
+    expect(closed.structuredContent.grant_by).toBeNull();
+    expect(closed.structuredContent.closed).toBe(true);
+
+    const missing = await call(tokens.aRead, "get_vacation_entitlement", {
+      person_id: a.person.id,
+    });
+    expect(missing.structuredContent.state).toBe("no_hire_date");
+    expect(missing.structuredContent.message).toBe("Sin fecha de ingreso");
   });
 });

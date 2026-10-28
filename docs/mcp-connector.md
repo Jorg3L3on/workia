@@ -122,6 +122,7 @@ America/Mexico_City. Las listas grandes paginan con `cursor` opaco y firmado
 | `get_asset` | Un activo con su resguardante y el historial de entregas y devoluciones (fecha, condición, notas). | `read` (Leer) | `assets:read` |
 | `list_audit_events` | Bitácora de cambios (append-only), más reciente primero: quién, qué recurso, qué acción, origen (app, seed, system, import, mcp) y el antes/después. | `audit` (Auditoría) | `audit:read` |
 | `list_termination_reasons` | Motivos de baja del catálogo de la empresa. | `read` (Leer) | `people:read` |
+| `get_vacation_entitlement` | Derecho a vacaciones de una persona, el mismo que muestra la tarjeta Vacaciones del expediente: año de servicio cumplido, aniversario actual y siguiente, días de derecho y fecha límite para otorgarlas. | `read` (Leer) | `people:read` |
 | `create_person` | Da de alta un expediente con las mismas reglas que la app (D-04). | `write:people` (Escribir personas) | `people:create` |
 | `update_person` | Edita sólo los campos enviados en changes (null borra el dato); el resto del expediente y el horario no cambian. | `write:people` (Escribir personas) | `people:update` |
 | `set_person_status` | Da de baja laboral o reingresa a una persona (estatus activa \| baja). | `write:people` (Escribir personas) | `people:update` |

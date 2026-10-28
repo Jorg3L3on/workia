@@ -41,6 +41,7 @@ import {
 } from "./onboarding";
 import { listTerminationReasonsTool } from "./employment";
 import { getPersonTool, listPeopleTool } from "./people";
+import { getVacationEntitlementTool } from "./vacation";
 import {
   createPersonTool,
   setPersonStatusTool,
@@ -79,6 +80,8 @@ export const WORKIA_TOOLS: WorkiaTool[] = [
   listAuditEventsTool,
   // Iniciativa 2: motivos de baja for set_person_status.
   listTerminationReasonsTool,
+  // WRK-I14-2: read-only vacation entitlement (same view as the card).
+  getVacationEntitlementTool,
   // Phase 2: writes (preview + confirmation + idempotency).
   createPersonTool,
   updatePersonTool,
