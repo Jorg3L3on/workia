@@ -136,6 +136,8 @@ describe("PositionDocumentsSection", () => {
       "00000000-0000-4000-8000-000000000099",
     );
 
+    expect(screen.getAllByLabelText("Vigencia (meses)")[1]).toHaveValue("");
+
     fireEvent.click(
       screen.getByRole("button", { name: "Bajar Identificación" }),
     );

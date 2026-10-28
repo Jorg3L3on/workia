@@ -428,8 +428,8 @@ const PositionDocumentsEditor = ({
                       onChange={(event) =>
                         patchDraft(draft.key, { months: event.target.value })
                       }
-                      placeholder="12"
-                      value={draft.months}
+                      placeholder={draft.noVence ? "" : "12"}
+                      value={draft.noVence ? "" : draft.months}
                     />
                   </div>
                   <div className="flex items-center justify-between gap-3">
