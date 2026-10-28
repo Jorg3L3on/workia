@@ -4,6 +4,8 @@
  * scope, cursors are signed, and the lists match the app's own queries.
  * Test titles are the surface ids of docs/idor-matrix.md.
  */
+import { randomUUID } from "node:crypto";
+
 import { and, desc, eq } from "drizzle-orm";
 import { beforeAll, describe, expect, it } from "vitest";
 
@@ -17,15 +19,23 @@ import {
   listRenewalTrayItems,
   previewContract,
 } from "@/lib/contracts";
+import { listExpiringDocuments } from "@/lib/documents";
 import {
   auditEvents,
+  companyMemberships,
   contracts,
+  documentRequirements,
   employmentPeriods,
   mcpConnections,
   mcpToolCalls,
   people,
+  permissions,
+  personDocuments,
   personBeneficiaries,
   personSchedules,
+  rolePermissions,
+  roles,
+  users,
 } from "@/lib/db/schema";
 import { isoToday } from "@/lib/format/date";
 import {
@@ -181,7 +191,7 @@ beforeAll(async () => {
 });
 
 describe("protocol surface", () => {
-  it("lists the 39 tools, the 4 resources and the 3 prompts", async () => {
+  it("lists the 41 tools, the 4 resources and the 3 prompts", async () => {
     const tools = (await rpc(tokens.aRead, "tools/list")).result.tools;
     const resources = (await rpc(tokens.aRead, "resources/list")).result
       .resources;
@@ -191,8 +201,9 @@ describe("protocol surface", () => {
 
     // 18 reads (phase 1) + 13 writes (phase 2) + phase 3 (3 reads, 4 writes)
     // + list_termination_reasons (Iniciativa 2)
-    // + get_vacation_entitlement (WRK-I14-2).
-    expect(tools).toHaveLength(40);
+    // + get_vacation_entitlement (WRK-I14-2)
+    // + list_expiring_documents (WRK-I15-4).
+    expect(tools).toHaveLength(41);
     expect(resources.map((r: { uri: string }) => r.uri).sort()).toEqual([
       "workia://catalogo",
       "workia://glosario",
@@ -864,6 +875,162 @@ describe("new read-only domain queries stay inside the company", () => {
   });
 });
 
+describe("documents", () => {
+  const addDays = (iso: string, days: number) => {
+    const [year, month, day] = iso.split("-").map(Number);
+    const date = new Date(Date.UTC(year, month - 1, day + days));
+    const pad = (value: number) => String(value).padStart(2, "0");
+
+    return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`;
+  };
+
+  it("mcp:list_expiring_documents", async () => {
+    const today = isoToday();
+    const [requirement] = await ownerDb
+      .insert(documentRequirements)
+      .values({
+        companyId: a.companyId,
+        name: "Licencia de demostración",
+        required: true,
+      })
+      .returning();
+    const [later] = await ownerDb
+      .insert(documentRequirements)
+      .values({
+        companyId: a.companyId,
+        name: "Carta de demostración",
+        required: true,
+      })
+      .returning();
+    const [foreignRequirement] = await ownerDb
+      .insert(documentRequirements)
+      .values({
+        companyId: b.companyId,
+        name: "Aviso de la otra empresa",
+        required: true,
+      })
+      .returning();
+    const [own] = await ownerDb
+      .insert(personDocuments)
+      .values({
+        companyId: a.companyId,
+        personId: a.person.id,
+        requirementId: requirement.id,
+        deliveredOn: "2026-01-15",
+        expiresOn: addDays(today, 10),
+      })
+      .returning();
+    await ownerDb.insert(personDocuments).values({
+      companyId: a.companyId,
+      personId: a.person.id,
+      requirementId: later.id,
+      deliveredOn: "2026-01-15",
+      expiresOn: addDays(today, 40),
+    });
+    await ownerDb.insert(personDocuments).values({
+      companyId: b.companyId,
+      personId: b.person.id,
+      requirementId: foreignRequirement.id,
+      deliveredOn: "2026-01-15",
+      expiresOn: addDays(today, 5),
+    });
+
+    const cross = await call(tokens.bAll, "list_expiring_documents", {
+      limit: 100,
+    });
+
+    expectNoLeak(cross);
+    expect(
+      cross.structuredContent.items.map(
+        (item: { document_id: string }) => item.document_id,
+      ),
+    ).not.toContain(own.id);
+
+    const listed = await call(tokens.aRead, "list_expiring_documents", {
+      limit: 100,
+    });
+    const domain = await listExpiringDocuments(a.companyId, today);
+
+    expect(listed.isError).toBeFalsy();
+    expect(listed.structuredContent.as_of).toBe(today);
+    expect(listed.structuredContent.window_days).toBe(30);
+    expect(listed.structuredContent.status).toBe("por_vencer");
+    expect(
+      listed.structuredContent.items.map(
+        (item: { document_id: string }) => item.document_id,
+      ),
+    ).toEqual(domain.map((row) => row.id));
+    expect(listed.structuredContent.items[0]).toMatchObject({
+      document_id: own.id,
+      person: { id: a.person.id },
+      requirement_name: "Licencia de demostración",
+      expires_on: addDays(today, 10),
+      status: "expiring",
+      status_label: "Por vencer",
+      days_left: 10,
+    });
+
+    const byPosition = await call(tokens.aRead, "list_expiring_documents", {
+      position_id: a.position.id,
+      limit: 100,
+    });
+    const domainPosition = await listExpiringDocuments(a.companyId, today, {
+      positionId: a.position.id,
+    });
+
+    expect(
+      byPosition.structuredContent.items.map(
+        (item: { document_id: string }) => item.document_id,
+      ),
+    ).toEqual(domainPosition.map((row) => row.id));
+
+    const foreignPosition = await call(tokens.bAll, "list_expiring_documents", {
+      position_id: a.position.id,
+      limit: 100,
+    });
+
+    expect(foreignPosition.structuredContent.items).toEqual([]);
+
+    const [role] = await ownerDb
+      .insert(roles)
+      .values({
+        slug: `sin-documentos-${randomUUID().slice(0, 8)}`,
+        name: "Sin documentos",
+      })
+      .returning();
+    const [peopleRead] = await ownerDb
+      .select()
+      .from(permissions)
+      .where(eq(permissions.slug, "people:read"));
+
+    await ownerDb.insert(rolePermissions).values({
+      roleId: role.id,
+      permissionId: peopleRead.id,
+    });
+
+    const [user] = await ownerDb
+      .insert(users)
+      .values({
+        email: `sin-documentos-${role.slug}@idor.test`,
+        name: "Sin documentos",
+      })
+      .returning();
+
+    await ownerDb.insert(companyMemberships).values({
+      userId: user.id,
+      companyId: a.companyId,
+      roleId: role.id,
+      isDefault: true,
+    });
+
+    const denied = await tokenFor(a, user.id, ["read"]);
+
+    expect(errorCode(await call(denied.token, "list_expiring_documents"))).toBe(
+      "FORBIDDEN_RBAC",
+    );
+  });
+});
+
 describe("PII sweep and output contracts", () => {
   /** Arguments that make every read tool touch the test person. */
   const sweepArgs = () => ({
@@ -883,6 +1050,7 @@ describe("PII sweep and output contracts", () => {
     list_termination_reasons: {},
     get_seniority_certificate: { person_id: a.person.id },
     get_vacation_entitlement: { person_id: a.person.id },
+    list_expiring_documents: {},
     list_contracts: { person_id: a.person.id },
     list_expiring_contracts: { within_days: 365 },
     list_renewal_tray: {},

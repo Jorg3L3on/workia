@@ -123,6 +123,7 @@ America/Mexico_City. Las listas grandes paginan con `cursor` opaco y firmado
 | `list_audit_events` | Bitácora de cambios (append-only), más reciente primero: quién, qué recurso, qué acción, origen (app, seed, system, import, mcp) y el antes/después. | `audit` (Auditoría) | `audit:read` |
 | `list_termination_reasons` | Motivos de baja del catálogo de la empresa. | `read` (Leer) | `people:read` |
 | `get_vacation_entitlement` | Derecho a vacaciones de una persona, el mismo que muestra la tarjeta Vacaciones del expediente: año de servicio cumplido, aniversario actual y siguiente, días de derecho y fecha límite para otorgarlas. | `read` (Leer) | `people:read` |
+| `list_expiring_documents` | La bandeja «Documentos por vencer»: la entrega más reciente de cada persona y requisito que vence hoy o en los próximos 30 días (por_vencer, el valor por defecto) o que ya venció (vencido). | `read` (Leer) | `documents:read` |
 | `create_person` | Da de alta un expediente con las mismas reglas que la app (D-04). | `write:people` (Escribir personas) | `people:create` |
 | `update_person` | Edita sólo los campos enviados en changes (null borra el dato); el resto del expediente y el horario no cambian. | `write:people` (Escribir personas) | `people:update` |
 | `set_person_status` | Da de baja laboral o reingresa a una persona (estatus activa \| baja). | `write:people` (Escribir personas) | `people:update` |

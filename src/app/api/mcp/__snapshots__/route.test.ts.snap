@@ -4537,6 +4537,227 @@ exports[`/api/mcp transport > keeps the tools/list contract (snapshot) 1`] = `
       "securitySchemes": [
         {
           "scopes": [
+            "read",
+          ],
+          "type": "oauth2",
+        },
+      ],
+    },
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true,
+      "title": "Documentos por vencer",
+    },
+    "description": "La bandeja «Documentos por vencer»: la entrega más reciente de cada persona y requisito que vence hoy o en los próximos 30 días (por_vencer, el valor por defecto) o que ya venció (vencido). La misma lista que la bandeja, ordenada por fecha de vencimiento. No incluye archivos, números de documento ni notas.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "cursor": {
+          "description": "Cursor opaco devuelto como next_cursor en la página anterior.",
+          "maxLength": 1000,
+          "type": "string",
+        },
+        "limit": {
+          "default": 25,
+          "description": "Cuántos resultados (por defecto 25, máximo 100).",
+          "maximum": 100,
+          "minimum": 1,
+          "type": "integer",
+        },
+        "position_id": {
+          "description": "Sólo personas de este puesto.",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+          "type": "string",
+        },
+        "status": {
+          "default": "por_vencer",
+          "description": "por_vencer: vence hoy o en 30 días. vencido: la vigencia ya pasó.",
+          "enum": [
+            "por_vencer",
+            "vencido",
+          ],
+          "type": "string",
+        },
+      },
+      "type": "object",
+    },
+    "name": "list_expiring_documents",
+    "outputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "as_of": {
+          "type": "string",
+        },
+        "as_of_mx": {
+          "anyOf": [
+            {
+              "type": "string",
+            },
+            {
+              "type": "null",
+            },
+          ],
+        },
+        "items": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "days_left": {
+                "maximum": 9007199254740991,
+                "minimum": -9007199254740991,
+                "type": "integer",
+              },
+              "delivered_on": {
+                "type": "string",
+              },
+              "delivered_on_mx": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                  },
+                  {
+                    "type": "null",
+                  },
+                ],
+              },
+              "document_id": {
+                "type": "string",
+              },
+              "expires_on": {
+                "type": "string",
+              },
+              "expires_on_mx": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                  },
+                  {
+                    "type": "null",
+                  },
+                ],
+              },
+              "person": {
+                "additionalProperties": false,
+                "properties": {
+                  "id": {
+                    "type": "string",
+                  },
+                  "nombre_completo": {
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "id",
+                  "nombre_completo",
+                ],
+                "type": "object",
+              },
+              "position": {
+                "anyOf": [
+                  {
+                    "additionalProperties": false,
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                      },
+                      "name": {
+                        "type": "string",
+                      },
+                    },
+                    "required": [
+                      "id",
+                      "name",
+                    ],
+                    "type": "object",
+                  },
+                  {
+                    "type": "null",
+                  },
+                ],
+              },
+              "requirement_id": {
+                "type": "string",
+              },
+              "requirement_name": {
+                "type": "string",
+              },
+              "status": {
+                "enum": [
+                  "expiring",
+                  "expired",
+                ],
+                "type": "string",
+              },
+              "status_label": {
+                "type": "string",
+              },
+              "url": {
+                "type": "string",
+              },
+            },
+            "required": [
+              "document_id",
+              "person",
+              "position",
+              "requirement_id",
+              "requirement_name",
+              "delivered_on",
+              "delivered_on_mx",
+              "expires_on",
+              "expires_on_mx",
+              "days_left",
+              "status",
+              "status_label",
+              "url",
+            ],
+            "type": "object",
+          },
+          "type": "array",
+        },
+        "next_cursor": {
+          "anyOf": [
+            {
+              "type": "string",
+            },
+            {
+              "type": "null",
+            },
+          ],
+          "description": "Cursor para la página siguiente; null si no hay más.",
+        },
+        "status": {
+          "enum": [
+            "por_vencer",
+            "vencido",
+          ],
+          "type": "string",
+        },
+        "window_days": {
+          "const": 30,
+          "type": "number",
+        },
+      },
+      "required": [
+        "as_of",
+        "as_of_mx",
+        "window_days",
+        "status",
+        "items",
+        "next_cursor",
+      ],
+      "type": "object",
+    },
+    "title": "Documentos por vencer",
+  },
+  {
+    "_meta": {
+      "securitySchemes": [
+        {
+          "scopes": [
             "write:people",
           ],
           "type": "oauth2",

@@ -38,6 +38,7 @@ const openPalette = (
     canReadMembers: true,
     canUseConnections: true,
     canReadReports: true,
+    canReadDocuments: true,
   },
 ) => {
   render(<AppCommandPalette access={access} />);
@@ -73,11 +74,13 @@ describe("AppCommandPalette", () => {
       canReadMembers: false,
       canUseConnections: false,
       canReadReports: false,
+      canReadDocuments: false,
     });
 
     expect(optionLabels()).not.toContain("Miembros");
     expect(optionLabels()).not.toContain("Conexiones");
     expect(optionLabels()).not.toContain("Rotación");
+    expect(optionLabels()).not.toContain("Documentos");
   });
 
   it("finds people by RFC as you type and opens the expediente", async () => {

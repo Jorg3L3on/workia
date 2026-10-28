@@ -1,4 +1,4 @@
-import { asc, desc, eq, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, isNull } from "drizzle-orm";
 
 import {
   buildChanges,
@@ -14,8 +14,13 @@ import {
   personDocuments,
   positions,
 } from "@/lib/db/schema";
+import { formatPersonName } from "@/lib/people/schema";
 import { withTenant } from "@/lib/tenant/scope";
 
+import {
+  selectExpiringDocumentRows,
+  type ExpiringDocumentQuery,
+} from "./expiring";
 import {
   buildPersonDocumentCard,
   personDocumentCardWithoutPosition,
@@ -512,4 +517,76 @@ export const listPersonDocumentCard = async (
   ]);
 
   return buildPersonDocumentCard(requirements, deliveries, today);
+};
+
+/**
+ * The tray and `list_expiring_documents`: every latest delivery in this
+ * company that expires today or within 30 days (`status` expiring), or that
+ * is already expired when `status` is expired. `today` is `isoToday()`.
+ * Another company's rows never match the company filter.
+ */
+export const listExpiringDocuments = async (
+  companyId: string,
+  today: string,
+  options: ExpiringDocumentQuery = {},
+) => {
+  const rows = await tdb(companyId)
+    .select({
+      id: personDocuments.id,
+      personId: personDocuments.personId,
+      requirementId: personDocuments.requirementId,
+      deliveredOn: personDocuments.deliveredOn,
+      expiresOn: personDocuments.expiresOn,
+      createdAt: personDocuments.createdAt,
+      nombres: people.nombres,
+      apellidoPaterno: people.apellidoPaterno,
+      apellidoMaterno: people.apellidoMaterno,
+      positionId: people.positionId,
+      positionName: positions.name,
+      requirementName: documentRequirements.name,
+    })
+    .from(personDocuments)
+    .innerJoin(
+      people,
+      and(
+        eq(people.companyId, personDocuments.companyId),
+        eq(people.id, personDocuments.personId),
+        isNull(people.deletedAt),
+      ),
+    )
+    .innerJoin(
+      documentRequirements,
+      and(
+        eq(documentRequirements.companyId, personDocuments.companyId),
+        eq(documentRequirements.id, personDocuments.requirementId),
+        isNull(documentRequirements.deletedAt),
+        eq(documentRequirements.active, true),
+      ),
+    )
+    .leftJoin(
+      positions,
+      and(
+        eq(positions.companyId, personDocuments.companyId),
+        eq(positions.id, people.positionId),
+        isNull(positions.deletedAt),
+      ),
+    )
+    .where(withTenant(personDocuments, companyId));
+
+  return selectExpiringDocumentRows(
+    rows.map((row) => ({
+      id: row.id,
+      personId: row.personId,
+      requirementId: row.requirementId,
+      deliveredOn: row.deliveredOn,
+      expiresOn: row.expiresOn,
+      createdAt: row.createdAt,
+      personName: formatPersonName(row),
+      positionId: row.positionId,
+      positionName: row.positionName,
+      requirementName: row.requirementName,
+    })),
+    today,
+    options,
+  );
 };

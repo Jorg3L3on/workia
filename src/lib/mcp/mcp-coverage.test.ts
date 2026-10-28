@@ -55,6 +55,8 @@ const PHASE_3_READ_TOOLS = [
   "get_vacation_entitlement",
   // Iniciativa 2: baja y periodos laborales.
   "list_termination_reasons",
+  // WRK-I15-4: the 30-day documents tray.
+  "list_expiring_documents",
 ];
 const PHASE_3_WRITE_TOOLS = [
   "update_person_schedule_blocks",

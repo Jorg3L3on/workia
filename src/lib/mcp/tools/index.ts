@@ -41,6 +41,7 @@ import {
 } from "./onboarding";
 import { listTerminationReasonsTool } from "./employment";
 import { getPersonTool, listPeopleTool } from "./people";
+import { listExpiringDocumentsTool } from "./documents";
 import { getVacationEntitlementTool } from "./vacation";
 import {
   createPersonTool,
@@ -82,6 +83,8 @@ export const WORKIA_TOOLS: WorkiaTool[] = [
   listTerminationReasonsTool,
   // WRK-I14-2: read-only vacation entitlement (same view as the card).
   getVacationEntitlementTool,
+  // WRK-I15-4: the 30-day documents tray.
+  listExpiringDocumentsTool,
   // Phase 2: writes (preview + confirmation + idempotency).
   createPersonTool,
   updatePersonTool,

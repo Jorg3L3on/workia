@@ -54,6 +54,7 @@ const renderShell = (
     canReadMembers?: boolean;
     canUseConnections?: boolean;
     canReadReports?: boolean;
+    canReadDocuments?: boolean;
     isPlatformAdmin?: boolean;
   } = {},
 ) =>
@@ -204,6 +205,7 @@ describe("AppShell", () => {
       canReadMembers: true,
       canUseConnections: true,
       canReadReports: true,
+      canReadDocuments: true,
     });
 
     const sidebar = within(
@@ -218,6 +220,7 @@ describe("AppShell", () => {
       "Inicio",
       "Personas",
       "Contratos",
+      "Documentos",
       "Altas",
       "Resguardo",
     ]);
@@ -237,6 +240,7 @@ describe("AppShell", () => {
     expect(sidebar.queryByRole("link", { name: "Miembros" })).toBeNull();
     expect(sidebar.queryByRole("link", { name: "Conexiones" })).toBeNull();
     expect(sidebar.queryByRole("link", { name: "Rotación" })).toBeNull();
+    expect(sidebar.queryByRole("link", { name: "Documentos" })).toBeNull();
     expect(sidebar.getByRole("link", { name: "Auditoría" })).toBeTruthy();
   });
 
