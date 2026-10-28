@@ -16,9 +16,11 @@ export type {
 /**
  * Loads one person's vacation constancia inside `companyId` (WRK-I14-4).
  * Null when the person is not in the company, when no service year is
- * complete by `asOf` (or by the fecha de baja), or when `serviceYear` is
- * still ahead of that date. Omit `serviceYear` to use the year that
- * contains the date. Days taken are non-voided ledger rows of that year.
+ * complete by `asOf` (or by the fecha de baja, when that date is earlier),
+ * or when `serviceYear` is still ahead of that cutoff. Omit `serviceYear`
+ * to use the year that contains the cutoff. Days taken are non-voided
+ * ledger rows of that year. The printed issue date is `asOf` itself: a
+ * fecha de baja cuts the year and the count, and is not the issue date.
  *
  * pendiente de contador: the grant-by date and the year-6 day count are the
  * engine's readings (see constancia-sheet.ts). This loader does not add one.
@@ -86,6 +88,7 @@ export const getVacationConstancia = async (
     seniorityDate,
     serviceYear: year,
     asOf: countedTo,
+    issuedOn: asOf,
     entries: records.map((record) => ({
       startDate: record.startDate,
       endDate: record.endDate,

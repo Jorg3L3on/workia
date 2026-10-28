@@ -568,6 +568,7 @@ describe("vacation constancia stays inside the company", () => {
       entitlementDays: period?.entitlementDays,
       takenHalves: 10,
       grantBy: period?.grantBy,
+      issuedOn: isoToday(),
     });
     expect(sheet?.ranges).toEqual([
       {
@@ -664,5 +665,96 @@ describe("vacation constancia stays inside the company", () => {
     await expect(
       openConstancia(companyA.person.id, String(serviceYear)),
     ).rejects.toMatchObject({ kind: "notFound" });
+  });
+
+  it("issues the sheet today when the person is on baja", async () => {
+    const fechaBaja = "2025-06-01";
+    const today = isoToday();
+    const closed = vacationPeriodFor(seniority, fechaBaja);
+    const stillActive = vacationPeriodFor(seniority, today);
+
+    expect(fechaBaja < today).toBe(true);
+    expect(closed?.serviceYearsCompleted).toBe(2);
+    expect(stillActive!.serviceYearsCompleted).toBeGreaterThan(
+      closed!.serviceYearsCompleted,
+    );
+
+    const [person] = await ownerDb
+      .insert(people)
+      .values({
+        companyId: companyA.companyId,
+        nombres: "Persona Baja",
+        apellidoPaterno: "Demostración",
+        fechaIngreso: seniority,
+        status: "baja",
+      })
+      .returning();
+
+    await ownerDb.insert(employmentPeriods).values({
+      companyId: companyA.companyId,
+      personId: person.id,
+      fechaIngreso: seniority,
+      fechaAntiguedad: seniority,
+      fechaBaja,
+    });
+
+    const taken = await registerVacationRecord(companyA.companyId, {
+      personId: person.id,
+      startDate: "2025-04-01",
+      endDate: "2025-04-03",
+      days: "3",
+    });
+    const voided = await registerVacationRecord(companyA.companyId, {
+      personId: person.id,
+      startDate: "2025-04-10",
+      endDate: "2025-04-10",
+      days: "1",
+    });
+
+    if (!taken?.ok || !voided?.ok) {
+      throw new Error("No se pudo preparar la baja de demostración.");
+    }
+
+    const removed = await voidVacationRecord(companyA.companyId, voided.id);
+
+    expect(removed?.ok).toBe(true);
+
+    const sheet = await getVacationConstancia(
+      companyA.companyId,
+      person.id,
+      today,
+    );
+
+    expect(sheet).toMatchObject({
+      personName: "Persona Baja Demostración",
+      seniorityDate: seniority,
+      serviceYear: closed!.serviceYearsCompleted,
+      entitlementDays: closed!.entitlementDays,
+      takenHalves: 6,
+      grantBy: closed!.grantBy,
+      issuedOn: today,
+    });
+    expect(sheet?.issuedOn).not.toBe(fechaBaja);
+    expect(sheet?.ranges).toEqual([
+      { startDate: "2025-04-01", endDate: "2025-04-03", days: "3.0" },
+    ]);
+    expect(
+      await getVacationConstancia(
+        companyA.companyId,
+        person.id,
+        today,
+        stillActive!.serviceYearsCompleted,
+      ),
+    ).toBeNull();
+
+    actAs(companyA.admin);
+    const html = renderToStaticMarkup(await openConstancia(person.id));
+
+    expect(html).toContain(
+      `Se extiende la presente el ${formatDateMx(today)}.`,
+    );
+    expect(html).not.toContain(formatDateMx(fechaBaja));
+    expect(html).toContain(`>${closed!.serviceYearsCompleted}</dd>`);
+    expect(html).toContain("3 días");
   });
 });

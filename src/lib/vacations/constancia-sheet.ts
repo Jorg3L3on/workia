@@ -45,6 +45,8 @@ const blank = (value: string | null | undefined) => {
 /**
  * Builds the sheet for one completed service year. Null when that year is
  * not complete by `asOf`, or when the engine has no period for it.
+ * `asOf` is only the cutoff (today, or the fecha de baja when the period
+ * is closed). `issuedOn` is the date printed on the sheet and can be later.
  * `entries` may include other years and voided rows; only non-voided rows
  * of `serviceYear` count.
  */
@@ -54,13 +56,17 @@ export const composeVacationConstancia = ({
   seniorityDate,
   serviceYear,
   asOf,
+  issuedOn,
   entries,
 }: {
   companyName: string;
   personName: string;
   seniorityDate: string;
   serviceYear: number;
+  /** Cutoff for the service year and the day count. */
   asOf: string;
+  /** Date printed on the sheet. */
+  issuedOn: string;
   entries: VacationSpan[];
 }): VacationConstancia | null => {
   const period = vacationPeriodForCompletedYear(seniorityDate, serviceYear);
@@ -96,7 +102,7 @@ export const composeVacationConstancia = ({
     entitlementDays: period.entitlementDays,
     takenHalves: balance.takenHalves,
     grantBy: period.grantBy,
-    issuedOn: asOf,
+    issuedOn,
     ranges,
   };
 };

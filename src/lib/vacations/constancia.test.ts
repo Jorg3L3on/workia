@@ -33,6 +33,7 @@ describe("composeVacationConstancia", () => {
       seniorityDate: seniority,
       serviceYear: 3,
       asOf,
+      issuedOn: asOf,
       entries: [
         span({ days: "5", serviceYear: 3 }),
         span({
@@ -75,6 +76,7 @@ describe("composeVacationConstancia", () => {
       seniorityDate: seniority,
       serviceYear: 3,
       asOf,
+      issuedOn: asOf,
       entries: [],
     });
 
@@ -91,6 +93,7 @@ describe("composeVacationConstancia", () => {
         seniorityDate: seniority,
         serviceYear: 4,
         asOf,
+        issuedOn: asOf,
         entries: [],
       }),
     ).toBeNull();
@@ -101,6 +104,52 @@ describe("composeVacationConstancia", () => {
         seniorityDate: "2025-06-15",
         serviceYear: 1,
         asOf: "2026-06-14",
+        issuedOn: "2026-06-14",
+        entries: [],
+      }),
+    ).toBeNull();
+  });
+
+  it("prints today when the cutoff is an earlier fecha de baja", () => {
+    const fechaBaja = "2025-06-01";
+    const issuedOn = "2026-10-28";
+    const closed = vacationPeriodFor(seniority, fechaBaja);
+    const sheet = composeVacationConstancia({
+      companyName: "Empresa Demostración SA",
+      personName: "Persona Baja Demostración",
+      seniorityDate: seniority,
+      serviceYear: 2,
+      asOf: fechaBaja,
+      issuedOn,
+      entries: [
+        span({
+          days: "3",
+          serviceYear: 2,
+          startDate: "2025-04-01",
+          endDate: "2025-04-03",
+        }),
+        span({ days: "5", serviceYear: 3 }),
+      ],
+    });
+
+    expect(closed?.serviceYearsCompleted).toBe(2);
+    expect(closed?.entitlementDays).toBe(14);
+    expect(sheet).toMatchObject({
+      serviceYear: 2,
+      entitlementDays: 14,
+      takenHalves: 6,
+      issuedOn,
+      ranges: [{ startDate: "2025-04-01", endDate: "2025-04-03", days: "3" }],
+    });
+    expect(sheet?.issuedOn).not.toBe(fechaBaja);
+    expect(
+      composeVacationConstancia({
+        companyName: "Empresa Demostración SA",
+        personName: "Persona Baja Demostración",
+        seniorityDate: seniority,
+        serviceYear: 3,
+        asOf: fechaBaja,
+        issuedOn,
         entries: [],
       }),
     ).toBeNull();
@@ -113,6 +162,7 @@ describe("composeVacationConstancia", () => {
       seniorityDate: "2018-03-01",
       serviceYear: 6,
       asOf: "2024-03-01",
+      issuedOn: "2024-03-01",
       entries: [],
     });
 
