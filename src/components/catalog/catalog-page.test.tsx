@@ -8,7 +8,11 @@ import {
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+}));
+
+vi.mock("@/lib/documents/actions", () => ({
+  setRequirementsAction: async () => ({ ok: true as const }),
 }));
 
 vi.mock("@/lib/catalog/actions", () => ({
@@ -45,6 +49,7 @@ import {
   SucursalesCatalog,
   type AreaCatalogRow,
   type PositionCatalogRow,
+  type PositionDocumentRequirement,
 } from "@/components/catalog/catalog-entities";
 
 const permissions = { canCreate: true, canUpdate: true, canDelete: true };
@@ -61,6 +66,7 @@ const position = (
   areaName: null,
   activities: [],
   references: [{ count: 0, one: "persona", many: "personas" }],
+  documents: [],
   ...overrides,
 });
 
@@ -91,13 +97,17 @@ const openMenu = (name: string) => {
   return screen.getAllByRole("menuitem").map((item) => item.textContent);
 };
 
-const renderPuestos = () =>
+const renderPuestos = (
+  extra: Partial<Parameters<typeof PuestosCatalog>[0]> = {},
+) =>
   render(
     <PuestosCatalog
       activities={activities}
       areas={[{ id: "a1", name: "Operaciones" }]}
+      canManageDocuments
       rows={positions}
       {...permissions}
+      {...extra}
     />,
   );
 
@@ -129,10 +139,19 @@ describe("CatalogPage", () => {
   it("offers Eliminar only when nothing points at the record", () => {
     renderPuestos();
 
-    expect(openMenu("Analista")).toEqual(["Editar", "Desactivar", "Eliminar"]);
+    expect(openMenu("Analista")).toEqual([
+      "Editar",
+      "Documentos requeridos",
+      "Desactivar",
+      "Eliminar",
+    ]);
     cleanup();
     renderPuestos();
-    expect(openMenu("Auxiliar")).toEqual(["Editar", "Desactivar"]);
+    expect(openMenu("Auxiliar")).toEqual([
+      "Editar",
+      "Documentos requeridos",
+      "Desactivar",
+    ]);
   });
 
   it("edits a puesto in a sheet with its activities as chips", () => {
@@ -237,6 +256,148 @@ describe("CatalogPage", () => {
 
     expect(screen.queryByRole("group", { name: "Estado" })).toBeNull();
     expect(openMenu("Sucursal Norte")).toEqual(["Editar", "Eliminar"]);
+  });
+
+  const paper = (
+    id: string,
+    name: string,
+    extra: Partial<PositionDocumentRequirement> = {},
+  ): PositionDocumentRequirement => ({
+    id,
+    name,
+    required: true,
+    validityMonths: null,
+    sort: 0,
+    active: true,
+    ...extra,
+  });
+
+  const openDocuments = (name: string) => {
+    fireEvent.click(
+      screen.getByRole("menuitem", { name: "Documentos requeridos" }),
+    );
+    const sheet = screen.getByRole("dialog", { name: "Documentos requeridos" });
+    expect(within(sheet).getByText(name)).toBeTruthy();
+    return sheet;
+  };
+
+  it("shows an empty documents section for a puesto", () => {
+    renderPuestos();
+    openMenu("Analista");
+
+    const sheet = openDocuments("Analista");
+
+    expect(
+      within(sheet).getByText("Este puesto no tiene documentos requeridos."),
+    ).toBeTruthy();
+    expect(
+      within(sheet).getByRole("button", { name: "Agregar documento" }),
+    ).toBeTruthy();
+    expect(within(sheet).queryByRole("list")).toBeNull();
+  });
+
+  it("lists one and many required documents and counts them", () => {
+    renderPuestos({
+      rows: [
+        position("p1", "Analista", {
+          documents: [paper("d1", "Identificación")],
+        }),
+        position("p2", "Coordinador", {
+          documents: [
+            paper("d2", "Domicilio", { validityMonths: 12, sort: 0 }),
+            paper("d3", "Contrato", {
+              required: false,
+              validityMonths: 24,
+              sort: 1,
+            }),
+          ],
+        }),
+      ],
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Todos" }));
+    expect(table().getByText("1")).toBeTruthy();
+    expect(table().getByText("2")).toBeTruthy();
+
+    openMenu("Analista");
+    const one = openDocuments("Analista");
+    expect(within(one).getAllByRole("listitem")).toHaveLength(1);
+    expect(within(one).getByLabelText("Nombre")).toHaveProperty(
+      "value",
+      "Identificación",
+    );
+    expect(
+      (
+        within(one).getByRole("button", {
+          name: "Subir Identificación",
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(true);
+    expect(
+      (
+        within(one).getByRole("button", {
+          name: "Bajar Identificación",
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(true);
+
+    cleanup();
+    renderPuestos({
+      rows: [
+        position("p2", "Coordinador", {
+          documents: [
+            paper("d2", "Domicilio", { validityMonths: 12 }),
+            paper("d3", "Contrato", { required: false, sort: 1 }),
+          ],
+        }),
+      ],
+    });
+    openMenu("Coordinador");
+    const many = openDocuments("Coordinador");
+    expect(within(many).getAllByRole("listitem")).toHaveLength(2);
+    expect(within(many).getByDisplayValue("Domicilio")).toBeTruthy();
+    expect(within(many).getByDisplayValue("Contrato")).toBeTruthy();
+    expect(within(many).queryByLabelText("Nota")).toBeNull();
+    expect(within(many).queryByLabelText("Archivo")).toBeNull();
+    expect(within(many).queryByLabelText("Número de documento")).toBeNull();
+  });
+
+  it("shows the documents list read-only without documents:manage", () => {
+    renderPuestos({
+      canManageDocuments: false,
+      canCreate: false,
+      canUpdate: false,
+      canDelete: false,
+      rows: [
+        position("p1", "Analista", {
+          documents: [
+            paper("d1", "Identificación", { validityMonths: 12 }),
+            paper("d2", "Comprobante", {
+              required: false,
+              active: false,
+              sort: 1,
+            }),
+          ],
+        }),
+      ],
+    });
+
+    expect(openMenu("Analista")).toEqual(["Documentos requeridos"]);
+    const sheet = openDocuments("Analista");
+
+    expect(within(sheet).getByText("Solo lectura.")).toBeTruthy();
+    expect(within(sheet).getByText("Identificación")).toBeTruthy();
+    expect(within(sheet).getByText("Obligatorio · 12 meses")).toBeTruthy();
+    expect(
+      within(sheet).getByText("Opcional · No vence · Inactivo"),
+    ).toBeTruthy();
+    expect(within(sheet).queryByRole("textbox")).toBeNull();
+    expect(
+      within(sheet).queryByRole("button", { name: "Agregar documento" }),
+    ).toBeNull();
+    expect(
+      within(sheet).queryByRole("button", { name: "Guardar documentos" }),
+    ).toBeNull();
   });
 
   it("names the references", () => {

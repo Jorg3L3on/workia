@@ -310,6 +310,26 @@ describe("document actions with company B's session", () => {
         (row) => row.id === requirementA.id,
       )?.name,
     ).toBe("Identificación");
+
+    expect(
+      await setRequirementsAction(
+        formData({
+          payload: JSON.stringify({
+            positionId: a.position.id,
+            requirements: [item("Del puesto ajeno")],
+          }),
+        }),
+      ),
+    ).toEqual({ error: "No encontramos ese registro en esta empresa." });
+    expect(
+      (await requirementsOf(a.companyId)).some(
+        (row) =>
+          row.positionId === a.position.id && row.name === "Del puesto ajeno",
+      ),
+    ).toBe(false);
+    expect(
+      (await requirementsOf(b.companyId)).map((row) => row.name),
+    ).not.toContain("Del puesto ajeno");
   });
 
   it("action:documents/recordDeliveryAction", async () => {

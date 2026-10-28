@@ -10,6 +10,8 @@ import {
   writableCompanyIdFromForm,
 } from "@/lib/tenant/scope";
 
+import { CATALOG_PATHS } from "@/lib/catalog/paths";
+
 import { requireDocumentsManage } from "./auth";
 import { recordDelivery, setRequirements } from "./index";
 import {
@@ -23,6 +25,7 @@ const DENIED = "No tienes permiso para gestionar documentos.";
 const revalidateDocuments = () => {
   revalidatePath("/app/personas");
   revalidatePath("/app/auditoria");
+  revalidatePath(CATALOG_PATHS.puestos);
 };
 
 const requireManage = async () => {

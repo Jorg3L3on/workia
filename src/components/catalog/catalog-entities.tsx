@@ -1,6 +1,7 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { FileTextIcon } from "lucide-react";
+import { useCallback, useState, type ReactNode } from "react";
 
 import {
   ActivityChipsField,
@@ -12,6 +13,11 @@ import {
   type CatalogRowBase,
   type CatalogSchema,
 } from "@/components/catalog/catalog-page";
+import {
+  PositionDocumentsSection,
+  type PositionDocumentRequirement,
+} from "@/components/catalog/position-documents-section";
+import { FormSheet } from "@/components/layout/form-sheet";
 import { Tag } from "@/components/ui/badge";
 import { EmptyValue } from "@/components/ui/data-table";
 import { FormSelect } from "@/components/ui/form-select";
@@ -193,20 +199,35 @@ const VISIBLE_ACTIVITIES = 3;
 
 // ── Puestos ────────────────────────────────────────────────────────────
 
+export type { PositionDocumentRequirement };
+
 export type PositionCatalogRow = CatalogRowBase & {
   areaId: string | null;
   areaName: string | null;
   activities: ActivityOption[];
+  documents: PositionDocumentRequirement[];
 };
 
 export const PuestosCatalog = ({
   areas,
   activities,
+  canManageDocuments,
   ...props
 }: EntityProps<PositionCatalogRow> & {
   areas: Option[];
   activities: ActivityOption[];
+  canManageDocuments: boolean;
 }) => {
+  const [documentsRow, setDocumentsRow] = useState<PositionCatalogRow | null>(
+    null,
+  );
+  const [documentsPending, setDocumentsPending] = useState(false);
+  const handleDocumentsPending = useCallback((pending: boolean) => {
+    setDocumentsPending(pending);
+  }, []);
+  const openDocuments = documentsRow
+    ? (props.rows.find((row) => row.id === documentsRow.id) ?? documentsRow)
+    : null;
   const schema: CatalogSchema<PositionCatalogRow> = {
     title: "Puestos",
     description: "Puestos con su área y las actividades que realizan.",
@@ -214,7 +235,7 @@ export const PuestosCatalog = ({
     createLabel: "Nuevo puesto",
     editTitle: "Editar puesto",
     nameHeader: "Puesto",
-    searchPlaceholder: "Buscar puesto, área o actividad",
+    searchPlaceholder: "Buscar puesto, área, actividad o documento",
     emptyTitle: "Sin puestos registrados.",
     status: MASCULINE_STATUS,
     columns: [
@@ -246,13 +267,37 @@ export const PuestosCatalog = ({
             </span>
           ),
       },
+      {
+        id: "documents",
+        header: "Documentos",
+        accessor: (row) => row.documents.length,
+        variant: "numeric",
+        cell: (row) =>
+          row.documents.length === 0 ? <EmptyValue /> : row.documents.length,
+      },
     ],
     getSearchText: (row) =>
-      row.activities.map((activity) => activity.name).join(" "),
+      [
+        ...row.activities.map((activity) => activity.name),
+        ...row.documents.map((document) => document.name),
+      ].join(" "),
     mobileSubtitle: (row) =>
-      [row.areaName, plural(row.activities.length, "actividad", "actividades")]
+      [
+        row.areaName,
+        plural(row.activities.length, "actividad", "actividades"),
+        row.documents.length > 0
+          ? plural(row.documents.length, "documento", "documentos")
+          : null,
+      ]
         .filter(Boolean)
         .join(" · "),
+    rowActions: (row) => [
+      {
+        label: "Documentos requeridos",
+        icon: FileTextIcon,
+        onSelect: () => setDocumentsRow(row),
+      },
+    ],
     fields: (row) => {
       const current =
         row?.areaId && row.areaName
@@ -304,7 +349,35 @@ export const PuestosCatalog = ({
         : null,
   };
 
-  return <CatalogPage schema={schema} {...props} />;
+  return (
+    <>
+      <CatalogPage schema={schema} {...props} />
+      <FormSheet
+        description={openDocuments?.name}
+        formId="position-documents-form"
+        hideFooter={!canManageDocuments}
+        onOpenChange={(open) => {
+          if (!open && !documentsPending) setDocumentsRow(null);
+        }}
+        open={openDocuments !== null}
+        pending={documentsPending}
+        submitLabel="Guardar documentos"
+        title="Documentos requeridos"
+      >
+        {openDocuments ? (
+          <PositionDocumentsSection
+            canManage={canManageDocuments}
+            formId="position-documents-form"
+            key={openDocuments.id}
+            onPendingChange={handleDocumentsPending}
+            positionId={openDocuments.id}
+            requirements={openDocuments.documents}
+            showSubmit={false}
+          />
+        ) : null}
+      </FormSheet>
+    </>
+  );
 };
 
 // ── Actividades ────────────────────────────────────────────────────────
