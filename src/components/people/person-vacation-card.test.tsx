@@ -147,7 +147,7 @@ describe("PersonVacationCard", () => {
 
     renderCard(
       vacationEntitlementView({
-        seniorityDate: "2026-04-01",
+        seniorityDate: "2023-02-31",
         asOf: "2026-03-02",
         closed: false,
       }),
@@ -156,6 +156,26 @@ describe("PersonVacationCard", () => {
     expect(screen.getByRole("alert")).toHaveTextContent(
       "No se pudo calcular el derecho a vacaciones",
     );
+  });
+
+  it("shows a future hire as a neutral status, not an alert", () => {
+    renderCard(
+      vacationEntitlementView({
+        seniorityDate: "2026-04-01",
+        asOf: "2026-03-02",
+        closed: false,
+      }),
+    );
+
+    const card = screen.getByRole("region", { name: "Vacaciones" });
+    expect(card).toHaveAttribute("data-card", "vacaciones");
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Aún no inicia su antigüedad",
+    );
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.queryByTestId("vacation-days")).toBeNull();
+    expect(screen.queryByTestId("vacation-grant-by")).toBeNull();
+    expect(screen.queryByTestId("vacation-prima")).toBeNull();
   });
 
   it("does not put the year-6 caveat on screen", () => {

@@ -1,4 +1,4 @@
-import { formatDateMx } from "@/lib/format/date";
+import { formatDateMx, parseFlexibleDateToIso } from "@/lib/format/date";
 import {
   VACATION_TABLE_EFFECTIVE_FROM,
   vacationPeriodFor,
@@ -25,6 +25,8 @@ export const VACATION_PRIMA_TEXT =
 
 export const VACATION_CARD_COPY = {
   noHireDate: "Sin fecha de ingreso",
+  /** Neutral: the seniority date is still ahead of `asOf` (a scheduled hire). */
+  notStarted: "Aún no inicia su antigüedad",
   notYet: "Aún no genera vacaciones",
   closed: "Periodo cerrado",
   /** Neutral: the engine returns null before the reformed table is in force. */
@@ -34,6 +36,7 @@ export const VACATION_CARD_COPY = {
 
 export type VacationEntitlementState =
   | "no_hire_date"
+  | "not_started"
   | "before_table"
   | "proportional"
   | "entitled"
@@ -133,6 +136,16 @@ export const vacationEntitlementView = ({
 
   if (!on) {
     return viewOf("error", closed, null, VACATION_CARD_COPY.error);
+  }
+
+  // A scheduled hire is not a failure: the engine returns null when `asOf`
+  // is before the seniority date. Only a real calendar day counts; an
+  // impossible date stays an error.
+  const seniorityDay = parseFlexibleDateToIso(seniority);
+  const asOfDay = parseFlexibleDateToIso(on);
+
+  if (seniorityDay && asOfDay && seniorityDay > asOfDay) {
+    return viewOf("not_started", closed, on, VACATION_CARD_COPY.notStarted);
   }
 
   // Lexicographic order matches chronology for yyyy-mm-dd.

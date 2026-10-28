@@ -153,10 +153,35 @@ describe("vacationEntitlementView", () => {
     });
   });
 
-  it("reports an error instead of guessing when the dates cannot be calculated", () => {
+  it("treats a future seniority date as not started, without days or a deadline", () => {
     expect(
       vacationEntitlementView({
         seniorityDate: "2026-04-01",
+        asOf: "2026-03-02",
+        closed: false,
+      }),
+    ).toMatchObject({
+      state: "not_started",
+      message: "Aún no inicia su antigüedad",
+      serviceYearsCompleted: null,
+      entitlementDays: null,
+      grantBy: null,
+      prima: null,
+    });
+    expect(
+      vacationEntitlementForPerson({
+        seniorityDate: "2026-11-01",
+        status: "activa",
+        fechaBaja: null,
+        today: "2026-10-28",
+      }).state,
+    ).toBe("not_started");
+  });
+
+  it("reports an error instead of guessing when the date is not a calendar day", () => {
+    expect(
+      vacationEntitlementView({
+        seniorityDate: "2023-02-31",
         asOf: "2026-03-02",
         closed: false,
       }),
@@ -166,6 +191,13 @@ describe("vacationEntitlementView", () => {
       entitlementDays: null,
       grantBy: null,
     });
+    expect(
+      vacationEntitlementView({
+        seniorityDate: "2026-13-01",
+        asOf: "2026-01-15",
+        closed: false,
+      }).state,
+    ).toBe("error");
   });
 
   it("counts an active person to the today the server passed in", () => {

@@ -4339,7 +4339,7 @@ exports[`/api/mcp transport > keeps the tools/list contract (snapshot) 1`] = `
       "readOnlyHint": true,
       "title": "Derecho a vacaciones",
     },
-    "description": "Derecho a vacaciones de una persona, el mismo que muestra la tarjeta Vacaciones del expediente: año de servicio cumplido, aniversario actual y siguiente, días de derecho y fecha límite para otorgarlas. Con menos de un año de servicio no hay días ni fecha límite. No incluye días tomados ni saldo.",
+    "description": "Derecho a vacaciones de una persona, el mismo que muestra la tarjeta Vacaciones del expediente: año de servicio cumplido, aniversario actual y siguiente, días de derecho y fecha límite para otorgarlas. Con menos de un año de servicio no hay días ni fecha límite. Si la fecha de antigüedad es posterior a la de cálculo, la antigüedad aún no inicia. No incluye días tomados ni saldo.",
     "inputSchema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "properties": {
@@ -4495,6 +4495,7 @@ exports[`/api/mcp transport > keeps the tools/list contract (snapshot) 1`] = `
         "state": {
           "enum": [
             "no_hire_date",
+            "not_started",
             "before_table",
             "proportional",
             "entitled",

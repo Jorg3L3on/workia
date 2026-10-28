@@ -22,7 +22,7 @@ export const getVacationEntitlementTool = defineTool({
   name: "get_vacation_entitlement",
   title: "Derecho a vacaciones",
   description:
-    "Derecho a vacaciones de una persona, el mismo que muestra la tarjeta Vacaciones del expediente: año de servicio cumplido, aniversario actual y siguiente, días de derecho y fecha límite para otorgarlas. Con menos de un año de servicio no hay días ni fecha límite. No incluye días tomados ni saldo.",
+    "Derecho a vacaciones de una persona, el mismo que muestra la tarjeta Vacaciones del expediente: año de servicio cumplido, aniversario actual y siguiente, días de derecho y fecha límite para otorgarlas. Con menos de un año de servicio no hay días ni fecha límite. Si la fecha de antigüedad es posterior a la de cálculo, la antigüedad aún no inicia. No incluye días tomados ni saldo.",
   kind: "read",
   scope: "read",
   permission: "people:read",
@@ -32,6 +32,7 @@ export const getVacationEntitlementTool = defineTool({
   output: z.object({
     state: z.enum([
       "no_hire_date",
+      "not_started",
       "before_table",
       "proportional",
       "entitled",
