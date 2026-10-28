@@ -17,6 +17,10 @@ import {
 import { withTenant } from "@/lib/tenant/scope";
 
 import {
+  buildPersonDocumentCard,
+  personDocumentCardWithoutPosition,
+} from "./person-card";
+import {
   addCalendarMonths,
   DEFAULT_DOCUMENT_REQUIREMENTS,
   requirementNameKey,
@@ -473,3 +477,39 @@ export const recordDelivery = async (
 
     return created;
   }, companyId);
+
+/**
+ * Rows for the expediente card: active requirements of the person's puesto,
+ * with the latest delivery of each. Returns null when the person is not in
+ * this company (the page turns that into 404). A person with no puesto is
+ * an empty card, not a missing person.
+ */
+export const listPersonDocumentCard = async (
+  companyId: string,
+  personId: string,
+  today: string,
+) => {
+  const [person] = await tdb(companyId)
+    .select({ id: people.id, positionId: people.positionId })
+    .from(people)
+    .where(withTenant(people, companyId, eq(people.id, personId)))
+    .limit(1);
+
+  if (!person) {
+    return null;
+  }
+
+  if (!person.positionId) {
+    return personDocumentCardWithoutPosition();
+  }
+
+  const [requirements, deliveries] = await Promise.all([
+    listDocumentRequirements(companyId, {
+      positionId: person.positionId,
+      activeOnly: true,
+    }),
+    listPersonDocuments(companyId, person.id),
+  ]);
+
+  return buildPersonDocumentCard(requirements, deliveries, today);
+};

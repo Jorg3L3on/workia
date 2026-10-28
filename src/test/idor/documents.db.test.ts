@@ -9,7 +9,11 @@ import { beforeAll, describe, expect, it } from "vitest";
 
 import { onboardingChecklistLabels } from "@/lib/onboarding/schema";
 import { isUniqueViolation } from "@/lib/db/errors";
-import { documentRequirements, personDocuments } from "@/lib/db/schema";
+import {
+  auditEvents,
+  documentRequirements,
+  personDocuments,
+} from "@/lib/db/schema";
 import {
   recordDeliveryAction,
   setRequirementsAction,
@@ -19,6 +23,7 @@ import {
   DocumentsAlreadyActiveError,
   getDocumentRequirementById,
   listDocumentRequirements,
+  listPersonDocumentCard,
   listPersonDocuments,
   recordDelivery,
   setRequirements,
@@ -41,13 +46,14 @@ const item = (
     required?: boolean;
     validityMonths?: number | null;
     sort?: number;
+    active?: boolean;
   } = {},
 ) => ({
   name,
   required: extra.required ?? true,
   validityMonths: extra.validityMonths ?? null,
   sort: extra.sort ?? 0,
-  active: true,
+  active: extra.active ?? true,
 });
 
 const formData = (values: Record<string, string>) => {
@@ -265,6 +271,110 @@ describe("documents stay inside the company", () => {
     expect(
       (await deliveriesOf(b.companyId)).map((row) => row.requirementId),
     ).not.toContain(requirement!.id);
+  });
+
+  it("lib:documents/listPersonDocumentCard", async () => {
+    const saved = await setRequirements(
+      a.companyId,
+      {
+        positionId: a.position.id,
+        requirements: [
+          item("Credencial del puesto", { validityMonths: 12 }),
+          item("Comprobante de domicilio", { sort: 1, required: false }),
+          item("Pausado", { sort: 2, active: false }),
+        ],
+      },
+      a.admin.id,
+    );
+    const requirement = saved?.find(
+      (row) => row.name === "Credencial del puesto",
+    );
+
+    expect(requirement?.positionId).toBe(a.position.id);
+
+    // Another company's person is not found. The expediente calls notFound().
+    expect(
+      await listPersonDocumentCard(b.companyId, a.person.id, "2026-10-28"),
+    ).toBeNull();
+
+    const card = await listPersonDocumentCard(
+      a.companyId,
+      a.person.id,
+      "2026-10-28",
+    );
+
+    expect(card?.rows.map((row) => row.name)).toEqual([
+      "Credencial del puesto",
+      "Comprobante de domicilio",
+    ]);
+    expect(card?.state).toBe("missing");
+    expect(card?.rows.map((row) => row.name)).not.toContain("Identificación");
+    expect(card?.rows.map((row) => row.name)).not.toContain("Pausado");
+
+    const otherCompany = await listPersonDocumentCard(
+      b.companyId,
+      b.person.id,
+      "2026-10-28",
+    );
+
+    expect(otherCompany?.rows.map((row) => row.name) ?? []).not.toContain(
+      "Credencial del puesto",
+    );
+
+    const withoutPosition = await listPersonDocumentCard(
+      a.companyId,
+      a.teammate.id,
+      "2026-10-28",
+    );
+
+    expect(withoutPosition).toMatchObject({
+      state: "empty",
+      message: "Esta persona no tiene puesto.",
+      rows: [],
+    });
+
+    const delivery = await recordDelivery(
+      a.companyId,
+      {
+        personId: a.person.id,
+        requirementId: requirement!.id,
+        deliveredOn: "2026-01-15",
+      },
+      a.admin.id,
+    );
+
+    expect(delivery).toMatchObject({ expiresOn: "2027-01-15" });
+
+    const events = await ownerDb
+      .select()
+      .from(auditEvents)
+      .where(eq(auditEvents.resourceId, delivery!.id));
+
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      companyId: a.companyId,
+      actorUserId: a.admin.id,
+      resourceType: "person_document",
+      action: "create",
+    });
+    expect(events[0]?.payload).toMatchObject({
+      summary: "Documento registrado: Credencial del puesto",
+    });
+
+    const after = await listPersonDocumentCard(
+      a.companyId,
+      a.person.id,
+      "2026-10-28",
+    );
+
+    expect(after?.rows[0]).toMatchObject({
+      name: "Credencial del puesto",
+      status: "valid",
+      deliveredOn: "2026-01-15",
+      expiresOn: "2027-01-15",
+    });
+    expect(after?.rows[1]?.status).toBe("missing");
+    expect(after?.state).toBe("missing");
   });
 });
 

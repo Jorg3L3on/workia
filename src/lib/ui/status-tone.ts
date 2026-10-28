@@ -40,6 +40,12 @@ export const statusTone = {
     failed: "danger",
     undone: "neutral",
   },
+  document: {
+    missing: "info",
+    valid: "success",
+    expiring: "warning",
+    expired: "danger",
+  },
 } as const satisfies Record<string, Record<string, Tone>>;
 
 export type StatusKind = keyof typeof statusTone;
