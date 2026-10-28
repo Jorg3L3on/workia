@@ -4088,6 +4088,7 @@ exports[`/api/mcp transport > keeps the tools/list contract (snapshot) 1`] = `
             "report_export",
             "document_requirement",
             "person_document",
+            "vacation_record",
           ],
           "type": "string",
         },

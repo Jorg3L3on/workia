@@ -43,6 +43,7 @@ describe("audit append-only surface", () => {
       "snapshotRegion",
       "snapshotSite",
       "snapshotTerminationReason",
+      "snapshotVacationRecord",
     ]);
   });
 

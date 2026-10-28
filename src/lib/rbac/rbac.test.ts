@@ -62,6 +62,32 @@ describe("documents permissions", () => {
   });
 });
 
+describe("vacation permissions", () => {
+  it("grants read, create and update to the roles that can edit contracts", async () => {
+    const { PERMISSIONS, ROLES } = await import("@/lib/db/schema/types");
+
+    expect(PERMISSIONS.map((permission) => permission.slug)).toEqual(
+      expect.arrayContaining([
+        "vacations:read",
+        "vacations:create",
+        "vacations:update",
+      ]),
+    );
+
+    for (const role of ROLES) {
+      const permissions: readonly string[] = role.permissions;
+      const editsContracts =
+        role.slug === "super_admin" ||
+        (permissions.includes("contracts:update") &&
+          ["admin", "editor"].includes(role.slug));
+
+      expect(permissions.includes("vacations:read")).toBe(editsContracts);
+      expect(permissions.includes("vacations:create")).toBe(editsContracts);
+      expect(permissions.includes("vacations:update")).toBe(editsContracts);
+    }
+  });
+});
+
 describe("reports permission", () => {
   it("is granted to super_admin and admin only", async () => {
     const { PERMISSIONS, ROLES } = await import("@/lib/db/schema/types");

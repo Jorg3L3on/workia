@@ -12,6 +12,9 @@ describe("permissionLabel", () => {
     expect(permissionLabel("reports:read")).toBe("Leer reportes");
     expect(permissionLabel("documents:read")).toBe("Leer documentos");
     expect(permissionLabel("documents:manage")).toBe("Gestionar documentos");
+    expect(permissionLabel("vacations:read")).toBe("Leer vacaciones");
+    expect(permissionLabel("vacations:create")).toBe("Crear vacaciones");
+    expect(permissionLabel("vacations:update")).toBe("Editar vacaciones");
   });
 
   it("returns an unknown slug unchanged", () => {

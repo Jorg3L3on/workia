@@ -1,11 +1,25 @@
 import { DetailCard } from "@/components/people/person-detail-card";
+import {
+  VacationLedger,
+  type VacationLedgerModel,
+} from "@/components/people/vacation-ledger";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDateMx } from "@/lib/format/date";
 import type { VacationEntitlementView } from "@/lib/people/vacation-card";
+import {
+  VACATION_OVER_ENTITLEMENT_WARNING,
+  formatSignedVacationDays,
+} from "@/lib/vacations/balance";
 
 type PersonVacationCardProps = {
   /** "loading" is the skeleton while the expediente is still resolving. */
   view: VacationEntitlementView | "loading";
+  /** Days taken, the balance and the register dialog. Omitted without a vacation permission. */
+  ledger?: VacationLedgerModel & {
+    takenHalves: number | null;
+    remainingHalves: number | null;
+    exceedsEntitlement: boolean;
+  };
 };
 
 const dayLabel = (days: number) =>
@@ -40,9 +54,17 @@ const VacationSkeleton = () => (
   </div>
 );
 
-const VacationBody = ({ view }: { view: VacationEntitlementView }) => {
+const VacationBody = ({
+  view,
+  ledger,
+}: {
+  view: VacationEntitlementView;
+  ledger?: PersonVacationCardProps["ledger"];
+}) => {
   const showFigures = view.serviceYearsCompleted !== null;
   const alert = view.state === "error";
+  const showBalance =
+    ledger?.takenHalves != null && ledger.remainingHalves != null;
 
   return (
     <div className="space-y-3" data-state={view.state}>
@@ -84,7 +106,30 @@ const VacationBody = ({ view }: { view: VacationEntitlementView }) => {
               value={formatDateMx(view.grantBy)}
             />
           ) : null}
+          {showBalance && ledger ? (
+            <Field
+              label="Tomados"
+              testId="vacation-taken"
+              value={formatSignedVacationDays(ledger.takenHalves ?? 0)}
+            />
+          ) : null}
+          {showBalance && ledger ? (
+            <Field
+              label="Quedan"
+              testId="vacation-remaining"
+              value={formatSignedVacationDays(ledger.remainingHalves ?? 0)}
+            />
+          ) : null}
         </dl>
+      ) : null}
+      {ledger?.exceedsEntitlement ? (
+        <p
+          className="text-sm"
+          data-testid="vacation-over-warning"
+          role="status"
+        >
+          {VACATION_OVER_ENTITLEMENT_WARNING}
+        </p>
       ) : null}
       {view.prima ? (
         <p
@@ -99,12 +144,22 @@ const VacationBody = ({ view }: { view: VacationEntitlementView }) => {
 };
 
 /**
- * Read-only «Vacaciones» card (WRK-I14-2). Visible with people:read, the
- * same gate as the expediente. No edit action: days taken and the balance
- * are a later phase.
+ * «Vacaciones» card. The entitlement stays visible with people:read. The
+ * ledger (balance, history, registrar) is passed in only when the session
+ * has a vacation permission.
  */
-export const PersonVacationCard = ({ view }: PersonVacationCardProps) => (
+export const PersonVacationCard = ({
+  view,
+  ledger,
+}: PersonVacationCardProps) => (
   <DetailCard id="vacaciones">
-    {view === "loading" ? <VacationSkeleton /> : <VacationBody view={view} />}
+    {view === "loading" ? (
+      <VacationSkeleton />
+    ) : (
+      <div className="space-y-3">
+        <VacationBody ledger={ledger} view={view} />
+        {ledger ? <VacationLedger {...ledger} /> : null}
+      </div>
+    )}
   </DetailCard>
 );
