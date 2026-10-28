@@ -4328,6 +4328,214 @@ exports[`/api/mcp transport > keeps the tools/list contract (snapshot) 1`] = `
       "securitySchemes": [
         {
           "scopes": [
+            "read",
+          ],
+          "type": "oauth2",
+        },
+      ],
+    },
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true,
+      "title": "Derecho a vacaciones",
+    },
+    "description": "Derecho a vacaciones de una persona, el mismo que muestra la tarjeta Vacaciones del expediente: año de servicio cumplido, aniversario actual y siguiente, días de derecho y fecha límite para otorgarlas. Con menos de un año de servicio no hay días ni fecha límite. Si la fecha de antigüedad es posterior a la de cálculo, la antigüedad aún no inicia. No incluye días tomados ni saldo.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "person_id": {
+          "description": "Id de la persona.",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+          "type": "string",
+        },
+      },
+      "required": [
+        "person_id",
+      ],
+      "type": "object",
+    },
+    "name": "get_vacation_entitlement",
+    "outputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "as_of": {
+          "anyOf": [
+            {
+              "type": "string",
+            },
+            {
+              "type": "null",
+            },
+          ],
+        },
+        "as_of_mx": {
+          "anyOf": [
+            {
+              "type": "string",
+            },
+            {
+              "type": "null",
+            },
+          ],
+        },
+        "closed": {
+          "description": "true cuando el periodo laboral está cerrado.",
+          "type": "boolean",
+        },
+        "current_anniversary": {
+          "anyOf": [
+            {
+              "type": "string",
+            },
+            {
+              "type": "null",
+            },
+          ],
+        },
+        "current_anniversary_mx": {
+          "anyOf": [
+            {
+              "type": "string",
+            },
+            {
+              "type": "null",
+            },
+          ],
+        },
+        "entitlement_days": {
+          "anyOf": [
+            {
+              "maximum": 9007199254740991,
+              "minimum": -9007199254740991,
+              "type": "integer",
+            },
+            {
+              "type": "null",
+            },
+          ],
+        },
+        "grant_by": {
+          "anyOf": [
+            {
+              "type": "string",
+            },
+            {
+              "type": "null",
+            },
+          ],
+          "description": "Fecha límite para otorgarlas. Null si aún no hay derecho.",
+        },
+        "grant_by_mx": {
+          "anyOf": [
+            {
+              "type": "string",
+            },
+            {
+              "type": "null",
+            },
+          ],
+        },
+        "message": {
+          "anyOf": [
+            {
+              "type": "string",
+            },
+            {
+              "type": "null",
+            },
+          ],
+          "description": "Aviso fijo del estado. No es un texto capturado.",
+        },
+        "next_anniversary": {
+          "anyOf": [
+            {
+              "type": "string",
+            },
+            {
+              "type": "null",
+            },
+          ],
+        },
+        "next_anniversary_mx": {
+          "anyOf": [
+            {
+              "type": "string",
+            },
+            {
+              "type": "null",
+            },
+          ],
+        },
+        "prima_vacacional": {
+          "anyOf": [
+            {
+              "const": "Prima vacacional: no menor al 25% (Art. 80 LFT)",
+              "type": "string",
+            },
+            {
+              "type": "null",
+            },
+          ],
+          "description": "Texto fijo del artículo 80. Null cuando no hay derecho.",
+        },
+        "service_years_completed": {
+          "anyOf": [
+            {
+              "maximum": 9007199254740991,
+              "minimum": -9007199254740991,
+              "type": "integer",
+            },
+            {
+              "type": "null",
+            },
+          ],
+        },
+        "state": {
+          "enum": [
+            "no_hire_date",
+            "not_started",
+            "before_table",
+            "proportional",
+            "entitled",
+            "closed",
+            "error",
+          ],
+          "type": "string",
+        },
+        "url": {
+          "type": "string",
+        },
+      },
+      "required": [
+        "state",
+        "message",
+        "service_years_completed",
+        "current_anniversary",
+        "current_anniversary_mx",
+        "next_anniversary",
+        "next_anniversary_mx",
+        "entitlement_days",
+        "grant_by",
+        "grant_by_mx",
+        "prima_vacacional",
+        "closed",
+        "as_of",
+        "as_of_mx",
+        "url",
+      ],
+      "type": "object",
+    },
+    "title": "Derecho a vacaciones",
+  },
+  {
+    "_meta": {
+      "securitySchemes": [
+        {
+          "scopes": [
             "write:people",
           ],
           "type": "oauth2",

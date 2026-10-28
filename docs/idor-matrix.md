@@ -327,6 +327,7 @@ Una conexión de la empresa B llama cada herramienta con ids de la empresa A: la
 | `mcp:get_onboarding`                | ✅     | `src/test/idor/mcp-write-tools.db.test.ts` | `people:read`             |
 | `mcp:get_person`                    | ✅     | `src/test/idor/mcp-tools.db.test.ts`       | `people:read`             |
 | `mcp:get_seniority_certificate`     | ✅     | `src/test/idor/mcp-tools.db.test.ts`       | `contracts:read`          |
+| `mcp:get_vacation_entitlement`      | ✅     | `src/test/idor/mcp-tools.db.test.ts`       | `people:read`             |
 | `mcp:issue_contract`                | ✅     | `src/test/idor/mcp-write-tools.db.test.ts` | `contracts:create`        |
 | `mcp:link_position_activity`        | ✅     | `src/test/idor/mcp-write-tools.db.test.ts` | `positions:update`        |
 | `mcp:list_activities`               | ✅     | `src/test/idor/mcp-tools.db.test.ts`       | `positions:read`          |
