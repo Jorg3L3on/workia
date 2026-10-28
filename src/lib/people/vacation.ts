@@ -230,3 +230,46 @@ export const vacationPeriodFor = (
 
   return PERIOD_FOR_BASIS[accrualBasis](resolved, asOf);
 };
+
+/**
+ * The service year `serviceYear` on the day it is completed (1 = the first).
+ * Same anniversary, entitlement and grant-by date as `vacationPeriodFor` on
+ * that anniversary. Null for year 0, a non-integer, or a year completed
+ * before the reformed table is in force.
+ *
+ * pendiente de contador: `grantBy` is six months after that anniversary
+ * (Art. 81). Days from year 6 follow this file's five-year blocks. This
+ * helper does not add another reading of either rule.
+ */
+export const vacationPeriodForCompletedYear = (
+  seniorityDate: string | null | undefined,
+  serviceYear: number,
+): VacationPeriod | null => {
+  if (!Number.isInteger(serviceYear) || serviceYear < 1) {
+    return null;
+  }
+
+  const resolved = resolveSeniorityDate([], seniorityDate ?? null);
+
+  if (!resolved) {
+    return null;
+  }
+
+  const anniversary = shiftYears(resolved, serviceYear);
+
+  if (!anniversary) {
+    return null;
+  }
+
+  const period = periodOnAnniversary(resolved, anniversary);
+
+  if (
+    !period ||
+    period.proportionalOnly ||
+    period.serviceYearsCompleted !== serviceYear
+  ) {
+    return null;
+  }
+
+  return period;
+};

@@ -1,18 +1,41 @@
 /**
- * Vacation days taken (WRK-I14-3). Company B cannot read, create or void
- * company A's records, and a role without vacations:create is denied.
- * Titles are the surface ids in docs/idor-matrix.md.
+ * Vacation days taken (WRK-I14-3) and the annual constancia (WRK-I14-4).
+ * Company B cannot read, create or void company A's records, and a role
+ * without vacations:create is denied. The constancia page answers notFound
+ * without vacations:read or without contracts:read, and notFound for a
+ * person of the other company. Titles are the surface ids in docs/idor-matrix.md.
  */
+import { randomUUID } from "node:crypto";
+
 import { eq, sql } from "drizzle-orm";
+import { renderToStaticMarkup } from "react-dom/server";
 import { beforeAll, describe, expect, it } from "vitest";
 
+import VacationConstanciaPage from "@/app/app/personas/[id]/vacaciones/constancia/page";
 import {
   auditEvents,
+  companies,
+  companyMemberships,
   employmentPeriods,
   people,
+  permissions,
+  rolePermissions,
+  roles,
+  users,
   vacationRecords,
 } from "@/lib/db/schema";
-import { serviceYearBalance, VACATION_COPY } from "@/lib/vacations/balance";
+import { formatDateMx, isoToday } from "@/lib/format/date";
+import {
+  vacationPeriodFor,
+  vacationPeriodForCompletedYear,
+} from "@/lib/people/vacation";
+import { STALE_COMPANY_MESSAGE } from "@/lib/tenant/scope";
+import {
+  formatSignedVacationDays,
+  serviceYearBalance,
+  VACATION_COPY,
+} from "@/lib/vacations/balance";
+import { getVacationConstancia } from "@/lib/vacations/constancia";
 import {
   listVacationRecords,
   registerVacationRecord,
@@ -22,10 +45,9 @@ import {
   registerVacationAction,
   voidVacationAction,
 } from "@/lib/vacations/actions";
-import { STALE_COMPANY_MESSAGE } from "@/lib/tenant/scope";
 
 import { idsIn, ownerDb, seedTenant, type Tenant } from "./fixtures";
-import { actAs } from "./session-state";
+import { actAs, NavigationThrow } from "./session-state";
 
 let a: Tenant;
 let b: Tenant;
@@ -422,5 +444,317 @@ describe("vacation_records constraints", () => {
     expect(policies.rows.map((row) => row.policyname)).toContain(
       "vacation_records_company_isolation",
     );
+  });
+});
+
+const plusDays = (iso: string, days: number) => {
+  const [y, m, d] = iso.split("-").map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d + days));
+
+  return date.toISOString().slice(0, 10);
+};
+
+const hireForConstancia = async (tenant: Tenant, fechaIngreso: string) => {
+  await ownerDb
+    .update(people)
+    .set({ fechaIngreso })
+    .where(eq(people.id, tenant.person.id));
+  await ownerDb.insert(employmentPeriods).values({
+    companyId: tenant.companyId,
+    personId: tenant.person.id,
+    fechaIngreso,
+    fechaAntiguedad: fechaIngreso,
+  });
+};
+
+const openConstancia = (personId: string, anio?: string) =>
+  VacationConstanciaPage({
+    params: Promise.resolve({ id: personId }),
+    searchParams: Promise.resolve(anio === undefined ? {} : { anio }),
+  });
+
+describe("vacation constancia stays inside the company", () => {
+  let companyA: Tenant;
+  let companyB: Tenant;
+  let serviceYear: number;
+  const seniority = "2023-03-01";
+
+  beforeAll(async () => {
+    companyA = await seedTenant("VC");
+    companyB = await seedTenant("VD");
+    const today = isoToday();
+    const current = vacationPeriodFor(seniority, today);
+
+    if (!current || current.proportionalOnly) {
+      throw new Error("La fixture no tiene un año de servicio cumplido.");
+    }
+
+    serviceYear = current.serviceYearsCompleted;
+    await ownerDb
+      .update(companies)
+      .set({ legalName: "Empresa Demostración SA" })
+      .where(eq(companies.id, companyA.companyId));
+    await hireForConstancia(companyA, seniority);
+    await hireForConstancia(companyB, seniority);
+
+    const created = await registerVacationRecord(companyA.companyId, {
+      personId: companyA.person.id,
+      startDate: current.currentAnniversary,
+      endDate: current.currentAnniversary,
+      days: "5",
+    });
+    const voided = await registerVacationRecord(companyA.companyId, {
+      personId: companyA.person.id,
+      startDate: plusDays(current.currentAnniversary, 1),
+      endDate: plusDays(current.currentAnniversary, 1),
+      days: "1",
+    });
+
+    if (!created?.ok || !voided?.ok) {
+      throw new Error("No se pudo preparar el registro de la empresa A.");
+    }
+
+    const removed = await voidVacationRecord(companyA.companyId, voided.id);
+
+    if (!removed?.ok) {
+      throw new Error("No se pudo anular el registro de la empresa A.");
+    }
+
+    if (serviceYear < 2) {
+      return;
+    }
+
+    const previous = vacationPeriodForCompletedYear(seniority, serviceYear - 1);
+
+    if (!previous) {
+      throw new Error("No se pudo ubicar el año de servicio anterior.");
+    }
+
+    const otherYear = await registerVacationRecord(companyA.companyId, {
+      personId: companyA.person.id,
+      startDate: previous.currentAnniversary,
+      endDate: previous.currentAnniversary,
+      days: "2",
+    });
+
+    if (!otherYear?.ok) {
+      throw new Error("No se pudo registrar el año de servicio anterior.");
+    }
+  });
+
+  it("lib:vacations/constancia/getVacationConstancia", async () => {
+    expect(
+      await getVacationConstancia(
+        companyB.companyId,
+        companyA.person.id,
+        isoToday(),
+        serviceYear,
+      ),
+    ).toBeNull();
+
+    const sheet = await getVacationConstancia(
+      companyA.companyId,
+      companyA.person.id,
+      isoToday(),
+      serviceYear,
+    );
+    const period = vacationPeriodForCompletedYear(seniority, serviceYear);
+
+    expect(sheet).toMatchObject({
+      companyName: "Empresa Demostración SA",
+      personName: `Persona ${companyA.label} Idor`,
+      seniorityDate: seniority,
+      serviceYear,
+      entitlementDays: period?.entitlementDays,
+      takenHalves: 10,
+      grantBy: period?.grantBy,
+      issuedOn: isoToday(),
+    });
+    expect(sheet?.ranges).toEqual([
+      {
+        startDate: period!.currentAnniversary,
+        endDate: period!.currentAnniversary,
+        days: "5.0",
+      },
+    ]);
+  });
+
+  it("prints the sheet for the company and hides it from everyone else", async () => {
+    const period = vacationPeriodForCompletedYear(seniority, serviceYear);
+
+    actAs(companyB.admin);
+    await expect(
+      openConstancia(companyA.person.id, String(serviceYear)),
+    ).rejects.toMatchObject({ kind: "notFound" });
+
+    actAs(companyA.viewer);
+    await expect(
+      openConstancia(companyA.person.id, String(serviceYear)),
+    ).rejects.toBeInstanceOf(NavigationThrow);
+    await expect(
+      openConstancia(companyA.person.id, String(serviceYear)),
+    ).rejects.toMatchObject({ kind: "notFound" });
+
+    actAs(companyA.admin);
+    await expect(openConstancia(companyA.person.id, "0")).rejects.toMatchObject(
+      { kind: "notFound" },
+    );
+    await expect(
+      openConstancia(companyA.person.id, String(serviceYear + 20)),
+    ).rejects.toMatchObject({ kind: "notFound" });
+
+    const html = renderToStaticMarkup(
+      await openConstancia(companyA.person.id, String(serviceYear)),
+    );
+
+    expect(html).toContain("Empresa Demostración SA");
+    expect(html).toContain(`Persona ${companyA.label} Idor`);
+    expect(html).toContain(formatDateMx(seniority));
+    expect(html).toContain(`>${serviceYear}</dd>`);
+    expect(html).toContain(
+      formatSignedVacationDays((period?.entitlementDays ?? 0) * 2),
+    );
+    expect(html).toContain("5 días");
+    expect(html).toContain(formatDateMx(period?.grantBy));
+    expect(html).toContain("Nombre y firma de quien expide");
+    expect(html).toContain("Firma de la persona trabajadora");
+    expect(html).toContain("print:hidden");
+    expect(html).not.toMatch(/Art\.\s*81|artículo 81|prima vacacional/i);
+    expect(html).not.toContain(
+      formatDateMx(plusDays(period!.currentAnniversary, 1)),
+    );
+  });
+
+  it("returns notFound with vacations:read and without contracts:read", async () => {
+    const [role] = await ownerDb
+      .insert(roles)
+      .values({
+        slug: `vacaciones-${randomUUID().slice(0, 8)}`,
+        name: "Vacaciones",
+      })
+      .returning();
+    const granted = (await ownerDb.select().from(permissions)).filter(
+      (permission) =>
+        permission.slug === "people:read" ||
+        permission.slug === "vacations:read",
+    );
+
+    await ownerDb.insert(rolePermissions).values(
+      granted.map((permission) => ({
+        roleId: role.id,
+        permissionId: permission.id,
+      })),
+    );
+
+    const [user] = await ownerDb
+      .insert(users)
+      .values({
+        email: `vacaciones-${role.slug}@idor.test`,
+        name: "Vacaciones",
+      })
+      .returning();
+
+    await ownerDb.insert(companyMemberships).values({
+      userId: user.id,
+      companyId: companyA.companyId,
+      roleId: role.id,
+      isDefault: true,
+    });
+
+    actAs(user);
+    await expect(
+      openConstancia(companyA.person.id, String(serviceYear)),
+    ).rejects.toMatchObject({ kind: "notFound" });
+  });
+
+  it("issues the sheet today when the person is on baja", async () => {
+    const fechaBaja = "2025-06-01";
+    const today = isoToday();
+    const closed = vacationPeriodFor(seniority, fechaBaja);
+    const stillActive = vacationPeriodFor(seniority, today);
+
+    expect(fechaBaja < today).toBe(true);
+    expect(closed?.serviceYearsCompleted).toBe(2);
+    expect(stillActive!.serviceYearsCompleted).toBeGreaterThan(
+      closed!.serviceYearsCompleted,
+    );
+
+    const [person] = await ownerDb
+      .insert(people)
+      .values({
+        companyId: companyA.companyId,
+        nombres: "Persona Baja",
+        apellidoPaterno: "Demostración",
+        fechaIngreso: seniority,
+        status: "baja",
+      })
+      .returning();
+
+    await ownerDb.insert(employmentPeriods).values({
+      companyId: companyA.companyId,
+      personId: person.id,
+      fechaIngreso: seniority,
+      fechaAntiguedad: seniority,
+      fechaBaja,
+    });
+
+    const taken = await registerVacationRecord(companyA.companyId, {
+      personId: person.id,
+      startDate: "2025-04-01",
+      endDate: "2025-04-03",
+      days: "3",
+    });
+    const voided = await registerVacationRecord(companyA.companyId, {
+      personId: person.id,
+      startDate: "2025-04-10",
+      endDate: "2025-04-10",
+      days: "1",
+    });
+
+    if (!taken?.ok || !voided?.ok) {
+      throw new Error("No se pudo preparar la baja de demostración.");
+    }
+
+    const removed = await voidVacationRecord(companyA.companyId, voided.id);
+
+    expect(removed?.ok).toBe(true);
+
+    const sheet = await getVacationConstancia(
+      companyA.companyId,
+      person.id,
+      today,
+    );
+
+    expect(sheet).toMatchObject({
+      personName: "Persona Baja Demostración",
+      seniorityDate: seniority,
+      serviceYear: closed!.serviceYearsCompleted,
+      entitlementDays: closed!.entitlementDays,
+      takenHalves: 6,
+      grantBy: closed!.grantBy,
+      issuedOn: today,
+    });
+    expect(sheet?.issuedOn).not.toBe(fechaBaja);
+    expect(sheet?.ranges).toEqual([
+      { startDate: "2025-04-01", endDate: "2025-04-03", days: "3.0" },
+    ]);
+    expect(
+      await getVacationConstancia(
+        companyA.companyId,
+        person.id,
+        today,
+        stillActive!.serviceYearsCompleted,
+      ),
+    ).toBeNull();
+
+    actAs(companyA.admin);
+    const html = renderToStaticMarkup(await openConstancia(person.id));
+
+    expect(html).toContain(
+      `Se extiende la presente el ${formatDateMx(today)}.`,
+    );
+    expect(html).not.toContain(formatDateMx(fechaBaja));
+    expect(html).toContain(`>${closed!.serviceYearsCompleted}</dd>`);
+    expect(html).toContain("3 días");
   });
 });

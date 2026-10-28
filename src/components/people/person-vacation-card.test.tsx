@@ -48,6 +48,24 @@ describe("PersonVacationCard", () => {
     expect(screen.queryByRole("link")).toBeNull();
   });
 
+  it("links to the constancia for that service year", () => {
+    render(
+      <PersonVacationCard
+        constanciaHref="/app/personas/p-1/vacaciones/constancia?anio=3"
+        view={vacationEntitlementView({
+          seniorityDate: "2023-03-01",
+          asOf: "2026-03-02",
+          closed: false,
+        })}
+      />,
+    );
+
+    expect(screen.getByRole("link", { name: /Constancia/ })).toHaveAttribute(
+      "href",
+      "/app/personas/p-1/vacaciones/constancia?anio=3",
+    );
+  });
+
   it("hides the grant-by date and says vacations are not due yet", () => {
     renderCard(
       vacationEntitlementView({
