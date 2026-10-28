@@ -381,6 +381,25 @@ export const snapshotContract = (contract: Record<string, unknown>) => ({
   deletedAt: contract.deletedAt,
 });
 
+export const snapshotDocumentRequirement = (
+  requirement: Record<string, unknown>,
+) => ({
+  name: requirement.name,
+  positionId: requirement.positionId ?? null,
+  required: requirement.required,
+  validityMonths: requirement.validityMonths ?? null,
+  sort: requirement.sort,
+  active: requirement.active,
+  deletedAt: requirement.deletedAt ?? null,
+});
+
+export const snapshotPersonDocument = (document: Record<string, unknown>) => ({
+  personId: document.personId,
+  requirementId: document.requirementId,
+  deliveredOn: document.deliveredOn,
+  expiresOn: document.expiresOn ?? null,
+});
+
 export const snapshotContractTemplate = (
   template: Record<string, unknown>,
 ) => ({

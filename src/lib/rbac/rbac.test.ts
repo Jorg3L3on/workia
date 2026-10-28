@@ -40,6 +40,28 @@ describe("people import/export permissions", () => {
   });
 });
 
+describe("documents permissions", () => {
+  it("grants read to every company role and manage to admins only", async () => {
+    const { PERMISSIONS, ROLES } = await import("@/lib/db/schema/types");
+
+    expect(PERMISSIONS.map((permission) => permission.slug)).toEqual(
+      expect.arrayContaining(["documents:read", "documents:manage"]),
+    );
+
+    for (const role of ROLES) {
+      const permissions: readonly string[] = role.permissions;
+      const companyRole = ["super_admin", "admin", "editor", "viewer"].includes(
+        role.slug,
+      );
+
+      expect(permissions.includes("documents:read")).toBe(companyRole);
+      expect(permissions.includes("documents:manage")).toBe(
+        ["super_admin", "admin"].includes(role.slug),
+      );
+    }
+  });
+});
+
 describe("reports permission", () => {
   it("is granted to super_admin and admin only", async () => {
     const { PERMISSIONS, ROLES } = await import("@/lib/db/schema/types");

@@ -19,6 +19,8 @@ export const AUDIT_RESOURCE_TYPES = [
   "onboarding",
   "termination_reason",
   "report_export",
+  "document_requirement",
+  "person_document",
 ] as const;
 
 export type AuditResourceType = (typeof AUDIT_RESOURCE_TYPES)[number];
@@ -99,6 +101,8 @@ export const auditResourceTypeLabels: Record<AuditResourceType, string> = {
   onboarding: "Alta (RH → Nóminas)",
   termination_reason: "Motivo de baja",
   report_export: "Exportación de reporte",
+  document_requirement: "Requisito de documento",
+  person_document: "Documento de la persona",
 };
 
 export const AUDIT_SOURCES = [
@@ -138,6 +142,10 @@ export const auditFieldLabels: Record<string, string> = {
   finiquitoMonto: "Monto del finiquito",
   endDate: "Fin",
   classification: "Clasificación",
+  required: "Obligatorio",
+  validityMonths: "Meses de vigencia",
+  deliveredOn: "Fecha de entrega",
+  expiresOn: "Fecha de vencimiento",
 };
 
 /**

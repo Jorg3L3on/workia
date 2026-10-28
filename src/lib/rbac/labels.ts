@@ -23,6 +23,7 @@ const resourceLabels: Record<string, string> = {
   content: "contenido",
   contract_templates: "plantillas de contrato",
   contracts: "contratos",
+  documents: "documentos",
   mcp_connections: "conexiones",
   members: "miembros",
   payroll: "altas de Nóminas",

@@ -27,7 +27,8 @@ export type PermissionResource =
   | "mcp_connections"
   | "compensation"
   | "payroll"
-  | "reports";
+  | "reports"
+  | "documents";
 
 export type PermissionSlug = `${PermissionResource}:${PermissionAction}`;
 
@@ -414,6 +415,22 @@ export const PERMISSIONS: Array<{
       "See the company reports (turnover: bajas, motivos and the 90-day trial)",
   },
   {
+    slug: "documents:read",
+    name: "Read Documents",
+    resource: "documents",
+    action: "read",
+    description:
+      "View the documents a position requires and the delivery dates",
+  },
+  {
+    slug: "documents:manage",
+    name: "Manage Documents",
+    resource: "documents",
+    action: "manage",
+    description:
+      "Define the documents each position requires and record delivery dates",
+  },
+  {
     slug: "companies:read",
     name: "Read Companies",
     resource: "companies",
@@ -511,6 +528,8 @@ export const ROLES = [
       "compensation:read",
       "payroll:approve",
       "reports:read",
+      "documents:read",
+      "documents:manage",
     ] satisfies PermissionSlug[],
   },
   {
@@ -538,6 +557,7 @@ export const ROLES = [
       "assets:create",
       "assets:update",
       "mcp_connections:create",
+      "documents:read",
     ] satisfies PermissionSlug[],
   },
   {
@@ -554,6 +574,7 @@ export const ROLES = [
       "contracts:read",
       "contract_templates:read",
       "assets:read",
+      "documents:read",
     ] satisfies PermissionSlug[],
   },
 ] as const;
