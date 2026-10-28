@@ -7,7 +7,7 @@ import {
   snapshotPersonDocument,
 } from "@/lib/audit";
 import { tdb, withTransaction, type DbExecutor } from "@/lib/db";
-import { rethrowDuplicate } from "@/lib/db/errors";
+import { isUniqueViolation, rethrowDuplicate } from "@/lib/db/errors";
 import {
   documentRequirements,
   people,
@@ -54,59 +54,81 @@ const listLiveInScope = async (
     )
     .orderBy(asc(documentRequirements.sort), asc(documentRequirements.name));
 
+/** Two first activations raced past the existence check. */
+export class DocumentsAlreadyActiveError extends Error {
+  constructor(message = "El módulo de documentos ya está activo.") {
+    super(message);
+    this.name = "DocumentsAlreadyActiveError";
+  }
+}
+
 /**
  * Copies the alta checklist (names only) the first time the company
  * activates the module. A company that already has any requirement, even a
  * deleted one, is left as it is. Constancia fiscal and cuenta bancaria are
  * stored with required = false.
+ *
+ * The action that exposes this must call requireDocumentsManage first.
+ * Two first activations at once can both pass the existence check; the
+ * second hits the unique name index and is thrown as
+ * DocumentsAlreadyActiveError, not the raw database error.
  */
 export const activateDocumentRequirements = async (
   companyId: string,
   actorUserId?: string | null,
-) =>
-  withTransaction(async (tx) => {
-    const [existing] = await tx
-      .select({ id: documentRequirements.id })
-      .from(documentRequirements)
-      .where(eq(documentRequirements.companyId, companyId))
-      .limit(1);
+) => {
+  try {
+    return await withTransaction(async (tx) => {
+      const [existing] = await tx
+        .select({ id: documentRequirements.id })
+        .from(documentRequirements)
+        .where(eq(documentRequirements.companyId, companyId))
+        .limit(1);
 
-    if (!existing) {
-      const created = await tx
-        .insert(documentRequirements)
-        .values(
-          DEFAULT_DOCUMENT_REQUIREMENTS.map((item) => ({
-            companyId,
-            positionId: null,
-            name: item.name,
-            required: item.required,
-            validityMonths: null,
-            sort: item.sort,
-            active: true,
-          })),
-        )
-        .returning();
+      if (!existing) {
+        const created = await tx
+          .insert(documentRequirements)
+          .values(
+            DEFAULT_DOCUMENT_REQUIREMENTS.map((item) => ({
+              companyId,
+              positionId: null,
+              name: item.name,
+              required: item.required,
+              validityMonths: null,
+              sort: item.sort,
+              active: true,
+            })),
+          )
+          .returning();
 
-      for (const row of created) {
-        await recordAuditEvent(
-          {
-            companyId,
-            actorUserId,
-            resourceType: "document_requirement",
-            resourceId: row.id,
-            action: "create",
-            payload: {
-              after: snapshotDocumentRequirement(row),
-              summary: `Requisito de documento creado: ${row.name}`,
+        for (const row of created) {
+          await recordAuditEvent(
+            {
+              companyId,
+              actorUserId,
+              resourceType: "document_requirement",
+              resourceId: row.id,
+              action: "create",
+              payload: {
+                after: snapshotDocumentRequirement(row),
+                summary: `Requisito de documento creado: ${row.name}`,
+              },
             },
-          },
-          tx,
-        );
+            tx,
+          );
+        }
       }
+
+      return listLiveInScope(companyId, null, tx);
+    }, companyId);
+  } catch (error) {
+    if (isUniqueViolation(error)) {
+      throw new DocumentsAlreadyActiveError();
     }
 
-    return listLiveInScope(companyId, null, tx);
-  }, companyId);
+    throw error;
+  }
+};
 
 export const listDocumentRequirements = async (
   companyId: string,

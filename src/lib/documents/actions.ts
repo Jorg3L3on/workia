@@ -12,7 +12,11 @@ import {
 
 import { requireDocumentsManage } from "./auth";
 import { recordDelivery, setRequirements } from "./index";
-import { recordDeliverySchema, setRequirementsSchema } from "./schema";
+import {
+  expiresOnFromForm,
+  recordDeliverySchema,
+  setRequirementsSchema,
+} from "./schema";
 
 const DENIED = "No tienes permiso para gestionar documentos.";
 
@@ -86,6 +90,11 @@ export const setRequirementsAction = async (formData: FormData) => {
   return { ok: true as const };
 };
 
+/**
+ * Records a delivery. A missing or blank expiresOn is not sent, so the
+ * domain computes it from validity_months. The checkbox noVence (on, true
+ * or 1) is the explicit «does not expire» and stores null instead.
+ */
 export const recordDeliveryAction = async (formData: FormData) => {
   const session = await requireManage();
 
@@ -101,12 +110,14 @@ export const recordDeliveryAction = async (formData: FormData) => {
     return { error: STALE_COMPANY_MESSAGE };
   }
 
-  const expiresRaw = formData.get("expiresOn");
   const parsed = recordDeliverySchema.safeParse({
     personId: String(formData.get("personId") ?? ""),
     requirementId: String(formData.get("requirementId") ?? ""),
     deliveredOn: String(formData.get("deliveredOn") ?? ""),
-    expiresOn: expiresRaw === null ? undefined : String(expiresRaw) || null,
+    expiresOn: expiresOnFromForm(
+      formData.get("expiresOn"),
+      formData.get("noVence"),
+    ),
   });
 
   if (!parsed.success) {

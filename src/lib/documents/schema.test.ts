@@ -10,6 +10,8 @@ import {
 import {
   addCalendarMonths,
   DEFAULT_DOCUMENT_REQUIREMENTS,
+  expiresOnFromForm,
+  latestDelivery,
   recordDeliverySchema,
   setRequirementsSchema,
   statusOf,
@@ -157,5 +159,98 @@ describe("addCalendarMonths", () => {
   it("clamps the day to the end of the target month", () => {
     expect(addCalendarMonths("2026-01-31", 1)).toBe("2026-02-28");
     expect(addCalendarMonths("2024-01-31", 1)).toBe("2024-02-29");
+  });
+});
+
+const person = "00000000-0000-4000-8000-000000000010";
+const otherPerson = "00000000-0000-4000-8000-000000000011";
+const requirementId = "00000000-0000-4000-8000-000000000020";
+const otherRequirement = "00000000-0000-4000-8000-000000000021";
+
+describe("latestDelivery", () => {
+  it("keeps the latest delivered_on per person and requirement", () => {
+    const older = {
+      personId: person,
+      requirementId,
+      deliveredOn: "2026-01-01",
+      expiresOn: "2026-02-01",
+    };
+    const newer = {
+      personId: person,
+      requirementId,
+      deliveredOn: "2026-06-01",
+      expiresOn: "2027-06-01",
+    };
+    const other = {
+      personId: otherPerson,
+      requirementId,
+      deliveredOn: "2026-03-01",
+      expiresOn: null,
+    };
+    const otherPaper = {
+      personId: person,
+      requirementId: otherRequirement,
+      deliveredOn: "2025-01-01",
+      expiresOn: "2025-02-01",
+    };
+
+    expect(latestDelivery([older, other, newer, otherPaper])).toEqual([
+      newer,
+      other,
+      otherPaper,
+    ]);
+    expect(
+      statusOf(requirement, latestDelivery([older, newer])[0], today),
+    ).toBe("valid");
+  });
+
+  it("breaks a same-day tie by createdAt, then by list order", () => {
+    const first = {
+      personId: person,
+      requirementId,
+      deliveredOn: "2026-06-01",
+      createdAt: "2026-06-01T10:00:00.000Z",
+    };
+    const second = {
+      personId: person,
+      requirementId,
+      deliveredOn: "2026-06-01",
+      createdAt: "2026-06-01T12:00:00.000Z",
+    };
+    const tiedEarly = {
+      personId: person,
+      requirementId: otherRequirement,
+      deliveredOn: "2026-06-01",
+      createdAt: "2026-06-01T10:00:00.000Z",
+    };
+    const tiedLate = {
+      personId: person,
+      requirementId: otherRequirement,
+      deliveredOn: "2026-06-01",
+      createdAt: "2026-06-01T10:00:00.000Z",
+    };
+
+    expect(latestDelivery([first, second])).toEqual([second]);
+    expect(latestDelivery([second, first])).toEqual([second]);
+    expect(latestDelivery([tiedEarly, tiedLate])).toEqual([tiedLate]);
+  });
+});
+
+describe("expiresOnFromForm", () => {
+  it("treats a missing or blank expiry as not sent", () => {
+    expect(expiresOnFromForm(null, null)).toBeUndefined();
+    expect(expiresOnFromForm("", null)).toBeUndefined();
+    expect(expiresOnFromForm("  ", null)).toBeUndefined();
+  });
+
+  it("keeps a posted date", () => {
+    expect(expiresOnFromForm("2026-12-31", null)).toBe("2026-12-31");
+  });
+
+  it("stores null when noVence is checked, even if a date was posted", () => {
+    expect(expiresOnFromForm("2026-12-31", "on")).toBeNull();
+    expect(expiresOnFromForm("", "true")).toBeNull();
+    expect(expiresOnFromForm(null, "1")).toBeNull();
+    expect(expiresOnFromForm(null, "false")).toBeUndefined();
   });
 });

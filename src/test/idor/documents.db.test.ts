@@ -4,9 +4,11 @@
  * denied. Test titles are the surface ids of docs/idor-matrix.md.
  */
 import { eq, sql } from "drizzle-orm";
+import { Client } from "pg";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import { onboardingChecklistLabels } from "@/lib/onboarding/schema";
+import { isUniqueViolation } from "@/lib/db/errors";
 import { documentRequirements, personDocuments } from "@/lib/db/schema";
 import {
   recordDeliveryAction,
@@ -14,6 +16,7 @@ import {
 } from "@/lib/documents/actions";
 import {
   activateDocumentRequirements,
+  DocumentsAlreadyActiveError,
   getDocumentRequirementById,
   listDocumentRequirements,
   listPersonDocuments,
@@ -335,6 +338,61 @@ describe("document actions with company B's session", () => {
     expect(await deliveriesOf(a.companyId)).toEqual(before);
     expect(deliveryA.deliveredOn).toBe("2026-01-15");
   });
+
+  it("computes a blank expiresOn and stores null only for noVence", async () => {
+    const saved = await setRequirements(
+      b.companyId,
+      {
+        positionId: b.position.id,
+        requirements: [item("Gafete", { validityMonths: 12 })],
+      },
+      b.admin.id,
+    );
+    const requirement = saved?.[0];
+
+    expect(requirement?.positionId).toBe(b.position.id);
+    actAs(b.admin);
+
+    expect(
+      await recordDeliveryAction(
+        formData({
+          personId: b.person.id,
+          requirementId: requirement!.id,
+          deliveredOn: "2026-01-15",
+          expiresOn: "",
+        }),
+      ),
+    ).toEqual({ ok: true });
+    expect(
+      await recordDeliveryAction(
+        formData({
+          personId: b.person.id,
+          requirementId: requirement!.id,
+          deliveredOn: "2026-02-01",
+          expiresOn: "2026-03-01",
+          noVence: "on",
+        }),
+      ),
+    ).toEqual({ ok: true });
+    expect(
+      await recordDeliveryAction(
+        formData({
+          personId: b.person.id,
+          requirementId: requirement!.id,
+          deliveredOn: "2026-03-01",
+          expiresOn: "2026-06-01",
+        }),
+      ),
+    ).toEqual({ ok: true });
+
+    const rows = await deliveriesOf(b.companyId);
+    const expiryOf = (deliveredOn: string) =>
+      rows.find((row) => row.deliveredOn === deliveredOn)?.expiresOn;
+
+    expect(expiryOf("2026-01-15")).toBe("2027-01-15");
+    expect(expiryOf("2026-02-01")).toBeNull();
+    expect(expiryOf("2026-03-01")).toBe("2026-06-01");
+  });
 });
 
 describe("documents permissions", () => {
@@ -381,6 +439,78 @@ describe("documents permissions", () => {
     }
 
     expect(await deliveriesOf(b.companyId)).toEqual(before);
+  });
+});
+
+describe("simultaneous document activation", () => {
+  it("returns a domain error instead of the raw unique violation", async () => {
+    const fresh = await seedTenant("DD");
+    const connectionString =
+      process.env.TEST_OWNER_DATABASE_URL ?? process.env.DATABASE_URL;
+
+    if (!connectionString) {
+      throw new Error("No hay base de datos de prueba.");
+    }
+
+    const client = new Client({ connectionString });
+    await client.connect();
+    let pending: Promise<unknown> | undefined;
+
+    try {
+      await client.query("BEGIN");
+      await client.query(
+        `INSERT INTO document_requirements (company_id, name)
+         VALUES ($1, $2)`,
+        [fresh.companyId, onboardingChecklistLabels.ine],
+      );
+
+      let settled = false;
+      pending = activateDocumentRequirements(fresh.companyId).finally(() => {
+        settled = true;
+      });
+
+      const deadline = Date.now() + 5_000;
+      let waiting = false;
+
+      while (!settled && Date.now() < deadline) {
+        const locks = await client.query(
+          `SELECT 1
+           FROM pg_locks
+           WHERE NOT granted
+             AND pid <> pg_backend_pid()`,
+        );
+
+        if ((locks.rowCount ?? 0) > 0) {
+          waiting = true;
+          break;
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 40));
+      }
+
+      if (!waiting) {
+        throw new Error("La activación no esperó el índice único.");
+      }
+
+      await client.query("COMMIT");
+      await expect(pending).rejects.toBeInstanceOf(DocumentsAlreadyActiveError);
+      await expect(pending).rejects.toThrow(
+        "El módulo de documentos ya está activo.",
+      );
+      await expect(pending).rejects.not.toSatisfy(isUniqueViolation);
+    } finally {
+      await client.query("ROLLBACK").catch(() => undefined);
+      await client.end();
+      await pending?.catch(() => undefined);
+    }
+
+    const live = await listDocumentRequirements(fresh.companyId, {
+      positionId: null,
+    });
+
+    expect(live.map((row) => row.name)).toEqual([
+      onboardingChecklistLabels.ine,
+    ]);
   });
 });
 

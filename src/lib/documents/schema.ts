@@ -208,8 +208,13 @@ export const addCalendarMonths = (isoDate: string, months: number) => {
 /**
  * missing when there is no delivery; otherwise valid, expiring (expires_on
  * is today or within 30 days) or expired (the day after expires_on).
- * `today` is an ISO string. `requirement` is part of the signature so callers
- * pass the catalog row; the chip depends on the date, not on required.
+ *
+ * `today` must be the company's local calendar date, `YYYY-MM-DD` from
+ * `isoToday()` in `@/lib/format/date` (America/Mexico_City). Do not pass
+ * `new Date().toISOString()`: that instant is UTC and in the evening it is
+ * already the next calendar day. Only the first 10 characters are read.
+ * `requirement` is part of the signature so callers pass the catalog row;
+ * the chip depends on the date, not on required.
  */
 export const statusOf = (
   requirement: RequirementStatusInput,
@@ -238,4 +243,89 @@ export const statusOf = (
   }
 
   return "valid";
+};
+
+export type DatedDelivery = {
+  personId: string;
+  requirementId: string;
+  deliveredOn: string;
+  createdAt?: Date | string | null;
+};
+
+const deliveryCreatedAt = (value: Date | string | null | undefined) => {
+  if (value instanceof Date) {
+    return value.getTime();
+  }
+
+  if (typeof value === "string") {
+    const parsed = Date.parse(value);
+
+    return Number.isNaN(parsed) ? Number.NEGATIVE_INFINITY : parsed;
+  }
+
+  return Number.NEGATIVE_INFINITY;
+};
+
+const isNewerDelivery = (candidate: DatedDelivery, current: DatedDelivery) => {
+  if (candidate.deliveredOn !== current.deliveredOn) {
+    return candidate.deliveredOn > current.deliveredOn;
+  }
+
+  const candidateAt = deliveryCreatedAt(candidate.createdAt);
+  const currentAt = deliveryCreatedAt(current.createdAt);
+
+  if (candidateAt !== currentAt) {
+    return candidateAt > currentAt;
+  }
+
+  return true;
+};
+
+/**
+ * The row to pass to statusOf: the latest delivered_on for each person and
+ * requirement. The same day keeps the later createdAt, and a tie there keeps
+ * the later item in the list. Older rows stay in the history.
+ */
+export const latestDelivery = <T extends DatedDelivery>(
+  documents: readonly T[],
+): T[] => {
+  const byPair = new Map<string, T>();
+
+  for (const document of documents) {
+    const key = `${document.personId}\0${document.requirementId}`;
+    const current = byPair.get(key);
+
+    if (!current || isNewerDelivery(document, current)) {
+      byPair.set(key, document);
+    }
+  }
+
+  return [...byPair.values()];
+};
+
+const NO_VENCE_VALUES = new Set(["on", "true", "1"]);
+
+/**
+ * Form field → recordDelivery.expiresOn.
+ *
+ * A missing or blank expiresOn was not sent: leave it undefined so the
+ * domain fills it from validity_months. `noVence` (on, true or 1) is the
+ * explicit «does not expire» field and stores null, even when a date was
+ * also posted. Any other non-empty expiresOn is that date.
+ */
+export const expiresOnFromForm = (
+  expiresOn: unknown,
+  noVence: unknown,
+): string | null | undefined => {
+  if (typeof noVence === "string" && NO_VENCE_VALUES.has(noVence)) {
+    return null;
+  }
+
+  if (expiresOn == null) {
+    return undefined;
+  }
+
+  const value = String(expiresOn).trim();
+
+  return value ? value : undefined;
 };
