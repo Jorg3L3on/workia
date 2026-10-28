@@ -35,6 +35,7 @@ const resourceLabels: Record<string, string> = {
   settings: "configuración",
   sites: "sucursales",
   users: "usuarios",
+  vacations: "vacaciones",
 };
 
 /** «Leer áreas»; an unknown slug comes back as it is. */

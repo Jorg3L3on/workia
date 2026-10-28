@@ -21,6 +21,7 @@ export const AUDIT_RESOURCE_TYPES = [
   "report_export",
   "document_requirement",
   "person_document",
+  "vacation_record",
 ] as const;
 
 export type AuditResourceType = (typeof AUDIT_RESOURCE_TYPES)[number];
@@ -103,6 +104,7 @@ export const auditResourceTypeLabels: Record<AuditResourceType, string> = {
   report_export: "Exportación de reporte",
   document_requirement: "Requisito de documento",
   person_document: "Documento de la persona",
+  vacation_record: "Vacaciones tomadas",
 };
 
 export const AUDIT_SOURCES = [
@@ -146,6 +148,11 @@ export const auditFieldLabels: Record<string, string> = {
   validityMonths: "Meses de vigencia",
   deliveredOn: "Fecha de entrega",
   expiresOn: "Fecha de vencimiento",
+  startDate: "Inicio",
+  days: "Días",
+  serviceYear: "Año de servicio",
+  note: "Nota",
+  voidedAt: "Anulado",
 };
 
 /**

@@ -91,6 +91,8 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `action:reports/setTurnoverGoalAction`                     | ✅     | `src/test/idor/turnover.db.test.ts`                                                                    | `settings:update`           |
 | `action:reports/createTurnoverViewAction`                  | ✅     | `src/test/idor/turnover.db.test.ts`                                                                    | `reports:read`              |
 | `action:reports/deleteTurnoverViewAction`                  | ✅     | `src/test/idor/turnover.db.test.ts`                                                                    | `reports:read`              |
+| `action:vacations/registerVacationAction`                  | ✅     | `src/test/idor/vacations.db.test.ts`                                                                   | `vacations:create`          |
+| `action:vacations/voidVacationAction`                      | ✅     | `src/test/idor/vacations.db.test.ts`                                                                   | `vacations:update`          |
 
 ## Rutas
 
@@ -309,6 +311,9 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `lib:reports/turnover/views/listTurnoverViews`                | ✅     | `src/test/idor/turnover.db.test.ts`           | —       |
 | `lib:reports/turnover/getTurnoverReport`                      | ✅     | `src/test/idor/turnover.db.test.ts`           | —       |
 | `lib:termination-reasons/countUnclassifiedTerminationReasons` | ✅     | `src/test/idor/employment.db.test.ts`         | —       |
+| `lib:vacations/listVacationRecords`                           | ✅     | `src/test/idor/vacations.db.test.ts`          | —       |
+| `lib:vacations/registerVacationRecord`                        | ✅     | `src/test/idor/vacations.db.test.ts`          | —       |
+| `lib:vacations/voidVacationRecord`                            | ✅     | `src/test/idor/vacations.db.test.ts`          | —       |
 
 ## Herramientas MCP
 

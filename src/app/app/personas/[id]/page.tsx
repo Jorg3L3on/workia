@@ -78,6 +78,12 @@ import {
   summarizePeriods,
 } from "@/lib/people/employment";
 import { vacationEntitlementForPerson } from "@/lib/people/vacation-card";
+import { serviceYearBalance } from "@/lib/vacations/balance";
+import {
+  registerVacationAction,
+  voidVacationAction,
+} from "@/lib/vacations/actions";
+import { listVacationRecords } from "@/lib/vacations";
 import { getPersonEmploymentMenuData } from "@/lib/people/employment-menu";
 
 export const metadata: Metadata = {
@@ -157,6 +163,9 @@ const PersonaDetailPage = async ({
     canUpdateContracts,
     canReadAssets,
     canSeeCompensation,
+    canReadVacations,
+    canCreateVacations,
+    canUpdateVacations,
     positionActivities,
     beneficiaries,
     periods,
@@ -170,6 +179,9 @@ const PersonaDetailPage = async ({
     userHasPermission(session.user.id, "contracts:update"),
     userHasPermission(session.user.id, "assets:read"),
     userHasPermission(session.user.id, "compensation:read"),
+    userHasPermission(session.user.id, "vacations:read"),
+    userHasPermission(session.user.id, "vacations:create"),
+    userHasPermission(session.user.id, "vacations:update"),
     listActivitiesForPersonPosition(session.companyId, id),
     listPersonBeneficiaries(session.companyId, id),
     listEmploymentPeriods(session.companyId, id),
@@ -281,6 +293,56 @@ const PersonaDetailPage = async ({
     fechaBaja: employmentSummary?.fechaBaja ?? null,
     today,
   });
+  const canSeeVacationLedger =
+    canReadVacations || canCreateVacations || canUpdateVacations;
+  const vacationHistory = canSeeVacationLedger
+    ? await listVacationRecords(session.companyId, person.id)
+    : [];
+  const showVacationHistory = canReadVacations || canUpdateVacations;
+  const vacationBalance =
+    showVacationHistory &&
+    vacation.serviceYearsCompleted !== null &&
+    vacation.entitlementDays !== null
+      ? serviceYearBalance({
+          serviceYear: vacation.serviceYearsCompleted,
+          entitlementDays: vacation.entitlementDays,
+          entries: vacationHistory.map((record) => ({
+            serviceYear: record.serviceYear,
+            days: record.days,
+            voided: false,
+          })),
+        })
+      : null;
+  const vacationLedger = canSeeVacationLedger
+    ? {
+        showHistory: showVacationHistory,
+        records: showVacationHistory ? vacationHistory : [],
+        existing: vacationHistory.map((record) => ({
+          startDate: record.startDate,
+          endDate: record.endDate,
+          serviceYear: record.serviceYear,
+          days: record.days,
+          voided: false,
+        })),
+        takenHalves: vacationBalance?.takenHalves ?? null,
+        remainingHalves: vacationBalance?.remainingHalves ?? null,
+        exceedsEntitlement: vacationBalance?.exceedsEntitlement ?? false,
+        canCreate: canCreateVacations && !isDeleted,
+        canVoid: canUpdateVacations && !isDeleted,
+        personId: person.id,
+        periods: periods.map((period) => ({
+          id: period.id,
+          fechaIngreso: period.fechaIngreso,
+          fechaBaja: period.fechaBaja,
+          bajaSinFecha: period.bajaSinFecha,
+          reconoceAntiguedad: period.reconoceAntiguedad,
+          fechaAntiguedadReconocida: period.fechaAntiguedadReconocida,
+        })),
+        fallbackFechaIngreso: person.fechaIngreso,
+        registerAction: registerVacationAction,
+        voidAction: voidVacationAction,
+      }
+    : undefined;
   const editAction = (
     section: Parameters<typeof personEditHref>[1],
     field?: string,
@@ -630,7 +692,7 @@ const PersonaDetailPage = async ({
               />
             </DetailCard>
 
-            <PersonVacationCard view={vacation} />
+            <PersonVacationCard ledger={vacationLedger} view={vacation} />
 
             <DetailCard
               action={editAction("identificadores", "telefono")}

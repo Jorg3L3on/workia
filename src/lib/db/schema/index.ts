@@ -13,3 +13,4 @@ export * from "./people";
 export * from "./people-views";
 export * from "./rbac";
 export * from "./sites";
+export * from "./vacations";

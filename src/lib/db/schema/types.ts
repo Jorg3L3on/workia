@@ -28,7 +28,8 @@ export type PermissionResource =
   | "compensation"
   | "payroll"
   | "reports"
-  | "documents";
+  | "documents"
+  | "vacations";
 
 export type PermissionSlug = `${PermissionResource}:${PermissionAction}`;
 
@@ -431,6 +432,27 @@ export const PERMISSIONS: Array<{
       "Define the documents each position requires and record delivery dates",
   },
   {
+    slug: "vacations:read",
+    name: "Read Vacations",
+    resource: "vacations",
+    action: "read",
+    description: "View vacation days taken and the balance",
+  },
+  {
+    slug: "vacations:create",
+    name: "Create Vacations",
+    resource: "vacations",
+    action: "create",
+    description: "Register vacation days taken",
+  },
+  {
+    slug: "vacations:update",
+    name: "Update Vacations",
+    resource: "vacations",
+    action: "update",
+    description: "Void a vacation record",
+  },
+  {
     slug: "companies:read",
     name: "Read Companies",
     resource: "companies",
@@ -530,6 +552,9 @@ export const ROLES = [
       "reports:read",
       "documents:read",
       "documents:manage",
+      "vacations:read",
+      "vacations:create",
+      "vacations:update",
     ] satisfies PermissionSlug[],
   },
   {
@@ -558,6 +583,9 @@ export const ROLES = [
       "assets:update",
       "mcp_connections:create",
       "documents:read",
+      "vacations:read",
+      "vacations:create",
+      "vacations:update",
     ] satisfies PermissionSlug[],
   },
   {

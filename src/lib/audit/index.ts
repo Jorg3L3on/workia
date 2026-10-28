@@ -400,6 +400,29 @@ export const snapshotPersonDocument = (document: Record<string, unknown>) => ({
   expiresOn: document.expiresOn ?? null,
 });
 
+export const snapshotVacationRecord = (record: {
+  personId: string;
+  employmentPeriodId?: string | null;
+  serviceYear: number;
+  startDate: string;
+  endDate: string;
+  days: string;
+  note?: string | null;
+  voidedAt?: Date | string | null;
+}) => ({
+  personId: record.personId,
+  employmentPeriodId: record.employmentPeriodId ?? null,
+  serviceYear: record.serviceYear,
+  startDate: record.startDate,
+  endDate: record.endDate,
+  days: record.days,
+  note: record.note ?? null,
+  voidedAt:
+    record.voidedAt instanceof Date
+      ? record.voidedAt.toISOString()
+      : (record.voidedAt ?? null),
+});
+
 export const snapshotContractTemplate = (
   template: Record<string, unknown>,
 ) => ({
