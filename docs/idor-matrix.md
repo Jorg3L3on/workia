@@ -179,6 +179,7 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `lib:documents/activateDocumentRequirements`                  | ✅     | `src/test/idor/documents.db.test.ts`          | —       |
 | `lib:documents/getDocumentRequirementById`                    | ✅     | `src/test/idor/documents.db.test.ts`          | —       |
 | `lib:documents/listDocumentRequirements`                      | ✅     | `src/test/idor/documents.db.test.ts`          | —       |
+| `lib:documents/listExpiringDocuments`                         | ✅     | `src/test/idor/documents.db.test.ts`          | —       |
 | `lib:documents/listPersonDocuments`                           | ✅     | `src/test/idor/documents.db.test.ts`          | —       |
 | `lib:documents/listPersonDocumentCard`                        | ✅     | `src/test/idor/documents.db.test.ts`          | —       |
 | `lib:documents/recordDelivery`                                | ✅     | `src/test/idor/documents.db.test.ts`          | —       |
@@ -344,6 +345,7 @@ Una conexión de la empresa B llama cada herramienta con ids de la empresa A: la
 | `mcp:list_contract_templates`       | ✅     | `src/test/idor/mcp-tools.db.test.ts`       | `contract_templates:read` |
 | `mcp:list_contracts`                | ✅     | `src/test/idor/mcp-tools.db.test.ts`       | `contracts:read`          |
 | `mcp:list_expiring_contracts`       | ✅     | `src/test/idor/mcp-tools.db.test.ts`       | `contracts:read`          |
+| `mcp:list_expiring_documents`       | ✅     | `src/test/idor/mcp-tools.db.test.ts`       | `documents:read`          |
 | `mcp:list_people`                   | ✅     | `src/test/idor/mcp-tools.db.test.ts`       | `people:read`             |
 | `mcp:list_positions`                | ✅     | `src/test/idor/mcp-tools.db.test.ts`       | `positions:read`          |
 | `mcp:list_regions`                  | ✅     | `src/test/idor/mcp-tools.db.test.ts`       | `sites:read`              |

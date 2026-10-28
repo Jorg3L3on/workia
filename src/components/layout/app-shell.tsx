@@ -56,6 +56,8 @@ type AppShellProps = {
   canUseConnections?: boolean;
   /** reports:read in the active company: shows Reportes. */
   canReadReports?: boolean;
+  /** documents:read in the active company: shows Documentos. */
+  canReadDocuments?: boolean;
   /** Platform admins also get a link to the platform console. */
   isPlatformAdmin?: boolean;
   user: {
@@ -73,9 +75,15 @@ export const AppShell = ({
   canReadMembers = false,
   canUseConnections = false,
   canReadReports = false,
+  canReadDocuments = false,
   isPlatformAdmin = false,
 }: AppShellProps) => {
-  const access = { canReadMembers, canUseConnections, canReadReports };
+  const access = {
+    canReadMembers,
+    canUseConnections,
+    canReadReports,
+    canReadDocuments,
+  };
   const groups = visibleNavGroups(access);
   const initials = (user.name ?? "RRHH")
     .split(" ")

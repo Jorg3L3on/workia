@@ -28,6 +28,7 @@ export const pageTitles = {
   importaciones: "Historial de importaciones",
   expediente: "Expediente",
   contratos: "Contratos",
+  documentos: "Documentos por vencer",
   plantillas: "Plantillas",
   nuevaPlantilla: "Nueva plantilla",
   plantilla: "Plantilla",

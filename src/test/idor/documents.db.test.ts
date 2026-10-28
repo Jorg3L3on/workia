@@ -12,7 +12,9 @@ import { isUniqueViolation } from "@/lib/db/errors";
 import {
   auditEvents,
   documentRequirements,
+  people,
   personDocuments,
+  positions,
 } from "@/lib/db/schema";
 import {
   recordDeliveryAction,
@@ -23,6 +25,7 @@ import {
   DocumentsAlreadyActiveError,
   getDocumentRequirementById,
   listDocumentRequirements,
+  listExpiringDocuments,
   listPersonDocumentCard,
   listPersonDocuments,
   recordDelivery,
@@ -641,6 +644,173 @@ describe("simultaneous document activation", () => {
     expect(live.map((row) => row.name)).toEqual([
       onboardingChecklistLabels.ine,
     ]);
+  });
+});
+
+describe("expiring documents stay inside the company", () => {
+  it("lib:documents/listExpiringDocuments", async () => {
+    const today = "2026-10-28";
+    const [otherPosition] = await ownerDb
+      .insert(positions)
+      .values({
+        companyId: a.companyId,
+        name: "Puesto Piso",
+        areaId: a.area.id,
+      })
+      .returning();
+    const [otherPerson] = await ownerDb
+      .insert(people)
+      .values({
+        companyId: a.companyId,
+        nombres: "Persona",
+        apellidoPaterno: "Bandeja",
+        positionId: otherPosition.id,
+      })
+      .returning();
+    const [deletedPerson] = await ownerDb
+      .insert(people)
+      .values({
+        companyId: a.companyId,
+        nombres: "Persona",
+        apellidoPaterno: "Borrada",
+        positionId: a.position.id,
+        deletedAt: new Date("2026-10-01T00:00:00.000Z"),
+      })
+      .returning();
+
+    const insertRequirement = async (
+      companyId: string,
+      name: string,
+      active = true,
+    ) => {
+      const [row] = await ownerDb
+        .insert(documentRequirements)
+        .values({ companyId, name, required: true, active })
+        .returning();
+
+      return row;
+    };
+
+    const license = await insertRequirement(
+      a.companyId,
+      "Licencia de demostración",
+    );
+    const far = await insertRequirement(a.companyId, "Carta de demostración");
+    const open = await insertRequirement(
+      a.companyId,
+      "Contrato de demostración",
+    );
+    const replaced = await insertRequirement(
+      a.companyId,
+      "Comprobante de demostración",
+    );
+    const past = await insertRequirement(a.companyId, "Examen de demostración");
+    const todayReq = await insertRequirement(
+      a.companyId,
+      "Identificación de piso",
+    );
+    const inactive = await insertRequirement(
+      a.companyId,
+      "Aviso inactivo",
+      false,
+    );
+    const foreign = await insertRequirement(
+      b.companyId,
+      "Aviso de la otra empresa",
+    );
+
+    const deliver = async (
+      companyId: string,
+      personId: string,
+      requirementId: string,
+      expiresOn: string | null,
+      deliveredOn = "2026-01-15",
+    ) => {
+      const row = await recordDelivery(companyId, {
+        personId,
+        requirementId,
+        deliveredOn,
+        expiresOn,
+      });
+
+      if (!row) {
+        throw new Error("No se pudo registrar la entrega de prueba.");
+      }
+
+      return row;
+    };
+
+    const inTen = await deliver(
+      a.companyId,
+      a.person.id,
+      license.id,
+      "2026-11-07",
+    );
+    await deliver(a.companyId, a.person.id, far.id, "2026-11-28");
+    await deliver(a.companyId, a.person.id, open.id, null);
+    await deliver(a.companyId, a.person.id, replaced.id, "2026-11-02");
+    await deliver(
+      a.companyId,
+      a.person.id,
+      replaced.id,
+      "2027-06-01",
+      "2026-08-01",
+    );
+    await deliver(a.companyId, a.person.id, past.id, "2026-10-27");
+    const dueToday = await deliver(
+      a.companyId,
+      otherPerson.id,
+      todayReq.id,
+      today,
+    );
+    const foreignDelivery = await deliver(
+      b.companyId,
+      b.person.id,
+      foreign.id,
+      "2026-11-01",
+    );
+
+    await ownerDb.insert(personDocuments).values({
+      companyId: a.companyId,
+      personId: deletedPerson.id,
+      requirementId: license.id,
+      deliveredOn: "2026-01-15",
+      expiresOn: "2026-11-03",
+    });
+    await ownerDb.insert(personDocuments).values({
+      companyId: a.companyId,
+      personId: a.person.id,
+      requirementId: inactive.id,
+      deliveredOn: "2026-01-15",
+      expiresOn: "2026-11-04",
+    });
+
+    const tray = await listExpiringDocuments(a.companyId, today);
+
+    expect(tray.map((row) => row.id)).toEqual([dueToday.id, inTen.id]);
+    expect(tray.map((row) => row.expiresOn)).toEqual([today, "2026-11-07"]);
+    expect(idsIn(tray)).not.toContain(foreignDelivery.id);
+    expect(idsIn(tray)).not.toContain(deliveryA.id);
+
+    const byPosition = await listExpiringDocuments(a.companyId, today, {
+      positionId: otherPosition.id,
+    });
+
+    expect(byPosition.map((row) => row.id)).toEqual([dueToday.id]);
+
+    const expired = await listExpiringDocuments(a.companyId, today, {
+      status: "expired",
+    });
+
+    expect(expired.map((row) => row.requirementName)).toEqual([
+      "Examen de demostración",
+    ]);
+
+    const otherCompany = await listExpiringDocuments(b.companyId, today);
+
+    expect(otherCompany.map((row) => row.id)).toEqual([foreignDelivery.id]);
+    expect(idsIn(otherCompany)).not.toContain(inTen.id);
+    expect(idsIn(otherCompany)).not.toContain(a.person.id);
   });
 });
 

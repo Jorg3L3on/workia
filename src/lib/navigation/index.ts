@@ -1,5 +1,6 @@
 import {
   ChartLineIcon,
+  FilesIcon,
   FileTextIcon,
   FolderTreeIcon,
   HomeIcon,
@@ -26,6 +27,8 @@ export type NavAccess = {
   canReadMembers: boolean;
   canUseConnections: boolean;
   canReadReports: boolean;
+  /** documents:read in the active company: shows Documentos. */
+  canReadDocuments: boolean;
 };
 
 export type NavLink = {
@@ -70,6 +73,13 @@ export const NAV_GROUPS: readonly NavGroup[] = [
         href: "/app/contratos",
         icon: FileTextIcon,
         keywords: ["renovar", "vencimiento", "plantillas"],
+      },
+      {
+        title: "Documentos",
+        href: "/app/documentos",
+        icon: FilesIcon,
+        keywords: ["por vencer", "vencidos", "vigencia"],
+        requires: "canReadDocuments",
       },
       {
         title: "Altas",
