@@ -509,6 +509,9 @@ describe("PersonContractsSection compensation", () => {
       "Capturada (requiere el permiso de compensación)",
     );
     expect(document.body).not.toHaveTextContent(/987|29,?629/);
+    expect(
+      screen.queryByRole("link", { name: "Descargar PDF del contrato" }),
+    ).toBeNull();
   });
 
   it("shows it with compensation:read", () => {
@@ -523,5 +526,18 @@ describe("PersonContractsSection compensation", () => {
     renderSection(false);
 
     expect(screen.queryByRole("heading", { name: "Contratos" })).toBeNull();
+  });
+
+  it("links each contract to its PDF", () => {
+    renderSection(true);
+
+    expect(
+      screen
+        .getAllByRole("link", { name: "Descargar PDF del contrato" })
+        .map((link) => link.getAttribute("href")),
+    ).toEqual([
+      "/app/personas/p-1/contratos/contract-01/pdf",
+      "/app/personas/p-1/contratos/contract-01/pdf",
+    ]);
   });
 });
