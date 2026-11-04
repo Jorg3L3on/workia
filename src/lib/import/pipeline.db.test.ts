@@ -26,6 +26,7 @@ import {
   validateJobStep,
   validatePersonasChunk,
 } from "./validate";
+import { uniqueCurp } from "@/test/curp";
 
 let t: Tenant;
 
@@ -265,21 +266,43 @@ describe("jefe directo by name", () => {
   it("resolves a unique name in the file or in Workia, and explains the rest", async () => {
     const job = await stage({
       personas: [
-        { nombres: "Iván", apellidoPaterno: "Ríos" },
-        { nombres: "Ema", apellidoPaterno: "Paz", jefeDirecto: "ivan rios" },
+        { nombres: "Iván", apellidoPaterno: "Ríos", curp: uniqueCurp() },
+        {
+          nombres: "Ema",
+          apellidoPaterno: "Paz",
+          curp: uniqueCurp(),
+          jefeDirecto: "ivan rios",
+        },
         {
           nombres: "Leo",
           apellidoPaterno: "Mar",
+          curp: uniqueCurp(),
           jefeDirecto: "Olga Méndez Ruiz",
         },
-        { nombres: "Uma", apellidoPaterno: "Sol", jefeDirecto: "Pedro Gil" },
-        { nombres: "Eva", apellidoPaterno: "Luz", jefeDirecto: "Nadie Nunca" },
+        {
+          nombres: "Uma",
+          apellidoPaterno: "Sol",
+          curp: uniqueCurp(),
+          jefeDirecto: "Pedro Gil",
+        },
+        {
+          nombres: "Eva",
+          apellidoPaterno: "Luz",
+          curp: uniqueCurp(),
+          jefeDirecto: "Nadie Nunca",
+        },
         {
           nombres: "Ada",
           apellidoPaterno: "Mora",
+          curp: uniqueCurp(),
           jefeDirecto: "Borrada Sola",
         },
-        { nombres: "Gil", apellidoPaterno: "Ney", jefeDirecto: CURP_JEFA },
+        {
+          nombres: "Gil",
+          apellidoPaterno: "Ney",
+          curp: uniqueCurp(),
+          jefeDirecto: CURP_JEFA,
+        },
       ],
     });
 
@@ -332,8 +355,8 @@ describe("file-wide rules across chunks", () => {
           apellidoPaterno: "A",
           curp: curp("UXOA010101HDFNNN0"),
         },
-        { nombres: "Dos", apellidoPaterno: "B" },
-        { nombres: "Tres", apellidoPaterno: "C" },
+        { nombres: "Dos", apellidoPaterno: "B", curp: uniqueCurp() },
+        { nombres: "Tres", apellidoPaterno: "C", curp: uniqueCurp() },
         {
           nombres: "Cuatro",
           apellidoPaterno: "D",
@@ -396,7 +419,11 @@ describe("file-wide rules across chunks", () => {
 describe("all or nothing", () => {
   it("validates again in client-repeatable steps before applying", async () => {
     const job = await stage(
-      { personas: [{ nombres: "Todo", apellidoPaterno: "Nada" }] },
+      {
+        personas: [
+          { nombres: "Todo", apellidoPaterno: "Nada", curp: uniqueCurp() },
+        ],
+      },
       { mode: "all_or_nothing" },
     );
 

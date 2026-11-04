@@ -35,6 +35,7 @@ import {
   users,
 } from "@/lib/db/schema";
 import { PERMISSIONS, ROLES } from "@/lib/db/schema/types";
+import { sampleCurp } from "@/lib/people/identity";
 
 /**
  * The test's own connection, as the database owner: fixtures and assertions
@@ -147,7 +148,7 @@ export const seedTenant = async (label: string) => {
       companyId,
       nombres: `Persona ${label}`,
       apellidoPaterno: "Idor",
-      curp: `CURP${label}000000000000`.slice(0, 18).toUpperCase(),
+      curp: sampleCurp(label === "A" ? 1 : 2),
       rfc: `RFC${label}00000000`.slice(0, 13).toUpperCase(),
       nss: `${label === "A" ? 1 : 2}0000000000`,
       areaId: area.id,
@@ -161,6 +162,7 @@ export const seedTenant = async (label: string) => {
       companyId,
       nombres: `Compañera ${label}`,
       apellidoPaterno: "Idor",
+      curp: sampleCurp(label === "A" ? 3 : 4),
       managerId: person.id,
     })
     .returning();

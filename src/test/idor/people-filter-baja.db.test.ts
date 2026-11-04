@@ -38,6 +38,7 @@ import { listTerminationReasons } from "@/lib/termination-reasons";
 
 import { idsIn, ownerDb, seedTenant, tenantIds, type Tenant } from "./fixtures";
 import { actAs } from "./session-state";
+import { uniqueCurp } from "@/test/curp";
 
 let x: Tenant;
 let y: Tenant;
@@ -76,6 +77,7 @@ const person = async (
       companyId: x.companyId,
       nombres: `Baja ${key}`,
       apellidoPaterno: "Prueba",
+      curp: uniqueCurp(),
       ...values,
     })
     .returning();

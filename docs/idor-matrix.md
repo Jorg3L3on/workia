@@ -302,6 +302,11 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `lib:termination-reasons/listTerminationReasonsWithUsage`     | ✅     | `src/test/idor/employment.db.test.ts`         | —       |
 | `lib:termination-reasons/listTerminationReasons`              | ✅     | `src/test/idor/employment.db.test.ts`         | —       |
 | `lib:termination-reasons/softDeleteTerminationReason`         | ✅     | `src/test/idor/employment.db.test.ts`         | —       |
+| `lib:timeline/appendPersonEvents`                             | ✅     | `src/test/idor/timeline.db.test.ts`           | —       |
+| `lib:timeline/listPersonEvents`                               | ✅     | `src/test/idor/timeline.db.test.ts`           | —       |
+| `lib:timeline/writers/appendEmploymentChanges`                | ✅     | `src/test/idor/timeline-writers.db.test.ts`   | —       |
+| `lib:timeline/writers/replacePeriodIncidencias`               | ✅     | `src/test/idor/timeline-writers.db.test.ts`   | —       |
+| `lib:timeline/writers/writeAttendanceDays`                    | ✅     | `src/test/idor/timeline-writers.db.test.ts`   | —       |
 | `lib:termination-reasons/updateTerminationReason`             | ✅     | `src/test/idor/employment.db.test.ts`         | —       |
 | `lib:reports/turnover/data/getTurnoverGoal`                   | ✅     | `src/test/idor/turnover.db.test.ts`           | —       |
 | `lib:reports/turnover/data/loadTurnoverFacts`                 | ✅     | `src/test/idor/turnover.db.test.ts`           | —       |

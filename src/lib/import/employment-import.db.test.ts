@@ -50,6 +50,7 @@ import {
 } from "./jobs";
 import { previewUndo, undoJobStep } from "./undo";
 import { validateJobStep } from "./validate";
+import { uniqueCurp } from "@/test/curp";
 
 let a: Tenant;
 let b: Tenant;
@@ -73,7 +74,7 @@ const personForm = (
   managerId: "",
   siteId: "",
   rfc: "",
-  curp: "",
+  curp: uniqueCurp(),
   nss: "",
   horarioEntrada: "",
   horarioSalidaComer: "",
