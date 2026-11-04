@@ -97,7 +97,7 @@ import {
 import { decideRequestByHrAction } from "@/lib/requests/actions";
 import { STALE_COMPANY_MESSAGE } from "@/lib/tenant/scope";
 import { getPersonVacationBalance } from "@/lib/vacations/person-balance";
-import { uniqueCurp } from "@/test/curp";
+import { randomCurp } from "@/test/curp";
 
 import { ownerDb, seedTenant, type Tenant } from "./fixtures";
 import { actAs, NavigationThrow } from "./session-state";
@@ -138,7 +138,7 @@ const person = async (
       companyId,
       nombres,
       apellidoPaterno: "Solicitud",
-      curp: uniqueCurp(),
+      curp: randomCurp(),
       managerId,
       fechaIngreso: "2023-03-01",
     })

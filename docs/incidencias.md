@@ -104,9 +104,9 @@ permiso or incapacidad, `/ override` for an override, `/ revoke` for a
 cancel. A cancel keeps the row with who cancelled it and why; the app role
 cannot delete these rows. A decision on a closed quincena is refused.
 
-W2-06 (requests and approvals) can register an approved permiso by calling
+W2-06 (requests and approvals, [solicitudes.md](solicitudes.md)) calls
 `createJustification` in its approval transaction, with the request id as
-`reference`.
+`reference`, and `cancelJustification` when the employee cancels it.
 
 ## What it writes
 

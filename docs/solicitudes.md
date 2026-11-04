@@ -7,11 +7,11 @@ amounts. Code: `src/lib/requests`, migration `0047_time_off_requests`.
 
 ## What can be asked
 
-| Kind               | What approval does                                               |
-| ------------------ | ---------------------------------------------------------------- |
-| `vacaciones`       | writes a `vacation_records` row in the same transaction          |
-| `permiso_con_goce` | nothing else; the timeline row says `pay: con_goce`              |
-| `permiso_sin_goce` | nothing else; the timeline row says `pay: sin_goce` (pre-nómina) |
+| Kind               | What approval does                                             |
+| ------------------ | -------------------------------------------------------------- |
+| `vacaciones`       | writes a `vacation_records` row in the same transaction        |
+| `permiso_con_goce` | justifies its days in the incidencias (W2-14); `pay: con_goce` |
+| `permiso_sin_goce` | justifies its days in the incidencias (W2-14); `pay: sin_goce` |
 
 Home office and shift swaps are out of scope.
 
@@ -65,13 +65,18 @@ Each one runs in one transaction with:
 - for an approved vacation, `registerVacationRecordInTx`, and for a cancelled
   one, `voidVacationRecordInTx`: the balance moves only on approval and comes
   back on cancellation; a rejection never touches it;
+- for an approved permiso, `createJustification` of W2-14
+  ([incidencias.md](incidencias.md)) with the request id as `reference`, so
+  its days are justified absences and their quincenas are recomputed; a
+  cancel calls `cancelJustification` on it. When a quincena of the range is
+  already closed the decision (or the cancel) is refused and nothing is
+  written: HR reopens the quincena first;
 - an audit event, `time_off_request` with `create`, `approve`, `reject` or
   `cancel`, plus the `vacation_record` event of the row it wrote or voided. A
   manager or employee is the actor through their employee account (source
   `employee`), HR through its user;
 - a `person_events` row: `vacation` or `permiso` with `kind` request,
-  approval, rejection or cancellation ([timeline.md](timeline.md)). W2-14
-  reads approved permisos to justify the days they cover;
+  approval, rejection or cancellation ([timeline.md](timeline.md));
 - the notification of W2-08 ([notificaciones.md](notificaciones.md)):
   `request_pending` to whoever decides when the request is created (the jefe
   in `/mi`, or the HR users with `vacations:update`), `request_decision` to the
