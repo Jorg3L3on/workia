@@ -63,6 +63,11 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `action:employee/requestLoginCodeAction`                   | ✅     | `src/test/idor/employee-accounts.db.test.ts`                                                           | —                           |
 | `action:employee/signOutEmployeeAction`                    | ✅     | `src/test/idor/employee-accounts.db.test.ts`                                                           | —                           |
 | `action:employee/verifyLoginCodeAction`                    | ✅     | `src/test/idor/employee-accounts.db.test.ts`                                                           | —                           |
+| `action:incidencias/cancelJustificationAction`             | ✅     | `src/test/idor/incidencias.db.test.ts`                                                                 | `pay_periods:manage`        |
+| `action:incidencias/createJustificationAction`             | ✅     | `src/test/idor/incidencias.db.test.ts`                                                                 | `pay_periods:manage`        |
+| `action:incidencias/overrideIncidenciaAction`              | ✅     | `src/test/idor/incidencias.db.test.ts`                                                                 | `pay_periods:manage`        |
+| `action:incidencias/recomputePayPeriodAction`              | ✅     | `src/test/idor/incidencias.db.test.ts`                                                                 | `pay_periods:manage`        |
+| `action:incidencias/saveIncidenciaRulesAction`             | ✅     | `src/test/idor/incidencias.db.test.ts`                                                                 | `pay_periods:manage`        |
 | `action:mcp/approveConsentAction`                          | ✅     | `src/test/idor/mcp.db.test.ts`                                                                         | `mcp_connections:create`    |
 | `action:mcp/createPersonalTokenAction`                     | ✅     | `src/test/idor/mcp.db.test.ts`                                                                         | `mcp_connections:create`    |
 | `action:mcp/denyConsentAction`                             | ✅     | `src/test/idor/mcp.db.test.ts`                                                                         | —                           |
@@ -73,6 +78,8 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `action:onboarding/rejectOnboardingAction`                 | ✅     | `src/test/idor/onboarding.db.test.ts`                                                                  | `payroll:approve`           |
 | `action:onboarding/startOnboardingAction`                  | ✅     | `src/test/idor/onboarding.db.test.ts`                                                                  | `people:update`             |
 | `action:onboarding/updateOnboardingAction`                 | ✅     | `src/test/idor/onboarding.db.test.ts`                                                                  | `people:update`             |
+| `action:pay-periods/closePayPeriodAction`                  | ✅     | `src/test/idor/period-close.db.test.ts`                                                                | `pay_periods:manage`        |
+| `action:pay-periods/reopenPayPeriodAction`                 | ✅     | `src/test/idor/period-close.db.test.ts`                                                                | `pay_periods:manage`        |
 | `action:people/assertPeopleListAccess`                     | ⏭️     | Exento: guard de lectura sin datos (requirePeopleRead); la lista la cubre lib:people/listPeoplePage    | `people:read`               |
 | `action:people/countPeopleFilterAction`                    | ✅     | `src/test/idor/people-filter.db.test.ts`                                                               | `people:read`               |
 | `action:people/countPeopleFilterOptionsAction`             | ✅     | `src/test/idor/people-filter.db.test.ts`                                                               | `people:read`               |
@@ -118,8 +125,6 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `action:termination-reasons/updateTerminationReasonAction` | ✅     | `src/test/idor/employment.db.test.ts`                                                                  | `settings:update`           |
 | `action:vacations/registerVacationAction`                  | ✅     | `src/test/idor/vacations.db.test.ts`                                                                   | `vacations:create`          |
 | `action:vacations/voidVacationAction`                      | ✅     | `src/test/idor/vacations.db.test.ts`                                                                   | `vacations:update`          |
-| `action:pay-periods/closePayPeriodAction`                  | ✅     | `src/test/idor/period-close.db.test.ts`                                                                | `pay_periods:manage`        |
-| `action:pay-periods/reopenPayPeriodAction`                 | ✅     | `src/test/idor/period-close.db.test.ts`                                                                | `pay_periods:manage`        |
 
 ## Rutas
 
@@ -169,6 +174,7 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `lib:attendance/dismissUnmatched`                             | ✅     | `src/test/idor/attendance.db.test.ts`                                                                             | —       |
 | `lib:attendance/importChecadorCsv`                            | ✅     | `src/test/idor/attendance.db.test.ts`                                                                             | —       |
 | `lib:attendance/ingest/ingestPunches`                         | ✅     | `src/test/idor/attendance.db.test.ts`                                                                             | —       |
+| `lib:attendance/ingest/recomputeIncidenciasAfter`             | ✅     | `src/test/idor/incidencias.db.test.ts`                                                                            | —       |
 | `lib:attendance/issueDeviceToken`                             | ✅     | `src/test/idor/attendance.db.test.ts`                                                                             | —       |
 | `lib:attendance/listAttendanceBatches`                        | ✅     | `src/test/idor/attendance.db.test.ts`                                                                             | —       |
 | `lib:attendance/listAttendanceDevices`                        | ✅     | `src/test/idor/attendance.db.test.ts`                                                                             | —       |
@@ -265,6 +271,16 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `lib:import/validate/validateHorariosChunk`                   | ✅     | `src/test/idor/import.db.test.ts`                                                                                 | —       |
 | `lib:import/validate/validateJobStep`                         | ✅     | `src/test/idor/import.db.test.ts`                                                                                 | —       |
 | `lib:import/validate/validatePersonasChunk`                   | ✅     | `src/test/idor/import.db.test.ts`                                                                                 | —       |
+| `lib:incidencias/cancelJustification`                         | ✅     | `src/test/idor/incidencias.db.test.ts`                                                                            | —       |
+| `lib:incidencias/createJustification`                         | ✅     | `src/test/idor/incidencias.db.test.ts`                                                                            | —       |
+| `lib:incidencias/getIncidenciaRules`                          | ✅     | `src/test/idor/incidencias.db.test.ts`                                                                            | —       |
+| `lib:incidencias/getPersonPeriodIncidencias`                  | ✅     | `src/test/idor/incidencias.db.test.ts`                                                                            | —       |
+| `lib:incidencias/listIncidenciaRules`                         | ✅     | `src/test/idor/incidencias.db.test.ts`                                                                            | —       |
+| `lib:incidencias/listJustifications`                          | ✅     | `src/test/idor/incidencias.db.test.ts`                                                                            | —       |
+| `lib:incidencias/overrideIncidencia`                          | ✅     | `src/test/idor/incidencias.db.test.ts`                                                                            | —       |
+| `lib:incidencias/recomputeAfterAttendance`                    | ✅     | `src/test/idor/incidencias.db.test.ts`                                                                            | —       |
+| `lib:incidencias/runIncidencias`                              | ✅     | `src/test/idor/incidencias.db.test.ts`                                                                            | —       |
+| `lib:incidencias/saveIncidenciaRules`                         | ✅     | `src/test/idor/incidencias.db.test.ts`                                                                            | —       |
 | `lib:mcp/connections/countRecentConnections`                  | ✅     | `src/test/idor/mcp.db.test.ts`                                                                                    | —       |
 | `lib:mcp/connections/countToolCallErrors`                     | ✅     | `src/test/idor/mcp.db.test.ts`                                                                                    | —       |
 | `lib:mcp/connections/createAuthCode`                          | ✅     | `src/test/idor/mcp.db.test.ts`                                                                                    | —       |

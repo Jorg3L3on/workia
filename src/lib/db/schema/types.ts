@@ -470,7 +470,7 @@ export const PERMISSIONS: Array<{
     resource: "pay_periods",
     action: "manage",
     description:
-      "Close a quincena (freeze its incidencias) and reopen it with a reason",
+      "Close a quincena (freeze its incidencias) and reopen it with a reason; set the incidencias rules, justify or void incidencias and register permisos and incapacidades",
   },
   {
     slug: "employee_accounts:manage",

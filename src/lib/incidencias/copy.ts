@@ -73,3 +73,11 @@ export const justificationRefLabel = (ref: string | null) => {
     justificationKindLabel[kind as IncidenciaJustificationKind] ?? "Justificada"
   );
 };
+
+/** One incidencia, singular: «Falta», «Retardo», «Salida anticipada». */
+export const incidenciaLabel = (kind: string) =>
+  ({
+    falta: "Falta",
+    retardo: "Retardo",
+    salida_anticipada: "Salida anticipada",
+  })[kind] ?? kind.replaceAll("_", " ");

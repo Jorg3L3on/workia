@@ -124,3 +124,10 @@ writes) go to `super_admin` and `admin`. Run `npm run db:sync-permissions`
 after 0044 reaches an environment. Every HR change leaves an audit event
 (`attendance_device`, `attendance_import`, `attendance_badge`,
 `attendance_checkin`); punches go to the timeline, not to audit.
+
+## Incidencias
+
+Once an ingestion commits, the incidencias engine (W2-14,
+[incidencias.md](incidencias.md)) recomputes the people and quincenas the new
+punches touched. A closed quincena is skipped: the punches are stored and
+count after a reopen.

@@ -1,4 +1,5 @@
 import { CATALOG_PATHS } from "@/lib/catalog/paths";
+import { quincenaLabel } from "@/lib/pay-periods/quincena";
 
 export type BreadcrumbCrumb = {
   label: string;
@@ -62,6 +63,29 @@ export const resolveBreadcrumbs = (
 
   if (path === "/app/periodos") {
     return [{ label: "Periodos de pago" }];
+  }
+
+  if (path === "/app/periodos/reglas") {
+    return [
+      { label: "Periodos de pago", href: "/app/periodos" },
+      { label: "Reglas de incidencias" },
+    ];
+  }
+
+  // One person's quincena (W2-14): /app/periodos/2026-11-Q1/<person id>.
+  const personPeriod = /^\/app\/periodos\/(\d{4}-\d{2}-Q[12])\/[^/]+$/.exec(
+    path,
+  );
+
+  if (personPeriod) {
+    return [
+      { label: "Periodos de pago", href: "/app/periodos" },
+      {
+        label: quincenaLabel(personPeriod[1]),
+        href: `/app/periodos/${personPeriod[1]}`,
+      },
+      { label: labels.current ?? "Persona" },
+    ];
   }
 
   if (path.startsWith("/app/periodos/")) {

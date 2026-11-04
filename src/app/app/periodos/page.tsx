@@ -1,3 +1,4 @@
+import { SlidersHorizontalIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -6,6 +7,7 @@ import { PayPeriodsTable } from "@/components/pay-periods/pay-periods-table";
 import { Button } from "@/components/ui/button";
 import { pageTitles } from "@/lib/brand/chrome-copy";
 import { isoToday } from "@/lib/format/date";
+import { INCIDENCIAS_COPY } from "@/lib/incidencias/copy";
 import { listPayPeriods } from "@/lib/pay-periods";
 import { requirePayPeriodsRead } from "@/lib/pay-periods/auth";
 import { PAY_PERIOD_COPY } from "@/lib/pay-periods/copy";
@@ -34,6 +36,11 @@ const PeriodosPage = async ({ searchParams }: PeriodosPageProps) => {
     <div className="flex flex-col gap-6">
       <PageHeader
         description={PAY_PERIOD_COPY.description}
+        secondary={{
+          label: INCIDENCIAS_COPY.rulesTitle,
+          href: "/app/periodos/reglas",
+          icon: SlidersHorizontalIcon,
+        }}
         title={PAY_PERIOD_COPY.title}
       />
       <PayPeriodsTable

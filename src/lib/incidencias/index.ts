@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, inArray, isNull, lte, or } from "drizzle-orm";
+import { asc, desc, eq, gte, inArray, isNull, lte, or } from "drizzle-orm";
 
 import { recordAuditEvent } from "@/lib/audit";
 import { tdb, withTransaction, type DbTransaction } from "@/lib/db";
@@ -206,126 +206,118 @@ const loadInputs = async (
 ): Promise<EnginePersonInput[]> => {
   const ids = batch.map((person) => person.id);
   const wide = { from: addDays(range.from, -1), to: addDays(range.to, 1) };
-  const [
-    contractRows,
-    scheduleRows,
-    employmentRows,
-    vacationRows,
-    justificationRows,
-    attendanceRows,
-  ] = await Promise.all([
-    tx
-      .select({
-        personId: contracts.personId,
-        from: contracts.startDate,
-        to: contracts.endDate,
-        blocks: contracts.scheduleBlocks,
-        entrada: contracts.scheduleEntrada,
-        salida: contracts.scheduleSalida,
-        restDay: contracts.scheduleRestDay,
-      })
-      .from(contracts)
-      .where(
-        withTenant(
-          contracts,
-          companyId,
-          inArray(contracts.personId, ids),
-          isNull(contracts.deletedAt),
-          lte(contracts.startDate, wide.to),
-          or(isNull(contracts.endDate), gte(contracts.endDate, wide.from)),
+  // One connection per transaction: the reads go one after another.
+  const contractRows = await tx
+    .select({
+      personId: contracts.personId,
+      from: contracts.startDate,
+      to: contracts.endDate,
+      blocks: contracts.scheduleBlocks,
+      entrada: contracts.scheduleEntrada,
+      salida: contracts.scheduleSalida,
+      restDay: contracts.scheduleRestDay,
+    })
+    .from(contracts)
+    .where(
+      withTenant(
+        contracts,
+        companyId,
+        inArray(contracts.personId, ids),
+        isNull(contracts.deletedAt),
+        lte(contracts.startDate, wide.to),
+        or(isNull(contracts.endDate), gte(contracts.endDate, wide.from)),
+      ),
+    );
+  const scheduleRows = await tx
+    .select({
+      personId: personSchedules.personId,
+      blocks: personSchedules.blocks,
+      entrada: personSchedules.entrada,
+      salida: personSchedules.salida,
+      restDay: personSchedules.restDay,
+    })
+    .from(personSchedules)
+    .where(
+      withTenant(
+        personSchedules,
+        companyId,
+        inArray(personSchedules.personId, ids),
+        isNull(personSchedules.deletedAt),
+      ),
+    );
+  const employmentRows = await tx
+    .select({
+      personId: employmentPeriods.personId,
+      from: employmentPeriods.fechaIngreso,
+      to: employmentPeriods.fechaBaja,
+    })
+    .from(employmentPeriods)
+    .where(
+      withTenant(
+        employmentPeriods,
+        companyId,
+        inArray(employmentPeriods.personId, ids),
+      ),
+    );
+  const vacationRows = await tx
+    .select({
+      id: vacationRecords.id,
+      personId: vacationRecords.personId,
+      fromDay: vacationRecords.startDate,
+      toDay: vacationRecords.endDate,
+    })
+    .from(vacationRecords)
+    .where(
+      withTenant(
+        vacationRecords,
+        companyId,
+        inArray(vacationRecords.personId, ids),
+        isNull(vacationRecords.voidedAt),
+        lte(vacationRecords.startDate, range.to),
+        gte(vacationRecords.endDate, range.from),
+      ),
+    );
+  const justificationRows = await tx
+    .select({
+      id: incidenciaJustifications.id,
+      personId: incidenciaJustifications.personId,
+      kind: incidenciaJustifications.kind,
+      fromDay: incidenciaJustifications.fromDay,
+      toDay: incidenciaJustifications.toDay,
+      incidenciaKind: incidenciaJustifications.incidenciaKind,
+      effect: incidenciaJustifications.effect,
+    })
+    .from(incidenciaJustifications)
+    .where(
+      withTenant(
+        incidenciaJustifications,
+        companyId,
+        inArray(incidenciaJustifications.personId, ids),
+        isNull(incidenciaJustifications.cancelledAt),
+        lte(incidenciaJustifications.fromDay, range.to),
+        gte(incidenciaJustifications.toDay, range.from),
+      ),
+    )
+    .orderBy(asc(incidenciaJustifications.createdAt));
+  const attendanceRows = await tx
+    .select({
+      personId: personEvents.personId,
+      dedupeKey: personEvents.dedupeKey,
+      payload: personEvents.payload,
+    })
+    .from(personEvents)
+    .where(
+      withTenant(
+        personEvents,
+        companyId,
+        eq(personEvents.type, "attendance"),
+        inArray(personEvents.personId, ids),
+        inArray(
+          personEvents.dedupeKey,
+          eachDay(wide.from, wide.to).map(attendanceDedupeKey),
         ),
       ),
-    tx
-      .select({
-        personId: personSchedules.personId,
-        blocks: personSchedules.blocks,
-        entrada: personSchedules.entrada,
-        salida: personSchedules.salida,
-        restDay: personSchedules.restDay,
-      })
-      .from(personSchedules)
-      .where(
-        withTenant(
-          personSchedules,
-          companyId,
-          inArray(personSchedules.personId, ids),
-          isNull(personSchedules.deletedAt),
-        ),
-      ),
-    tx
-      .select({
-        personId: employmentPeriods.personId,
-        from: employmentPeriods.fechaIngreso,
-        to: employmentPeriods.fechaBaja,
-      })
-      .from(employmentPeriods)
-      .where(
-        withTenant(
-          employmentPeriods,
-          companyId,
-          inArray(employmentPeriods.personId, ids),
-        ),
-      ),
-    tx
-      .select({
-        id: vacationRecords.id,
-        personId: vacationRecords.personId,
-        fromDay: vacationRecords.startDate,
-        toDay: vacationRecords.endDate,
-      })
-      .from(vacationRecords)
-      .where(
-        withTenant(
-          vacationRecords,
-          companyId,
-          inArray(vacationRecords.personId, ids),
-          isNull(vacationRecords.voidedAt),
-          lte(vacationRecords.startDate, range.to),
-          gte(vacationRecords.endDate, range.from),
-        ),
-      ),
-    tx
-      .select({
-        id: incidenciaJustifications.id,
-        personId: incidenciaJustifications.personId,
-        kind: incidenciaJustifications.kind,
-        fromDay: incidenciaJustifications.fromDay,
-        toDay: incidenciaJustifications.toDay,
-        incidenciaKind: incidenciaJustifications.incidenciaKind,
-        effect: incidenciaJustifications.effect,
-      })
-      .from(incidenciaJustifications)
-      .where(
-        withTenant(
-          incidenciaJustifications,
-          companyId,
-          inArray(incidenciaJustifications.personId, ids),
-          isNull(incidenciaJustifications.cancelledAt),
-          lte(incidenciaJustifications.fromDay, range.to),
-          gte(incidenciaJustifications.toDay, range.from),
-        ),
-      )
-      .orderBy(asc(incidenciaJustifications.createdAt)),
-    tx
-      .select({
-        personId: personEvents.personId,
-        dedupeKey: personEvents.dedupeKey,
-        payload: personEvents.payload,
-      })
-      .from(personEvents)
-      .where(
-        withTenant(
-          personEvents,
-          companyId,
-          eq(personEvents.type, "attendance"),
-          inArray(personEvents.personId, ids),
-          inArray(
-            personEvents.dedupeKey,
-            eachDay(wide.from, wide.to).map(attendanceDedupeKey),
-          ),
-        ),
-      ),
-  ]);
+    );
 
   const group = <T extends { personId: string }>(rows: T[]) => {
     const map = new Map<string, T[]>();
@@ -650,12 +642,17 @@ const validateDays = (fromDay: string, toDay: string) => {
  * Registers a permiso or an IMSS incapacidad: the person's incidencias of
  * those days become justified. Every quincena it touches must be open
  * (PayPeriodError 'period_closed' otherwise); they are recomputed in the
- * same transaction, with an audit event.
+ * same transaction, with an audit event. W2-06 calls it with its own `tx`
+ * when a permiso request is approved, with the request id as `reference`.
  */
 export const createJustification = async (
   companyId: string,
   input: JustificationInput,
-  options: { actorUserId?: string | null; asOf?: Date } = {},
+  options: {
+    actorUserId?: string | null;
+    asOf?: Date;
+    tx?: DbTransaction;
+  } = {},
 ) => {
   validateDays(input.fromDay, input.toDay);
   const reason = cleanText(input.reason, MAX_JUSTIFICATION_REASON);
@@ -668,7 +665,7 @@ export const createJustification = async (
     throw new IncidenciaError("invalid_dates", "Usa overrideIncidencia.");
   }
 
-  return withTransaction(async (tx) => {
+  const run = async (tx: DbTransaction) => {
     await assertPerson(tx, companyId, input.personId);
     const row = await insertJustification(
       tx,
@@ -717,7 +714,9 @@ export const createJustification = async (
     );
 
     return row;
-  }, companyId);
+  };
+
+  return options.tx ? run(options.tx) : withTransaction(run, companyId);
 };
 
 /**
@@ -806,7 +805,12 @@ export const overrideIncidencia = async (
 export const cancelJustification = async (
   companyId: string,
   justificationId: string,
-  options: { reason: string; actorUserId?: string | null; asOf?: Date },
+  options: {
+    reason: string;
+    actorUserId?: string | null;
+    asOf?: Date;
+    tx?: DbTransaction;
+  },
 ) => {
   const reason = cleanText(options.reason, MAX_JUSTIFICATION_REASON);
 
@@ -814,7 +818,7 @@ export const cancelJustification = async (
     throw new IncidenciaError("reason_required", "Escribe el motivo.");
   }
 
-  return withTransaction(async (tx) => {
+  const run = async (tx: DbTransaction) => {
     const [row] = await tx
       .update(incidenciaJustifications)
       .set({
@@ -864,7 +868,9 @@ export const cancelJustification = async (
     );
 
     return row;
-  }, companyId);
+  };
+
+  return options.tx ? run(options.tx) : withTransaction(run, companyId);
 };
 
 /** A person's justifications that touch `from`..`to`, cancelled ones included, oldest first. */

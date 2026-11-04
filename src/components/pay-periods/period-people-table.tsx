@@ -40,10 +40,13 @@ export const PeriodPeopleTable = ({
   rows,
   kinds,
   emptyTitle,
+  period,
 }: {
   rows: PeriodPeopleRow[];
   kinds: string[];
   emptyTitle: string;
+  /** The quincena: a row opens that person's incidencias of it (W2-14). */
+  period: string;
 }) => {
   const columns = useMemo<DataTableColumn<PeriodPeopleRow>[]>(
     () => [
@@ -70,8 +73,8 @@ export const PeriodPeopleTable = ({
       columns={columns}
       data={rows}
       emptyTitle={emptyTitle}
-      getRowAriaLabel={(row) => `Ver expediente de ${row.name}`}
-      getRowHref={(row) => `/app/personas/${row.personId}`}
+      getRowAriaLabel={(row) => `Ver incidencias de ${row.name}`}
+      getRowHref={(row) => `/app/periodos/${period}/${row.personId}`}
       getRowId={(row) => row.personId}
       getSearchText={(row) => row.name}
       mobileCard={(row) => ({

@@ -57,6 +57,7 @@ export const pageTitles = {
   rotacion: "Rotación",
   periodos: "Periodos de pago",
   periodo: "Quincena",
+  reglasIncidencias: "Reglas de incidencias",
 } as const;
 
 export const companyCopy = {

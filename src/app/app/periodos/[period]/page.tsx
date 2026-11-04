@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { PageBreadcrumbLabel } from "@/components/layout/app-breadcrumbs";
 import { PageHeader } from "@/components/layout/page-header";
+import { RecomputeButton } from "@/components/incidencias/recompute-button";
 import { PayPeriodActions } from "@/components/pay-periods/pay-period-actions";
 import { PayPeriodStatusBadge } from "@/components/pay-periods/pay-periods-table";
 import { PeriodPeopleTable } from "@/components/pay-periods/period-people-table";
@@ -20,6 +21,7 @@ import {
   closePayPeriodAction,
   reopenPayPeriodAction,
 } from "@/lib/pay-periods/actions";
+import { recomputePayPeriodAction } from "@/lib/incidencias/actions";
 import { requirePayPeriodsRead } from "@/lib/pay-periods/auth";
 import {
   incidenciaKindLabel,
@@ -91,6 +93,14 @@ const PeriodoPage = async ({ params, searchParams }: PeriodoPageProps) => {
             />
           ) : null
         }
+        secondary={
+          canManage && detail.status === "open" ? (
+            <RecomputeButton
+              action={recomputePayPeriodAction}
+              period={detail.period}
+            />
+          ) : null
+        }
         status={<PayPeriodStatusBadge status={detail.status} />}
         title={detail.label}
         variant="detail"
@@ -137,6 +147,7 @@ const PeriodoPage = async ({ params, searchParams }: PeriodoPageProps) => {
       <PeriodPeopleTable
         emptyTitle={PAY_PERIOD_COPY.empty}
         kinds={kinds}
+        period={detail.period}
         rows={detail.people}
       />
       {detail.next ? (
