@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { InstallPrompt } from "@/components/employee/install-prompt";
@@ -12,7 +13,7 @@ export const metadata: Metadata = { title: "Inicio" };
 
 /**
  * Home of the employee app (W2-01). Everything comes from the session's
- * person; the route takes no id. W2-02 Mi expediente grows from here.
+ * person; the route takes no id. The full record is /mi/expediente (W2-02).
  */
 const EmployeeHomePage = async () => {
   const context = await requireEmployeeContext();
@@ -76,6 +77,9 @@ const EmployeeHomePage = async () => {
             RH aún no captura tu puesto ni tu sucursal.
           </p>
         )}
+        <Button asChild className="self-start" variant="secondary">
+          <Link href="/mi/expediente">Ver mi expediente</Link>
+        </Button>
       </section>
     </main>
   );

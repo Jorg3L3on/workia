@@ -52,6 +52,13 @@ export const statusTone = {
     expiring: "warning",
     expired: "danger",
   },
+  // Mi expediente corrections (W2-02).
+  correction: {
+    pendiente: "warning",
+    aplicada: "success",
+    rechazada: "danger",
+    cancelada: "neutral",
+  },
 } as const satisfies Record<string, Record<string, Tone>>;
 
 export type StatusKind = keyof typeof statusTone;

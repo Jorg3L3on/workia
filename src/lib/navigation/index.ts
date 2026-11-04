@@ -1,5 +1,6 @@
 import {
   ChartLineIcon,
+  ClipboardCheckIcon,
   FilesIcon,
   FileTextIcon,
   FolderTreeIcon,
@@ -29,6 +30,8 @@ export type NavAccess = {
   canReadReports: boolean;
   /** documents:read in the active company: shows Documentos. */
   canReadDocuments: boolean;
+  /** people:update in the active company: shows Correcciones (W2-02). */
+  canUpdatePeople?: boolean;
 };
 
 export type NavLink = {
@@ -80,6 +83,13 @@ export const NAV_GROUPS: readonly NavGroup[] = [
         icon: FilesIcon,
         keywords: ["por vencer", "vencidos", "vigencia"],
         requires: "canReadDocuments",
+      },
+      {
+        title: "Correcciones",
+        href: "/app/correcciones",
+        icon: ClipboardCheckIcon,
+        keywords: ["mi expediente", "solicitudes", "empleados", "datos"],
+        requires: "canUpdatePeople",
       },
       {
         title: "Altas",

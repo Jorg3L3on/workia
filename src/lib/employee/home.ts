@@ -15,8 +15,8 @@ import { withTenant } from "@/lib/tenant/scope";
 /**
  * What /mi shows the signed-in employee about themselves (W2-01): name,
  * company, puesto, área, sucursal and the account email. Read only with the
- * guard's company and person, never with an id from the request. W2-02 Mi
- * expediente builds the full view on this.
+ * guard's company and person, never with an id from the request. The full
+ * record is getEmployeeExpediente (W2-02, ./expediente.ts).
  */
 export const getEmployeeHome = async (context: EmployeeContext) => {
   const [row] = await tdb(context.companyId)

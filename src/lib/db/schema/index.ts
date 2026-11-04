@@ -12,6 +12,7 @@ export * from "./mcp";
 export * from "./onboardings";
 export * from "./people";
 export * from "./people-views";
+export * from "./profile-corrections";
 export * from "./rbac";
 export * from "./sites";
 export * from "./vacations";

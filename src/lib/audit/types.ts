@@ -23,6 +23,7 @@ export const AUDIT_RESOURCE_TYPES = [
   "person_document",
   "vacation_record",
   "employee_account",
+  "profile_correction",
 ] as const;
 
 export type AuditResourceType = (typeof AUDIT_RESOURCE_TYPES)[number];
@@ -58,6 +59,8 @@ export const AUDIT_ACTIONS = [
   "code_requested",
   "login",
   "logout",
+  // Workia 2.0 W2-02: Mi expediente corrections.
+  "cancel",
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
@@ -91,6 +94,7 @@ export const auditActionLabels: Record<AuditAction, string> = {
   code_requested: "Código de acceso enviado",
   login: "Inicio de sesión",
   logout: "Cierre de sesión",
+  cancel: "Cancelación",
 };
 
 export const auditResourceTypeLabels: Record<AuditResourceType, string> = {
@@ -118,6 +122,7 @@ export const auditResourceTypeLabels: Record<AuditResourceType, string> = {
   person_document: "Documento de la persona",
   vacation_record: "Vacaciones tomadas",
   employee_account: "Cuenta de empleado",
+  profile_correction: "Corrección del expediente",
 };
 
 export const AUDIT_SOURCES = [
