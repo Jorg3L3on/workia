@@ -49,6 +49,26 @@ export const loadReportStructure = async (
 };
 
 /**
+ * What buildAbsenteeismReport computes from for `companyId` and a range: the
+ * turnover report's periods, the catalog and the attendance aggregates by
+ * sucursal, read in parallel. The group dashboard (W2-25) reads the same.
+ */
+export const loadAbsenteeismInputs = async (
+  companyId: string,
+  range: { from: string; to: string },
+) => {
+  const days = { from: range.from, to: range.to };
+  const [facts, structure, absenteeism, incidencias] = await Promise.all([
+    loadTurnoverFacts(companyId),
+    loadReportStructure(companyId),
+    absenteeismBy(companyId, days, { by: "site" }),
+    incidenciasBy(companyId, days, { by: "site" }),
+  ]);
+
+  return { facts, structure, absenteeism, incidencias };
+};
+
+/**
  * The report of `companyId` (one subsidiary) for `filter`: the turnover
  * report's periods, the attendance aggregates by sucursal and the catalog,
  * read in parallel and computed by buildAbsenteeismReport.
@@ -62,13 +82,8 @@ export const getAbsenteeismReport = async (
     structure: Awaited<ReturnType<typeof loadReportStructure>>;
   }
 > => {
-  const range = { from: filter.from, to: filter.to };
-  const [facts, structure, absenteeism, incidencias] = await Promise.all([
-    loadTurnoverFacts(companyId),
-    loadReportStructure(companyId),
-    absenteeismBy(companyId, range, { by: "site" }),
-    incidenciasBy(companyId, range, { by: "site" }),
-  ]);
+  const { facts, structure, absenteeism, incidencias } =
+    await loadAbsenteeismInputs(companyId, filter);
 
   return {
     ...buildAbsenteeismReport({

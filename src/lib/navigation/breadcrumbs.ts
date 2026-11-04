@@ -64,6 +64,10 @@ export const resolveBreadcrumbs = (
     return [{ label: "Reportes" }, { label: "Ausentismo y rotación" }];
   }
 
+  if (path === "/app/reportes/grupo") {
+    return [{ label: "Reportes" }, { label: "Tablero del grupo" }];
+  }
+
   if (path === "/app/periodos") {
     return [{ label: "Periodos de pago" }];
   }

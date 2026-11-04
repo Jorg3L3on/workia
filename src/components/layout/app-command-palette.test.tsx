@@ -38,6 +38,7 @@ const openPalette = (
     canReadMembers: true,
     canUseConnections: true,
     canReadReports: true,
+    canReadGroupReports: true,
     canReadDocuments: true,
     canReadPayPeriods: true,
   },
@@ -75,6 +76,7 @@ describe("AppCommandPalette", () => {
       canReadMembers: false,
       canUseConnections: false,
       canReadReports: false,
+      canReadGroupReports: false,
       canReadDocuments: false,
       canReadPayPeriods: false,
     });
@@ -82,6 +84,7 @@ describe("AppCommandPalette", () => {
     expect(optionLabels()).not.toContain("Miembros");
     expect(optionLabels()).not.toContain("Conexiones");
     expect(optionLabels()).not.toContain("Rotación");
+    expect(optionLabels()).not.toContain("Grupo");
     expect(optionLabels()).not.toContain("Documentos");
     expect(optionLabels()).not.toContain("Periodos de pago");
   });

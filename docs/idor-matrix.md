@@ -126,6 +126,7 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `route:GET /app/personas/exportar`                              | ✅     | `src/test/idor/import.db.test.ts`                                      | `people:export`                              |
 | `route:GET /app/reportes/rotacion/exportar`                     | ✅     | `src/test/idor/turnover.db.test.ts`                                    | `reports:read` + `people:export`             |
 | `route:GET /app/reportes/ausentismo/exportar`                   | ✅     | `src/test/idor/absenteeism.db.test.ts`                                 | `reports:read` (+ `people:export` for Excel) |
+| `route:GET /app/reportes/grupo/exportar`                        | ✅     | `src/test/idor/group-dashboard.db.test.ts`                             | `reports:read` in each company shown         |
 | `route:GET /app/personas/plantilla`                             | ✅     | `src/test/idor/import.db.test.ts`                                      | `people:import`                              |
 | `route:POST /api/import/personas`                               | ✅     | `src/test/idor/import.db.test.ts`                                      | `people:import`                              |
 | `route:POST /api/import/personas/[jobId]/apply`                 | ✅     | `src/test/idor/import.db.test.ts`                                      | `people:import`                              |
@@ -347,6 +348,8 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `lib:reports/absenteeism/data/getAbsenteeismReport`           | ✅     | `src/test/idor/absenteeism.db.test.ts`        | —       |
 | `lib:reports/absenteeism/data/loadAbsenteeismDetail`          | ✅     | `src/test/idor/absenteeism.db.test.ts`        | —       |
 | `lib:reports/absenteeism/data/loadReportStructure`            | ✅     | `src/test/idor/absenteeism.db.test.ts`        | —       |
+| `lib:reports/absenteeism/data/loadAbsenteeismInputs`          | ✅     | `src/test/idor/group-dashboard.db.test.ts`    | —       |
+| `lib:reports/group/data/loadCompanyTransfers`                 | ✅     | `src/test/idor/group-dashboard.db.test.ts`    | —       |
 | `lib:reports/absenteeism/views/createAbsenteeismView`         | ✅     | `src/test/idor/absenteeism.db.test.ts`        | —       |
 | `lib:reports/absenteeism/views/deleteAbsenteeismView`         | ✅     | `src/test/idor/absenteeism.db.test.ts`        | —       |
 | `lib:reports/absenteeism/views/listAbsenteeismViews`          | ✅     | `src/test/idor/absenteeism.db.test.ts`        | —       |

@@ -71,6 +71,8 @@ migration only widens a check constraint.
 
 ## Not here
 
-Several subsidiaries side by side is W2-25 (group dashboards), which needs the
-group admin role of W2-24. The HR assistant's tools over these numbers are
+Several subsidiaries side by side is the group dashboard
+([reportes-grupo.md](reportes-grupo.md), W2-25), which reads each company
+with `loadAbsenteeismInputs` and `buildAbsenteeismReport`, so its rows match
+this report. The HR assistant's tools over these numbers are
 W2-23.

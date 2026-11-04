@@ -56,6 +56,8 @@ type AppShellProps = {
   canUseConnections?: boolean;
   /** reports:read in the active company: shows Reportes. */
   canReadReports?: boolean;
+  /** reports:read here and another company to compare: shows Grupo. */
+  canReadGroupReports?: boolean;
   /** documents:read in the active company: shows Documentos. */
   canReadDocuments?: boolean;
   /** pay_periods:read in the active company: shows Periodos de pago. */
@@ -77,6 +79,7 @@ export const AppShell = ({
   canReadMembers = false,
   canUseConnections = false,
   canReadReports = false,
+  canReadGroupReports = false,
   canReadDocuments = false,
   canReadPayPeriods = false,
   isPlatformAdmin = false,
@@ -85,6 +88,7 @@ export const AppShell = ({
     canReadMembers,
     canUseConnections,
     canReadReports,
+    canReadGroupReports,
     canReadDocuments,
     canReadPayPeriods,
   };
