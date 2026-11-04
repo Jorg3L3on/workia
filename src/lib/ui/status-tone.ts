@@ -42,6 +42,12 @@ export const statusTone = {
   },
   // A quincena receiving incidencias, or frozen for pre-nómina (W2-15).
   payPeriod: { open: "info", closed: "neutral" },
+  employeeAccount: {
+    none: "neutral",
+    invited: "info",
+    active: "success",
+    disabled: "neutral",
+  },
   document: {
     missing: "info",
     valid: "success",

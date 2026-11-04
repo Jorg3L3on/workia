@@ -162,6 +162,7 @@ with no job to reconcile.
   (direct reports, or indirect too when HR enables it). Indirect reports are a
   recursive query over `people.manager_id`, not a stored tree.
 - **Delegation** is a grant from one account to another with an end date.
+- Built in [managers.md](managers.md).
 
 ## One person across subsidiaries (W2-24)
 

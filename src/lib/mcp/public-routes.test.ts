@@ -31,6 +31,17 @@ const PUBLIC_MCP_ROUTES = [
   "/api/oauth/token",
 ];
 
+/**
+ * The employee app (W2-01) signs in without an HR session: Google's start and
+ * callback, and the static manifest and service worker of /mi.
+ */
+const PUBLIC_EMPLOYEE_ROUTES = [
+  "/api/mi/google",
+  "/api/mi/google/callback",
+  "/mi/manifest.webmanifest",
+  "/mi/sw.js",
+];
+
 /** A route is guarded when it goes through the company context or Auth.js. */
 const isSessionGuarded = (source: string) =>
   /require(CompanyContext|Auth|PeopleImport|PeopleExport|[A-Z]\w*(Read|Create|Update|Delete|Import|Export))\b|requireImportRoute|withImportRoute|auth\(\)/.test(
@@ -45,7 +56,9 @@ describe("public routes", () => {
       .map(({ route }) => route)
       .sort();
 
-    expect(unguarded).toEqual(PUBLIC_MCP_ROUTES);
+    expect(unguarded).toEqual(
+      [...PUBLIC_MCP_ROUTES, ...PUBLIC_EMPLOYEE_ROUTES].sort(),
+    );
   });
 
   it("puts every public MCP route behind MCP_ENABLED", () => {

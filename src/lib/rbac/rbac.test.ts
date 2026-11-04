@@ -88,6 +88,24 @@ describe("vacation permissions", () => {
   });
 });
 
+describe("employee accounts permission", () => {
+  it("is granted to super_admin and admin only", async () => {
+    const { PERMISSIONS, ROLES } = await import("@/lib/db/schema/types");
+
+    expect(PERMISSIONS.map((permission) => permission.slug)).toContain(
+      "employee_accounts:manage",
+    );
+
+    for (const role of ROLES) {
+      const permissions: readonly string[] = role.permissions;
+
+      expect(permissions.includes("employee_accounts:manage")).toBe(
+        ["super_admin", "admin"].includes(role.slug),
+      );
+    }
+  });
+});
+
 describe("reports permission", () => {
   it("is granted to super_admin and admin only", async () => {
     const { PERMISSIONS, ROLES } = await import("@/lib/db/schema/types");

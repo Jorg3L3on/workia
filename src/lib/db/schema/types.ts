@@ -30,7 +30,8 @@ export type PermissionResource =
   | "reports"
   | "documents"
   | "vacations"
-  | "pay_periods";
+  | "pay_periods"
+  | "employee_accounts";
 
 export type PermissionSlug = `${PermissionResource}:${PermissionAction}`;
 
@@ -470,6 +471,14 @@ export const PERMISSIONS: Array<{
       "Close a quincena (freeze its incidencias) and reopen it with a reason",
   },
   {
+    slug: "employee_accounts:manage",
+    name: "Manage Employee Accounts",
+    resource: "employee_accounts",
+    action: "manage",
+    description:
+      "Invite people to the employee app, issue activation codes and disable accounts",
+  },
+  {
     slug: "companies:read",
     name: "Read Companies",
     resource: "companies",
@@ -574,6 +583,7 @@ export const ROLES = [
       "vacations:update",
       "pay_periods:read",
       "pay_periods:manage",
+      "employee_accounts:manage",
     ] satisfies PermissionSlug[],
   },
   {

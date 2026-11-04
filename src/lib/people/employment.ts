@@ -23,6 +23,7 @@ import {
 } from "@/lib/db/schema";
 import type { EmploymentPeriod } from "@/lib/db/schema/employment";
 import { formatDateMx } from "@/lib/format/date";
+import { revokeEmployeeAccess } from "@/lib/employee-accounts/revoke";
 import { withTenant } from "@/lib/tenant/scope";
 import { appendPersonEvents } from "@/lib/timeline";
 import {
@@ -686,6 +687,16 @@ export const recordTermination = async (
     .set({ status: "baja" })
     .where(withTenant(people, companyId, eq(people.id, personId)))
     .returning();
+
+  // W2-01: the employee account goes off with the baja, in this transaction.
+  await revokeEmployeeAccess(
+    tx,
+    companyId,
+    personId,
+    "baja",
+    actorUserId,
+    options.source,
+  );
 
   const terminated = await terminateVigenteContract(
     tx,

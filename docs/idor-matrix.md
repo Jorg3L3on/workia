@@ -43,6 +43,19 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `action:contracts/updateContractTemplateAction`            | ✅     | `src/test/idor/contracts.db.test.ts`                                                                   | `contract_templates:update` |
 | `action:documents/recordDeliveryAction`                    | ✅     | `src/test/idor/documents.db.test.ts`                                                                   | `documents:manage`          |
 | `action:documents/setRequirementsAction`                   | ✅     | `src/test/idor/documents.db.test.ts`                                                                   | `documents:manage`          |
+| `action:employee-accounts/disableEmployeeAccountAction`    | ✅     | `src/test/idor/employee-accounts.db.test.ts`                                                           | `employee_accounts:manage`  |
+| `action:employee-accounts/inviteEmployeeAction`            | ✅     | `src/test/idor/employee-accounts.db.test.ts`                                                           | `employee_accounts:manage`  |
+| `action:employee-accounts/issueActivationCodeAction`       | ✅     | `src/test/idor/employee-accounts.db.test.ts`                                                           | `employee_accounts:manage`  |
+| `action:employee/activateAccountAction`                    | ✅     | `src/test/idor/employee-accounts.db.test.ts`                                                           | —                           |
+| `action:employee/passwordSignInAction`                     | ✅     | `src/test/idor/employee-accounts.db.test.ts`                                                           | —                           |
+| `action:employee/requestLoginCodeAction`                   | ✅     | `src/test/idor/employee-accounts.db.test.ts`                                                           | —                           |
+| `action:employee/signOutEmployeeAction`                    | ✅     | `src/test/idor/employee-accounts.db.test.ts`                                                           | —                           |
+| `action:employee/verifyLoginCodeAction`                    | ✅     | `src/test/idor/employee-accounts.db.test.ts`                                                           | —                           |
+| `action:employee/cancelDelegationAction`                   | ✅     | `src/test/idor/managers.db.test.ts`                                                                    | —                           |
+| `action:employee/createDelegationAction`                   | ✅     | `src/test/idor/managers.db.test.ts`                                                                    | —                           |
+| `action:managers/cancelDelegationByHrAction`               | ✅     | `src/test/idor/managers.db.test.ts`                                                                    | `employee_accounts:manage`  |
+| `action:managers/revokeManagerGrantAction`                 | ✅     | `src/test/idor/managers.db.test.ts`                                                                    | `employee_accounts:manage`  |
+| `action:managers/setManagerGrantAction`                    | ✅     | `src/test/idor/managers.db.test.ts`                                                                    | `employee_accounts:manage`  |
 | `action:mcp/approveConsentAction`                          | ✅     | `src/test/idor/mcp.db.test.ts`                                                                         | `mcp_connections:create`    |
 | `action:mcp/createPersonalTokenAction`                     | ✅     | `src/test/idor/mcp.db.test.ts`                                                                         | `mcp_connections:create`    |
 | `action:mcp/denyConsentAction`                             | ✅     | `src/test/idor/mcp.db.test.ts`                                                                         | —                           |
@@ -98,33 +111,37 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 
 ## Rutas
 
-| Superficie                                                      | Estado | Prueba                                  | Permiso                                |
-| --------------------------------------------------------------- | ------ | --------------------------------------- | -------------------------------------- |
-| `route:DELETE /api/import/personas/[jobId]/apply`               | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                        |
-| `route:DELETE /api/mcp`                                         | ✅     | `src/test/idor/mcp.db.test.ts`          | —                                      |
-| `route:GET /.well-known/oauth-authorization-server/[[...path]]` | ✅     | `src/test/idor/mcp.db.test.ts`          | —                                      |
-| `route:GET /.well-known/oauth-protected-resource/[[...path]]`   | ✅     | `src/test/idor/mcp.db.test.ts`          | —                                      |
-| `route:GET /api/import/personas/[jobId]`                        | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                        |
-| `route:GET /api/import/personas/[jobId]/errors`                 | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                        |
-| `route:GET /api/import/personas/[jobId]/rows`                   | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                        |
-| `route:GET /api/import/personas/[jobId]/undo`                   | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                        |
-| `route:GET /api/mcp`                                            | ✅     | `src/test/idor/mcp.db.test.ts`          | —                                      |
-| `route:GET /api/oauth/authorize`                                | ✅     | `src/test/idor/mcp.db.test.ts`          | —                                      |
-| `route:GET /app/personas/[id]/contratos/[contractId]/pdf`       | ✅     | `src/test/idor/contract-pdf.db.test.ts` | `contracts:read` + `compensation:read` |
-| `route:GET /app/personas/exportar`                              | ✅     | `src/test/idor/import.db.test.ts`       | `people:export`                        |
-| `route:GET /app/reportes/rotacion/exportar`                     | ✅     | `src/test/idor/turnover.db.test.ts`     | `reports:read` + `people:export`       |
-| `route:GET /app/personas/plantilla`                             | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                        |
-| `route:POST /api/import/personas`                               | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                        |
-| `route:POST /api/import/personas/[jobId]/apply`                 | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                        |
-| `route:POST /api/import/personas/[jobId]/finalize`              | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                        |
-| `route:POST /api/import/personas/[jobId]/rows`                  | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                        |
-| `route:POST /api/import/personas/[jobId]/undo`                  | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                        |
-| `route:POST /api/import/personas/[jobId]/validate`              | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                        |
-| `route:POST /api/mcp`                                           | ✅     | `src/test/idor/mcp.db.test.ts`          | —                                      |
-| `route:POST /api/oauth/register`                                | ✅     | `src/test/idor/mcp.db.test.ts`          | —                                      |
-| `route:POST /api/oauth/revoke`                                  | ✅     | `src/test/idor/mcp.db.test.ts`          | —                                      |
-| `route:POST /api/oauth/token`                                   | ✅     | `src/test/idor/mcp.db.test.ts`          | —                                      |
-| `route:PUT /api/import/personas/[jobId]/validate`               | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                        |
+| Superficie                                                      | Estado | Prueba                                                                 | Permiso                                |
+| --------------------------------------------------------------- | ------ | ---------------------------------------------------------------------- | -------------------------------------- |
+| `route:DELETE /api/import/personas/[jobId]/apply`               | ✅     | `src/test/idor/import.db.test.ts`                                      | `people:import`                        |
+| `route:DELETE /api/mcp`                                         | ✅     | `src/test/idor/mcp.db.test.ts`                                         | —                                      |
+| `route:GET /.well-known/oauth-authorization-server/[[...path]]` | ✅     | `src/test/idor/mcp.db.test.ts`                                         | —                                      |
+| `route:GET /.well-known/oauth-protected-resource/[[...path]]`   | ✅     | `src/test/idor/mcp.db.test.ts`                                         | —                                      |
+| `route:GET /api/import/personas/[jobId]`                        | ✅     | `src/test/idor/import.db.test.ts`                                      | `people:import`                        |
+| `route:GET /api/import/personas/[jobId]/errors`                 | ✅     | `src/test/idor/import.db.test.ts`                                      | `people:import`                        |
+| `route:GET /api/import/personas/[jobId]/rows`                   | ✅     | `src/test/idor/import.db.test.ts`                                      | `people:import`                        |
+| `route:GET /api/import/personas/[jobId]/undo`                   | ✅     | `src/test/idor/import.db.test.ts`                                      | `people:import`                        |
+| `route:GET /api/mcp`                                            | ✅     | `src/test/idor/mcp.db.test.ts`                                         | —                                      |
+| `route:GET /api/mi/google`                                      | ✅     | `src/test/idor/employee-accounts.db.test.ts`                           | —                                      |
+| `route:GET /api/mi/google/callback`                             | ✅     | `src/test/idor/employee-accounts.db.test.ts`                           | —                                      |
+| `route:GET /api/oauth/authorize`                                | ✅     | `src/test/idor/mcp.db.test.ts`                                         | —                                      |
+| `route:GET /app/personas/[id]/contratos/[contractId]/pdf`       | ✅     | `src/test/idor/contract-pdf.db.test.ts`                                | `contracts:read` + `compensation:read` |
+| `route:GET /app/personas/exportar`                              | ✅     | `src/test/idor/import.db.test.ts`                                      | `people:export`                        |
+| `route:GET /app/reportes/rotacion/exportar`                     | ✅     | `src/test/idor/turnover.db.test.ts`                                    | `reports:read` + `people:export`       |
+| `route:GET /app/personas/plantilla`                             | ✅     | `src/test/idor/import.db.test.ts`                                      | `people:import`                        |
+| `route:GET /mi/manifest.webmanifest`                            | ⏭️     | Exento: manifiesto estático de la app de empleados, sin datos          | —                                      |
+| `route:GET /mi/sw.js`                                           | ⏭️     | Exento: service worker estático que no guarda nada en caché, sin datos | —                                      |
+| `route:POST /api/import/personas`                               | ✅     | `src/test/idor/import.db.test.ts`                                      | `people:import`                        |
+| `route:POST /api/import/personas/[jobId]/apply`                 | ✅     | `src/test/idor/import.db.test.ts`                                      | `people:import`                        |
+| `route:POST /api/import/personas/[jobId]/finalize`              | ✅     | `src/test/idor/import.db.test.ts`                                      | `people:import`                        |
+| `route:POST /api/import/personas/[jobId]/rows`                  | ✅     | `src/test/idor/import.db.test.ts`                                      | `people:import`                        |
+| `route:POST /api/import/personas/[jobId]/undo`                  | ✅     | `src/test/idor/import.db.test.ts`                                      | `people:import`                        |
+| `route:POST /api/import/personas/[jobId]/validate`              | ✅     | `src/test/idor/import.db.test.ts`                                      | `people:import`                        |
+| `route:POST /api/mcp`                                           | ✅     | `src/test/idor/mcp.db.test.ts`                                         | —                                      |
+| `route:POST /api/oauth/register`                                | ✅     | `src/test/idor/mcp.db.test.ts`                                         | —                                      |
+| `route:POST /api/oauth/revoke`                                  | ✅     | `src/test/idor/mcp.db.test.ts`                                         | —                                      |
+| `route:POST /api/oauth/token`                                   | ✅     | `src/test/idor/mcp.db.test.ts`                                         | —                                      |
+| `route:PUT /api/import/personas/[jobId]/validate`               | ✅     | `src/test/idor/import.db.test.ts`                                      | `people:import`                        |
 
 ## Funciones de datos (lib)
 
@@ -182,10 +199,14 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `lib:documents/getDocumentRequirementById`                    | ✅     | `src/test/idor/documents.db.test.ts`                                                                              | —       |
 | `lib:documents/listDocumentRequirements`                      | ✅     | `src/test/idor/documents.db.test.ts`                                                                              | —       |
 | `lib:documents/listExpiringDocuments`                         | ✅     | `src/test/idor/documents.db.test.ts`                                                                              | —       |
-| `lib:documents/listPersonDocuments`                           | ✅     | `src/test/idor/documents.db.test.ts`                                                                              | —       |
 | `lib:documents/listPersonDocumentCard`                        | ✅     | `src/test/idor/documents.db.test.ts`                                                                              | —       |
+| `lib:documents/listPersonDocuments`                           | ✅     | `src/test/idor/documents.db.test.ts`                                                                              | —       |
 | `lib:documents/recordDelivery`                                | ✅     | `src/test/idor/documents.db.test.ts`                                                                              | —       |
 | `lib:documents/setRequirements`                               | ✅     | `src/test/idor/documents.db.test.ts`                                                                              | —       |
+| `lib:employee-accounts/disableEmployeeAccount`                | ✅     | `src/test/idor/employee-accounts.db.test.ts`                                                                      | —       |
+| `lib:employee-accounts/getEmployeeAccount`                    | ✅     | `src/test/idor/employee-accounts.db.test.ts`                                                                      | —       |
+| `lib:employee-accounts/inviteEmployee`                        | ✅     | `src/test/idor/employee-accounts.db.test.ts`                                                                      | —       |
+| `lib:employee-accounts/issueActivationCode`                   | ✅     | `src/test/idor/employee-accounts.db.test.ts`                                                                      | —       |
 | `lib:import/apply/applyJobStep`                               | ✅     | `src/test/idor/import.db.test.ts`                                                                                 | —       |
 | `lib:import/apply/pauseApply`                                 | ✅     | `src/test/idor/import.db.test.ts`                                                                                 | —       |
 | `lib:import/error-report/buildErrorReport`                    | ✅     | `src/test/idor/import.db.test.ts`                                                                                 | —       |
@@ -210,6 +231,12 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `lib:import/validate/validateHorariosChunk`                   | ✅     | `src/test/idor/import.db.test.ts`                                                                                 | —       |
 | `lib:import/validate/validateJobStep`                         | ✅     | `src/test/idor/import.db.test.ts`                                                                                 | —       |
 | `lib:import/validate/validatePersonasChunk`                   | ✅     | `src/test/idor/import.db.test.ts`                                                                                 | —       |
+| `lib:managers/cancelDelegation`                               | ✅     | `src/test/idor/managers.db.test.ts`                                                                               | —       |
+| `lib:managers/getManagerAdmin`                                | ✅     | `src/test/idor/managers.db.test.ts`                                                                               | —       |
+| `lib:managers/listDelegationsGiven`                           | ✅     | `src/test/idor/managers.db.test.ts`                                                                               | —       |
+| `lib:managers/revokeManagerGrant`                             | ✅     | `src/test/idor/managers.db.test.ts`                                                                               | —       |
+| `lib:managers/scope/currentApprover`                          | ✅     | `src/test/idor/managers.db.test.ts`                                                                               | —       |
+| `lib:managers/setManagerGrant`                                | ✅     | `src/test/idor/managers.db.test.ts`                                                                               | —       |
 | `lib:mcp/connections/countRecentConnections`                  | ✅     | `src/test/idor/mcp.db.test.ts`                                                                                    | —       |
 | `lib:mcp/connections/countToolCallErrors`                     | ✅     | `src/test/idor/mcp.db.test.ts`                                                                                    | —       |
 | `lib:mcp/connections/createAuthCode`                          | ✅     | `src/test/idor/mcp.db.test.ts`                                                                                    | —       |
@@ -234,6 +261,14 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `lib:onboarding/rejectOnboarding`                             | ✅     | `src/test/idor/onboarding.db.test.ts`                                                                             | —       |
 | `lib:onboarding/startOnboarding`                              | ✅     | `src/test/idor/onboarding.db.test.ts`                                                                             | —       |
 | `lib:onboarding/updateOnboarding`                             | ✅     | `src/test/idor/onboarding.db.test.ts`                                                                             | —       |
+| `lib:pay-periods/closePayPeriod`                              | ✅     | `src/test/idor/pay-periods.db.test.ts`                                                                            | —       |
+| `lib:pay-periods/getPayPeriodDetail`                          | ✅     | `src/test/idor/period-close.db.test.ts`                                                                           | —       |
+| `lib:pay-periods/getPayPeriod`                                | ✅     | `src/test/idor/pay-periods.db.test.ts`                                                                            | —       |
+| `lib:pay-periods/listPayPeriods`                              | ✅     | `src/test/idor/period-close.db.test.ts`                                                                           | —       |
+| `lib:pay-periods/loadPayPeriodIncidencias`                    | ✅     | `src/test/idor/period-close.db.test.ts`                                                                           | —       |
+| `lib:pay-periods/readPeriodSnapshot`                          | ✅     | `src/test/idor/pay-periods.db.test.ts`                                                                            | —       |
+| `lib:pay-periods/reopenPayPeriod`                             | ✅     | `src/test/idor/pay-periods.db.test.ts`                                                                            | —       |
+| `lib:pay-periods/verifyPeriodSnapshot`                        | ✅     | `src/test/idor/period-close.db.test.ts`                                                                           | —       |
 | `lib:people/countActivePeopleInPosition`                      | ✅     | `src/test/idor/mcp-write-tools.db.test.ts`                                                                        | —       |
 | `lib:people/countActivePeople`                                | ✅     | `src/test/idor/people.db.test.ts`                                                                                 | —       |
 | `lib:people/countPeopleByStatus`                              | ✅     | `src/test/idor/people.db.test.ts`                                                                                 | —       |
@@ -275,6 +310,15 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `lib:regions/listRegions`                                     | ✅     | `src/test/idor/regions.db.test.ts`                                                                                | —       |
 | `lib:regions/softDeleteRegion`                                | ✅     | `src/test/idor/regions.db.test.ts`                                                                                | —       |
 | `lib:regions/updateRegion`                                    | ✅     | `src/test/idor/regions.db.test.ts`                                                                                | —       |
+| `lib:reports/turnover/data/getTurnoverGoal`                   | ✅     | `src/test/idor/turnover.db.test.ts`                                                                               | —       |
+| `lib:reports/turnover/data/loadTurnoverFacts`                 | ✅     | `src/test/idor/turnover.db.test.ts`                                                                               | —       |
+| `lib:reports/turnover/data/loadTurnoverFiniquitos`            | ✅     | `src/test/idor/turnover.db.test.ts`                                                                               | —       |
+| `lib:reports/turnover/data/loadTurnoverLabels`                | ✅     | `src/test/idor/turnover.db.test.ts`                                                                               | —       |
+| `lib:reports/turnover/data/setTurnoverGoal`                   | ✅     | `src/test/idor/turnover.db.test.ts`                                                                               | —       |
+| `lib:reports/turnover/getTurnoverReport`                      | ✅     | `src/test/idor/turnover.db.test.ts`                                                                               | —       |
+| `lib:reports/turnover/views/createTurnoverView`               | ✅     | `src/test/idor/turnover.db.test.ts`                                                                               | —       |
+| `lib:reports/turnover/views/deleteTurnoverView`               | ✅     | `src/test/idor/turnover.db.test.ts`                                                                               | —       |
+| `lib:reports/turnover/views/listTurnoverViews`                | ✅     | `src/test/idor/turnover.db.test.ts`                                                                               | —       |
 | `lib:resguardo/assignAsset`                                   | ✅     | `src/test/idor/resguardo.db.test.ts`                                                                              | —       |
 | `lib:resguardo/countAssignedAssets`                           | ✅     | `src/test/idor/resguardo.db.test.ts`                                                                              | —       |
 | `lib:resguardo/createAsset`                                   | ✅     | `src/test/idor/resguardo.db.test.ts`                                                                              | —       |
@@ -298,40 +342,23 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `lib:tenant/members/changeMemberRole`                         | ✅     | `src/test/idor/tenant.db.test.ts`                                                                                 | —       |
 | `lib:tenant/members/listCompanyMembers`                       | ✅     | `src/test/idor/tenant.db.test.ts`                                                                                 | —       |
 | `lib:tenant/members/revokeMember`                             | ✅     | `src/test/idor/tenant.db.test.ts`                                                                                 | —       |
+| `lib:termination-reasons/countUnclassifiedTerminationReasons` | ✅     | `src/test/idor/employment.db.test.ts`                                                                             | —       |
 | `lib:termination-reasons/createTerminationReason`             | ✅     | `src/test/idor/employment.db.test.ts`                                                                             | —       |
 | `lib:termination-reasons/ensureTerminationReasons`            | ✅     | `src/test/idor/employment.db.test.ts`                                                                             | —       |
 | `lib:termination-reasons/getTerminationReasonById`            | ✅     | `src/test/idor/employment.db.test.ts`                                                                             | —       |
 | `lib:termination-reasons/listTerminationReasonsWithUsage`     | ✅     | `src/test/idor/employment.db.test.ts`                                                                             | —       |
 | `lib:termination-reasons/listTerminationReasons`              | ✅     | `src/test/idor/employment.db.test.ts`                                                                             | —       |
 | `lib:termination-reasons/softDeleteTerminationReason`         | ✅     | `src/test/idor/employment.db.test.ts`                                                                             | —       |
-| `lib:pay-periods/closePayPeriod`                              | ✅     | `src/test/idor/pay-periods.db.test.ts`                                                                            | —       |
-| `lib:pay-periods/getPayPeriod`                                | ✅     | `src/test/idor/pay-periods.db.test.ts`                                                                            | —       |
-| `lib:pay-periods/readPeriodSnapshot`                          | ✅     | `src/test/idor/pay-periods.db.test.ts`                                                                            | —       |
-| `lib:pay-periods/reopenPayPeriod`                             | ✅     | `src/test/idor/pay-periods.db.test.ts`                                                                            | —       |
+| `lib:termination-reasons/updateTerminationReason`             | ✅     | `src/test/idor/employment.db.test.ts`                                                                             | —       |
 | `lib:timeline/aggregates/absenteeismBy`                       | ✅     | `src/test/idor/pay-periods.db.test.ts`                                                                            | —       |
 | `lib:timeline/aggregates/incidenciasBy`                       | ✅     | `src/test/idor/pay-periods.db.test.ts`                                                                            | —       |
-| `lib:pay-periods/getPayPeriodDetail`                          | ✅     | `src/test/idor/period-close.db.test.ts`                                                                           | —       |
-| `lib:pay-periods/listPayPeriods`                              | ✅     | `src/test/idor/period-close.db.test.ts`                                                                           | —       |
-| `lib:pay-periods/loadPayPeriodIncidencias`                    | ✅     | `src/test/idor/period-close.db.test.ts`                                                                           | —       |
-| `lib:pay-periods/verifyPeriodSnapshot`                        | ✅     | `src/test/idor/period-close.db.test.ts`                                                                           | —       |
-| `lib:timeline/today/todayCounts`                              | ✅     | `src/test/idor/period-close.db.test.ts`                                                                           | —       |
-| `lib:timeline/writers/replacePeriodIncidencias`               | ✅     | `src/test/idor/period-close.db.test.ts`                                                                           | —       |
-| `lib:timeline/writers/appendEmploymentChanges`                | ⏭️     | Exento: escritor de W2-13 para el flujo que ya validó la empresa; probado en `src/lib/timeline/writes.db.test.ts` | —       |
-| `lib:timeline/writers/writeAttendanceDays`                    | ⏭️     | Exento: escritor de W2-13 para el flujo que ya validó la empresa; probado en `src/lib/timeline/writes.db.test.ts` | —       |
 | `lib:timeline/appendPersonEvents`                             | ✅     | `src/test/idor/timeline.db.test.ts`                                                                               | —       |
 | `lib:timeline/listPersonEvents`                               | ✅     | `src/test/idor/timeline.db.test.ts`                                                                               | —       |
 | `lib:timeline/today/listTodayPage`                            | ✅     | `src/test/idor/today.db.test.ts`                                                                                  | —       |
-| `lib:termination-reasons/updateTerminationReason`             | ✅     | `src/test/idor/employment.db.test.ts`                                                                             | —       |
-| `lib:reports/turnover/data/getTurnoverGoal`                   | ✅     | `src/test/idor/turnover.db.test.ts`                                                                               | —       |
-| `lib:reports/turnover/data/loadTurnoverFacts`                 | ✅     | `src/test/idor/turnover.db.test.ts`                                                                               | —       |
-| `lib:reports/turnover/data/loadTurnoverLabels`                | ✅     | `src/test/idor/turnover.db.test.ts`                                                                               | —       |
-| `lib:reports/turnover/data/setTurnoverGoal`                   | ✅     | `src/test/idor/turnover.db.test.ts`                                                                               | —       |
-| `lib:reports/turnover/data/loadTurnoverFiniquitos`            | ✅     | `src/test/idor/turnover.db.test.ts`                                                                               | —       |
-| `lib:reports/turnover/views/createTurnoverView`               | ✅     | `src/test/idor/turnover.db.test.ts`                                                                               | —       |
-| `lib:reports/turnover/views/deleteTurnoverView`               | ✅     | `src/test/idor/turnover.db.test.ts`                                                                               | —       |
-| `lib:reports/turnover/views/listTurnoverViews`                | ✅     | `src/test/idor/turnover.db.test.ts`                                                                               | —       |
-| `lib:reports/turnover/getTurnoverReport`                      | ✅     | `src/test/idor/turnover.db.test.ts`                                                                               | —       |
-| `lib:termination-reasons/countUnclassifiedTerminationReasons` | ✅     | `src/test/idor/employment.db.test.ts`                                                                             | —       |
+| `lib:timeline/today/todayCounts`                              | ✅     | `src/test/idor/period-close.db.test.ts`                                                                           | —       |
+| `lib:timeline/writers/appendEmploymentChanges`                | ⏭️     | Exento: escritor de W2-13 para el flujo que ya validó la empresa; probado en `src/lib/timeline/writes.db.test.ts` | —       |
+| `lib:timeline/writers/replacePeriodIncidencias`               | ✅     | `src/test/idor/period-close.db.test.ts`                                                                           | —       |
+| `lib:timeline/writers/writeAttendanceDays`                    | ⏭️     | Exento: escritor de W2-13 para el flujo que ya validó la empresa; probado en `src/lib/timeline/writes.db.test.ts` | —       |
 | `lib:vacations/constancia/getVacationConstancia`              | ✅     | `src/test/idor/vacations.db.test.ts`                                                                              | —       |
 | `lib:vacations/listVacationRecords`                           | ✅     | `src/test/idor/vacations.db.test.ts`                                                                              | —       |
 | `lib:vacations/registerVacationRecord`                        | ✅     | `src/test/idor/vacations.db.test.ts`                                                                              | —       |
