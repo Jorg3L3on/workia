@@ -42,9 +42,15 @@ const PUBLIC_EMPLOYEE_ROUTES = [
   "/mi/sw.js",
 ];
 
+/**
+ * Scheduled jobs (W2-08): sessionless, answer only to the CRON_SECRET bearer
+ * and 404 while it is unset.
+ */
+const SCHEDULED_JOB_ROUTES = ["/api/cron/notifications"];
+
 /** A route is guarded when it goes through the company context or Auth.js. */
 const isSessionGuarded = (source: string) =>
-  /require(CompanyContext|Auth|PeopleImport|PeopleExport|[A-Z]\w*(Read|Create|Update|Delete|Import|Export))\b|requireImportRoute|withImportRoute|auth\(\)/.test(
+  /getEmployeeContext\(|require(CompanyContext|EmployeeContext|Auth|PeopleImport|PeopleExport|[A-Z]\w*(Read|Create|Update|Delete|Import|Export))\b|requireImportRoute|withImportRoute|auth\(\)/.test(
     source,
   );
 
@@ -57,7 +63,11 @@ describe("public routes", () => {
       .sort();
 
     expect(unguarded).toEqual(
-      [...PUBLIC_MCP_ROUTES, ...PUBLIC_EMPLOYEE_ROUTES].sort(),
+      [
+        ...PUBLIC_MCP_ROUTES,
+        ...PUBLIC_EMPLOYEE_ROUTES,
+        ...SCHEDULED_JOB_ROUTES,
+      ].sort(),
     );
   });
 
@@ -66,6 +76,14 @@ describe("public routes", () => {
       PUBLIC_MCP_ROUTES.includes(r.route),
     )) {
       expect(source, route).toMatch(/whenEnabled|isMcpEnabled/);
+    }
+  });
+
+  it("puts every scheduled job route behind CRON_SECRET", () => {
+    for (const { route, source } of routes.filter((r) =>
+      SCHEDULED_JOB_ROUTES.includes(r.route),
+    )) {
+      expect(source, route).toMatch(/env\.CRON_SECRET/);
     }
   });
 });
