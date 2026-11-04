@@ -31,7 +31,10 @@
     "check:idor": "tsx scripts/check-idor-coverage.ts",
     "test:db:rls": "TEST_RLS=1 vitest run -c vitest.db.config.ts",
     "db:cutover": "tsx scripts/cutover/run.ts",
-    "docs:mcp": "tsx scripts/mcp-docs.ts"
+    "docs:mcp": "tsx scripts/mcp-docs.ts",
+    "db:load-test": "tsx scripts/load-test-neon-budget.ts",
+    "db:report-slow-queries": "tsx scripts/report-slow-queries.ts",
+    "db:restore-drill": "tsx scripts/restore-drill.ts"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.3",

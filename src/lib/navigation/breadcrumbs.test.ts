@@ -96,6 +96,10 @@ describe("resolveBreadcrumbs", () => {
       { label: "Administración", href: "/admin" },
       { label: "Roles y permisos" },
     ]);
+    expect(resolveBreadcrumbs("/admin/uso")).toEqual([
+      { label: "Administración", href: "/admin" },
+      { label: "Uso de la base de datos" },
+    ]);
   });
 
   it("does not invent public chrome for login or landing", () => {

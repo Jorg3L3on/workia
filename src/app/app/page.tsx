@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { UsageNotice } from "@/components/db-usage/usage-notice";
 import { TodayDashboard } from "@/components/home/today-dashboard";
 import { pageTitles } from "@/lib/brand/chrome-copy";
 import { listActivePositions } from "@/lib/catalog";
@@ -8,6 +9,7 @@ import {
   listActiveContractTemplates,
   listRenewalTrayItems,
 } from "@/lib/contracts";
+import { getDatabaseUsageOrNull } from "@/lib/db-usage";
 import { isoToday } from "@/lib/format/date";
 import { listOnboardings } from "@/lib/onboarding";
 import { countActivePeople } from "@/lib/people";
@@ -37,6 +39,7 @@ export default async function AppPage() {
     canUpdateContracts,
     canSeeCompensation,
     canReadAssets,
+    canUpdateSettings,
   ] = await Promise.all([
     can("people:read"),
     can("people:create"),
@@ -44,6 +47,7 @@ export default async function AppPage() {
     can("contracts:update"),
     can("compensation:read"),
     can("assets:read"),
+    can("settings:update"),
   ]);
 
   const [
@@ -54,6 +58,7 @@ export default async function AppPage() {
     positions,
     onboardings,
     assetsToRecover,
+    databaseUsage,
   ] = await Promise.all([
     canReadPeople ? countActivePeople(companyId) : 0,
     canReadContracts
@@ -66,6 +71,8 @@ export default async function AppPage() {
     canUpdateContracts ? listActivePositions(companyId) : [],
     canReadPeople ? listOnboardings(companyId) : [],
     canReadAssets ? listAssetsToRecover(companyId, HOME_LIST_LIMIT) : null,
+    // HR admins see a warning before a Neon Free limit is reached (P-03).
+    canUpdateSettings ? getDatabaseUsageOrNull() : null,
   ]);
 
   const openOnboardings = onboardings.filter(
@@ -80,6 +87,14 @@ export default async function AppPage() {
       assetsToRecover={assetsToRecover}
       canCreatePeople={canCreatePeople}
       canSeeCompensation={canSeeCompensation}
+      notice={
+        databaseUsage ? (
+          <UsageNotice
+            detailsHref={session.isPlatformAdmin ? "/admin/uso" : undefined}
+            usage={databaseUsage}
+          />
+        ) : null
+      }
       onboardings={
         canReadPeople
           ? {

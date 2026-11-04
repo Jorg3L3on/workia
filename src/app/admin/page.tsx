@@ -65,6 +65,20 @@ export default async function AdminPage() {
         </Card>
         <Card>
           <CardHeader>
+            <CardTitle>{pageTitles.usoBaseDatos}</CardTitle>
+            <CardDescription>
+              Almacenamiento, cómputo y consultas lentas contra el plan gratuito
+              de Neon.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild variant="secondary">
+              <Link href="/admin/uso">Ver el uso</Link>
+            </Button>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
             <CardTitle>Tus permisos</CardTitle>
             <CardDescription>
               Lo que tu cuenta puede hacer en la plataforma.

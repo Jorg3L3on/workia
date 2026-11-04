@@ -197,6 +197,13 @@ export const resolveBreadcrumbs = (
     ];
   }
 
+  if (path === "/admin/uso") {
+    return [
+      { label: "Administración", href: "/admin" },
+      { label: "Uso de la base de datos" },
+    ];
+  }
+
   if (path.startsWith("/admin/")) {
     return [{ label: "Administración", href: "/admin" }];
   }

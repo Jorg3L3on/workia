@@ -46,6 +46,7 @@ export const pageTitles = {
   auditoria: "Auditoría",
   administracion: "Administración",
   rbac: "Roles y permisos",
+  usoBaseDatos: "Uso de la base de datos",
   notFound: "Página no encontrada",
   forbidden: "Acceso no permitido",
   empresa: "Elegir empresa",
