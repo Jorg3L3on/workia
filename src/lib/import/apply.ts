@@ -40,6 +40,7 @@ import {
 } from "@/lib/people/employment";
 import { formatHorarioToken } from "@/lib/people/schema";
 import { withTenant } from "@/lib/tenant/scope";
+import { appendEmploymentChanges } from "@/lib/timeline/writers";
 
 import {
   contractIdentity,
@@ -863,12 +864,15 @@ const applyPersonasBatch = async (job: ImportJob) =>
           mark.targetPersonId ? [mark.targetPersonId] : [],
         ),
         job.actorUserId,
+        "import",
       );
       await applyEmploymentPlans(tx, job, marks, plans);
     }
 
     if (audit.length > 0) {
-      await tx.insert(auditEvents).values(audit);
+      const written = await tx.insert(auditEvents).values(audit).returning();
+      // Puesto, sucursal or área changed by the file: «cambio» events (W2-13).
+      await appendEmploymentChanges(job.companyId, written, tx);
     }
 
     await tx
