@@ -40,11 +40,24 @@ export const statusTone = {
     failed: "danger",
     undone: "neutral",
   },
+  employeeAccount: {
+    none: "neutral",
+    invited: "info",
+    active: "success",
+    disabled: "neutral",
+  },
   document: {
     missing: "info",
     valid: "success",
     expiring: "warning",
     expired: "danger",
+  },
+  // Mi expediente corrections (W2-02).
+  correction: {
+    pendiente: "warning",
+    aplicada: "success",
+    rechazada: "danger",
+    cancelada: "neutral",
   },
 } as const satisfies Record<string, Record<string, Tone>>;
 

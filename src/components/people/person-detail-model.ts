@@ -61,6 +61,7 @@ export const DETAIL_CARDS = {
   laboral: "Laboral",
   vacaciones: "Vacaciones",
   contacto: "Contacto",
+  cuenta: "Cuenta de empleado",
   documentos: "Documentos",
   fiscal: "Fiscal e IMSS",
   contrato: "Contrato",

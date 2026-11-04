@@ -29,7 +29,8 @@ export type PermissionResource =
   | "payroll"
   | "reports"
   | "documents"
-  | "vacations";
+  | "vacations"
+  | "employee_accounts";
 
 export type PermissionSlug = `${PermissionResource}:${PermissionAction}`;
 
@@ -453,6 +454,14 @@ export const PERMISSIONS: Array<{
     description: "Void a vacation record",
   },
   {
+    slug: "employee_accounts:manage",
+    name: "Manage Employee Accounts",
+    resource: "employee_accounts",
+    action: "manage",
+    description:
+      "Invite people to the employee app, issue activation codes and disable accounts",
+  },
+  {
     slug: "companies:read",
     name: "Read Companies",
     resource: "companies",
@@ -555,6 +564,7 @@ export const ROLES = [
       "vacations:read",
       "vacations:create",
       "vacations:update",
+      "employee_accounts:manage",
     ] satisfies PermissionSlug[],
   },
   {

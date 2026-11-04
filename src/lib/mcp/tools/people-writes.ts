@@ -222,7 +222,14 @@ const personFields = {
   manager_id: uuid("Jefe directo.").optional(),
   site_id: uuid("Sucursal o corporativo.").optional(),
   rfc: z.string().trim().max(13).optional().describe("Sólo con el scope pii."),
-  curp: z.string().trim().max(18).optional().describe("Sólo con el scope pii."),
+  curp: z
+    .string()
+    .trim()
+    .max(18)
+    .optional()
+    .describe(
+      "Obligatoria en un alta: toda persona activa tiene una CURP válida. Sólo con el scope pii.",
+    ),
   nss: z.string().trim().max(11).optional().describe("Sólo con el scope pii."),
   ...Object.fromEntries(
     Object.entries(mexicoWriteFields).map(([key, schema]) => [
@@ -291,7 +298,7 @@ export const createPersonTool = defineWriteTool({
   name: "create_person",
   title: "Alta de persona",
   description:
-    "Da de alta un expediente con las mismas reglas que la app (D-04). RFC, CURP y NSS sólo con el scope pii. CONFLICT si un RFC, CURP o NSS ya es de otra persona activa. Primero responde una vista previa; repite con confirmation_token para hacerlo.",
+    "Da de alta un expediente con las mismas reglas que la app (D-04). La CURP es obligatoria (una persona activa siempre tiene CURP válida). RFC, CURP y NSS sólo con el scope pii. CONFLICT si un RFC, CURP o NSS ya es de otra persona activa. Primero responde una vista previa; repite con confirmation_token para hacerlo.",
   scope: "write:people",
   permission: "people:create",
   input: createInput,
@@ -629,7 +636,7 @@ export const setPersonStatusTool = defineWriteTool({
   name: "set_person_status",
   title: "Baja o reingreso",
   description:
-    "Da de baja laboral o reingresa a una persona (estatus activa | baja). No es borrar: el expediente sigue ahí. Baja: fecha_baja, tipo_baja, motivo (motivo_id de list_termination_reasons, o su nombre en motivo) y recontratable son obligatorios; comentario y finiquito opcionales (el monto sólo con el scope pii y compensation:read). Cierra el periodo laboral y el contrato vigente queda «terminado» en la fecha de baja. Reingreso (status activa): abre un nuevo periodo en el mismo expediente con fecha_ingreso (por defecto hoy) y reconocer_antiguedad (por defecto false: la antigüedad reinicia). La vista previa avisa si tiene contrato vigente, activos en resguardo o si su última baja dice no recontratable. Primero responde una vista previa; repite con confirmation_token para hacerlo.",
+    "Da de baja laboral o reingresa a una persona (estatus activa | baja). No es borrar: el expediente sigue ahí. Baja: fecha_baja, tipo_baja, motivo (motivo_id de list_termination_reasons, o su nombre en motivo) y recontratable son obligatorios; comentario y finiquito opcionales (el monto sólo con el scope pii y compensation:read). Cierra el periodo laboral y el contrato vigente queda «terminado» en la fecha de baja. Reingreso (status activa): necesita CURP válida en el expediente; abre un nuevo periodo en el mismo expediente con fecha_ingreso (por defecto hoy) y reconocer_antiguedad (por defecto false: la antigüedad reinicia). La vista previa avisa si tiene contrato vigente, activos en resguardo o si su última baja dice no recontratable. Primero responde una vista previa; repite con confirmation_token para hacerlo.",
   scope: "write:people",
   permission: "people:update",
   input: statusInput,
