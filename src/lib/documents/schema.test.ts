@@ -136,7 +136,9 @@ describe("document schemas", () => {
 });
 
 describe("person_documents columns", () => {
-  it("stores the delivery date and nothing that could hold a result or a note", () => {
+  // W2-04 adds the file reference and HR's review on purpose. The rejection
+  // reason is a code from a closed list, so there is still no free text.
+  it("stores the delivery date, the file reference and the review, and nothing that could hold a result or a note", () => {
     const names = getTableConfig(personDocuments).columns.map(
       (column) => column.name,
     );
@@ -149,6 +151,14 @@ describe("person_documents columns", () => {
       "delivered_on",
       "expires_on",
       "created_by",
+      "status",
+      "file_key",
+      "file_content_type",
+      "file_size",
+      "uploaded_by_account_id",
+      "reviewed_by",
+      "reviewed_at",
+      "rejection_reason",
       "created_at",
       "updated_at",
     ]);

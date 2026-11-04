@@ -571,7 +571,15 @@ export const listExpiringDocuments = async (
         isNull(positions.deletedAt),
       ),
     )
-    .where(withTenant(personDocuments, companyId));
+    // Only accepted rows are deliveries; a pending or rejected upload (W2-04)
+    // never shows in the tray.
+    .where(
+      withTenant(
+        personDocuments,
+        companyId,
+        eq(personDocuments.status, "accepted"),
+      ),
+    );
 
   return selectExpiringDocumentRows(
     rows.map((row) => ({

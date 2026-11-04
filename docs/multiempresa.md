@@ -24,6 +24,9 @@ aislados. Plania: WRK-I4.
   apunte a otro de otra empresa. `src/lib/db/schema/tenant-coverage.test.ts`
   falla si una tabla nueva no tiene `company_id`. Las únicas excepciones son
   las de plataforma: usuarios, sesiones, roles, permisos, empresas y membresías.
+- **Identidad de las personas:** cada fila de `people` es de una empresa, toda
+  persona activa tiene CURP válida, y las cuentas de empleado y los traslados
+  entre empresas siguen [identity-model.md](identity-model.md).
 - **Unicidad por empresa** (0017): CURP, RFC y NSS de personas activas; nombre
   de área, puesto, sucursal y actividad (sin mayúsculas, acentos ni espacios
   extra, con `catalog_key()`, igual que la importación); identificador de

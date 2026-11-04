@@ -48,3 +48,9 @@ next-env.d.ts
 # claude code (local worktrees and personal settings)
 /.claude/worktrees/
 /.claude/settings.local.json
+
+# employee email outbox (development and e2e)
+/.outbox/
+
+# local object storage (development and e2e, src/lib/storage)
+/.storage/

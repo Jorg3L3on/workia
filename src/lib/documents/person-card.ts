@@ -1,3 +1,8 @@
+import type {
+  DocumentRejectionReason,
+  PersonDocumentStatus,
+} from "@/lib/db/schema/document-review";
+
 import {
   latestDelivery,
   statusOf,
@@ -43,6 +48,20 @@ export type PersonDocumentRow = {
   status: DocumentStatus;
   deliveredOn: string | null;
   expiresOn: string | null;
+  /**
+   * W2-04: the employee's latest upload when it is newer than the accepted
+   * delivery and still pending or rejected. Absent otherwise.
+   */
+  review?: PersonDocumentReview;
+  /** W2-04: the accepted delivery's id when it has an uploaded file. */
+  fileDocumentId?: string;
+};
+
+export type PersonDocumentReview = {
+  id: string;
+  status: Exclude<PersonDocumentStatus, "accepted">;
+  rejectionReason: DocumentRejectionReason | null;
+  uploadedAt: string;
 };
 
 export type PersonDocumentCardView = {
@@ -65,6 +84,55 @@ export type PersonDocumentDeliverySlice = {
   deliveredOn: string;
   expiresOn: string | null;
   createdAt?: Date | string | null;
+  /** W2-04. Missing means accepted (HR's own records). */
+  id?: string;
+  status?: PersonDocumentStatus;
+  rejectionReason?: DocumentRejectionReason | null;
+  fileKey?: string | null;
+};
+
+const createdAtMs = (value: Date | string | null | undefined) =>
+  value instanceof Date
+    ? value.getTime()
+    : typeof value === "string"
+      ? Date.parse(value)
+      : Number.NEGATIVE_INFINITY;
+
+/**
+ * Per requirement, the newest upload (by createdAt) when it is pending or
+ * rejected. An accepted row newer than it means the review is over.
+ */
+const latestReviews = (deliveries: readonly PersonDocumentDeliverySlice[]) => {
+  const newest = new Map<string, PersonDocumentDeliverySlice>();
+
+  for (const delivery of deliveries) {
+    const current = newest.get(delivery.requirementId);
+
+    if (
+      !current ||
+      createdAtMs(delivery.createdAt) >= createdAtMs(current.createdAt)
+    ) {
+      newest.set(delivery.requirementId, delivery);
+    }
+  }
+
+  const reviews = new Map<string, PersonDocumentReview>();
+
+  for (const [requirementId, delivery] of newest) {
+    if (
+      delivery.id &&
+      (delivery.status === "uploaded" || delivery.status === "rejected")
+    ) {
+      reviews.set(requirementId, {
+        id: delivery.id,
+        status: delivery.status,
+        rejectionReason: delivery.rejectionReason ?? null,
+        uploadedAt: new Date(createdAtMs(delivery.createdAt)).toISOString(),
+      });
+    }
+  }
+
+  return reviews;
 };
 
 const SUMMARY: Record<Exclude<PersonDocumentCardState, "error">, string> = {
@@ -111,15 +179,21 @@ export const personDocumentCardWithoutPosition =
 
 /**
  * Rows for the card. `today` is the company calendar date (`isoToday()`).
- * The chip uses the latest delivery of each requirement.
+ * The chip uses the latest accepted delivery of each requirement, the same
+ * rule as before uploads existed; a pending or rejected upload only adds
+ * `review` to the row.
  */
 export const buildPersonDocumentCard = (
   requirements: readonly PersonDocumentRequirementSlice[],
   deliveries: readonly PersonDocumentDeliverySlice[],
   today: string,
 ): PersonDocumentCardView => {
+  const accepted = deliveries.filter(
+    (delivery) => (delivery.status ?? "accepted") === "accepted",
+  );
+  const reviews = latestReviews(deliveries);
   const latestByRequirement = new Map(
-    latestDelivery(deliveries).map((delivery) => [
+    latestDelivery(accepted).map((delivery) => [
       delivery.requirementId,
       delivery,
     ]),
@@ -137,8 +211,13 @@ export const buildPersonDocumentCard = (
       const document: DocumentStatusInput = delivery
         ? { expiresOn: delivery.expiresOn }
         : null;
+      const review = reviews.get(requirement.id);
 
       return {
+        ...(review ? { review } : {}),
+        ...(delivery?.id && delivery.fileKey
+          ? { fileDocumentId: delivery.id }
+          : {}),
         requirementId: requirement.id,
         name: requirement.name,
         required: requirement.required,

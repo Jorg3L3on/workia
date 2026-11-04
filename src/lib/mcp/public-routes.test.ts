@@ -31,21 +31,66 @@ const PUBLIC_MCP_ROUTES = [
   "/api/oauth/token",
 ];
 
+/**
+ * The employee app (W2-01) signs in without an HR session: Google's start and
+ * callback, and the static manifest and service worker of /mi.
+ */
+const PUBLIC_EMPLOYEE_ROUTES = [
+  "/api/mi/google",
+  "/api/mi/google/callback",
+  "/mi/manifest.webmanifest",
+  "/mi/sw.js",
+];
+
+/** Scheduled jobs (W2-09): no session, a Bearer CRON_SECRET instead. */
+const SCHEDULED_JOB_ROUTES = ["/api/cron/retention"];
+
+/**
+ * The local storage driver (development and tests only) serves files for an
+ * HMAC-signed URL, like a bucket's presigned URL, and is off in production.
+ */
+const SIGNED_STORAGE_ROUTES = ["/api/storage/local/[...key]"];
+
 /** A route is guarded when it goes through the company context or Auth.js. */
 const isSessionGuarded = (source: string) =>
-  /require(CompanyContext|Auth|PeopleImport|PeopleExport|[A-Z]\w*(Read|Create|Update|Delete|Import|Export))\b|requireImportRoute|withImportRoute|auth\(\)/.test(
+  /require(CompanyContext|EmployeeContext|Auth|PeopleImport|PeopleExport|[A-Z]\w*(Read|Create|Update|Delete|Import|Export|Manage))\b|requireImportRoute|withImportRoute|getEmployeeContext\(\)|auth\(\)/.test(
     source,
   );
 
 describe("public routes", () => {
-  it("adds only /api/mcp, /api/oauth/* and /.well-known/* as routes without a session", () => {
+  it("adds only /api/mcp, /api/oauth/*, /.well-known/* and the scheduled jobs as routes without a session", () => {
     const unguarded = routes
       .filter(({ route }) => !route.startsWith("/api/auth"))
       .filter(({ source }) => !isSessionGuarded(source))
       .map(({ route }) => route)
       .sort();
 
-    expect(unguarded).toEqual(PUBLIC_MCP_ROUTES);
+    expect(unguarded).toEqual(
+      [
+        ...PUBLIC_MCP_ROUTES,
+        ...PUBLIC_EMPLOYEE_ROUTES,
+        ...SCHEDULED_JOB_ROUTES,
+        ...SIGNED_STORAGE_ROUTES,
+      ].sort(),
+    );
+  });
+
+  it("puts every scheduled job behind CRON_SECRET", () => {
+    for (const { route, source } of routes.filter((r) =>
+      SCHEDULED_JOB_ROUTES.includes(r.route),
+    )) {
+      expect(source, route).toMatch(/env\.CRON_SECRET/);
+      expect(source, route).toMatch(/timingSafeEqual/);
+    }
+  });
+
+  it("checks the signature of every signed storage route and turns it off in production", () => {
+    for (const { route, source } of routes.filter((r) =>
+      SIGNED_STORAGE_ROUTES.includes(r.route),
+    )) {
+      expect(source, route).toMatch(/verifyLocalUrl/);
+      expect(source, route).toMatch(/NODE_ENV === "production"/);
+    }
   });
 
   it("puts every public MCP route behind MCP_ENABLED", () => {

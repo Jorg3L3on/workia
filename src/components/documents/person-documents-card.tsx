@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   useEffect,
@@ -33,6 +34,7 @@ import {
   type PersonDocumentCardView,
   type PersonDocumentRow,
 } from "@/lib/documents/person-card";
+import { documentRejectionReasonLabels } from "@/lib/documents/files-schema";
 import { addCalendarMonths, statusOf } from "@/lib/documents/schema";
 import { toneFor } from "@/lib/ui/status-tone";
 
@@ -368,6 +370,43 @@ const DocumentRow = ({
           <dd>{dateLabel(row.deliveredOn, row.expiresOn, "expires")}</dd>
         </div>
       </dl>
+      {row.fileDocumentId ? (
+        <a
+          className="text-primary self-start text-sm underline-offset-4 hover:underline"
+          href={`/app/documentos/revision/${row.fileDocumentId}/archivo`}
+          rel="noopener"
+          target="_blank"
+        >
+          Ver archivo
+        </a>
+      ) : null}
+      {row.review ? (
+        <p
+          className="text-sm"
+          data-testid={`document-review-${row.requirementId}`}
+        >
+          {row.review.status === "uploaded" ? (
+            <>
+              Subido desde la app el {formatDateMx(row.review.uploadedAt)}, en
+              revisión.{" "}
+              <Link
+                className="text-primary underline-offset-4 hover:underline"
+                href="/app/documentos/revision"
+              >
+                Revisar
+              </Link>
+            </>
+          ) : (
+            <>
+              Último archivo rechazado
+              {row.review.rejectionReason
+                ? `: ${documentRejectionReasonLabels[row.review.rejectionReason]}`
+                : ""}
+              .
+            </>
+          )}
+        </p>
+      ) : null}
       {canManage ? (
         <Button
           aria-haspopup="dialog"
@@ -517,7 +556,8 @@ const PersonDocumentsBody = ({
 /**
  * «Documentos» card. One row per requirement of the person's puesto.
  * documents:manage records a date; documents:read is the same list without
- * the dialog. No note, file or document number.
+ * the dialog. No note or document number; an employee's uploaded file
+ * (W2-04) opens from «Ver archivo», and a pending upload links to the queue.
  */
 export const PersonDocumentsCard = ({
   view,

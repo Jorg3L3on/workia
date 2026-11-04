@@ -64,6 +64,7 @@ import { TERMINATION_REASON_SEED } from "@/lib/termination-reasons/schema";
 
 import { idsIn, ownerDb, seedTenant, type Tenant } from "./fixtures";
 import { actAs } from "./session-state";
+import { uniqueCurp } from "@/test/curp";
 
 let a: Tenant;
 let b: Tenant;
@@ -102,7 +103,7 @@ const personForm = (
   managerId: "",
   siteId: "",
   rfc: "",
-  curp: "",
+  curp: uniqueCurp(),
   nss: "",
   horarioEntrada: "",
   horarioSalidaComer: "",
@@ -610,6 +611,33 @@ describe("baja, reingreso and finiquito", () => {
     ).rejects.toBeInstanceOf(EmploymentError);
   });
 
+  it("a reingreso needs a valid CURP: nobody becomes activa without one (P-00)", async () => {
+    const person = await createPerson(
+      a.companyId,
+      personForm({ nombres: "SinCurp", fechaIngreso: "2019-02-01" }),
+      a.admin.id,
+    );
+    await terminatePerson(
+      a.companyId,
+      person.id,
+      baja(reasonA.id, "2023-06-30"),
+    );
+    // Legacy data: a baja captured before the rule, without CURP.
+    await ownerDb
+      .update(people)
+      .set({ curp: null })
+      .where(eq(people.id, person.id));
+
+    await expect(
+      rehirePerson(a.companyId, person.id, {
+        fechaIngreso: "2025-01-15",
+        reconoceAntiguedad: false,
+      }),
+    ).rejects.toMatchObject({ field: "curp" });
+    expect(await personRow(person.id)).toMatchObject({ status: "baja" });
+    expect(await periodsOf(person.id)).toHaveLength(1);
+  });
+
   it("a reingreso opens a second period: seniority restarts by default", async () => {
     const person = await createPerson(
       a.companyId,
@@ -927,6 +955,7 @@ describe("importing people (Iniciativa 2 hook)", () => {
           cells: {
             nombres: "Importada",
             apellidoPaterno: "Activa",
+            curp: uniqueCurp(),
             fechaIngreso: "2024-02-01",
           },
         },
