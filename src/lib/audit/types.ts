@@ -25,6 +25,7 @@ export const AUDIT_RESOURCE_TYPES = [
   "employee_account",
   "manager_grant",
   "manager_delegation",
+  "time_off_request",
 ] as const;
 
 export type AuditResourceType = (typeof AUDIT_RESOURCE_TYPES)[number];
@@ -60,6 +61,8 @@ export const AUDIT_ACTIONS = [
   "code_requested",
   "login",
   "logout",
+  // Workia 2.0 W2-06: an employee cancels their request.
+  "cancel",
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
@@ -93,6 +96,7 @@ export const auditActionLabels: Record<AuditAction, string> = {
   code_requested: "Código de acceso enviado",
   login: "Inicio de sesión",
   logout: "Cierre de sesión",
+  cancel: "Cancelación",
 };
 
 export const auditResourceTypeLabels: Record<AuditResourceType, string> = {
@@ -122,6 +126,7 @@ export const auditResourceTypeLabels: Record<AuditResourceType, string> = {
   employee_account: "Cuenta de empleado",
   manager_grant: "Rol de jefe",
   manager_delegation: "Suplencia de jefe",
+  time_off_request: "Solicitud de vacaciones o permiso",
 };
 
 export const AUDIT_SOURCES = [

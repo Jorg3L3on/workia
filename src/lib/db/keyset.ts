@@ -46,6 +46,16 @@ const encode = (json: string) =>
   Buffer.from(json, "utf8").toString("base64url");
 
 /**
+ * A cursor for these key values, in key order, as a page's `next` would be.
+ * For a list that receives its position from elsewhere (the approvals inbox
+ * merges several sources and hands each one the last item's keys). Each value
+ * must be what Postgres casts back to the key's type: a timestamptz with its
+ * zone and microseconds, a uuid, a date.
+ */
+export const keysetCursor = (values: Array<string | number>) =>
+  encode(JSON.stringify(values));
+
+/**
  * The key values of a cursor, or null when it is missing, malformed or made
  * for another key list (an old link or a tampered one): the list then starts
  * from the first page.

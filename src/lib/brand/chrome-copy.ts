@@ -29,6 +29,8 @@ export const pageTitles = {
   expediente: "Expediente",
   contratos: "Contratos",
   documentos: "Documentos por vencer",
+  solicitudes: "Solicitudes",
+  solicitud: "Solicitud",
   plantillas: "Plantillas",
   nuevaPlantilla: "Nueva plantilla",
   plantilla: "Plantilla",

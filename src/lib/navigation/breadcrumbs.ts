@@ -68,6 +68,17 @@ export const resolveBreadcrumbs = (
     return [{ label: "Documentos" }];
   }
 
+  if (path === "/app/solicitudes") {
+    return [{ label: "Solicitudes" }];
+  }
+
+  if (path.startsWith("/app/solicitudes/")) {
+    return [
+      { label: "Solicitudes", href: "/app/solicitudes" },
+      { label: "Solicitud" },
+    ];
+  }
+
   if (path === "/app/contratos/plantillas") {
     return [
       { label: "Contratos", href: "/app/contratos" },

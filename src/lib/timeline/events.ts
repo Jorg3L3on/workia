@@ -257,11 +257,12 @@ export const vacationVoidEvent = (
   },
 });
 
-export type VacationRequestKind = "request" | "approval" | "rejection";
+export type VacationRequestKind =
+  "request" | "approval" | "rejection" | "cancellation";
 
 /**
- * A vacation request and its decision (W2-09/W2-10 write these in the
- * request's transaction), keyed by the request row and the step.
+ * A vacation request and its decision (W2-06 writes these in the request's
+ * transaction), keyed by the request row and the step.
  */
 export const vacationRequestEvent = (input: {
   personId: string;
@@ -287,6 +288,41 @@ export const vacationRequestEvent = (input: {
     to: input.to,
     vacation_record_id: input.vacationRecordId ?? undefined,
   }),
+});
+
+// ------------------------------------------------------------------- permiso
+
+export type PermisoPay = "con_goce" | "sin_goce";
+
+/**
+ * A permiso request and each step of it (W2-06), keyed by the request row
+ * and the step. W2-14 reads approved permisos to justify the days they cover;
+ * sin goce is what pre-nómina needs.
+ */
+export const permisoRequestEvent = (input: {
+  personId: string;
+  requestId: string;
+  kind: VacationRequestKind;
+  pay: PermisoPay;
+  occurredAt: Date;
+  source: Source;
+  days: number;
+  from: string;
+  to: string;
+}): PersonEventInput => ({
+  personId: input.personId,
+  type: "permiso",
+  occurredAt: input.occurredAt,
+  source: input.source,
+  dedupeKey: rowKey("permiso", "request", input.requestId, input.kind),
+  payload: {
+    kind: input.kind,
+    pay: input.pay,
+    request_id: input.requestId,
+    days: input.days,
+    from: input.from,
+    to: input.to,
+  },
 });
 
 // ------------------------------------------------------------------ document

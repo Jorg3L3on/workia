@@ -77,6 +77,23 @@ const EmployeeHomePage = async () => {
             : "Nada nuevo"}
         </span>
       </Link>
+      <Link
+        className="workia-pass-card flex items-center justify-between gap-3 px-5 py-4"
+        href="/mi/solicitudes"
+      >
+        <span className="space-y-0.5">
+          <span className="block text-base font-semibold">
+            Vacaciones y permisos
+          </span>
+          <span className="text-muted-foreground block text-sm">
+            Pide días y revisa tus solicitudes.
+          </span>
+        </span>
+        <ChevronRightIcon
+          aria-hidden
+          className="text-muted-foreground size-5"
+        />
+      </Link>
       {managerAccess ? (
         <Link
           className="workia-pass-card flex items-center justify-between gap-3 px-5 py-4"

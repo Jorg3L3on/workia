@@ -6,16 +6,21 @@ import { TeamPageHeader } from "@/components/manager/team-page-header";
 import { requireEmployeeContext } from "@/lib/employee-accounts/session";
 import { getManagerAccess } from "@/lib/managers";
 import { listApprovalsInbox } from "@/lib/managers/inbox";
+import { decidedNotice } from "@/lib/requests/rules";
 
 export const metadata: Metadata = { title: "Aprobaciones" };
 
 type InboxPageProps = {
-  searchParams: Promise<{ cursor?: string | string[] }>;
+  searchParams: Promise<{
+    cursor?: string | string[];
+    decidida?: string | string[];
+    exceso?: string | string[];
+  }>;
 };
 
 /**
  * The approvals inbox (W2-07): what waits for a decision of the managers
- * this account acts for, newest first. W2-06 adds vacaciones and permisos.
+ * this account acts for, newest first: vacaciones and permisos (W2-06).
  */
 const InboxPage = async ({ searchParams }: InboxPageProps) => {
   const context = await requireEmployeeContext();
@@ -25,7 +30,9 @@ const InboxPage = async ({ searchParams }: InboxPageProps) => {
     notFound();
   }
 
-  const { cursor } = await searchParams;
+  const params = await searchParams;
+  const { cursor } = params;
+  const notice = decidedNotice(params);
   const inbox = await listApprovalsInbox(access, {
     cursor: typeof cursor === "string" ? cursor : null,
   });
@@ -37,6 +44,14 @@ const InboxPage = async ({ searchParams }: InboxPageProps) => {
         backLabel="Mi equipo"
         title="Aprobaciones"
       />
+      {notice ? (
+        <p
+          className="text-sm font-medium text-[color:var(--workia-accent-blue)]"
+          role="status"
+        >
+          {notice}
+        </p>
+      ) : null}
       {inbox.items.length > 0 ? (
         <ul className="workia-pass-card divide-y" data-testid="inbox-list">
           {inbox.items.map((item) => (

@@ -23,6 +23,8 @@ export const personEventTypeEnum = pgEnum("person_event_type", [
   "receipt",
   "document",
   "employment",
+  // W2-06: permisos con y sin goce (requests and decisions).
+  "permiso",
 ]);
 
 /**

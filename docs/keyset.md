@@ -88,15 +88,18 @@ attendance) and the timings in [timeline.md](timeline.md).
 
 ## Approvals inbox
 
-The table of requests is W2-06's, so its index is created there, in the same
-migration as the table. What P-04 fixes for it:
+W2-06 created the requests table, `time_off_requests` (migration 0047), with
+its index in the same migration:
 
-- Index `(company_id, manager_id, status, created_at DESC, id DESC)` on the
-  requests table, where `manager_id` is the approver stored on the request when
-  it is created (W2-07 moves a person to the new manager on the next request).
+- `time_off_requests_inbox_idx (company_id, manager_id, status, created_at
+DESC, id DESC)`, where `manager_id` is the approver stored on the request
+  when it is created (W2-07 moves a person to the new manager on the next
+  request).
 - The inbox query filters `company_id`, `manager_id` and `status` by equality
   and pages with the keyset above, `created_at DESC, id DESC`, so a page is one
-  index range scan with no sort.
-- HR's list of every request gets a second index,
-  `(company_id, status, created_at DESC, id DESC)`, only if W2-06's
-  measurement shows it needs one: each index costs storage on Neon Free.
+  index range scan with no sort. The inbox hands each source the last item's
+  UTC sort key; the source turns it back into a cursor with `keysetCursor()`.
+- HR's list of every request has no second index: measured at 20,000 rows
+  (500 people, five years) a page reads the whole table in about 7 ms
+  ([solicitudes.md](solicitudes.md)). Add `(company_id, status, created_at
+DESC, id DESC)` only if that grows into a problem.

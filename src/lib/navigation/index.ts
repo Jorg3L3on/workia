@@ -1,4 +1,5 @@
 import {
+  CalendarCheckIcon,
   ChartLineIcon,
   FilesIcon,
   FileTextIcon,
@@ -29,6 +30,8 @@ export type NavAccess = {
   canReadReports: boolean;
   /** documents:read in the active company: shows Documentos. */
   canReadDocuments: boolean;
+  /** vacations:read in the active company: shows Solicitudes (W2-06). */
+  canReadRequests: boolean;
 };
 
 export type NavLink = {
@@ -80,6 +83,13 @@ export const NAV_GROUPS: readonly NavGroup[] = [
         icon: FilesIcon,
         keywords: ["por vencer", "vencidos", "vigencia"],
         requires: "canReadDocuments",
+      },
+      {
+        title: "Solicitudes",
+        href: "/app/solicitudes",
+        icon: CalendarCheckIcon,
+        keywords: ["vacaciones", "permisos", "aprobar"],
+        requires: "canReadRequests",
       },
       {
         title: "Altas",

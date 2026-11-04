@@ -59,28 +59,27 @@ actor (source `employee`).
   jefe has a live grant, else null (the request goes to HR).
 - `inbox.ts`: the approvals inbox (`/mi/equipo/aprobaciones`). Each kind of
   request is an `InboxSource`; the inbox merges their pages newest first with
-  one opaque cursor. There are no sources yet, so the inbox is empty until
-  W2-06.
+  one opaque cursor. W2-06 registers vacaciones and permisos.
 
 The team list pages with a keyset on the name and the id (no `OFFSET`,
 [keyset.md](keyset.md)). It uses its own small cursor because the shared
 helper `src/lib/db/keyset.ts` arrives with P-04; switch to it once both are in
 `sandbox`.
 
-## For W2-06 (requests and approvals)
+## Requests (W2-06)
 
-- When a request is created, store `approver_person_id =
-currentApprover(companyId, requesterId)`. Null means HR decides. A later
-  change of jefe does not move a pending request.
-- Register a source in `INBOX_SOURCES` that lists pending requests where
-  `approver_person_id = ANY(approverIds)`, keyset on
-  `(created_at DESC, id DESC)` through the index docs/keyset.md fixes, and
-  returns `sortKey` as
-  `to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US')`.
-- Before a decision, check `canDecideFor(access, request.approverPersonId)`.
-  A delegate's decision is audited with the delegate's account as the actor.
-- The vacation timeline events go through `vacationRequestEvent` and
-  `appendPersonEvents` (W2-13) in the request's transaction.
+Vacaciones and permisos use these hooks; see [solicitudes.md](solicitudes.md).
+
+- A request stores `manager_id = currentApprover(companyId, requesterId)`
+  when it is created. Null means HR decides. A later change of jefe does not
+  move a pending request.
+- `INBOX_SOURCES` has the `time_off_request` source (loaded lazily, so this
+  module stays free of the database client). It lists pending requests whose
+  `manager_id` is one of the approvers, keyset on `(created_at DESC, id DESC)`
+  through `time_off_requests_inbox_idx`.
+- A decision checks `canDecideFor(access, request.manager_id)`; a request of
+  another team reads as missing. A delegate's decision is audited with the
+  delegate's account as the actor. Nobody decides their own request.
 
 ## Neon Free
 

@@ -184,6 +184,7 @@ describe("retention job", () => {
         receipt: null,
         document: null,
         employment: null,
+        permiso: null,
       },
       peopleBatch: 1,
       executor: ownerDb as unknown as DbExecutor,

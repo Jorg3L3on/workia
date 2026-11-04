@@ -9,16 +9,16 @@ What happened to a person, in one table. Workia 2.0 task P-01, built on the
 `person_events` is append-only. Every event about a person goes there, in the
 same transaction as the change that caused it.
 
-| Column        | What                                                                                                |
-| ------------- | --------------------------------------------------------------------------------------------------- |
-| `id`          | uuid, primary key                                                                                   |
-| `company_id`  | the person's company; RLS compares it with `app.company_id`                                         |
-| `person_id`   | composite foreign key `(company_id, person_id)` → `people`, `ON DELETE CASCADE`                     |
-| `type`        | `person_event_type`: `attendance`, `incidencia`, `vacation`, `receipt`, `document`, `employment`    |
-| `occurred_at` | when it happened (timestamptz)                                                                      |
-| `source`      | what produced it: `app`, `checador:<device>`, `payroll`, `import`… (1 to 64 characters)             |
-| `dedupe_key`  | idempotency key, unique per person; required on attendance                                          |
-| `payload`     | a JSON object, at most 4 KB: punches, the incidencia kind, the receipt period, the document status… |
+| Column        | What                                                                                                               |
+| ------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `id`          | uuid, primary key                                                                                                  |
+| `company_id`  | the person's company; RLS compares it with `app.company_id`                                                        |
+| `person_id`   | composite foreign key `(company_id, person_id)` → `people`, `ON DELETE CASCADE`                                    |
+| `type`        | `person_event_type`: `attendance`, `incidencia`, `vacation`, `receipt`, `document`, `employment`, `permiso` (0047) |
+| `occurred_at` | when it happened (timestamptz)                                                                                     |
+| `source`      | what produced it: `app`, `checador:<device>`, `payroll`, `import`… (1 to 64 characters)                            |
+| `dedupe_key`  | idempotency key, unique per person; required on attendance                                                         |
+| `payload`     | a JSON object, at most 4 KB: punches, the incidencia kind, the receipt period, the document status…                |
 
 There is no CURP column and no account id: a person is `(company_id,
 person_id)`. Who did something stays in `audit_events` (actor, action,
@@ -111,19 +111,20 @@ cannot be written, the change rolls back too (`writes.db.test.ts` checks
 that for every writer). The dedupe key names the source row, so the backfill
 builds the same key for the same fact and never writes it twice.
 
-| Event                                   | Written by                                                                          | Dedupe key                                 | `occurred_at`             |
-| --------------------------------------- | ----------------------------------------------------------------------------------- | ------------------------------------------ | ------------------------- |
-| `employment` alta                       | `syncEmploymentPeriods` (alta, edición, importación, alta a nómina), `rehirePerson` | `employment:period:<id>:alta`              | the ingreso               |
-| `employment` baja                       | `recordTermination`; a status set to baja without the dialog («sin fecha»)          | `employment:period:<id>:baja`              | the fecha de baja, or now |
-| `employment` baja corrected             | `correctTermination` (append-only: a new event, `corrected: true`)                  | `employment:audit:<audit id>`              | the fecha de baja         |
-| `employment` cambio                     | `updatePerson`, a renewal with a new puesto, an import that moves a person          | `employment:audit:<audit id>`              | the audit event           |
-| `employment` transfer                   | builder only, for the subsidiary transfers of phase 3                               | `employment:transfer:<id>`                 | the transfer              |
-| `vacation` enjoyment / void             | `registerVacationRecord` / `voidVacationRecord`                                     | `vacation:record:<id>:enjoyment` / `:void` | first day / the void      |
-| `vacation` request, approval, rejection | builder only, for the requests of W2-09/W2-10                                       | `vacation:request:<id>:<kind>`             | the step                  |
-| `document`                              | `recordDelivery` (status `accepted`); uploads and reviews of W2-07 pass theirs      | `document:person_document:<id>:<status>`   | the delivery date         |
-| `receipt`                               | builder only, for the receipts import of W2-03                                      | `receipt:cfdi:<uuid>`                      | delivered at              |
-| `attendance`                            | `writeAttendanceDays`, for the ingestion of W2-12                                   | `attendance:<date>`                        | the first punch           |
-| `incidencia`                            | `replacePeriodIncidencias`, for the engine of W2-14                                 | `incidencia:<period>:<date>:<kind>`        | the day                   |
+| Event                                                 | Written by                                                                          | Dedupe key                                 | `occurred_at`             |
+| ----------------------------------------------------- | ----------------------------------------------------------------------------------- | ------------------------------------------ | ------------------------- |
+| `employment` alta                                     | `syncEmploymentPeriods` (alta, edición, importación, alta a nómina), `rehirePerson` | `employment:period:<id>:alta`              | the ingreso               |
+| `employment` baja                                     | `recordTermination`; a status set to baja without the dialog («sin fecha»)          | `employment:period:<id>:baja`              | the fecha de baja, or now |
+| `employment` baja corrected                           | `correctTermination` (append-only: a new event, `corrected: true`)                  | `employment:audit:<audit id>`              | the fecha de baja         |
+| `employment` cambio                                   | `updatePerson`, a renewal with a new puesto, an import that moves a person          | `employment:audit:<audit id>`              | the audit event           |
+| `employment` transfer                                 | builder only, for the subsidiary transfers of phase 3                               | `employment:transfer:<id>`                 | the transfer              |
+| `vacation` enjoyment / void                           | `registerVacationRecord` / `voidVacationRecord`                                     | `vacation:record:<id>:enjoyment` / `:void` | first day / the void      |
+| `vacation` request, approval, rejection, cancellation | the requests of W2-06 (`src/lib/requests`)                                          | `vacation:request:<id>:<kind>`             | the step                  |
+| `permiso` request, approval, rejection, cancellation  | the requests of W2-06; payload `pay` is `con_goce` or `sin_goce`                    | `permiso:request:<id>:<kind>`              | the step                  |
+| `document`                                            | `recordDelivery` (status `accepted`); uploads and reviews of W2-07 pass theirs      | `document:person_document:<id>:<status>`   | the delivery date         |
+| `receipt`                                             | builder only, for the receipts import of W2-03                                      | `receipt:cfdi:<uuid>`                      | delivered at              |
+| `attendance`                                          | `writeAttendanceDays`, for the ingestion of W2-12                                   | `attendance:<date>`                        | the first punch           |
+| `incidencia`                                          | `replacePeriodIncidencias`, for the engine of W2-14                                 | `incidencia:<period>:<date>:<kind>`        | the day                   |
 
 A calendar day is stored as noon in central Mexico (`dayInstant`), so it stays
 on the same date in every Mexican time zone. A «cambio» is any person audit
@@ -169,10 +170,10 @@ when an applied run's counts do not match. A second run inserts nothing.
 `RETENTION_YEARS` in `src/lib/timeline` says how long each type is kept,
 counted from `occurred_at`:
 
-| Type                                            | Kept                        |
-| ----------------------------------------------- | --------------------------- |
-| `attendance`, `incidencia`                      | 5 years                     |
-| `vacation`, `receipt`, `document`, `employment` | while the person row exists |
+| Type                                                       | Kept                        |
+| ---------------------------------------------------------- | --------------------------- |
+| `attendance`, `incidencia`                                 | 5 years                     |
+| `vacation`, `receipt`, `document`, `employment`, `permiso` | while the person row exists |
 
 Five years is the longest of the conservation periods that apply to labor
 records (LFT, IMSS and SAT). HR confirms the legal period before the job is

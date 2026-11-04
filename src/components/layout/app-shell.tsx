@@ -58,6 +58,8 @@ type AppShellProps = {
   canReadReports?: boolean;
   /** documents:read in the active company: shows Documentos. */
   canReadDocuments?: boolean;
+  /** vacations:read in the active company: shows Solicitudes (W2-06). */
+  canReadRequests?: boolean;
   /** Platform admins also get a link to the platform console. */
   isPlatformAdmin?: boolean;
   /** Unread messages of the user's inbox in this company (W2-08), capped at 100. */
@@ -78,6 +80,7 @@ export const AppShell = ({
   canUseConnections = false,
   canReadReports = false,
   canReadDocuments = false,
+  canReadRequests = false,
   isPlatformAdmin = false,
   unreadNotifications = 0,
 }: AppShellProps) => {
@@ -86,6 +89,7 @@ export const AppShell = ({
     canUseConnections,
     canReadReports,
     canReadDocuments,
+    canReadRequests,
   };
   const groups = visibleNavGroups(access);
   const initials = (user.name ?? "RRHH")

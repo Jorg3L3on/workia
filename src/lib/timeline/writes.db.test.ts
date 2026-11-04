@@ -44,7 +44,7 @@ import { uniqueCurp } from "@/test/curp";
 import { ownerDb, seedTenant, type Tenant } from "@/test/idor/fixtures";
 
 import { backfillPersonTimeline } from "./backfill";
-import { receiptEvent } from "./events";
+import { permisoRequestEvent, receiptEvent } from "./events";
 import {
   appendPersonEvents,
   listPersonEvents,
@@ -813,6 +813,18 @@ describe("one person's timeline", () => {
         period: "2025-01-1",
         deliveredAt: new Date("2025-01-16T15:00:00Z"),
         source: "payroll",
+      }),
+      // W2-06 writes these with the request; no backfill (no older rows).
+      permisoRequestEvent({
+        personId: person.id,
+        requestId: "00000000-0000-4000-8000-000000000006",
+        kind: "request",
+        pay: "sin_goce",
+        occurredAt: new Date("2024-09-10T15:00:00Z"),
+        source: "employee",
+        days: 1,
+        from: "2024-09-12",
+        to: "2024-09-12",
       }),
     ]);
     await writeAttendanceDays(a.companyId, [

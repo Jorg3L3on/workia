@@ -15,6 +15,7 @@ export * from "./onboardings";
 export * from "./people";
 export * from "./people-views";
 export * from "./rbac";
+export * from "./requests";
 export * from "./sites";
 export * from "./timeline";
 export * from "./vacations";

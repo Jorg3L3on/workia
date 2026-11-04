@@ -20,13 +20,13 @@ cuántos avisos no se han leído (hasta «99+»).
 Están en `src/lib/notifications/templates.ts`. El texto se guarda al crear el
 aviso, así que la bandeja se lee igual años después.
 
-| Plantilla           | Para                          | La envía                         |
-| ------------------- | ----------------------------- | -------------------------------- |
-| `receipt_available` | la persona                    | W2-03 recibos de nómina          |
-| `request_decision`  | la persona que pidió          | W2-05 vacaciones, W2-06 permisos |
-| `document_rejected` | la persona                    | W2-04 documentos                 |
-| `contract_ending`   | su jefe y RH                  | W2-19 alertas LFT                |
-| `request_pending`   | el jefe (`people.manager_id`) | W2-06 bandeja de aprobaciones    |
+| Plantilla           | Para                                                         | La envía                      |
+| ------------------- | ------------------------------------------------------------ | ----------------------------- |
+| `receipt_available` | la persona                                                   | W2-03 recibos de nómina       |
+| `request_decision`  | la persona que pidió                                         | W2-06 vacaciones y permisos   |
+| `document_rejected` | la persona                                                   | W2-04 documentos              |
+| `contract_ending`   | su jefe y RH                                                 | W2-19 alertas LFT             |
+| `request_pending`   | el jefe que la decide, o RH con `vacations:update` si no hay | W2-06 bandeja de aprobaciones |
 
 ## Cómo se usa desde otra tarea
 

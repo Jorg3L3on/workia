@@ -39,6 +39,7 @@ const openPalette = (
     canUseConnections: true,
     canReadReports: true,
     canReadDocuments: true,
+    canReadRequests: true,
   },
 ) => {
   render(<AppCommandPalette access={access} />);
@@ -75,6 +76,7 @@ describe("AppCommandPalette", () => {
       canUseConnections: false,
       canReadReports: false,
       canReadDocuments: false,
+      canReadRequests: false,
     });
 
     expect(optionLabels()).not.toContain("Miembros");

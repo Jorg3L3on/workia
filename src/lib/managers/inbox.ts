@@ -4,7 +4,7 @@ import type { ManagerAccess } from "./scope";
  * The manager's approvals inbox (Workia 2.0 W2-07): one list, newest first,
  * of everything waiting for a decision of the managers this account acts for
  * (itself and whoever it covers for today). Each kind of request is a
- * source; W2-06 adds vacaciones and permisos, later tasks add theirs.
+ * source: W2-06's vacaciones and permisos, and later tasks' own.
  *
  * A source pages its own table with a keyset on (created_at DESC, id DESC)
  * filtered by approver and status, through the index docs/keyset.md fixes
@@ -49,8 +49,17 @@ export type InboxSource = {
   }) => Promise<InboxItem[]>;
 };
 
-/** The registered sources. W2-06 adds its requests source here. */
-export const INBOX_SOURCES: InboxSource[] = [];
+/**
+ * The registered sources. W2-06's vacaciones and permisos load lazily, so
+ * this module (and its unit tests) never loads the database client.
+ */
+export const INBOX_SOURCES: InboxSource[] = [
+  {
+    key: "time_off_request",
+    list: async (input) =>
+      (await import("@/lib/requests")).listPendingForInbox(input),
+  },
+];
 
 export const INBOX_PAGE_SIZE = 30;
 

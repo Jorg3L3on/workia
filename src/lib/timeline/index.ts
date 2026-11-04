@@ -192,6 +192,7 @@ export const RETENTION_YEARS: Record<PersonEventType, number | null> = {
   receipt: null,
   document: null,
   employment: null,
+  permiso: null,
 };
 
 /** People per DELETE statement of the retention job. */

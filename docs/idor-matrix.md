@@ -48,7 +48,10 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `action:employee-accounts/issueActivationCodeAction`          | ✅     | `src/test/idor/employee-accounts.db.test.ts`                                                           | `employee_accounts:manage`  |
 | `action:employee/activateAccountAction`                       | ✅     | `src/test/idor/employee-accounts.db.test.ts`                                                           | —                           |
 | `action:employee/cancelDelegationAction`                      | ✅     | `src/test/idor/managers.db.test.ts`                                                                    | —                           |
+| `action:employee/cancelRequestAction`                         | ✅     | `src/test/idor/requests.db.test.ts`                                                                    | —                           |
 | `action:employee/createDelegationAction`                      | ✅     | `src/test/idor/managers.db.test.ts`                                                                    | —                           |
+| `action:employee/createRequestAction`                         | ✅     | `src/test/idor/requests.db.test.ts`                                                                    | —                           |
+| `action:employee/decideRequestAction`                         | ✅     | `src/test/idor/requests.db.test.ts`                                                                    | —                           |
 | `action:employee/passwordSignInAction`                        | ✅     | `src/test/idor/employee-accounts.db.test.ts`                                                           | —                           |
 | `action:employee/requestLoginCodeAction`                      | ✅     | `src/test/idor/employee-accounts.db.test.ts`                                                           | —                           |
 | `action:employee/signOutEmployeeAction`                       | ✅     | `src/test/idor/employee-accounts.db.test.ts`                                                           | —                           |
@@ -91,6 +94,7 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `action:reports/createTurnoverViewAction`                     | ✅     | `src/test/idor/turnover.db.test.ts`                                                                    | `reports:read`              |
 | `action:reports/deleteTurnoverViewAction`                     | ✅     | `src/test/idor/turnover.db.test.ts`                                                                    | `reports:read`              |
 | `action:reports/setTurnoverGoalAction`                        | ✅     | `src/test/idor/turnover.db.test.ts`                                                                    | `settings:update`           |
+| `action:requests/decideRequestByHrAction`                     | ✅     | `src/test/idor/requests.db.test.ts`                                                                    | `vacations:update`          |
 | `action:resguardo/assertAssetsListAccess`                     | ⏭️     | Exento: guard de lectura sin datos (requireAssetsRead); la lista la cubre lib:resguardo/listAssetsPage | `assets:read`               |
 | `action:resguardo/assignAssetAction`                          | ✅     | `src/test/idor/resguardo.db.test.ts`                                                                   | `assets:update`             |
 | `action:resguardo/createAssetAction`                          | ✅     | `src/test/idor/resguardo.db.test.ts`                                                                   | `assets:create`             |
@@ -323,6 +327,9 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `lib:regions/listRegions`                                     | ✅     | `src/test/idor/regions.db.test.ts`            | —       |
 | `lib:regions/softDeleteRegion`                                | ✅     | `src/test/idor/regions.db.test.ts`            | —       |
 | `lib:regions/updateRegion`                                    | ✅     | `src/test/idor/regions.db.test.ts`            | —       |
+| `lib:requests/decideRequestAsHr`                              | ✅     | `src/test/idor/requests.db.test.ts`           | —       |
+| `lib:requests/getCompanyRequest`                              | ✅     | `src/test/idor/requests.db.test.ts`           | —       |
+| `lib:requests/listCompanyRequests`                            | ✅     | `src/test/idor/requests.db.test.ts`           | —       |
 | `lib:resguardo/assignAsset`                                   | ✅     | `src/test/idor/resguardo.db.test.ts`          | —       |
 | `lib:resguardo/countAssignedAssets`                           | ✅     | `src/test/idor/resguardo.db.test.ts`          | —       |
 | `lib:resguardo/createAsset`                                   | ✅     | `src/test/idor/resguardo.db.test.ts`          | —       |
