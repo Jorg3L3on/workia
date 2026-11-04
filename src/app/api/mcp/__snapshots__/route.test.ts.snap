@@ -4033,6 +4033,8 @@ exports[`/api/mcp transport > keeps the tools/list contract (snapshot) 1`] = `
             "reingreso",
             "finiquito_actualizado",
             "terminado",
+            "close",
+            "reopen",
           ],
           "type": "string",
         },
@@ -4089,6 +4091,7 @@ exports[`/api/mcp transport > keeps the tools/list contract (snapshot) 1`] = `
             "document_requirement",
             "person_document",
             "vacation_record",
+            "pay_period",
           ],
           "type": "string",
         },
@@ -4771,7 +4774,7 @@ exports[`/api/mcp transport > keeps the tools/list contract (snapshot) 1`] = `
       "readOnlyHint": false,
       "title": "Alta de persona",
     },
-    "description": "Da de alta un expediente con las mismas reglas que la app (D-04). RFC, CURP y NSS sólo con el scope pii. CONFLICT si un RFC, CURP o NSS ya es de otra persona activa. Primero responde una vista previa; repite con confirmation_token para hacerlo.",
+    "description": "Da de alta un expediente con las mismas reglas que la app (D-04). La CURP es obligatoria (una persona activa siempre tiene CURP válida). RFC, CURP y NSS sólo con el scope pii. CONFLICT si un RFC, CURP o NSS ya es de otra persona activa. Primero responde una vista previa; repite con confirmation_token para hacerlo.",
     "inputSchema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "properties": {
@@ -4826,7 +4829,7 @@ exports[`/api/mcp transport > keeps the tools/list contract (snapshot) 1`] = `
           "type": "string",
         },
         "curp": {
-          "description": "Sólo con el scope pii.",
+          "description": "Obligatoria en un alta: toda persona activa tiene una CURP válida. Sólo con el scope pii.",
           "maxLength": 18,
           "type": "string",
         },
@@ -5555,7 +5558,7 @@ exports[`/api/mcp transport > keeps the tools/list contract (snapshot) 1`] = `
       "readOnlyHint": false,
       "title": "Baja o reingreso",
     },
-    "description": "Da de baja laboral o reingresa a una persona (estatus activa | baja). No es borrar: el expediente sigue ahí. Baja: fecha_baja, tipo_baja, motivo (motivo_id de list_termination_reasons, o su nombre en motivo) y recontratable son obligatorios; comentario y finiquito opcionales (el monto sólo con el scope pii y compensation:read). Cierra el periodo laboral y el contrato vigente queda «terminado» en la fecha de baja. Reingreso (status activa): abre un nuevo periodo en el mismo expediente con fecha_ingreso (por defecto hoy) y reconocer_antiguedad (por defecto false: la antigüedad reinicia). La vista previa avisa si tiene contrato vigente, activos en resguardo o si su última baja dice no recontratable. Primero responde una vista previa; repite con confirmation_token para hacerlo.",
+    "description": "Da de baja laboral o reingresa a una persona (estatus activa | baja). No es borrar: el expediente sigue ahí. Baja: fecha_baja, tipo_baja, motivo (motivo_id de list_termination_reasons, o su nombre en motivo) y recontratable son obligatorios; comentario y finiquito opcionales (el monto sólo con el scope pii y compensation:read). Cierra el periodo laboral y el contrato vigente queda «terminado» en la fecha de baja. Reingreso (status activa): necesita CURP válida en el expediente; abre un nuevo periodo en el mismo expediente con fecha_ingreso (por defecto hoy) y reconocer_antiguedad (por defecto false: la antigüedad reinicia). La vista previa avisa si tiene contrato vigente, activos en resguardo o si su última baja dice no recontratable. Primero responde una vista previa; repite con confirmation_token para hacerlo.",
     "inputSchema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "properties": {

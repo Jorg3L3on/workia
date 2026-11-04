@@ -41,6 +41,7 @@ import {
   type Tenant,
 } from "./fixtures";
 import { actAs, NavigationThrow } from "./session-state";
+import { uniqueCurp } from "@/test/curp";
 
 let a: Tenant;
 let b: Tenant;
@@ -58,7 +59,7 @@ const form = (overrides: Partial<PersonFormValues> = {}): PersonFormValues => ({
   managerId: "",
   siteId: "",
   rfc: "",
-  curp: "",
+  curp: uniqueCurp(),
   nss: "",
   horarioEntrada: "",
   horarioSalidaComer: "",
@@ -261,6 +262,41 @@ describe("people writes cannot reach another company", () => {
       ),
     ).rejects.toThrow();
     expect(await snapshotTenant(a)).toEqual(before);
+  });
+});
+
+describe("identity model: an active person has a valid CURP (P-00)", () => {
+  it("createPerson refuses an active person without one and writes nothing", async () => {
+    const before = await snapshotTenant(a);
+
+    await expect(
+      createPerson(a.companyId, form({ curp: "" }), a.admin.id),
+    ).rejects.toMatchObject({ name: "MissingCurpError", field: "curp" });
+    expect(await snapshotTenant(a)).toEqual(before);
+
+    // Someone captured de baja may come without one.
+    const baja = await createPerson(
+      a.companyId,
+      form({ curp: "", status: "baja" }),
+      a.admin.id,
+    );
+    expect(baja.curp).toBeNull();
+  });
+
+  it("updatePerson refuses to clear the CURP of an active person", async () => {
+    const created = await createPerson(a.companyId, form(), a.admin.id);
+
+    await expect(
+      updatePerson(
+        a.companyId,
+        created.id,
+        form({ curp: "", nombres: created.nombres }),
+        a.admin.id,
+      ),
+    ).rejects.toMatchObject({ name: "MissingCurpError" });
+    expect((await getPersonById(a.companyId, created.id))?.curp).toBe(
+      created.curp,
+    );
   });
 });
 
