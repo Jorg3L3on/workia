@@ -13,6 +13,8 @@ import {
 import { formatDateMx } from "@/lib/format/date";
 
 import {
+  activePersonLacksCurp,
+  CURP_REQUIRED_MESSAGE,
   isValidCurp,
   isValidNss,
   isValidRfc,
@@ -224,7 +226,12 @@ export const personMexicoFields = {
     ),
 };
 
-export const personFormSchema = z.object({
+/**
+ * The person's fields, each validated on its own. Callers that merge a row
+ * with what is stored (the importer: a blank cell keeps the stored value)
+ * use this and check the merged result with activePersonLacksCurp.
+ */
+export const personFieldsSchema = z.object({
   nombres: z
     .string()
     .trim()
@@ -263,7 +270,22 @@ export const personFormSchema = z.object({
   ...personMexicoFields,
 });
 
-export type PersonFormValues = z.infer<typeof personFormSchema>;
+/**
+ * What every save of a whole person goes through (form, MCP): the fields,
+ * plus the identity rule that an active person has a valid CURP
+ * (docs/identity-model.md).
+ */
+export const personFormSchema = personFieldsSchema.refine(
+  (value) => Boolean(value.curp) || !activePersonLacksCurp(value),
+  {
+    path: ["curp"],
+    message: CURP_REQUIRED_MESSAGE,
+    // Reported next to the other field errors, not only once they are fixed.
+    when: ({ value }) => typeof value === "object" && value !== null,
+  },
+);
+
+export type PersonFormValues = z.infer<typeof personFieldsSchema>;
 
 export type PersonScheduleValues = {
   entrada?: string | null;

@@ -7,6 +7,8 @@ import ExcelJS from "exceljs";
 
 import { generateImportFixture } from "../src/lib/import/testing/fixture";
 
+import { e2eCurp } from "./curp";
+
 // Needs the seeded local database (npm run db:seed) and an admin who can import.
 const loginAsAdmin = async (page: Page) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
@@ -183,10 +185,12 @@ test("fills the downloaded template and applies it all or nothing", async ({
     }
   };
 
-  add({ Nombres: "Jefa", "Apellido paterno": lastName });
+  // Every active person needs a CURP (identity model); the baja below may skip it.
+  add({ Nombres: "Jefa", "Apellido paterno": lastName, CURP: e2eCurp() });
   add({
     Nombres: "Equipo",
     "Apellido paterno": lastName,
+    CURP: e2eCurp(),
     "Jefe directo (nombre, CURP o ID Workia)": `Jefa ${lastName}`,
   });
 
