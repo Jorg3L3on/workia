@@ -40,6 +40,22 @@ export const statusTone = {
     failed: "danger",
     undone: "neutral",
   },
+  employeeAccount: {
+    none: "neutral",
+    invited: "info",
+    active: "success",
+    disabled: "neutral",
+  },
+  payrollPeriod: {
+    draft: "info",
+    published: "success",
+  },
+  arco: {
+    received: "info",
+    late: "danger",
+    resolved: "success",
+    rejected: "neutral",
+  },
   document: {
     missing: "info",
     valid: "success",

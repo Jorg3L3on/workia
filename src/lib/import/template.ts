@@ -202,7 +202,7 @@ const instructionRows = (maxDate: string): InstructionRow[] => {
       "CURP, RFC, NSS y Teléfono son columnas de texto: conservan los ceros al inicio. Si pegas desde otra hoja, usa Pegado especial > Valores para no traer el formato de número.",
     ),
     text(
-      "CURP, RFC y NSS se escriben sin espacios; se validan y no pueden repetirse entre personas activas.",
+      "CURP, RFC y NSS se escriben sin espacios; se validan y no pueden repetirse entre personas activas. La CURP es obligatoria para toda persona activa (en una actualización, una celda vacía conserva la CURP guardada).",
     ),
     text(
       "Jefe directo: nombre completo (como está en Workia o en este archivo), CURP o ID Workia. La lista sugiere personas activas; si dos personas se llaman igual, usa la CURP o el ID Workia.",

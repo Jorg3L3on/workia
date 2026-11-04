@@ -1,12 +1,16 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  activePersonLacksCurp,
+  assertActivePersonHasCurp,
   curpCheckDigit,
   identifierOrNull,
   isValidCurp,
   isValidNss,
   isValidRfc,
+  MissingCurpError,
   normalizeIdentifier,
+  sampleCurp,
 } from "./identity";
 
 describe("normalizeIdentifier", () => {
@@ -66,5 +70,46 @@ describe("isValidNss", () => {
   it("rejects non-numeric and wrong length", () => {
     expect(isValidNss("1234")).toBe(false);
     expect(isValidNss("1234567890A")).toBe(false);
+  });
+});
+
+describe("identity model: active people carry a CURP (P-00)", () => {
+  it("flags an active, live person without a valid CURP", () => {
+    expect(activePersonLacksCurp({ status: "activa", curp: null })).toBe(true);
+    expect(activePersonLacksCurp({ status: "activa", curp: "NOPE" })).toBe(
+      true,
+    );
+    expect(
+      activePersonLacksCurp({ status: "activa", curp: sampleCurp(3) }),
+    ).toBe(false);
+  });
+
+  it("lets a baja or a borrado keep a blank CURP", () => {
+    expect(activePersonLacksCurp({ status: "baja", curp: null })).toBe(false);
+    expect(
+      activePersonLacksCurp({
+        status: "activa",
+        curp: null,
+        deletedAt: new Date(),
+      }),
+    ).toBe(false);
+  });
+
+  it("throws MissingCurpError on the curp field", () => {
+    expect(() =>
+      assertActivePersonHasCurp({ status: "activa", curp: "" }),
+    ).toThrow(MissingCurpError);
+  });
+
+  it("makes distinct valid sample CURPs", () => {
+    const indexes = [0, 1, 19, 20, 7999, 8000, 123_456, 799_999];
+    const curps = indexes.map(sampleCurp);
+
+    expect(curps.every(isValidCurp)).toBe(true);
+    expect(new Set(curps).size).toBe(indexes.length);
+    // The demo seed's identifiers stay as they were.
+    expect(sampleCurp(0)).toBe(
+      "XAXX010101HDFBBB0" + curpCheckDigit("XAXX010101HDFBBB0"),
+    );
   });
 });

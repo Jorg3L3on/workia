@@ -1,5 +1,6 @@
 import {
   ChartLineIcon,
+  ReceiptTextIcon,
   FilesIcon,
   FileTextIcon,
   FolderTreeIcon,
@@ -8,6 +9,7 @@ import {
   PlugIcon,
   PlusIcon,
   ScrollTextIcon,
+  ShieldCheckIcon,
   UploadIcon,
   UserCogIcon,
   UserPlusIcon,
@@ -29,6 +31,10 @@ export type NavAccess = {
   canReadReports: boolean;
   /** documents:read in the active company: shows Documentos. */
   canReadDocuments: boolean;
+  /** privacy:read in the active company: shows Privacidad. */
+  canReadPrivacy: boolean;
+  /** payroll_receipts:read in the active company: shows Nómina. */
+  canReadPayroll: boolean;
 };
 
 export type NavLink = {
@@ -80,6 +86,13 @@ export const NAV_GROUPS: readonly NavGroup[] = [
         icon: FilesIcon,
         keywords: ["por vencer", "vencidos", "vigencia"],
         requires: "canReadDocuments",
+      },
+      {
+        title: "Nómina",
+        href: "/app/nomina",
+        icon: ReceiptTextIcon,
+        keywords: ["recibos", "cfdi", "timbrado", "periodo", "quincena"],
+        requires: "canReadPayroll",
       },
       {
         title: "Altas",
@@ -134,6 +147,13 @@ export const NAV_GROUPS: readonly NavGroup[] = [
         icon: PlugIcon,
         keywords: ["mcp", "conector", "claude"],
         requires: "canUseConnections",
+      },
+      {
+        title: "Privacidad",
+        href: "/app/privacidad",
+        icon: ShieldCheckIcon,
+        keywords: ["aviso", "arco", "datos personales", "conservación"],
+        requires: "canReadPrivacy",
       },
       {
         title: "Auditoría",

@@ -84,6 +84,14 @@ describe("resolveBreadcrumbs", () => {
     expect(resolveBreadcrumbs("/app/documentos")).toEqual([
       { label: "Documentos" },
     ]);
+    expect(resolveBreadcrumbs("/app/nomina")).toEqual([{ label: "Nómina" }]);
+    expect(resolveBreadcrumbs("/app/nomina/abc")).toEqual([
+      { label: "Nómina", href: "/app/nomina" },
+      { label: "Periodo" },
+    ]);
+    expect(resolveBreadcrumbs("/app/privacidad")).toEqual([
+      { label: "Privacidad" },
+    ]);
     expect(resolveBreadcrumbs("/app/contratos/plantillas")).toEqual([
       { label: "Contratos", href: "/app/contratos" },
       { label: "Plantillas" },
