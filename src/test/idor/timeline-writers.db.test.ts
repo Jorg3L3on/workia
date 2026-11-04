@@ -41,7 +41,7 @@ beforeAll(async () => {
     day(a.person.id, "2026-11-03T14:00:00Z", "in"),
   ]);
   await replacePeriodIncidencias(a.companyId, {
-    period: "2026-11-1",
+    period: "2026-11-Q1",
     personIds: [a.person.id],
     incidencias: [
       {
@@ -75,14 +75,14 @@ describe("lib:timeline/writers/replacePeriodIncidencias", () => {
     // An empty recomputation from B would delete A's rows if it saw them.
     await expect(
       replacePeriodIncidencias(b.companyId, {
-        period: "2026-11-1",
+        period: "2026-11-Q1",
         personIds: [a.person.id],
         incidencias: [],
       }),
     ).rejects.toBeInstanceOf(CompanyReferenceError);
     await expect(
       replacePeriodIncidencias(b.companyId, {
-        period: "2026-11-1",
+        period: "2026-11-Q1",
         personIds: [a.person.id],
         incidencias: [
           {
