@@ -29,20 +29,33 @@ export const signInUrl = (origin: string, email: string, code?: string) => {
 export const sendInvitationEmail = async ({
   to,
   origin,
+  purpose = "account",
 }: {
   to: string;
   origin: string;
+  /** "onboarding": the invitation of a new hire to fill their alta (W2-10). */
+  purpose?: "account" | "onboarding";
 }) => {
   const link = signInUrl(origin, to);
-  const lines = [
-    "Tu empresa te dio acceso a Workia, donde puedes consultar tu información de empleado desde tu teléfono.",
-    `Para entrar, abre ${link} y escribe este correo. Te enviaremos un código de un solo uso.`,
-    "Si no esperabas este correo, ignóralo.",
-  ];
+  const lines =
+    purpose === "onboarding"
+      ? [
+          "Tu nueva empresa te pide completar tus datos de alta en Workia antes de tu primer día: datos personales, domicilio y documentos, desde tu teléfono.",
+          `Para entrar, abre ${link} y escribe este correo. Te enviaremos un código de un solo uso. Luego elige «Completa tu alta».`,
+          "Si no esperabas este correo, ignóralo.",
+        ]
+      : [
+          "Tu empresa te dio acceso a Workia, donde puedes consultar tu información de empleado desde tu teléfono.",
+          `Para entrar, abre ${link} y escribe este correo. Te enviaremos un código de un solo uso.`,
+          "Si no esperabas este correo, ignóralo.",
+        ];
 
   await sendEmail({
     to,
-    subject: "Tu cuenta de Workia",
+    subject:
+      purpose === "onboarding"
+        ? "Completa tu alta en Workia"
+        : "Tu cuenta de Workia",
     text: lines.join("\n\n"),
     html: paragraphs(lines),
   });

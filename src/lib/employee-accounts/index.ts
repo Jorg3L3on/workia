@@ -223,7 +223,7 @@ export const inviteEmployee = async (
   personId: string,
   rawEmail: string,
   actorUserId: string | null,
-  options: { origin: string },
+  options: { origin: string; purpose?: "account" | "onboarding" },
 ): Promise<InviteResult | null> => {
   const email = normalizeEmail(rawEmail);
 
@@ -320,7 +320,11 @@ export const inviteEmployee = async (
   }
 
   try {
-    await sendInvitationEmail({ to: email, origin: options.origin });
+    await sendInvitationEmail({
+      to: email,
+      origin: options.origin,
+      purpose: options.purpose,
+    });
     return { ...result, emailSent: true };
   } catch (error) {
     logger.error({ err: error, companyId }, "Invitation email failed");

@@ -58,8 +58,12 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `action:mcp/hideConnectionAction`                          | ✅     | `src/test/idor/mcp.db.test.ts`                                                                         | `mcp_connections:create`    |
 | `action:mcp/revokeConnectionAction`                        | ✅     | `src/test/idor/mcp.db.test.ts`                                                                         | `mcp_connections:create`    |
 | `action:mcp/setWritesEnabledAction`                        | ✅     | `src/test/idor/mcp-writes.db.test.ts`                                                                  | `mcp_connections:manage`    |
+| `action:onboarding/applyIntakeAction`                      | ✅     | `src/test/idor/onboarding-intake.db.test.ts`                                                           | `people:update`             |
 | `action:onboarding/approveOnboardingAction`                | ✅     | `src/test/idor/onboarding.db.test.ts`                                                                  | `people:update`             |
+| `action:onboarding/openSelfServiceAction`                  | ✅     | `src/test/idor/onboarding-intake.db.test.ts`                                                           | `people:update`             |
 | `action:onboarding/rejectOnboardingAction`                 | ✅     | `src/test/idor/onboarding.db.test.ts`                                                                  | `payroll:approve`           |
+| `action:onboarding/returnIntakeAction`                     | ✅     | `src/test/idor/onboarding-intake.db.test.ts`                                                           | `people:update`             |
+| `action:onboarding/saveEmployeeIntakeAction`               | ✅     | `src/test/idor/onboarding-intake.db.test.ts`                                                           | —                           |
 | `action:onboarding/startOnboardingAction`                  | ✅     | `src/test/idor/onboarding.db.test.ts`                                                                  | `people:update`             |
 | `action:onboarding/updateOnboardingAction`                 | ✅     | `src/test/idor/onboarding.db.test.ts`                                                                  | `people:update`             |
 | `action:people/assertPeopleListAccess`                     | ⏭️     | Exento: guard de lectura sin datos (requirePeopleRead); la lista la cubre lib:people/listPeoplePage    | `people:read`               |
@@ -260,6 +264,11 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `lib:onboarding/findBlockingOnboarding`                       | ✅     | `src/test/idor/employment.db.test.ts`         | —       |
 | `lib:onboarding/getOnboardingById`                            | ✅     | `src/test/idor/onboarding.db.test.ts`         | —       |
 | `lib:onboarding/getOnboardingByPerson`                        | ✅     | `src/test/idor/onboarding.db.test.ts`         | —       |
+| `lib:onboarding/intake/applyIntake`                           | ✅     | `src/test/idor/onboarding-intake.db.test.ts`  | —       |
+| `lib:onboarding/intake/getIntakeForOnboarding`                | ✅     | `src/test/idor/onboarding-intake.db.test.ts`  | —       |
+| `lib:onboarding/intake/intakeBlocksHrApproval`                | ✅     | `src/test/idor/onboarding-intake.db.test.ts`  | —       |
+| `lib:onboarding/intake/openSelfService`                       | ✅     | `src/test/idor/onboarding-intake.db.test.ts`  | —       |
+| `lib:onboarding/intake/returnIntake`                          | ✅     | `src/test/idor/onboarding-intake.db.test.ts`  | —       |
 | `lib:onboarding/listOnboardings`                              | ✅     | `src/test/idor/onboarding.db.test.ts`         | —       |
 | `lib:onboarding/rejectOnboarding`                             | ✅     | `src/test/idor/onboarding.db.test.ts`         | —       |
 | `lib:onboarding/startOnboarding`                              | ✅     | `src/test/idor/onboarding.db.test.ts`         | —       |

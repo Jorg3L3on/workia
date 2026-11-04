@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { signOutEmployeeAction } from "@/lib/employee/actions";
 import { getEmployeeHome } from "@/lib/employee/home";
 import { requireEmployeeContext } from "@/lib/employee-accounts/session";
+import { getEmployeeIntake } from "@/lib/onboarding/intake";
+import { intakeEmployeeLabels } from "@/lib/onboarding/intake-schema";
 
 export const metadata: Metadata = { title: "Inicio" };
 
@@ -17,7 +19,12 @@ export const metadata: Metadata = { title: "Inicio" };
  */
 const EmployeeHomePage = async () => {
   const context = await requireEmployeeContext();
-  const home = await getEmployeeHome(context);
+  const [home, intake] = await Promise.all([
+    getEmployeeHome(context),
+    getEmployeeIntake(context),
+  ]);
+  // Self-service onboarding (W2-10): shown while the alta is open.
+  const showIntake = intake?.altaOpen && intake.intake.status !== "aplicado";
 
   if (!home) {
     notFound();
@@ -55,6 +62,24 @@ const EmployeeHomePage = async () => {
       </section>
 
       <InstallPrompt />
+
+      {showIntake ? (
+        <Link
+          className="workia-pass-card flex min-h-11 items-center justify-between gap-3 px-5 py-4"
+          data-testid="intake-card"
+          href="/mi/alta"
+        >
+          <span className="flex flex-col">
+            <span className="text-base font-semibold">Completa tu alta</span>
+            <span className="text-muted-foreground text-sm">
+              {intakeEmployeeLabels[intake.intake.status]}
+            </span>
+          </span>
+          <span aria-hidden className="text-muted-foreground">
+            →
+          </span>
+        </Link>
+      ) : null}
 
       <section
         aria-labelledby="mi-datos"

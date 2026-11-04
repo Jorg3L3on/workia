@@ -12,6 +12,7 @@ import {
   type PersonWithRelations as MaybePerson,
 } from "@/lib/people";
 import { listEmploymentPeriods, rehireWarnings } from "@/lib/people/employment";
+import { personFormFromRecord } from "@/lib/people/form-values";
 import {
   FINIQUITO_STATUSES,
   rehireSchema,
@@ -104,43 +105,6 @@ const assertIdentifiersAllowed = (
     );
   }
 };
-
-/** The whole form as the app would submit it, from the person as stored. */
-const formFromPerson = (person: PersonWithRelations): PersonFormValues => ({
-  nombres: person.nombres,
-  apellidoPaterno: person.apellidoPaterno,
-  apellidoMaterno: person.apellidoMaterno ?? "",
-  email: person.email ?? "",
-  telefono: person.telefono ?? "",
-  fechaNacimiento: person.fechaNacimiento ?? "",
-  fechaIngreso: person.fechaIngreso ?? "",
-  areaId: person.areaId ?? "",
-  positionId: person.positionId ?? "",
-  managerId: person.managerId ?? "",
-  siteId: person.siteId ?? "",
-  rfc: person.rfc ?? "",
-  curp: person.curp ?? "",
-  nss: person.nss ?? "",
-  horarioEntrada: person.schedule?.entrada ?? "",
-  horarioSalidaComer: person.schedule?.salidaComer ?? "",
-  horarioRegresoComer: person.schedule?.regresoComer ?? "",
-  horarioSalida: person.schedule?.salida ?? "",
-  status: person.status,
-  domicilioCalle: person.domicilioCalle ?? "",
-  domicilioNumeroExterior: person.domicilioNumeroExterior ?? "",
-  domicilioNumeroInterior: person.domicilioNumeroInterior ?? "",
-  domicilioColonia: person.domicilioColonia ?? "",
-  domicilioMunicipio: person.domicilioMunicipio ?? "",
-  domicilioEstado: (person.domicilioEstado ??
-    "") as PersonFormValues["domicilioEstado"],
-  domicilioCodigoPostal: person.domicilioCodigoPostal ?? "",
-  estadoCivil: person.estadoCivil ?? "",
-  sexo: person.sexo ?? "",
-  lugarNacimiento: (person.lugarNacimiento ??
-    "") as PersonFormValues["lugarNacimiento"],
-  nacionalidad: person.nacionalidad ?? "",
-  ineClaveElector: person.ineClaveElector ?? "",
-});
 
 const loadPerson = async (ctx: WorkiaToolContext, personId: string) => {
   const person = await getPersonWithRelations(ctx.companyId, personId);
@@ -385,7 +349,7 @@ const applyChanges = (
   person: PersonWithRelations,
   changes: Record<string, unknown>,
 ) => {
-  const form = formFromPerson(person);
+  const form = personFormFromRecord(person);
 
   for (const [field, value] of Object.entries(changes)) {
     const key = FIELD_MAP[field];
@@ -451,7 +415,7 @@ export const updatePersonTool = defineWriteTool({
       throw notFound("La persona");
     }
 
-    const before = formFromPerson(person) as Record<string, unknown>;
+    const before = personFormFromRecord(person) as Record<string, unknown>;
     const diff = Object.fromEntries(
       Object.keys(changes)
         .map((field) => [field, FIELD_MAP[field]] as const)
@@ -772,7 +736,7 @@ export const updatePersonScheduleTool = defineWriteTool({
     const person = await loadPerson(ctx, args.person_id);
     const form = parseForm(
       {
-        ...formFromPerson(person),
+        ...personFormFromRecord(person),
         horarioEntrada: args.entrada ?? "",
         horarioSalidaComer: args.salida_comer ?? "",
         horarioRegresoComer: args.regreso_comer ?? "",
@@ -835,7 +799,7 @@ export const updatePersonScheduleBlocksTool = defineWriteTool({
     const person = await loadPerson(ctx, args.person_id);
     const next = toScheduleBlocks(args.bloques, args.dia_descanso);
     const form = parseForm(
-      { ...formFromPerson(person), horarioBloques: next },
+      { ...personFormFromRecord(person), horarioBloques: next },
       ["horarioBloques"],
     );
 

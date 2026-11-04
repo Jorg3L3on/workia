@@ -12,6 +12,8 @@ import {
 } from "@/lib/people/employment";
 import { withTenant } from "@/lib/tenant/scope";
 
+import { intakeBlocksHrApproval } from "./intake";
+import { INTAKE_COPY } from "./intake-schema";
 import {
   missingChecklist,
   onboardingChecklistLabels,
@@ -291,6 +293,11 @@ export const approveOnboardingStep = async (
       throw new OnboardingError(
         `Falta en el checklist: ${missing.map((item) => onboardingChecklistLabels[item]).join(", ")}.`,
       );
+    }
+
+    // Self-service (W2-10): what the person sent is reviewed inside this stage.
+    if (await intakeBlocksHrApproval(companyId, id)) {
+      throw new OnboardingError(INTAKE_COPY.hrNeedsReview);
     }
   } else if (existing.rhApprovedBy === actorUserId) {
     throw new OnboardingError(

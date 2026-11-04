@@ -9,15 +9,21 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AltaCaptureForm } from "@/components/onboarding/alta-capture-form";
 import { RejectAltaDialog } from "@/components/onboarding/reject-alta-dialog";
+import { SelfServiceCard } from "@/components/onboarding/self-service-card";
+import { getEmployeeAccount } from "@/lib/employee-accounts";
 import { formatDateMx } from "@/lib/format/date";
 import { getOnboardingById } from "@/lib/onboarding";
 import { approveOnboardingAction } from "@/lib/onboarding/actions";
+import { getIntakeForOnboarding } from "@/lib/onboarding/intake";
+import { INTAKE_COPY } from "@/lib/onboarding/intake-schema";
 import {
   missingChecklist,
   onboardingChecklistLabels,
   onboardingStageLabels,
 } from "@/lib/onboarding/schema";
+import { getPersonWithRelations, listPersonBeneficiaries } from "@/lib/people";
 import { requirePeopleRead } from "@/lib/people/auth";
+import { personFormFromRecord } from "@/lib/people/form-values";
 import { formatPersonName } from "@/lib/people/schema";
 import { userHasPermission } from "@/lib/rbac";
 import { toneFor } from "@/lib/ui/status-tone";
@@ -37,6 +43,7 @@ type AltaPageProps = {
     approved?: string;
     rejected?: string;
     started?: string;
+    intake?: string;
   }>;
 };
 
@@ -44,6 +51,11 @@ const STATUS: Record<string, string> = {
   approved: "Visto bueno registrado.",
   rejected: "Alta rechazada.",
   started: "Alta iniciada. Captura el checklist y apruébala.",
+};
+
+const INTAKE_STATUS: Record<string, string> = {
+  applied: "Datos de la persona aplicados al expediente.",
+  returned: "Devuelto a la persona para que corrija.",
 };
 
 const AltaStep = ({
@@ -101,10 +113,17 @@ const AltaPage = async ({ params, searchParams }: AltaPageProps) => {
   }
 
   const { onboarding, person } = row;
-  const [canHr, canPayroll] = await Promise.all([
-    userHasPermission(session.user.id, "people:update"),
-    userHasPermission(session.user.id, "payroll:approve"),
-  ]);
+  const [canHr, canPayroll, intake, record, beneficiaries, account] =
+    await Promise.all([
+      userHasPermission(session.user.id, "people:update"),
+      userHasPermission(session.user.id, "payroll:approve"),
+      getIntakeForOnboarding(session.companyId, onboarding.id),
+      getPersonWithRelations(session.companyId, person.id),
+      listPersonBeneficiaries(session.companyId, person.id),
+      getEmployeeAccount(session.companyId, person.id),
+    ]);
+  const intakeWaiting =
+    onboarding.stage === "rh_captura" && intake?.status === "enviado";
   const open =
     onboarding.stage === "rh_captura" ||
     onboarding.stage === "pendiente_nominas";
@@ -116,7 +135,7 @@ const AltaPage = async ({ params, searchParams }: AltaPageProps) => {
   const missing = missingChecklist(onboarding.checklist);
   const canDecide = canEdit && !sameApprover;
   const blockedByChecklist =
-    onboarding.stage === "rh_captura" && missing.length > 0;
+    onboarding.stage === "rh_captura" && (missing.length > 0 || intakeWaiting);
   // The two-person rule and the permissions decide; the footer only says why.
   const cannotDecideReason = sameApprover
     ? "Tú diste el visto bueno de RH; el de Nóminas lo da otra persona."
@@ -126,6 +145,11 @@ const AltaPage = async ({ params, searchParams }: AltaPageProps) => {
   const status = Object.keys(STATUS).find(
     (key) => query[key as keyof typeof query],
   );
+  const statusText = status
+    ? STATUS[status]
+    : query.intake
+      ? INTAKE_STATUS[query.intake]
+      : undefined;
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
@@ -157,12 +181,12 @@ const AltaPage = async ({ params, searchParams }: AltaPageProps) => {
               : "No se pudo completar la acción."}
         </p>
       ) : null}
-      {status ? (
+      {statusText ? (
         <p
           className="text-sm font-medium text-[color:var(--workia-accent-blue)]"
           role="status"
         >
-          {STATUS[status]}
+          {statusText}
         </p>
       ) : null}
 
@@ -204,6 +228,19 @@ const AltaPage = async ({ params, searchParams }: AltaPageProps) => {
         </p>
       ) : null}
 
+      <SelfServiceCard
+        altaOpen={onboarding.stage === "rh_captura"}
+        canHr={canHr}
+        defaultEmail={account?.email ?? record?.email ?? ""}
+        hasActiveAccount={account?.status === "active"}
+        intake={intake}
+        onboardingId={onboarding.id}
+        stored={{
+          ...(record ? personFormFromRecord(record) : {}),
+          beneficiarios: beneficiaries,
+        }}
+      />
+
       <AltaCaptureForm
         canEdit={canEdit}
         onboardingId={onboarding.id}
@@ -225,13 +262,15 @@ const AltaPage = async ({ params, searchParams }: AltaPageProps) => {
           {canDecide ? (
             <>
               <p className="text-muted-foreground mr-auto text-sm">
-                {blockedByChecklist
-                  ? `Falta en el checklist: ${missing
-                      .map((item) => onboardingChecklistLabels[item])
-                      .join(", ")}.`
-                  : onboarding.stage === "rh_captura"
-                    ? "Pasa a Nóminas; el segundo visto bueno lo da otra persona."
-                    : "Segundo visto bueno: el alta queda aprobada."}
+                {intakeWaiting
+                  ? INTAKE_COPY.hrNeedsReview
+                  : blockedByChecklist
+                    ? `Falta en el checklist: ${missing
+                        .map((item) => onboardingChecklistLabels[item])
+                        .join(", ")}.`
+                    : onboarding.stage === "rh_captura"
+                      ? "Pasa a Nóminas; el segundo visto bueno lo da otra persona."
+                      : "Segundo visto bueno: el alta queda aprobada."}
               </p>
               {onboarding.stage === "pendiente_nominas" ? (
                 <RejectAltaDialog

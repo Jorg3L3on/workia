@@ -8,6 +8,7 @@ import {
   pgTable,
   text,
   timestamp,
+  unique,
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
@@ -72,6 +73,8 @@ export const onboardings = pgTable(
       .$onUpdate(() => new Date()),
   },
   (table) => [
+    // Target of composite foreign keys (onboarding_intakes, migration 0048).
+    unique("onboardings_company_id_id_unique").on(table.companyId, table.id),
     // One alta per employment period, so a rehired person can get a new one;
     // and never two in progress for the same person.
     uniqueIndex("onboardings_company_period_unique")
