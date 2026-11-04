@@ -52,6 +52,7 @@ import {
   identifierOrNull,
   normalizeNss,
   type IdentityField,
+  assertActivePersonHasCurp,
 } from "./identity";
 import {
   personScheduleHasTimes,
@@ -823,6 +824,7 @@ export const createPerson = async (
 
     const values = toPersonValues(input);
 
+    assertActivePersonHasCurp(values);
     await assertNoIdentityConflicts(companyId, input, undefined, tx);
     await assertReferencesInCompany(companyId, values, tx);
 
@@ -888,6 +890,7 @@ export const updatePerson = async (
     const before = snapshotPerson(existing);
     const values = toPersonValues(input);
 
+    assertActivePersonHasCurp(values);
     await assertNoIdentityConflicts(companyId, input, id, tx);
     await assertReferencesInCompany(companyId, values, tx);
 
