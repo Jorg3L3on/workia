@@ -4095,6 +4095,8 @@ exports[`/api/mcp transport > keeps the tools/list contract (snapshot) 1`] = `
             "person_document",
             "vacation_record",
             "employee_account",
+            "manager_grant",
+            "manager_delegation",
           ],
           "type": "string",
         },

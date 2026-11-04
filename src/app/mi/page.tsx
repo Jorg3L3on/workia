@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ChevronRightIcon } from "lucide-react";
 
 import { InstallPrompt } from "@/components/employee/install-prompt";
 import { WorkiaMark } from "@/components/brand/workia-mark";
@@ -7,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { signOutEmployeeAction } from "@/lib/employee/actions";
 import { getEmployeeHome } from "@/lib/employee/home";
 import { requireEmployeeContext } from "@/lib/employee-accounts/session";
+import { getManagerAccess } from "@/lib/managers";
 
 export const metadata: Metadata = { title: "Inicio" };
 
@@ -16,7 +19,10 @@ export const metadata: Metadata = { title: "Inicio" };
  */
 const EmployeeHomePage = async () => {
   const context = await requireEmployeeContext();
-  const home = await getEmployeeHome(context);
+  const [home, managerAccess] = await Promise.all([
+    getEmployeeHome(context),
+    getManagerAccess(context),
+  ]);
 
   if (!home) {
     notFound();
@@ -54,6 +60,24 @@ const EmployeeHomePage = async () => {
       </section>
 
       <InstallPrompt />
+
+      {managerAccess ? (
+        <Link
+          className="workia-pass-card flex items-center justify-between gap-3 px-5 py-4"
+          href="/mi/equipo"
+        >
+          <span className="space-y-0.5">
+            <span className="block text-base font-semibold">Mi equipo</span>
+            <span className="text-muted-foreground block text-sm">
+              Tu equipo y lo que espera tu aprobación.
+            </span>
+          </span>
+          <ChevronRightIcon
+            aria-hidden
+            className="text-muted-foreground size-5"
+          />
+        </Link>
+      ) : null}
 
       <section
         aria-labelledby="mi-datos"

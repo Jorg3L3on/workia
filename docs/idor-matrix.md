@@ -51,6 +51,11 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `action:employee/requestLoginCodeAction`                   | ✅     | `src/test/idor/employee-accounts.db.test.ts`                                                           | —                           |
 | `action:employee/signOutEmployeeAction`                    | ✅     | `src/test/idor/employee-accounts.db.test.ts`                                                           | —                           |
 | `action:employee/verifyLoginCodeAction`                    | ✅     | `src/test/idor/employee-accounts.db.test.ts`                                                           | —                           |
+| `action:employee/cancelDelegationAction`                   | ✅     | `src/test/idor/managers.db.test.ts`                                                                    | —                           |
+| `action:employee/createDelegationAction`                   | ✅     | `src/test/idor/managers.db.test.ts`                                                                    | —                           |
+| `action:managers/cancelDelegationByHrAction`               | ✅     | `src/test/idor/managers.db.test.ts`                                                                    | `employee_accounts:manage`  |
+| `action:managers/revokeManagerGrantAction`                 | ✅     | `src/test/idor/managers.db.test.ts`                                                                    | `employee_accounts:manage`  |
+| `action:managers/setManagerGrantAction`                    | ✅     | `src/test/idor/managers.db.test.ts`                                                                    | `employee_accounts:manage`  |
 | `action:mcp/approveConsentAction`                          | ✅     | `src/test/idor/mcp.db.test.ts`                                                                         | `mcp_connections:create`    |
 | `action:mcp/createPersonalTokenAction`                     | ✅     | `src/test/idor/mcp.db.test.ts`                                                                         | `mcp_connections:create`    |
 | `action:mcp/denyConsentAction`                             | ✅     | `src/test/idor/mcp.db.test.ts`                                                                         | —                           |
@@ -224,6 +229,12 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `lib:import/validate/validateHorariosChunk`                   | ✅     | `src/test/idor/import.db.test.ts`             | —       |
 | `lib:import/validate/validateJobStep`                         | ✅     | `src/test/idor/import.db.test.ts`             | —       |
 | `lib:import/validate/validatePersonasChunk`                   | ✅     | `src/test/idor/import.db.test.ts`             | —       |
+| `lib:managers/cancelDelegation`                               | ✅     | `src/test/idor/managers.db.test.ts`           | —       |
+| `lib:managers/getManagerAdmin`                                | ✅     | `src/test/idor/managers.db.test.ts`           | —       |
+| `lib:managers/listDelegationsGiven`                           | ✅     | `src/test/idor/managers.db.test.ts`           | —       |
+| `lib:managers/revokeManagerGrant`                             | ✅     | `src/test/idor/managers.db.test.ts`           | —       |
+| `lib:managers/scope/currentApprover`                          | ✅     | `src/test/idor/managers.db.test.ts`           | —       |
+| `lib:managers/setManagerGrant`                                | ✅     | `src/test/idor/managers.db.test.ts`           | —       |
 | `lib:mcp/connections/countRecentConnections`                  | ✅     | `src/test/idor/mcp.db.test.ts`                | —       |
 | `lib:mcp/connections/countToolCallErrors`                     | ✅     | `src/test/idor/mcp.db.test.ts`                | —       |
 | `lib:mcp/connections/createAuthCode`                          | ✅     | `src/test/idor/mcp.db.test.ts`                | —       |

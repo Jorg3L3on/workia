@@ -23,6 +23,8 @@ export const AUDIT_RESOURCE_TYPES = [
   "person_document",
   "vacation_record",
   "employee_account",
+  "manager_grant",
+  "manager_delegation",
 ] as const;
 
 export type AuditResourceType = (typeof AUDIT_RESOURCE_TYPES)[number];
@@ -118,6 +120,8 @@ export const auditResourceTypeLabels: Record<AuditResourceType, string> = {
   person_document: "Documento de la persona",
   vacation_record: "Vacaciones tomadas",
   employee_account: "Cuenta de empleado",
+  manager_grant: "Rol de jefe",
+  manager_delegation: "Suplencia de jefe",
 };
 
 export const AUDIT_SOURCES = [

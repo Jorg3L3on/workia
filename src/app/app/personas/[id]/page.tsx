@@ -5,6 +5,7 @@ import { FileSignatureIcon, PencilIcon } from "lucide-react";
 
 import { pageTitles } from "@/lib/brand/chrome-copy";
 import { getEmployeeAccount } from "@/lib/employee-accounts";
+import { getManagerAdmin } from "@/lib/managers";
 
 import { PersonContractsSection } from "@/components/contracts/person-contracts-section";
 import { PersonDocumentsCard } from "@/components/documents/person-documents-card";
@@ -39,6 +40,7 @@ import { PersonRehireButton } from "@/components/people/person-rehire-button";
 import { PersonSectionNav } from "@/components/people/person-section-nav";
 import { PersonVacationCard } from "@/components/people/person-vacation-card";
 import { PersonAccountControls } from "@/components/employee-accounts/person-account-card";
+import { PersonManagerControls } from "@/components/manager/person-manager-controls";
 import { SectionSkeleton } from "@/components/loading/page-skeletons";
 import { PageBreadcrumbLabel } from "@/components/layout/app-breadcrumbs";
 import { Badge } from "@/components/ui/badge";
@@ -202,9 +204,12 @@ const PersonaDetailPage = async ({
   }
 
   const isDeleted = personIsDeleted(person);
-  const employeeAccount = canManageAccounts
-    ? await getEmployeeAccount(session.companyId, id)
-    : null;
+  const [employeeAccount, managerAdmin] = canManageAccounts
+    ? await Promise.all([
+        getEmployeeAccount(session.companyId, id),
+        getManagerAdmin(session.companyId, id),
+      ])
+    : [null, null];
   const isEditing = edit === "1" && canUpdate && !isDeleted;
   const personName = formatPersonName(person);
 
@@ -775,6 +780,20 @@ const PersonaDetailPage = async ({
                   personEmail={person.email}
                   personId={person.id}
                 />
+                {managerAdmin && !isDeleted && person.status === "activa" ? (
+                  <PersonManagerControls
+                    personId={person.id}
+                    view={{
+                      grant: managerAdmin.grant
+                        ? {
+                            includeIndirect: managerAdmin.grant.includeIndirect,
+                          }
+                        : null,
+                      directReports: managerAdmin.directReports,
+                      delegations: managerAdmin.delegations,
+                    }}
+                  />
+                ) : null}
               </DetailCard>
             ) : null}
           </div>

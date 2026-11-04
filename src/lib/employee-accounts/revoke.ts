@@ -9,6 +9,7 @@ import {
   employeeSessions,
   type EmployeeDisabledReason,
 } from "@/lib/db/schema";
+import { endManagerAccess } from "@/lib/managers";
 import { withTenant } from "@/lib/tenant/scope";
 
 const reasonSummaries: Record<EmployeeDisabledReason, string> = {
@@ -50,6 +51,9 @@ export const revokeEmployeeAccess = async (
   }
 
   const ids = disabled.map((account) => account.id);
+
+  // A manager grant and the delegations from or to the account end with it (W2-07).
+  await endManagerAccess(tx, companyId, ids, actorUserId ?? null);
 
   await tx
     .delete(employeeSessions)
