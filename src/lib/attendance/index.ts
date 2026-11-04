@@ -1,6 +1,15 @@
 import { createHash, randomBytes } from "node:crypto";
 
-import { and, asc, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  inArray,
+  isNotNull,
+  isNull,
+  sql,
+} from "drizzle-orm";
 
 import { recordAuditEvent } from "@/lib/audit";
 import { db, tdb, withTransaction } from "@/lib/db";
@@ -43,19 +52,22 @@ export const ATTENDANCE_COPY = {
   deviceInactive: "Ese checador está desactivado.",
   siteMissing: "Esa ubicación no existe en esta empresa.",
   personMissing: "Esa persona no existe en esta empresa.",
-  badge: "Escribe el número de la persona en el checador (hasta 40 caracteres).",
+  badge:
+    "Escribe el número de la persona en el checador (hasta 40 caracteres).",
   badgeTaken: (name: string) => `Ese número ya es de ${name}.`,
   fileMissing: "Elige el archivo que exportó el checador.",
   fileTooLarge: "El archivo puede pesar hasta 5 MB.",
   fileTooManyRows: "El archivo tiene demasiadas checadas; divídelo por días.",
   rowMissing: "Esa checada ya no está pendiente.",
-  position: "Escribe la latitud y longitud del lugar (por ejemplo 19.4326, -99.1332).",
+  position:
+    "Escribe la latitud y longitud del lugar (por ejemplo 19.4326, -99.1332).",
   radius: "El radio va de 25 a 2,000 metros.",
 } as const;
 
 export const MAX_CSV_BYTES = 5 * 1024 * 1024;
 
-const sha256 = (value: string) => createHash("sha256").update(value).digest("hex");
+const sha256 = (value: string) =>
+  createHash("sha256").update(value).digest("hex");
 
 /** A device push token: shown once, stored as its SHA-256. */
 const newDeviceToken = () => `wkc_${randomBytes(24).toString("base64url")}`;
@@ -72,7 +84,14 @@ const siteInCompany = async (companyId: string, siteId: string) => {
   const [row] = await tdb(companyId)
     .select({ id: sites.id })
     .from(sites)
-    .where(withTenant(sites, companyId, eq(sites.id, siteId), isNull(sites.deletedAt)))
+    .where(
+      withTenant(
+        sites,
+        companyId,
+        eq(sites.id, siteId),
+        isNull(sites.deletedAt),
+      ),
+    )
     .limit(1);
 
   return Boolean(row);
@@ -179,7 +198,13 @@ export const updateAttendanceDevice = async (
           csvFormat: attendanceDevices.csvFormat,
         })
         .from(attendanceDevices)
-        .where(withTenant(attendanceDevices, companyId, eq(attendanceDevices.id, deviceId)))
+        .where(
+          withTenant(
+            attendanceDevices,
+            companyId,
+            eq(attendanceDevices.id, deviceId),
+          ),
+        )
         .limit(1);
 
       if (!before) {
@@ -188,8 +213,18 @@ export const updateAttendanceDevice = async (
 
       await tx
         .update(attendanceDevices)
-        .set({ name: input.name, siteId: input.siteId, csvFormat: input.csvFormat })
-        .where(withTenant(attendanceDevices, companyId, eq(attendanceDevices.id, deviceId)));
+        .set({
+          name: input.name,
+          siteId: input.siteId,
+          csvFormat: input.csvFormat,
+        })
+        .where(
+          withTenant(
+            attendanceDevices,
+            companyId,
+            eq(attendanceDevices.id, deviceId),
+          ),
+        );
 
       await recordAuditEvent(
         {
@@ -198,7 +233,11 @@ export const updateAttendanceDevice = async (
           resourceType: "attendance_device",
           resourceId: deviceId,
           action: "update",
-          payload: { summary: `Checador «${input.name}»`, before, after: input },
+          payload: {
+            summary: `Checador «${input.name}»`,
+            before,
+            after: input,
+          },
         },
         tx,
       );
@@ -270,7 +309,13 @@ export const setAttendanceDeviceActive = async (
     const [device] = await tx
       .update(attendanceDevices)
       .set(active ? { active } : { active, tokenHash: null, tokenHint: null })
-      .where(withTenant(attendanceDevices, companyId, eq(attendanceDevices.id, deviceId)))
+      .where(
+        withTenant(
+          attendanceDevices,
+          companyId,
+          eq(attendanceDevices.id, deviceId),
+        ),
+      )
       .returning({ name: attendanceDevices.name });
 
     if (!device) {
@@ -299,7 +344,17 @@ export const setAttendanceDeviceActive = async (
 export const deviceForToken = async (token: string) => {
   if (!/^wkc_[A-Za-z0-9_-]{32}$/.test(token)) return null;
 
-  const [device] = await db
+  const tokenHash = sha256(token);
+  // The token is the only thing a push has: find its company outside RLS
+  // (attendance_device_company, 0044), then read the checador under it.
+  const found = await db.execute<{ company_id: string | null }>(
+    sql`select attendance_device_company(${tokenHash}) as company_id`,
+  );
+  const companyId = found.rows[0]?.company_id ?? null;
+
+  if (!companyId) return null;
+
+  const [device] = await tdb(companyId)
     .select({
       id: attendanceDevices.id,
       companyId: attendanceDevices.companyId,
@@ -307,8 +362,10 @@ export const deviceForToken = async (token: string) => {
     })
     .from(attendanceDevices)
     .where(
-      and(
-        eq(attendanceDevices.tokenHash, sha256(token)),
+      withTenant(
+        attendanceDevices,
+        companyId,
+        eq(attendanceDevices.tokenHash, tokenHash),
         eq(attendanceDevices.active, true),
       ),
     )
@@ -317,11 +374,21 @@ export const deviceForToken = async (token: string) => {
   return device ?? null;
 };
 
-export const markDevicePush = async (companyId: string, deviceId: string, at: Date) =>
+export const markDevicePush = async (
+  companyId: string,
+  deviceId: string,
+  at: Date,
+) =>
   tdb(companyId)
     .update(attendanceDevices)
     .set({ lastPushAt: at })
-    .where(withTenant(attendanceDevices, companyId, eq(attendanceDevices.id, deviceId)));
+    .where(
+      withTenant(
+        attendanceDevices,
+        companyId,
+        eq(attendanceDevices.id, deviceId),
+      ),
+    );
 
 // ---------------------------------------------------------------- uploads
 
@@ -335,7 +402,13 @@ const activeDevice = async (companyId: string, deviceId: string) => {
       active: attendanceDevices.active,
     })
     .from(attendanceDevices)
-    .where(withTenant(attendanceDevices, companyId, eq(attendanceDevices.id, deviceId)))
+    .where(
+      withTenant(
+        attendanceDevices,
+        companyId,
+        eq(attendanceDevices.id, deviceId),
+      ),
+    )
     .limit(1);
 
   return device ?? null;
@@ -354,7 +427,8 @@ export const importChecadorCsv = async (
   const device = await activeDevice(companyId, input.deviceId);
 
   if (!device) return { ok: false, error: ATTENDANCE_COPY.deviceMissing };
-  if (!device.active) return { ok: false, error: ATTENDANCE_COPY.deviceInactive };
+  if (!device.active)
+    return { ok: false, error: ATTENDANCE_COPY.deviceInactive };
 
   const read = readChecadorCsv(input.text, device.csvFormat);
 
@@ -412,7 +486,11 @@ export const importChecadorCsv = async (
 };
 
 const batchKeyset = defineKeyset([
-  { column: attendanceBatches.createdAt, type: "timestamptz", direction: "desc" },
+  {
+    column: attendanceBatches.createdAt,
+    type: "timestamptz",
+    direction: "desc",
+  },
   { column: attendanceBatches.id, type: "uuid", direction: "desc" },
 ]);
 
@@ -448,7 +526,13 @@ export const listAttendanceBatches = async (
       ),
     )
     .leftJoin(users, eq(users.id, attendanceBatches.createdBy))
-    .where(withTenant(attendanceBatches, companyId, batchKeyset.after(options.cursor)))
+    .where(
+      withTenant(
+        attendanceBatches,
+        companyId,
+        batchKeyset.after(options.cursor),
+      ),
+    )
     .orderBy(...batchKeyset.orderBy)
     .limit(limit + 1);
 
@@ -462,7 +546,11 @@ export type AttendanceBatchRow = Awaited<
 // ---------------------------------------------------------------- unmatched
 
 const unmatchedKeyset = defineKeyset([
-  { column: attendanceUnmatched.createdAt, type: "timestamptz", direction: "desc" },
+  {
+    column: attendanceUnmatched.createdAt,
+    type: "timestamptz",
+    direction: "desc",
+  },
   { column: attendanceUnmatched.id, type: "uuid", direction: "desc" },
 ]);
 
@@ -523,7 +611,13 @@ export const countOpenUnmatched = async (companyId: string) => {
   const [row] = await tdb(companyId)
     .select({ total: sql<number>`count(*)::int` })
     .from(attendanceUnmatched)
-    .where(withTenant(attendanceUnmatched, companyId, isNull(attendanceUnmatched.resolvedAt)));
+    .where(
+      withTenant(
+        attendanceUnmatched,
+        companyId,
+        isNull(attendanceUnmatched.resolvedAt),
+      ),
+    );
 
   return row?.total ?? 0;
 };
@@ -540,7 +634,8 @@ export const assignBadge = async (
 ): Promise<Result<{ placed: number }>> => {
   const badge = normalizeBadge(input.badge);
 
-  if (!badge || badge.length > 40) return { ok: false, error: ATTENDANCE_COPY.badge };
+  if (!badge || badge.length > 40)
+    return { ok: false, error: ATTENDANCE_COPY.badge };
 
   const [person] = await tdb(companyId)
     .select({
@@ -550,7 +645,14 @@ export const assignBadge = async (
       apellidoMaterno: people.apellidoMaterno,
     })
     .from(people)
-    .where(withTenant(people, companyId, eq(people.id, input.personId), isNull(people.deletedAt)))
+    .where(
+      withTenant(
+        people,
+        companyId,
+        eq(people.id, input.personId),
+        isNull(people.deletedAt),
+      ),
+    )
     .limit(1);
 
   if (!person) return { ok: false, error: ATTENDANCE_COPY.personMissing };
@@ -565,18 +667,32 @@ export const assignBadge = async (
     .from(attendanceBadges)
     .innerJoin(
       people,
-      and(eq(people.companyId, attendanceBadges.companyId), eq(people.id, attendanceBadges.personId)),
+      and(
+        eq(people.companyId, attendanceBadges.companyId),
+        eq(people.id, attendanceBadges.personId),
+      ),
     )
-    .where(withTenant(attendanceBadges, companyId, eq(attendanceBadges.badge, badge)))
+    .where(
+      withTenant(
+        attendanceBadges,
+        companyId,
+        eq(attendanceBadges.badge, badge),
+      ),
+    )
     .limit(1);
 
   if (taken) {
-    return { ok: false, error: ATTENDANCE_COPY.badgeTaken(formatPersonName(taken)) };
+    return {
+      ok: false,
+      error: ATTENDANCE_COPY.badgeTaken(formatPersonName(taken)),
+    };
   }
 
   try {
     return await withTransaction(async (tx) => {
-      await tx.insert(attendanceBadges).values({ companyId, personId: person.id, badge });
+      await tx
+        .insert(attendanceBadges)
+        .values({ companyId, personId: person.id, badge });
 
       const waiting = await tx
         .select({
@@ -611,7 +727,10 @@ export const assignBadge = async (
       const byDevice = new Map<string, typeof waiting>();
 
       for (const row of waiting) {
-        byDevice.set(row.deviceId, [...(byDevice.get(row.deviceId) ?? []), row]);
+        byDevice.set(row.deviceId, [
+          ...(byDevice.get(row.deviceId) ?? []),
+          row,
+        ]);
       }
 
       for (const [deviceId, rows] of byDevice) {
@@ -682,8 +801,17 @@ export const removeBadge = async (
   withTransaction(async (tx) => {
     const [removed] = await tx
       .delete(attendanceBadges)
-      .where(withTenant(attendanceBadges, companyId, eq(attendanceBadges.id, badgeId)))
-      .returning({ badge: attendanceBadges.badge, personId: attendanceBadges.personId });
+      .where(
+        withTenant(
+          attendanceBadges,
+          companyId,
+          eq(attendanceBadges.id, badgeId),
+        ),
+      )
+      .returning({
+        badge: attendanceBadges.badge,
+        personId: attendanceBadges.personId,
+      });
 
     if (!removed) return { ok: false as const, error: ATTENDANCE_COPY.badge };
 
@@ -723,7 +851,11 @@ export const dismissUnmatched = async (
           isNull(attendanceUnmatched.resolvedAt),
         ),
       )
-      .returning({ batchId: attendanceUnmatched.batchId, line: attendanceUnmatched.line, badge: attendanceUnmatched.badge });
+      .returning({
+        batchId: attendanceUnmatched.batchId,
+        line: attendanceUnmatched.line,
+        badge: attendanceUnmatched.badge,
+      });
 
     if (!row) return { ok: false as const, error: ATTENDANCE_COPY.rowMissing };
 
@@ -768,9 +900,18 @@ export const listBadges = async (
     .from(attendanceBadges)
     .innerJoin(
       people,
-      and(eq(people.companyId, attendanceBadges.companyId), eq(people.id, attendanceBadges.personId)),
+      and(
+        eq(people.companyId, attendanceBadges.companyId),
+        eq(people.id, attendanceBadges.personId),
+      ),
     )
-    .where(withTenant(attendanceBadges, companyId, badgeKeyset.after(options.cursor)))
+    .where(
+      withTenant(
+        attendanceBadges,
+        companyId,
+        badgeKeyset.after(options.cursor),
+      ),
+    )
     .orderBy(...badgeKeyset.orderBy)
     .limit(limit + 1);
 
@@ -801,7 +942,9 @@ export const listCheckinSites = async (companyId: string) =>
     .where(withTenant(sites, companyId, isNull(sites.deletedAt)))
     .orderBy(asc(sites.name));
 
-export type CheckinSiteRow = Awaited<ReturnType<typeof listCheckinSites>>[number];
+export type CheckinSiteRow = Awaited<
+  ReturnType<typeof listCheckinSites>
+>[number];
 
 export type CheckinSiteInput = {
   siteId: string;
@@ -833,9 +976,17 @@ export const saveCheckinSite = async (
 
     await tx
       .insert(attendanceCheckinSites)
-      .values({ companyId, siteId: input.siteId, qrSecret: newQrSecret(), ...values })
+      .values({
+        companyId,
+        siteId: input.siteId,
+        qrSecret: newQrSecret(),
+        ...values,
+      })
       .onConflictDoUpdate({
-        target: [attendanceCheckinSites.companyId, attendanceCheckinSites.siteId],
+        target: [
+          attendanceCheckinSites.companyId,
+          attendanceCheckinSites.siteId,
+        ],
         set: values,
       });
 
@@ -865,7 +1016,13 @@ export const rotateCheckinSecret = async (
     const [row] = await tx
       .update(attendanceCheckinSites)
       .set({ qrSecret: newQrSecret() })
-      .where(withTenant(attendanceCheckinSites, companyId, eq(attendanceCheckinSites.siteId, siteId)))
+      .where(
+        withTenant(
+          attendanceCheckinSites,
+          companyId,
+          eq(attendanceCheckinSites.siteId, siteId),
+        ),
+      )
       .returning({ siteId: attendanceCheckinSites.siteId });
 
     if (!row) return { ok: false as const, error: ATTENDANCE_COPY.siteMissing };

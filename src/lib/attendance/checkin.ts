@@ -1,5 +1,3 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
-
 import { and, eq } from "drizzle-orm";
 
 import { tdb } from "@/lib/db";
@@ -11,7 +9,17 @@ import { attendanceDedupeKey } from "@/lib/timeline";
 import { readAttendance } from "@/lib/timeline/writers";
 
 import { ingestPunches } from "./ingest";
+import { distanceMeters, verifyQrCode, type QrCode } from "./qr";
 import { localDay, localTime } from "./time";
+
+export {
+  distanceMeters,
+  qrCodeFor,
+  qrCodeUrl,
+  QR_WINDOW_MS,
+  verifyQrCode,
+  type QrCode,
+} from "./qr";
 
 /**
  * App check-in (W2-12): the employee scans the site's QR with the phone
@@ -21,10 +29,6 @@ import { localDay, localTime } from "./time";
  * site); the coordinates are used to decide and then dropped.
  */
 
-/** Rotating codes change every minute; one scanned up to three minutes ago still works. */
-export const QR_WINDOW_MS = 60_000;
-const QR_WINDOWS_ACCEPTED = 3;
-
 /** A fix worse than this cannot tell inside from outside a site. */
 export const MAX_ACCURACY_METERS = 150;
 
@@ -32,10 +36,12 @@ export const MAX_ACCURACY_METERS = 150;
 const REPEAT_WINDOW_MS = 2 * 60_000;
 
 export const CHECKIN_COPY = {
-  invalidCode: "Este código QR no es válido. Escanea el que está en tu sucursal.",
+  invalidCode:
+    "Este código QR no es válido. Escanea el que está en tu sucursal.",
   expiredCode: "El código QR ya cambió. Escanéalo de nuevo.",
   disabled: "El checado en la app no está activo en esta sucursal.",
-  location: "No pudimos leer tu ubicación. Activa la ubicación y vuelve a intentarlo.",
+  location:
+    "No pudimos leer tu ubicación. Activa la ubicación y vuelve a intentarlo.",
   accuracy:
     "Tu ubicación es muy imprecisa. Sal a un lugar abierto o activa el GPS y vuelve a intentarlo.",
   outside: (meters: number) =>
@@ -46,84 +52,6 @@ export const CHECKIN_COPY = {
   done: (kind: "in" | "out", time: string) =>
     `${kind === "in" ? "Entrada" : "Salida"} registrada a las ${time}.`,
 } as const;
-
-const mac = (secret: string, siteId: string, window: string) =>
-  createHmac("sha256", secret)
-    .update(`${siteId}.${window}`)
-    .digest("base64url")
-    .slice(0, 22);
-
-const sameMac = (a: string, b: string) => {
-  const x = Buffer.from(a);
-  const y = Buffer.from(b);
-
-  return x.length === y.length && timingSafeEqual(x, y);
-};
-
-export type QrCode = { siteId: string; window: string; mac: string };
-
-/** The code a site shows now: the current minute, or "p" for a printed code. */
-export const qrCodeFor = (
-  site: { siteId: string; qrSecret: string; qrMode: "rotating" | "printed" },
-  now = new Date(),
-): QrCode => {
-  const window =
-    site.qrMode === "printed" ? "p" : String(Math.floor(now.getTime() / QR_WINDOW_MS));
-
-  return { siteId: site.siteId, window, mac: mac(site.qrSecret, site.siteId, window) };
-};
-
-/** The URL the QR encodes: /mi/checar with the code in the query. */
-export const qrCodeUrl = (origin: string, code: QrCode) => {
-  const url = new URL("/mi/checar", origin);
-
-  url.searchParams.set("s", code.siteId);
-  url.searchParams.set("w", code.window);
-  url.searchParams.set("m", code.mac);
-
-  return url.toString();
-};
-
-export type QrCheck = "ok" | "invalid" | "expired";
-
-export const verifyQrCode = (
-  site: { siteId: string; qrSecret: string; qrMode: "rotating" | "printed" },
-  code: QrCode,
-  now = new Date(),
-): QrCheck => {
-  if (code.siteId !== site.siteId || !/^[A-Za-z0-9_-]{22}$/.test(code.mac)) {
-    return "invalid";
-  }
-
-  if (!sameMac(mac(site.qrSecret, site.siteId, code.window), code.mac)) {
-    return "invalid";
-  }
-
-  if (code.window === "p") {
-    return site.qrMode === "printed" ? "ok" : "expired";
-  }
-
-  if (!/^\d{1,12}$/.test(code.window)) return "invalid";
-
-  const age = Math.floor(now.getTime() / QR_WINDOW_MS) - Number(code.window);
-
-  return age >= 0 && age < QR_WINDOWS_ACCEPTED ? "ok" : "expired";
-};
-
-/** Great-circle distance in meters. */
-export const distanceMeters = (
-  a: { latitude: number; longitude: number },
-  b: { latitude: number; longitude: number },
-) => {
-  const rad = (degrees: number) => (degrees * Math.PI) / 180;
-  const dLat = rad(b.latitude - a.latitude);
-  const dLon = rad(b.longitude - a.longitude);
-  const h =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(rad(a.latitude)) * Math.cos(rad(b.latitude)) * Math.sin(dLon / 2) ** 2;
-
-  return 2 * 6_371_000 * Math.asin(Math.min(1, Math.sqrt(h)));
-};
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -150,7 +78,13 @@ export const checkinSiteFor = async (companyId: string, siteId: string) => {
         eq(sites.id, attendanceCheckinSites.siteId),
       ),
     )
-    .where(withTenant(attendanceCheckinSites, companyId, eq(attendanceCheckinSites.siteId, siteId)))
+    .where(
+      withTenant(
+        attendanceCheckinSites,
+        companyId,
+        eq(attendanceCheckinSites.siteId, siteId),
+      ),
+    )
     .limit(1);
 
   return row ?? null;
@@ -164,7 +98,8 @@ export type CheckinInput = {
   accuracy: number;
 };
 
-export type CheckinResult = { ok: true; message: string } | { ok: false; error: string };
+export type CheckinResult =
+  { ok: true; message: string } | { ok: false; error: string };
 
 /**
  * Records an app punch for the signed-in employee. The person comes from the
@@ -181,8 +116,10 @@ export const checkIn = async (
 
   const check = verifyQrCode(site, input.code, now);
 
-  if (check === "invalid") return { ok: false, error: CHECKIN_COPY.invalidCode };
-  if (check === "expired") return { ok: false, error: CHECKIN_COPY.expiredCode };
+  if (check === "invalid")
+    return { ok: false, error: CHECKIN_COPY.invalidCode };
+  if (check === "expired")
+    return { ok: false, error: CHECKIN_COPY.expiredCode };
   if (!site.enabled) return { ok: false, error: CHECKIN_COPY.disabled };
 
   if (await pendingPrivacyNotice(context.companyId, context.personId)) {
@@ -198,7 +135,8 @@ export const checkIn = async (
     input.accuracy >= 0;
 
   if (!valid) return { ok: false, error: CHECKIN_COPY.location };
-  if (input.accuracy > MAX_ACCURACY_METERS) return { ok: false, error: CHECKIN_COPY.accuracy };
+  if (input.accuracy > MAX_ACCURACY_METERS)
+    return { ok: false, error: CHECKIN_COPY.accuracy };
 
   const distance = distanceMeters(site, input);
 
@@ -230,16 +168,22 @@ export const checkIn = async (
 
   if (recent) return { ok: false, error: CHECKIN_COPY.repeated };
 
-  await ingestPunches(context.companyId, { kind: "app", siteId: site.siteId }, [
-    {
-      line: 1,
-      raw: [],
-      badge: null,
-      personId: context.personId,
-      at: now,
-      kind: input.kind,
-    },
-  ], [], { now });
+  await ingestPunches(
+    context.companyId,
+    { kind: "app", siteId: site.siteId },
+    [
+      {
+        line: 1,
+        raw: [],
+        badge: null,
+        personId: context.personId,
+        at: now,
+        kind: input.kind,
+      },
+    ],
+    [],
+    { now },
+  );
 
   return { ok: true, message: CHECKIN_COPY.done(input.kind, localTime(now)) };
 };

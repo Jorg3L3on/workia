@@ -225,6 +225,7 @@ describe("AppShell", () => {
       "Personas",
       "Contratos",
       "Documentos",
+      "Asistencia",
       "Altas",
       "Resguardo",
     ]);

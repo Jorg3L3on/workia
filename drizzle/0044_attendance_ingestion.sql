@@ -155,9 +155,27 @@ BEGIN
 	IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'workia_app') THEN
 		GRANT SELECT, INSERT, UPDATE, DELETE ON "attendance_unmatched" TO workia_app;
 	END IF;
+END $$--> statement-breakpoint
+-- A device push arrives before anyone knows the company, like an employee
+-- session (0030). This function only answers «which company holds this active
+-- checador token»; the app then reads the checador under RLS scoped to that
+-- company. It runs as the owner, outside RLS, and returns nothing else.
+CREATE FUNCTION "attendance_device_company"("lookup" text) RETURNS uuid
+	LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
+	AS $$
+		SELECT company_id FROM attendance_devices
+		WHERE token_hash = lookup AND active
+		LIMIT 1
+	$$;--> statement-breakpoint
+DO $$
+BEGIN
+	IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'workia_app') THEN
+		GRANT EXECUTE ON FUNCTION "attendance_device_company"(text) TO workia_app;
+	END IF;
 END $$;
 
 -- Rollback (by hand, in this order; nothing else references these tables):
+--   DROP FUNCTION "attendance_device_company"(text);
 --   DROP TABLE "attendance_unmatched";
 --   DROP TABLE "attendance_batches";
 --   DROP TABLE "attendance_checkin_sites";

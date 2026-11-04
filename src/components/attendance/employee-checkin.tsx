@@ -51,7 +51,10 @@ export const EmployeeCheckin = ({ siteName, code }: EmployeeCheckinProps) => {
     } catch (error) {
       const codeNumber = (error as { code?: number }).code ?? 2;
 
-      setStatus({ state: "error", message: LOCATION_ERRORS[codeNumber] ?? LOCATION_ERRORS[2] });
+      setStatus({
+        state: "error",
+        message: LOCATION_ERRORS[codeNumber] ?? LOCATION_ERRORS[2],
+      });
       return;
     }
 
@@ -72,12 +75,18 @@ export const EmployeeCheckin = ({ siteName, code }: EmployeeCheckinProps) => {
           : { state: "error", message: result.error },
       );
     } catch {
-      setStatus({ state: "error", message: "No pudimos registrar la checada. Vuelve a intentarlo." });
+      setStatus({
+        state: "error",
+        message: "No pudimos registrar la checada. Vuelve a intentarlo.",
+      });
     }
   };
 
   return (
-    <section aria-labelledby="checar-title" className="workia-pass-card flex flex-col gap-4 px-5 py-5">
+    <section
+      aria-labelledby="checar-title"
+      className="workia-pass-card flex flex-col gap-4 px-5 py-5"
+    >
       <div className="space-y-1">
         <p className="text-muted-foreground text-sm">Checar en</p>
         <h1 className="text-2xl font-semibold tracking-tight" id="checar-title">
@@ -86,7 +95,14 @@ export const EmployeeCheckin = ({ siteName, code }: EmployeeCheckinProps) => {
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <Button aria-busy={busy} className="h-16 text-base" disabled={busy} onClick={() => punch("in")} size="lg" type="button">
+        <Button
+          aria-busy={busy}
+          className="h-16 text-base"
+          disabled={busy}
+          onClick={() => punch("in")}
+          size="lg"
+          type="button"
+        >
           {busy && status.kind === "in" ? "Registrando…" : "Entrada"}
         </Button>
         <Button
@@ -103,8 +119,12 @@ export const EmployeeCheckin = ({ siteName, code }: EmployeeCheckinProps) => {
       </div>
 
       <div aria-live="polite" className="min-h-6 text-sm">
-        {status.state === "locating" ? <p className="text-muted-foreground">Leyendo tu ubicación…</p> : null}
-        {status.state === "done" ? <p className="font-medium">{status.message}</p> : null}
+        {status.state === "locating" ? (
+          <p className="text-muted-foreground">Leyendo tu ubicación…</p>
+        ) : null}
+        {status.state === "done" ? (
+          <p className="font-medium">{status.message}</p>
+        ) : null}
         {status.state === "error" ? (
           <p className="text-destructive" role="alert">
             {status.message}
@@ -113,7 +133,8 @@ export const EmployeeCheckin = ({ siteName, code }: EmployeeCheckinProps) => {
       </div>
 
       <p className="text-muted-foreground text-xs">
-        Tu ubicación solo se usa en este momento para confirmar que estás en la sucursal; no se guarda.
+        Tu ubicación solo se usa en este momento para confirmar que estás en la
+        sucursal; no se guarda.
       </p>
     </section>
   );

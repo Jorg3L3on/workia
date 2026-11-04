@@ -289,17 +289,17 @@ const AsistenciaPage = async ({ searchParams }: AsistenciaPageProps) => {
                         </TableCell>
                         <TableCell className="text-sm">
                           {row.punchedAt
-                            ? `${formatDateTimeMx(row.punchedAt)} · ${kindLabel(row.kind)}`
+                            ? `${formatDateTimeMx(row.punchedAt)}${row.kind ? ` · ${kindLabel(row.kind)}` : ""}`
                             : "—"}
                         </TableCell>
-                        <TableCell className="max-w-96 font-mono text-xs break-all">
+                        <TableCell className="max-w-72 font-mono text-xs break-all whitespace-normal">
                           {row.raw.join(" | ")}
                         </TableCell>
                         {canManage ? (
                           <TableCell className="text-right">
                             <div className="flex flex-col items-end gap-2">
                               {row.reason === "unknown_badge" && row.badge ? (
-                                <details className="w-72 text-left">
+                                <details className="w-64 text-left whitespace-normal">
                                   <summary className="cursor-pointer text-sm">
                                     Asignar a una persona
                                   </summary>
@@ -483,7 +483,9 @@ const AsistenciaPage = async ({ searchParams }: AsistenciaPageProps) => {
                   <TableBody>
                     {badges.items.map((badge) => (
                       <TableRow key={badge.id}>
-                        <TableCell className="font-mono">{badge.badge}</TableCell>
+                        <TableCell className="font-mono">
+                          {badge.badge}
+                        </TableCell>
                         <TableCell>
                           <Link
                             className="underline-offset-4 hover:underline"

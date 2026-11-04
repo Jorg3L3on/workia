@@ -31,9 +31,18 @@ const zonedParts = (instant: Date) => {
 /** Minutes the zone is ahead of UTC at that instant (Mexico City: -360). */
 const offsetMinutes = (instant: Date) => {
   const p = zonedParts(instant);
-  const asUtc = Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second);
+  const asUtc = Date.UTC(
+    p.year,
+    p.month - 1,
+    p.day,
+    p.hour,
+    p.minute,
+    p.second,
+  );
 
-  return Math.round((asUtc - Math.floor(instant.getTime() / 1000) * 1000) / 60000);
+  return Math.round(
+    (asUtc - Math.floor(instant.getTime() / 1000) * 1000) / 60000,
+  );
 };
 
 export type WallTime = {
@@ -59,7 +68,14 @@ const validWallTime = (t: WallTime) => {
 export const instantFromWallTime = (t: WallTime): Date | null => {
   if (!validWallTime(t)) return null;
 
-  const guess = Date.UTC(t.year, t.month - 1, t.day, t.hour, t.minute, t.second);
+  const guess = Date.UTC(
+    t.year,
+    t.month - 1,
+    t.day,
+    t.hour,
+    t.minute,
+    t.second,
+  );
   // Two passes settle the offset, also across an offset change.
   let instant = new Date(guess - offsetMinutes(new Date(guess)) * 60000);
   instant = new Date(guess - offsetMinutes(instant) * 60000);

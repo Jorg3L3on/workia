@@ -79,7 +79,12 @@ const SubmitButton = ({
   children: ReactNode;
   variant?: "secondary" | "ghost" | "destructive";
 }) => (
-  <Button aria-busy={pending} disabled={pending} type="submit" variant={variant}>
+  <Button
+    aria-busy={pending}
+    disabled={pending}
+    type="submit"
+    variant={variant}
+  >
     {pending ? "Guardando…" : children}
   </Button>
 );
@@ -109,25 +114,37 @@ export const UploadChecadasForm = ({
             defaultValue={devices[0]?.id ?? ""}
             id="upload-device"
             name="deviceId"
-            options={devices.map((device) => ({ value: device.id, label: device.name }))}
+            options={devices.map((device) => ({
+              value: device.id,
+              label: device.name,
+            }))}
             placeholder="Elige el checador"
             variant="field"
           />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="upload-file">Archivo que exportó (CSV o texto)</Label>
-          <Input accept=".csv,.txt,.dat,.tsv,text/csv,text/plain" id="upload-file" name="file" type="file" />
+          <Input
+            accept=".csv,.txt,.dat,.tsv,text/csv,text/plain"
+            id="upload-file"
+            name="file"
+            type="file"
+          />
         </div>
       </div>
       <p className="text-muted-foreground text-xs">
-        Puedes subir el mismo archivo otra vez: las checadas que ya están no se duplican.
+        Puedes subir el mismo archivo otra vez: las checadas que ya están no se
+        duplican.
       </p>
       <FormMessage state={state} />
       {summary ? (
-        <div className="bg-muted/50 space-y-1 rounded-md px-3 py-2 text-sm" role="status">
+        <div
+          className="bg-muted/50 space-y-1 rounded-md px-3 py-2 text-sm"
+          role="status"
+        >
           <p className="font-medium">
-            {plural(summary.punchesAdded, "checada nueva", "checadas nuevas")} de{" "}
-            {plural(summary.rows, "fila", "filas")}.
+            {plural(summary.punchesAdded, "checada nueva", "checadas nuevas")}{" "}
+            de {plural(summary.rows, "fila", "filas")}.
           </p>
           <p className="text-muted-foreground">
             {plural(summary.duplicates, "ya estaba", "ya estaban")} ·{" "}
@@ -135,11 +152,17 @@ export const UploadChecadasForm = ({
             {plural(summary.invalid, "fila con error", "filas con error")}
           </p>
           {summary.unmatched + summary.invalid > 0 ? (
-            <p className="text-muted-foreground">Revisa la pestaña «Por revisar».</p>
+            <p className="text-muted-foreground">
+              Revisa la pestaña «Por revisar».
+            </p>
           ) : null}
         </div>
       ) : null}
-      <Button aria-busy={pending} disabled={pending || devices.length === 0} type="submit">
+      <Button
+        aria-busy={pending}
+        disabled={pending || devices.length === 0}
+        type="submit"
+      >
         {pending ? "Cargando…" : "Cargar checadas"}
       </Button>
     </form>
@@ -175,9 +198,13 @@ export const DeviceForm = ({
   const [format, setFormat] = useState<AttendanceCsvFormat>(
     device?.csvFormat ?? CSV_FORMAT_PRESETS[0].format,
   );
-  const [split, setSplit] = useState(Boolean(format.dateColumn && !format.dateTimeColumn));
+  const [split, setSplit] = useState(
+    Boolean(format.dateColumn && !format.dateTimeColumn),
+  );
   const [presetKey, setPresetKey] = useState(0);
-  const { state, pending, onSubmit } = useActionForm(action, { reset: !device });
+  const { state, pending, onSubmit } = useActionForm(action, {
+    reset: !device,
+  });
   const idPrefix = device?.id ?? "new";
 
   const applyPreset = (id: string) => {
@@ -193,11 +220,19 @@ export const DeviceForm = ({
   return (
     <form className="space-y-3" noValidate onSubmit={onSubmit}>
       <CompanyField />
-      {device?.id ? <input name="deviceId" type="hidden" value={device.id} /> : null}
+      {device?.id ? (
+        <input name="deviceId" type="hidden" value={device.id} />
+      ) : null}
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1.5">
           <Label htmlFor={`${idPrefix}-name`}>Nombre</Label>
-          <Input defaultValue={device?.name ?? ""} id={`${idPrefix}-name`} maxLength={80} name="name" placeholder="Checador entrada Norte" />
+          <Input
+            defaultValue={device?.name ?? ""}
+            id={`${idPrefix}-name`}
+            maxLength={80}
+            name="name"
+            placeholder="Checador entrada Norte"
+          />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor={`${idPrefix}-site`}>Ubicación</Label>
@@ -205,20 +240,28 @@ export const DeviceForm = ({
             defaultValue={device?.siteId ?? ""}
             id={`${idPrefix}-site`}
             name="siteId"
-            options={[{ value: "", label: "La sucursal de cada persona" }, ...sites.map((site) => ({ value: site.id, label: site.name }))]}
+            options={[
+              { value: "", label: "La sucursal de cada persona" },
+              ...sites.map((site) => ({ value: site.id, label: site.name })),
+            ]}
             variant="field"
           />
         </div>
       </div>
 
       <fieldset className="space-y-3 rounded-md border px-3 py-3">
-        <legend className="px-1 text-sm font-medium">Formato del archivo</legend>
+        <legend className="px-1 text-sm font-medium">
+          Formato del archivo
+        </legend>
         <div className="space-y-1.5">
           <Label htmlFor={`${idPrefix}-preset`}>Empezar desde</Label>
           <FormSelect
             id={`${idPrefix}-preset`}
             onValueChange={applyPreset}
-            options={CSV_FORMAT_PRESETS.map((preset) => ({ value: preset.id, label: preset.label }))}
+            options={CSV_FORMAT_PRESETS.map((preset) => ({
+              value: preset.id,
+              label: preset.label,
+            }))}
             placeholder="Un formato común (ajústalo a tu archivo)"
             variant="field"
           />
@@ -227,7 +270,9 @@ export const DeviceForm = ({
           <div className="space-y-1.5">
             <Label htmlFor={`${idPrefix}-delimiter`}>Separador</Label>
             <FormSelect
-              defaultValue={format.delimiter === "\t" ? "tab" : format.delimiter}
+              defaultValue={
+                format.delimiter === "\t" ? "tab" : format.delimiter
+              }
               id={`${idPrefix}-delimiter`}
               name="delimiter"
               options={delimiterOptions}
@@ -236,15 +281,31 @@ export const DeviceForm = ({
           </div>
           <div className="space-y-1.5">
             <Label htmlFor={`${idPrefix}-header`}>Filas de encabezado</Label>
-            <Input defaultValue={format.headerRows} id={`${idPrefix}-header`} max={5} min={0} name="headerRows" type="number" />
+            <Input
+              defaultValue={format.headerRows}
+              id={`${idPrefix}-header`}
+              max={5}
+              min={0}
+              name="headerRows"
+              type="number"
+            />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor={`${idPrefix}-badge`}>Columna del número</Label>
-            <Input defaultValue={format.badgeColumn} id={`${idPrefix}-badge`} name="badgeColumn" placeholder="1 o «No.»" />
+            <Input
+              defaultValue={format.badgeColumn}
+              id={`${idPrefix}-badge`}
+              name="badgeColumn"
+              placeholder="1 o «No.»"
+            />
           </div>
           <div className="space-y-1.5 sm:col-span-3">
             <label className="flex items-center gap-2 text-sm">
-              <input checked={split} onChange={(event) => setSplit(event.target.checked)} type="checkbox" />
+              <input
+                checked={split}
+                onChange={(event) => setSplit(event.target.checked)}
+                type="checkbox"
+              />
               La fecha y la hora vienen en columnas separadas
             </label>
           </div>
@@ -252,51 +313,93 @@ export const DeviceForm = ({
             <>
               <div className="space-y-1.5">
                 <Label htmlFor={`${idPrefix}-date`}>Columna de fecha</Label>
-                <Input defaultValue={format.dateColumn ?? ""} id={`${idPrefix}-date`} name="dateColumn" placeholder="2 o «Fecha»" />
+                <Input
+                  defaultValue={format.dateColumn ?? ""}
+                  id={`${idPrefix}-date`}
+                  name="dateColumn"
+                  placeholder="2 o «Fecha»"
+                />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor={`${idPrefix}-time`}>Columna de hora</Label>
-                <Input defaultValue={format.timeColumn ?? ""} id={`${idPrefix}-time`} name="timeColumn" placeholder="3 o «Hora»" />
+                <Input
+                  defaultValue={format.timeColumn ?? ""}
+                  id={`${idPrefix}-time`}
+                  name="timeColumn"
+                  placeholder="3 o «Hora»"
+                />
               </div>
             </>
           ) : (
             <div className="space-y-1.5">
-              <Label htmlFor={`${idPrefix}-datetime`}>Columna de fecha y hora</Label>
-              <Input defaultValue={format.dateTimeColumn ?? ""} id={`${idPrefix}-datetime`} name="dateTimeColumn" placeholder="2 o «Fecha/Hora»" />
+              <Label htmlFor={`${idPrefix}-datetime`}>
+                Columna de fecha y hora
+              </Label>
+              <Input
+                defaultValue={format.dateTimeColumn ?? ""}
+                id={`${idPrefix}-datetime`}
+                name="dateTimeColumn"
+                placeholder="2 o «Fecha/Hora»"
+              />
             </div>
           )}
           <div className="space-y-1.5">
-            <Label htmlFor={`${idPrefix}-dateformat`}>Cómo viene la fecha</Label>
+            <Label htmlFor={`${idPrefix}-dateformat`}>
+              Cómo viene la fecha
+            </Label>
             <FormSelect
               defaultValue={format.dateFormat}
               id={`${idPrefix}-dateformat`}
               name="dateFormat"
-              options={DATE_FORMATS.map((value) => ({ value, label: dateFormatLabels[value] }))}
+              options={DATE_FORMATS.map((value) => ({
+                value,
+                label: dateFormatLabels[value],
+              }))}
               variant="field"
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor={`${idPrefix}-kind`}>Columna entrada/salida (opcional)</Label>
-            <Input defaultValue={format.kindColumn ?? ""} id={`${idPrefix}-kind`} name="kindColumn" placeholder="4 o «Estado»" />
+            <Label htmlFor={`${idPrefix}-kind`}>
+              Columna entrada/salida (opcional)
+            </Label>
+            <Input
+              defaultValue={format.kindColumn ?? ""}
+              id={`${idPrefix}-kind`}
+              name="kindColumn"
+              placeholder="4 o «Estado»"
+            />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor={`${idPrefix}-in`}>Valores de entrada</Label>
-            <Input defaultValue={(format.inValues ?? []).join(", ")} id={`${idPrefix}-in`} name="inValues" placeholder="0, E, Entrada" />
+            <Input
+              defaultValue={(format.inValues ?? []).join(", ")}
+              id={`${idPrefix}-in`}
+              name="inValues"
+              placeholder="0, E, Entrada"
+            />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor={`${idPrefix}-out`}>Valores de salida</Label>
-            <Input defaultValue={(format.outValues ?? []).join(", ")} id={`${idPrefix}-out`} name="outValues" placeholder="1, S, Salida" />
+            <Input
+              defaultValue={(format.outValues ?? []).join(", ")}
+              id={`${idPrefix}-out`}
+              name="outValues"
+              placeholder="1, S, Salida"
+            />
           </div>
         </div>
         <p className="text-muted-foreground text-xs">
-          Las columnas se indican por número (1 es la primera) o por el nombre del encabezado. Las horas
-          se leen en hora del centro de México. Sin columna de entrada/salida, las checadas de cada día se
-          toman en orden: entrada, salida, entrada…
+          Las columnas se indican por número (1 es la primera) o por el nombre
+          del encabezado. Las horas se leen en hora del centro de México. Sin
+          columna de entrada/salida, las checadas de cada día se toman en orden:
+          entrada, salida, entrada…
         </p>
       </fieldset>
 
       <FormMessage state={state} />
-      <SubmitButton pending={pending}>{device?.id ? "Guardar checador" : "Agregar checador"}</SubmitButton>
+      <SubmitButton pending={pending}>
+        {device?.id ? "Guardar checador" : "Agregar checador"}
+      </SubmitButton>
     </form>
   );
 };
@@ -320,7 +423,13 @@ export const DeviceTokenForm = ({
       {state.token ? (
         <div className="space-y-1">
           <Label htmlFor={`token-${deviceId}`}>Token de envío</Label>
-          <Input className="font-mono text-xs" id={`token-${deviceId}`} onFocus={(event) => event.currentTarget.select()} readOnly value={state.token} />
+          <Input
+            className="font-mono text-xs"
+            id={`token-${deviceId}`}
+            onFocus={(event) => event.currentTarget.select()}
+            readOnly
+            value={state.token}
+          />
         </div>
       ) : null}
       <FormMessage state={state} />
@@ -406,7 +515,12 @@ export const AssignBadgeForm = ({
               </p>
             </>
           ) : (
-            <Input id={`${idPrefix}-badge`} maxLength={40} name="badge" placeholder="123" />
+            <Input
+              id={`${idPrefix}-badge`}
+              maxLength={40}
+              name="badge"
+              placeholder="123"
+            />
           )}
         </div>
         <div className="space-y-1.5">
@@ -454,15 +568,34 @@ export const CheckinSiteForm = ({
       <div className="grid gap-3 sm:grid-cols-4">
         <div className="space-y-1.5">
           <Label htmlFor={`${id}-lat`}>Latitud</Label>
-          <Input defaultValue={site.latitude ?? ""} id={`${id}-lat`} inputMode="decimal" name="latitude" placeholder="19.4326" />
+          <Input
+            defaultValue={site.latitude ?? ""}
+            id={`${id}-lat`}
+            inputMode="decimal"
+            name="latitude"
+            placeholder="19.4326"
+          />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor={`${id}-lng`}>Longitud</Label>
-          <Input defaultValue={site.longitude ?? ""} id={`${id}-lng`} inputMode="decimal" name="longitude" placeholder="-99.1332" />
+          <Input
+            defaultValue={site.longitude ?? ""}
+            id={`${id}-lng`}
+            inputMode="decimal"
+            name="longitude"
+            placeholder="-99.1332"
+          />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor={`${id}-radius`}>Radio (metros)</Label>
-          <Input defaultValue={site.radiusMeters ?? 150} id={`${id}-radius`} max={2000} min={25} name="radiusMeters" type="number" />
+          <Input
+            defaultValue={site.radiusMeters ?? 150}
+            id={`${id}-radius`}
+            max={2000}
+            min={25}
+            name="radiusMeters"
+            type="number"
+          />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor={`${id}-mode`}>Código QR</Label>
@@ -471,7 +604,7 @@ export const CheckinSiteForm = ({
             id={`${id}-mode`}
             name="qrMode"
             options={[
-              { value: "rotating", label: "En pantalla, cambia cada minuto" },
+              { value: "rotating", label: "En pantalla (cambia)" },
               { value: "printed", label: "Impreso" },
             ]}
             variant="field"
@@ -479,7 +612,12 @@ export const CheckinSiteForm = ({
         </div>
       </div>
       <label className="flex items-center gap-2 text-sm">
-        <input defaultChecked={site.enabled ?? true} name="enabled" type="checkbox" value="true" />
+        <input
+          defaultChecked={site.enabled ?? true}
+          name="enabled"
+          type="checkbox"
+          value="true"
+        />
         Activo
       </label>
       <input name="enabled" type="hidden" value="false" />
@@ -535,7 +673,9 @@ export const KioskQr = ({ siteId }: { siteId: string }) => {
         role="img"
       />
       <p className="text-muted-foreground text-center text-sm">
-        {code.refreshInMs ? "El código cambia cada minuto." : "Código impreso: sirve hasta que se invalide."}
+        {code.refreshInMs
+          ? "El código cambia cada minuto."
+          : "Código impreso: sirve hasta que se invalide."}
       </p>
     </div>
   );

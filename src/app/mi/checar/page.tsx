@@ -29,7 +29,10 @@ const CheckinPage = async ({ searchParams }: CheckinPageProps) => {
     <main className="mx-auto flex min-h-svh w-full max-w-xl flex-col gap-5 px-4 pt-6 pb-10">
       <header className="flex items-center justify-between gap-3">
         <WorkiaMark />
-        <Link className="text-muted-foreground text-sm underline-offset-4 hover:underline" href="/mi">
+        <Link
+          className="text-muted-foreground text-sm underline-offset-4 hover:underline"
+          href="/mi"
+        >
           Inicio
         </Link>
       </header>

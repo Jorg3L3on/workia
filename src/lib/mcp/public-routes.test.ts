@@ -42,6 +42,12 @@ const PUBLIC_EMPLOYEE_ROUTES = [
   "/mi/sw.js",
 ];
 
+/**
+ * Device pushes (W2-12): no session; the Bearer token names one checador and
+ * its company.
+ */
+const DEVICE_ROUTES = ["/api/asistencia/checadas"];
+
 /** Scheduled jobs (W2-09): no session, a Bearer CRON_SECRET instead. */
 const SCHEDULED_JOB_ROUTES = ["/api/cron/retention"];
 
@@ -64,6 +70,7 @@ describe("public routes", () => {
         ...PUBLIC_MCP_ROUTES,
         ...PUBLIC_EMPLOYEE_ROUTES,
         ...SCHEDULED_JOB_ROUTES,
+        ...DEVICE_ROUTES,
       ].sort(),
     );
   });
@@ -74,6 +81,15 @@ describe("public routes", () => {
     )) {
       expect(source, route).toMatch(/env\.CRON_SECRET/);
       expect(source, route).toMatch(/timingSafeEqual/);
+    }
+  });
+
+  it("puts every device route behind a device token and a rate limit", () => {
+    for (const { route, source } of routes.filter((r) =>
+      DEVICE_ROUTES.includes(r.route),
+    )) {
+      expect(source, route).toMatch(/deviceForToken/);
+      expect(source, route).toMatch(/hitRateLimit/);
     }
   });
 

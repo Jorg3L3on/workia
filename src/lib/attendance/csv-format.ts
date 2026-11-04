@@ -38,10 +38,7 @@ const optionalColumn = z
   .transform((value) => (value === "" ? null : value))
   .nullish();
 
-const values = z
-  .array(z.string().trim().min(1).max(20))
-  .max(10)
-  .optional();
+const values = z.array(z.string().trim().min(1).max(20)).max(10).optional();
 
 export const csvFormatSchema = z
   .object({
@@ -66,7 +63,11 @@ export const csvFormatSchema = z
       });
     }
 
-    if (format.kindColumn && !format.inValues?.length && !format.outValues?.length) {
+    if (
+      format.kindColumn &&
+      !format.inValues?.length &&
+      !format.outValues?.length
+    ) {
       ctx.addIssue({
         code: "custom",
         path: ["inValues"],
@@ -82,7 +83,10 @@ export const csvFormatSchema = z
       format.kindColumn,
     ].filter((value): value is string => Boolean(value));
 
-    if (format.headerRows === 0 && named.some((value) => !/^\d+$/.test(value))) {
+    if (
+      format.headerRows === 0 &&
+      named.some((value) => !/^\d+$/.test(value))
+    ) {
       ctx.addIssue({
         code: "custom",
         path: ["headerRows"],
@@ -272,10 +276,15 @@ const MAX_RAW_CELL = 60;
 export const trimRaw = (cells: string[]) =>
   cells
     .slice(0, MAX_RAW_CELLS)
-    .map((cell) => (cell.length > MAX_RAW_CELL ? cell.slice(0, MAX_RAW_CELL) : cell));
+    .map((cell) =>
+      cell.length > MAX_RAW_CELL ? cell.slice(0, MAX_RAW_CELL) : cell,
+    );
 
 /** Splits a CSV with a fixed or detected delimiter (RFC 4180 quotes, CRLF, BOM). */
-export const splitCsv = (input: string, delimiter: AttendanceCsvFormat["delimiter"]) => {
+export const splitCsv = (
+  input: string,
+  delimiter: AttendanceCsvFormat["delimiter"],
+) => {
   const text = input.charCodeAt(0) === 0xfeff ? input.slice(1) : input;
   const firstLine = text.split(/\r?\n/, 1)[0] ?? "";
   const separator =
@@ -338,10 +347,13 @@ export const readChecadorCsv = (
   format: AttendanceCsvFormat,
 ): { punches: CsvPunch[]; invalid: CsvInvalid[]; rows: number } => {
   const lines = splitCsv(text, format.delimiter);
-  const header = format.headerRows > 0 ? (lines[format.headerRows - 1] ?? null) : null;
+  const header =
+    format.headerRows > 0 ? (lines[format.headerRows - 1] ?? null) : null;
   const index = {
     badge: resolveColumn(format.badgeColumn, header),
-    dateTime: format.dateTimeColumn ? resolveColumn(format.dateTimeColumn, header) : -1,
+    dateTime: format.dateTimeColumn
+      ? resolveColumn(format.dateTimeColumn, header)
+      : -1,
     date: format.dateColumn ? resolveColumn(format.dateColumn, header) : -1,
     time: format.timeColumn ? resolveColumn(format.timeColumn, header) : -1,
     kind: format.kindColumn ? resolveColumn(format.kindColumn, header) : -1,
@@ -354,7 +366,9 @@ export const readChecadorCsv = (
 
   const missing =
     index.badge < 0 ||
-    (format.dateTimeColumn ? index.dateTime < 0 : index.date < 0 || index.time < 0) ||
+    (format.dateTimeColumn
+      ? index.dateTime < 0
+      : index.date < 0 || index.time < 0) ||
     (format.kindColumn ? index.kind < 0 : false);
 
   for (let i = format.headerRows; i < lines.length; i += 1) {
@@ -377,13 +391,21 @@ export const readChecadorCsv = (
     const badge = normalizeBadge(clean(cells[index.badge]));
 
     if (!badge || badge.length > 40) {
-      invalid.push({ line, raw: trimRaw(cells), error: "Falta el número de la persona." });
+      invalid.push({
+        line,
+        raw: trimRaw(cells),
+        error: "Falta el número de la persona.",
+      });
       continue;
     }
 
     const at = format.dateTimeColumn
       ? parsePunchTime(clean(cells[index.dateTime]), null, format.dateFormat)
-      : parsePunchTime(clean(cells[index.date]), clean(cells[index.time]), format.dateFormat);
+      : parsePunchTime(
+          clean(cells[index.date]),
+          clean(cells[index.time]),
+          format.dateFormat,
+        );
 
     if (!at) {
       invalid.push({

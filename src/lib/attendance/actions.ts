@@ -90,7 +90,11 @@ const list = (value: string) =>
     .filter(Boolean);
 
 const deviceSchema = z.object({
-  name: z.string().trim().min(1, ATTENDANCE_COPY.deviceName).max(80, ATTENDANCE_COPY.deviceName),
+  name: z
+    .string()
+    .trim()
+    .min(1, ATTENDANCE_COPY.deviceName)
+    .max(80, ATTENDANCE_COPY.deviceName),
   siteId: optionalUuid,
   csvFormat: csvFormatSchema,
 });
@@ -100,7 +104,10 @@ const readDevice = (formData: FormData) =>
     name: text(formData, "name"),
     siteId: text(formData, "siteId"),
     csvFormat: {
-      delimiter: text(formData, "delimiter") === "tab" ? "\t" : text(formData, "delimiter") || "auto",
+      delimiter:
+        text(formData, "delimiter") === "tab"
+          ? "\t"
+          : text(formData, "delimiter") || "auto",
       headerRows: text(formData, "headerRows") || "0",
       badgeColumn: text(formData, "badgeColumn"),
       dateTimeColumn: text(formData, "dateTimeColumn"),
@@ -120,7 +127,10 @@ const firstIssue = (error: z.ZodError, fallback: string) =>
 const compactFormat = (format: z.infer<typeof csvFormatSchema>) =>
   Object.fromEntries(
     Object.entries(format).filter(
-      ([, value]) => value !== null && value !== undefined && !(Array.isArray(value) && value.length === 0),
+      ([, value]) =>
+        value !== null &&
+        value !== undefined &&
+        !(Array.isArray(value) && value.length === 0),
     ),
   ) as z.infer<typeof csvFormatSchema>;
 
@@ -134,20 +144,32 @@ export const saveAttendanceDeviceAction = async (
 
   const parsed = readDevice(formData);
 
-  if (!parsed.success) return { error: firstIssue(parsed.error, ATTENDANCE_COPY.deviceName) };
+  if (!parsed.success)
+    return { error: firstIssue(parsed.error, ATTENDANCE_COPY.deviceName) };
 
-  const input = { ...parsed.data, csvFormat: compactFormat(parsed.data.csvFormat) };
+  const input = {
+    ...parsed.data,
+    csvFormat: compactFormat(parsed.data.csvFormat),
+  };
   const deviceId = text(formData, "deviceId");
   const result = deviceId
     ? UUID.safeParse(deviceId).success
-      ? await updateAttendanceDevice(context.companyId, deviceId, input, context.userId)
+      ? await updateAttendanceDevice(
+          context.companyId,
+          deviceId,
+          input,
+          context.userId,
+        )
       : { ok: false as const, error: ATTENDANCE_COPY.deviceMissing }
     : await createAttendanceDevice(context.companyId, input, context.userId);
 
   if (!result.ok) return { error: result.error };
 
   revalidate();
-  return { ok: true, message: deviceId ? "Checador actualizado." : "Checador agregado." };
+  return {
+    ok: true,
+    message: deviceId ? "Checador actualizado." : "Checador agregado.",
+  };
 };
 
 export const issueDeviceTokenAction = async (
@@ -160,9 +182,14 @@ export const issueDeviceTokenAction = async (
 
   const deviceId = text(formData, "deviceId");
 
-  if (!UUID.safeParse(deviceId).success) return { error: ATTENDANCE_COPY.deviceMissing };
+  if (!UUID.safeParse(deviceId).success)
+    return { error: ATTENDANCE_COPY.deviceMissing };
 
-  const result = await issueDeviceToken(context.companyId, deviceId, context.userId);
+  const result = await issueDeviceToken(
+    context.companyId,
+    deviceId,
+    context.userId,
+  );
 
   if (!result.ok) return { error: result.error };
 
@@ -170,7 +197,8 @@ export const issueDeviceTokenAction = async (
   return {
     ok: true,
     token: result.token,
-    message: "Copia el token ahora: no se vuelve a mostrar. El anterior dejó de funcionar.",
+    message:
+      "Copia el token ahora: no se vuelve a mostrar. El anterior dejó de funcionar.",
   };
 };
 
@@ -184,15 +212,26 @@ export const setAttendanceDeviceActiveAction = async (
 
   const deviceId = text(formData, "deviceId");
 
-  if (!UUID.safeParse(deviceId).success) return { error: ATTENDANCE_COPY.deviceMissing };
+  if (!UUID.safeParse(deviceId).success)
+    return { error: ATTENDANCE_COPY.deviceMissing };
 
   const active = text(formData, "active") === "true";
-  const result = await setAttendanceDeviceActive(context.companyId, deviceId, active, context.userId);
+  const result = await setAttendanceDeviceActive(
+    context.companyId,
+    deviceId,
+    active,
+    context.userId,
+  );
 
   if (!result.ok) return { error: result.error };
 
   revalidate();
-  return { ok: true, message: active ? "Checador activado." : "Checador desactivado; su token ya no funciona." };
+  return {
+    ok: true,
+    message: active
+      ? "Checador activado."
+      : "Checador desactivado; su token ya no funciona.",
+  };
 };
 
 export const importChecadorCsvAction = async (
@@ -206,8 +245,10 @@ export const importChecadorCsvAction = async (
   const deviceId = text(formData, "deviceId");
   const file = formData.get("file");
 
-  if (!UUID.safeParse(deviceId).success) return { error: ATTENDANCE_COPY.deviceMissing };
-  if (!(file instanceof File) || file.size === 0) return { error: ATTENDANCE_COPY.fileMissing };
+  if (!UUID.safeParse(deviceId).success)
+    return { error: ATTENDANCE_COPY.deviceMissing };
+  if (!(file instanceof File) || file.size === 0)
+    return { error: ATTENDANCE_COPY.fileMissing };
   if (file.size > MAX_CSV_BYTES) return { error: ATTENDANCE_COPY.fileTooLarge };
 
   const bytes = new Uint8Array(await file.arrayBuffer());
@@ -242,7 +283,8 @@ export const assignBadgeAction = async (
 
   const personId = text(formData, "personId");
 
-  if (!UUID.safeParse(personId).success) return { error: "Elige a la persona." };
+  if (!UUID.safeParse(personId).success)
+    return { error: "Elige a la persona." };
 
   const result = await assignBadge(
     context.companyId,
@@ -304,9 +346,19 @@ export const dismissUnmatchedAction = async (
 
 const checkinSchema = z.object({
   siteId: UUID,
-  latitude: z.coerce.number().min(-90, ATTENDANCE_COPY.position).max(90, ATTENDANCE_COPY.position),
-  longitude: z.coerce.number().min(-180, ATTENDANCE_COPY.position).max(180, ATTENDANCE_COPY.position),
-  radiusMeters: z.coerce.number().int(ATTENDANCE_COPY.radius).min(25, ATTENDANCE_COPY.radius).max(2000, ATTENDANCE_COPY.radius),
+  latitude: z.coerce
+    .number()
+    .min(-90, ATTENDANCE_COPY.position)
+    .max(90, ATTENDANCE_COPY.position),
+  longitude: z.coerce
+    .number()
+    .min(-180, ATTENDANCE_COPY.position)
+    .max(180, ATTENDANCE_COPY.position),
+  radiusMeters: z.coerce
+    .number()
+    .int(ATTENDANCE_COPY.radius)
+    .min(25, ATTENDANCE_COPY.radius)
+    .max(2000, ATTENDANCE_COPY.radius),
   qrMode: z.enum(["rotating", "printed"]),
   enabled: z.boolean(),
 });
@@ -333,9 +385,14 @@ export const saveCheckinSiteAction = async (
     enabled: text(formData, "enabled") !== "false",
   });
 
-  if (!parsed.success) return { error: firstIssue(parsed.error, ATTENDANCE_COPY.position) };
+  if (!parsed.success)
+    return { error: firstIssue(parsed.error, ATTENDANCE_COPY.position) };
 
-  const result = await saveCheckinSite(context.companyId, parsed.data, context.userId);
+  const result = await saveCheckinSite(
+    context.companyId,
+    parsed.data,
+    context.userId,
+  );
 
   if (!result.ok) return { error: result.error };
 
@@ -353,17 +410,29 @@ export const rotateCheckinSecretAction = async (
 
   const siteId = text(formData, "siteId");
 
-  if (!UUID.safeParse(siteId).success) return { error: ATTENDANCE_COPY.siteMissing };
+  if (!UUID.safeParse(siteId).success)
+    return { error: ATTENDANCE_COPY.siteMissing };
 
-  const result = await rotateCheckinSecret(context.companyId, siteId, context.userId);
+  const result = await rotateCheckinSecret(
+    context.companyId,
+    siteId,
+    context.userId,
+  );
 
   if (!result.ok) return { error: result.error };
 
   revalidate();
-  return { ok: true, message: "Códigos QR anteriores invalidados. Imprime o muestra el nuevo." };
+  return {
+    ok: true,
+    message: "Códigos QR anteriores invalidados. Imprime o muestra el nuevo.",
+  };
 };
 
-export type KioskCode = { svg: string; url: string; refreshInMs: number | null } | null;
+export type KioskCode = {
+  svg: string;
+  url: string;
+  refreshInMs: number | null;
+} | null;
 
 /**
  * The QR a site shows right now, for the kiosk page (HR session on a screen
@@ -386,13 +455,19 @@ export const kioskCodeAction = async (siteId: string): Promise<KioskCode> => {
 
   const now = new Date();
   const url = qrCodeUrl(await requestOrigin(), qrCodeFor(site, now));
-  const svg = await QRCode.toString(url, { type: "svg", margin: 1, errorCorrectionLevel: "M" });
+  const svg = await QRCode.toString(url, {
+    type: "svg",
+    margin: 1,
+    errorCorrectionLevel: "M",
+  });
 
   return {
     svg,
     url,
     refreshInMs:
-      site.qrMode === "rotating" ? QR_WINDOW_MS - (now.getTime() % QR_WINDOW_MS) + 250 : null,
+      site.qrMode === "rotating"
+        ? QR_WINDOW_MS - (now.getTime() % QR_WINDOW_MS) + 250
+        : null,
   };
 };
 

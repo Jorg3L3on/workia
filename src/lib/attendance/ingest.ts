@@ -219,7 +219,8 @@ export const ingestPunches = async (
 
   const now = options.now ?? new Date();
   const deviceId = target.kind === "batch" ? target.deviceId : "app";
-  const source = target.kind === "batch" ? `checador:${target.deviceId}` : "app";
+  const source =
+    target.kind === "batch" ? `checador:${target.deviceId}` : "app";
 
   const run = async (tx: DbTransaction): Promise<IngestSummary> => {
     await lockCompany(tx, companyId);
@@ -233,7 +234,8 @@ export const ingestPunches = async (
         invalid.push({
           line: punch.line,
           raw: punch.raw,
-          error: "La checada es de una fecha futura: revisa el reloj del checador.",
+          error:
+            "La checada es de una fecha futura: revisa el reloj del checador.",
         });
       } else {
         valid.push(punch);
@@ -255,7 +257,10 @@ export const ingestPunches = async (
     ];
     const knownSites = await personSites(tx, companyId, knownIds);
 
-    type Placed = IncomingPunch & { personId: string; personSiteId: string | null };
+    type Placed = IncomingPunch & {
+      personId: string;
+      personSiteId: string | null;
+    };
     const placed: Placed[] = [];
     const unknown: IncomingPunch[] = [];
 
@@ -273,10 +278,16 @@ export const ingestPunches = async (
         continue;
       }
 
-      const person = punch.badge ? byBadge.get(normalizeBadge(punch.badge)) : undefined;
+      const person = punch.badge
+        ? byBadge.get(normalizeBadge(punch.badge))
+        : undefined;
 
       if (person) {
-        placed.push({ ...punch, personId: person.personId, personSiteId: person.siteId });
+        placed.push({
+          ...punch,
+          personId: person.personId,
+          personSiteId: person.siteId,
+        });
       } else {
         unknown.push(punch);
       }
@@ -285,7 +296,12 @@ export const ingestPunches = async (
     // One attendance row per person per local day.
     const groups = new Map<
       string,
-      { personId: string; day: string; siteId: string | null; punches: Placed[] }
+      {
+        personId: string;
+        day: string;
+        siteId: string | null;
+        punches: Placed[];
+      }
     >();
 
     for (const punch of placed) {
@@ -297,7 +313,12 @@ export const ingestPunches = async (
       if (group) {
         group.punches.push(punch);
       } else {
-        groups.set(key, { personId: punch.personId, day, siteId, punches: [punch] });
+        groups.set(key, {
+          personId: punch.personId,
+          day,
+          siteId,
+          punches: [punch],
+        });
       }
     }
 
@@ -308,10 +329,14 @@ export const ingestPunches = async (
 
     for (const [key, group] of groups) {
       const before = stored.get(key) ?? [];
-      const seen = new Set(before.map((punch) => `${punch.at}|${punch.device_id ?? ""}`));
+      const seen = new Set(
+        before.map((punch) => `${punch.at}|${punch.device_id ?? ""}`),
+      );
       const fresh: Array<{ at: string; kind: "in" | "out" | null }> = [];
 
-      for (const punch of group.punches.sort((a, b) => a.at.getTime() - b.at.getTime())) {
+      for (const punch of group.punches.sort(
+        (a, b) => a.at.getTime() - b.at.getTime(),
+      )) {
         const at = toSecond(punch.at);
         const id = `${at}|${deviceId}`;
 
@@ -346,13 +371,16 @@ export const ingestPunches = async (
         source,
         punches: fresh.map((punch) => ({
           at: punch.at,
-          kind: punch.kind ?? ((position.get(punch.at) ?? 0) % 2 === 0 ? "in" : "out"),
+          kind:
+            punch.kind ??
+            ((position.get(punch.at) ?? 0) % 2 === 0 ? "in" : "out"),
           device_id: deviceId,
         })),
       });
     }
 
-    const written = days.length > 0 ? await writeAttendanceDays(companyId, days, tx) : null;
+    const written =
+      days.length > 0 ? await writeAttendanceDays(companyId, days, tx) : null;
 
     let batchId: string | null = null;
     const counts = {

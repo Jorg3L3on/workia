@@ -29,7 +29,8 @@ const rawOf = (value: unknown): string[] => {
   if (value && typeof value === "object") {
     return trimRaw(
       Object.entries(value as Record<string, unknown>).map(
-        ([key, cell]) => `${key}=${typeof cell === "string" ? cell : JSON.stringify(cell)}`,
+        ([key, cell]) =>
+          `${key}=${typeof cell === "string" ? cell : JSON.stringify(cell)}`,
       ),
     );
   }
@@ -68,7 +69,11 @@ export const parseDevicePush = (
     const punch = punchSchema.safeParse(value);
 
     if (!punch.success) {
-      invalid.push({ line, raw, error: "La checada no trae número, fecha u hora válidos." });
+      invalid.push({
+        line,
+        raw,
+        error: "La checada no trae número, fecha u hora válidos.",
+      });
       return;
     }
 
@@ -76,7 +81,11 @@ export const parseDevicePush = (
     const at = parsePunchTime(punch.data.at.trim(), null, "YYYY-MM-DD");
 
     if (!badge || badge.length > 40 || !at) {
-      invalid.push({ line, raw, error: "La checada no trae número, fecha u hora válidos." });
+      invalid.push({
+        line,
+        raw,
+        error: "La checada no trae número, fecha u hora válidos.",
+      });
       return;
     }
 
