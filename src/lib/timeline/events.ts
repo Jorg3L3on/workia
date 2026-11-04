@@ -182,27 +182,42 @@ export const employmentChangeFromAudit = (
   };
 };
 
-/** A move between subsidiaries of the group (phase 3), keyed by its transfer row. */
+/**
+ * One side of a transfer between subsidiaries (W2-24, docs/transfers.md):
+ * the row the person left ("out") and the row they arrived at ("in") each get
+ * one, keyed by the transfer, with the other side's ids. Together with the
+ * baja of the closed period and the alta of the opened one, the group
+ * timeline reads as one continuous history.
+ */
 export const employmentTransferEvent = (input: {
   personId: string;
   transferId: string;
+  direction: "out" | "in";
   occurredAt: Date;
   source: Source;
-  employmentPeriodId?: string | null;
-  toCompanyId: string;
-  toPersonId?: string | null;
+  employmentPeriodId: string;
+  otherCompanyId: string;
+  otherPersonId: string;
 }): PersonEventInput => ({
   personId: input.personId,
   type: "employment",
   occurredAt: input.occurredAt,
   source: input.source,
   dedupeKey: rowKey("employment", "transfer", input.transferId),
-  payload: compact({
+  payload: {
     kind: "transfer",
-    employment_period_id: input.employmentPeriodId ?? undefined,
-    to_company_id: input.toCompanyId,
-    to_person_id: input.toPersonId ?? undefined,
-  }),
+    direction: input.direction,
+    employment_period_id: input.employmentPeriodId,
+    ...(input.direction === "out"
+      ? {
+          to_company_id: input.otherCompanyId,
+          to_person_id: input.otherPersonId,
+        }
+      : {
+          from_company_id: input.otherCompanyId,
+          from_person_id: input.otherPersonId,
+        }),
+  },
 });
 
 // ------------------------------------------------------------------ vacation

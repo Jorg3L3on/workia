@@ -12,6 +12,7 @@ const actionLabels: Record<string, string> = {
   import: "Importar",
   export: "Exportar",
   approve: "Aprobar",
+  transfer: "Trasladar",
 };
 
 const resourceLabels: Record<string, string> = {

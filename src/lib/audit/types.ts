@@ -58,6 +58,8 @@ export const AUDIT_ACTIONS = [
   "code_requested",
   "login",
   "logout",
+  // Workia 2.0 W2-24: transfers between subsidiaries.
+  "traslado",
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
@@ -91,6 +93,7 @@ export const auditActionLabels: Record<AuditAction, string> = {
   code_requested: "Código de acceso enviado",
   login: "Inicio de sesión",
   logout: "Cierre de sesión",
+  traslado: "Traslado entre empresas",
 };
 
 export const auditResourceTypeLabels: Record<AuditResourceType, string> = {

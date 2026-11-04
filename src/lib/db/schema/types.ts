@@ -6,7 +6,8 @@ export type PermissionAction =
   | "manage"
   | "import"
   | "export"
-  | "approve";
+  | "approve"
+  | "transfer";
 
 export type PermissionResource =
   | "users"
@@ -173,6 +174,14 @@ export const PERMISSIONS: Array<{
     resource: "people",
     action: "delete",
     description: "Logically delete people records",
+  },
+  {
+    slug: "people:transfer",
+    name: "Transfer People",
+    resource: "people",
+    action: "transfer",
+    description:
+      "Move a person to another company of the group, keeping their seniority (needed in both companies)",
   },
   {
     slug: "people:import",
@@ -525,6 +534,7 @@ export const ROLES = [
       "people:create",
       "people:update",
       "people:delete",
+      "people:transfer",
       "people:import",
       "people:export",
       "audit:read",

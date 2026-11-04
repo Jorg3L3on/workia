@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { FileSignatureIcon, PencilIcon } from "lucide-react";
@@ -89,6 +90,8 @@ import {
 } from "@/lib/vacations/actions";
 import { listVacationRecords } from "@/lib/vacations";
 import { getPersonEmploymentMenuData } from "@/lib/people/employment-menu";
+import { listPersonLinks } from "@/lib/transfers";
+import { listTransferTargets } from "@/lib/transfers/access";
 
 export const metadata: Metadata = {
   title: pageTitles.expediente,
@@ -121,6 +124,9 @@ type PersonaDetailPageProps = {
     baja?: string;
     reingreso?: string;
     finiquito?: string;
+    /** After a transfer to another company of the group (W2-24). */
+    traslado?: string;
+    invitacion?: string;
   }>;
 };
 
@@ -155,6 +161,8 @@ const PersonaDetailPage = async ({
     baja,
     reingreso,
     finiquito,
+    traslado,
+    invitacion,
   } = await searchParams;
 
   const [
@@ -176,6 +184,7 @@ const PersonaDetailPage = async ({
     positionActivities,
     beneficiaries,
     periods,
+    links,
   ] = await Promise.all([
     getPersonWithRelations(session.companyId, id, true),
     userHasPermission(session.user.id, "people:update"),
@@ -195,6 +204,7 @@ const PersonaDetailPage = async ({
     listActivitiesForPersonPosition(session.companyId, id),
     listPersonBeneficiaries(session.companyId, id),
     listEmploymentPeriods(session.companyId, id),
+    listPersonLinks(session.companyId, id),
   ]);
 
   if (!person) {
@@ -267,6 +277,13 @@ const PersonaDetailPage = async ({
         canSeeCompensation,
       )
     : undefined;
+  // «Trasladar a otra empresa» (W2-24): people:transfer here and in a target.
+  const canTransfer =
+    !isDeleted &&
+    person.status === "activa" &&
+    session.permissions.has("people:transfer") &&
+    (await listTransferTargets(session)).length > 0;
+  const lastLink = links.at(-1);
   // Bound once: the ⋯ menu and the baja block's «Reingresar» share it.
   const statusAction = canEdit
     ? setPersonStatusAction.bind(
@@ -472,7 +489,17 @@ const PersonaDetailPage = async ({
                 emitContractHref={canEmit ? emitHref : undefined}
                 personId={person.id}
                 personName={personName}
+                groupHistoryHref={
+                  links.length > 0
+                    ? `/app/personas/${person.id}/grupo`
+                    : undefined
+                }
                 showConstancia={canReadContracts}
+                transferHref={
+                  canTransfer
+                    ? `/app/personas/${person.id}/traslado`
+                    : undefined
+                }
                 showStartAlta={canEdit && person.status === "activa"}
                 status={person.status}
                 employment={employment}
@@ -566,6 +593,37 @@ const PersonaDetailPage = async ({
             role="status"
           >
             Reingreso registrado: se abrió un nuevo periodo laboral.
+          </p>
+        ) : null}
+
+        {traslado === "1" && isBaja ? (
+          <p
+            className="text-sm font-medium text-[color:var(--workia-accent-blue)]"
+            role="status"
+          >
+            Traslado registrado: su periodo aquí quedó cerrado y se abrió uno en
+            la otra empresa con su antigüedad.
+            {invitacion === "1"
+              ? " Se le envió la invitación a la app de empleados de la empresa nueva."
+              : ""}
+          </p>
+        ) : null}
+
+        {lastLink ? (
+          <p
+            className="border-border/70 bg-muted/40 rounded-lg border px-3 py-2 text-sm"
+            data-testid="person-transfer-notice"
+            role="status"
+          >
+            {lastLink.direction === "out"
+              ? `Se trasladó a ${lastLink.linkedCompanyName} el ${formatDateLabel(lastLink.transferDate)}.`
+              : `Llegó por traslado desde ${lastLink.linkedCompanyName} el ${formatDateLabel(lastLink.transferDate)}.`}{" "}
+            <Link
+              className="font-medium underline underline-offset-2"
+              href={`/app/personas/${person.id}/grupo`}
+            >
+              Ver historial del grupo
+            </Link>
           </p>
         ) : null}
 

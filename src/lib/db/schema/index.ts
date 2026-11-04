@@ -15,4 +15,5 @@ export * from "./people-views";
 export * from "./rbac";
 export * from "./sites";
 export * from "./timeline";
+export * from "./transfers";
 export * from "./vacations";

@@ -93,6 +93,8 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `action:tenant/setCompanyStatusAction`                     | ✅     | `src/test/idor/tenant.db.test.ts`                                                                      | `companies:manage`          |
 | `action:tenant/switchCompanyAction`                        | ✅     | `src/test/idor/tenant.db.test.ts`                                                                      | —                           |
 | `action:tenant/updateCompanyAction`                        | ✅     | `src/test/idor/tenant.db.test.ts`                                                                      | `companies:manage`          |
+| `action:transfers/setGroupAdminAction`                     | ✅     | `src/test/idor/transfers.db.test.ts`                                                                   | `companies:manage`          |
+| `action:transfers/transferPersonAction`                    | ✅     | `src/test/idor/transfers.db.test.ts`                                                                   | `people:transfer`           |
 | `action:termination-reasons/createTerminationReasonAction` | ✅     | `src/test/idor/employment.db.test.ts`                                                                  | `settings:update`           |
 | `action:termination-reasons/deleteTerminationReasonAction` | ✅     | `src/test/idor/employment.db.test.ts`                                                                  | `settings:update`           |
 | `action:termination-reasons/updateTerminationReasonAction` | ✅     | `src/test/idor/employment.db.test.ts`                                                                  | `settings:update`           |
@@ -320,6 +322,8 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `lib:termination-reasons/softDeleteTerminationReason`         | ✅     | `src/test/idor/employment.db.test.ts`         | —       |
 | `lib:timeline/appendPersonEvents`                             | ✅     | `src/test/idor/timeline.db.test.ts`           | —       |
 | `lib:timeline/listPersonEvents`                               | ✅     | `src/test/idor/timeline.db.test.ts`           | —       |
+| `lib:transfers/listPersonLinks`                               | ✅     | `src/test/idor/transfers.db.test.ts`          | —       |
+| `lib:transfers/transferPerson`                                | ✅     | `src/test/idor/transfers.db.test.ts`          | —       |
 | `lib:termination-reasons/updateTerminationReason`             | ✅     | `src/test/idor/employment.db.test.ts`         | —       |
 | `lib:reports/turnover/data/getTurnoverGoal`                   | ✅     | `src/test/idor/turnover.db.test.ts`           | —       |
 | `lib:reports/turnover/data/loadTurnoverFacts`                 | ✅     | `src/test/idor/turnover.db.test.ts`           | —       |
