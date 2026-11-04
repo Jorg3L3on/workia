@@ -36,6 +36,8 @@ describe("proxy", () => {
       "/empresa",
       "/login",
       "/api/auth/:path*",
+      "/mi",
+      "/mi/:path*",
     ]);
 
     const source = readFileSync(
@@ -44,6 +46,43 @@ describe("proxy", () => {
     );
     expect(source).toContain('"/login"');
     expect(source).toContain('"/api/auth/:path*"');
+  });
+
+  it("sends /mi without an employee session cookie to /mi/entrar", () => {
+    for (const pathname of ["/mi", "/mi/expediente"]) {
+      const response = proxy(makeRequest(pathname));
+
+      expect(response.headers.get("location")).toBe(
+        "https://workia.local/mi/entrar",
+      );
+    }
+  });
+
+  it("does not take an HR session as an employee session", () => {
+    const response = proxy(
+      makeRequest("/mi", "__Secure-authjs.session-token=jwt"),
+    );
+
+    expect(response.headers.get("location")).toBe(
+      "https://workia.local/mi/entrar",
+    );
+  });
+
+  it("lets /mi through with an employee cookie and keeps sign-in pages public", () => {
+    expect(
+      proxy(makeRequest("/mi", "__Host-workia.employee-session=t")).headers.get(
+        "location",
+      ),
+    ).toBeNull();
+
+    for (const pathname of [
+      "/mi/entrar",
+      "/mi/activar",
+      "/mi/manifest.webmanifest",
+      "/mi/sw.js",
+    ]) {
+      expect(proxy(makeRequest(pathname)).headers.get("location")).toBeNull();
+    }
   });
 
   it("does not bounce /login to /app when a session cookie is present", () => {

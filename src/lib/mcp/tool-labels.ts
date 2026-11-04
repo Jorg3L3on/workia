@@ -26,6 +26,8 @@ const toolLabels: Record<string, string> = {
   get_seniority_certificate: "Constancia de antigüedad",
   get_vacation_entitlement: "Derecho a vacaciones",
   list_expiring_documents: "Documentos por vencer",
+  get_incidencias_summary: "Incidencias y ausentismo",
+  get_pay_period: "Quincena",
   list_assets: "Listar resguardo",
   get_asset: "Ver activo",
   register_asset: "Registrar activo",

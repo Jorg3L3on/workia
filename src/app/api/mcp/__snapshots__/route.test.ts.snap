@@ -4033,6 +4033,14 @@ exports[`/api/mcp transport > keeps the tools/list contract (snapshot) 1`] = `
             "reingreso",
             "finiquito_actualizado",
             "terminado",
+            "close",
+            "reopen",
+            "override",
+            "invite",
+            "activation_code",
+            "code_requested",
+            "login",
+            "logout",
           ],
           "type": "string",
         },
@@ -4089,6 +4097,20 @@ exports[`/api/mcp transport > keeps the tools/list contract (snapshot) 1`] = `
             "document_requirement",
             "person_document",
             "vacation_record",
+            "pay_period",
+            "incidencia_rules",
+            "incidencia_justification",
+            "prenomina_template",
+            "prenomina_export",
+            "employee_account",
+            "privacy_notice",
+            "privacy_acceptance",
+            "arco_request",
+            "data_retention",
+            "attendance_device",
+            "attendance_import",
+            "attendance_badge",
+            "attendance_checkin",
           ],
           "type": "string",
         },
@@ -4758,6 +4780,517 @@ exports[`/api/mcp transport > keeps the tools/list contract (snapshot) 1`] = `
       "securitySchemes": [
         {
           "scopes": [
+            "read",
+          ],
+          "type": "oauth2",
+        },
+      ],
+    },
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true,
+      "title": "Incidencias y ausentismo",
+    },
+    "description": "Incidencias (faltas, retardos, salidas anticipadas) y ausentismo de un rango de días, agrupados por persona, sucursal o mes. Son los mismos números que muestran las pantallas, calculados al consultar a partir de la asistencia y las incidencias registradas: no son los de un cierre. Para lo congelado de una quincena cerrada usa get_pay_period. Ausentismo = faltas / (días con asistencia + faltas). Rango máximo de 400 días.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "cursor": {
+          "description": "Cursor opaco devuelto como next_cursor en la página anterior.",
+          "maxLength": 1000,
+          "type": "string",
+        },
+        "from": {
+          "description": "Primer día, incluido (aaaa-mm-dd).",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "type": "string",
+        },
+        "group_by": {
+          "default": "site",
+          "description": "person: una fila por persona. site: por sucursal actual de la persona. month: por mes (aaaa-mm).",
+          "enum": [
+            "person",
+            "site",
+            "month",
+          ],
+          "type": "string",
+        },
+        "limit": {
+          "default": 25,
+          "description": "Cuántos resultados (por defecto 25, máximo 100).",
+          "maximum": 100,
+          "minimum": 1,
+          "type": "integer",
+        },
+        "site_id": {
+          "description": "Sólo personas de esta sucursal.",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+          "type": "string",
+        },
+        "to": {
+          "description": "Último día, incluido (aaaa-mm-dd).",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "type": "string",
+        },
+      },
+      "required": [
+        "from",
+        "to",
+      ],
+      "type": "object",
+    },
+    "name": "get_incidencias_summary",
+    "outputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "from": {
+          "type": "string",
+        },
+        "from_mx": {
+          "anyOf": [
+            {
+              "type": "string",
+            },
+            {
+              "type": "null",
+            },
+          ],
+        },
+        "group_by": {
+          "enum": [
+            "person",
+            "site",
+            "month",
+          ],
+          "type": "string",
+        },
+        "items": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "absent_days": {
+                "maximum": 9007199254740991,
+                "minimum": -9007199254740991,
+                "type": "integer",
+              },
+              "absenteeism_rate": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                  },
+                  {
+                    "type": "null",
+                  },
+                ],
+                "description": "Entre 0 y 1; null si no hay días con asistencia ni faltas.",
+              },
+              "incidencias": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "count": {
+                      "description": "Días con esta incidencia.",
+                      "maximum": 9007199254740991,
+                      "minimum": -9007199254740991,
+                      "type": "integer",
+                    },
+                    "justified": {
+                      "description": "De esos, justificados.",
+                      "maximum": 9007199254740991,
+                      "minimum": -9007199254740991,
+                      "type": "integer",
+                    },
+                    "kind": {
+                      "type": "string",
+                    },
+                    "kind_label": {
+                      "type": "string",
+                    },
+                    "minutes": {
+                      "description": "Minutos sumados (retardo, salida anticipada).",
+                      "maximum": 9007199254740991,
+                      "minimum": -9007199254740991,
+                      "type": "integer",
+                    },
+                  },
+                  "required": [
+                    "kind",
+                    "kind_label",
+                    "count",
+                    "justified",
+                    "minutes",
+                  ],
+                  "type": "object",
+                },
+                "type": "array",
+              },
+              "justified_absent_days": {
+                "maximum": 9007199254740991,
+                "minimum": -9007199254740991,
+                "type": "integer",
+              },
+              "key": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                  },
+                  {
+                    "type": "null",
+                  },
+                ],
+                "description": "Id de persona, id de sucursal (null: sin sucursal) o aaaa-mm.",
+              },
+              "label": {
+                "type": "string",
+              },
+              "present_days": {
+                "maximum": 9007199254740991,
+                "minimum": -9007199254740991,
+                "type": "integer",
+              },
+              "url": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                  },
+                  {
+                    "type": "null",
+                  },
+                ],
+              },
+            },
+            "required": [
+              "key",
+              "label",
+              "present_days",
+              "absent_days",
+              "justified_absent_days",
+              "absenteeism_rate",
+              "incidencias",
+              "url",
+            ],
+            "type": "object",
+          },
+          "type": "array",
+        },
+        "next_cursor": {
+          "anyOf": [
+            {
+              "type": "string",
+            },
+            {
+              "type": "null",
+            },
+          ],
+          "description": "Cursor para la página siguiente; null si no hay más.",
+        },
+        "to": {
+          "type": "string",
+        },
+        "to_mx": {
+          "anyOf": [
+            {
+              "type": "string",
+            },
+            {
+              "type": "null",
+            },
+          ],
+        },
+      },
+      "required": [
+        "from",
+        "from_mx",
+        "to",
+        "to_mx",
+        "group_by",
+        "items",
+        "next_cursor",
+      ],
+      "type": "object",
+    },
+    "title": "Incidencias y ausentismo",
+  },
+  {
+    "_meta": {
+      "securitySchemes": [
+        {
+          "scopes": [
+            "read",
+          ],
+          "type": "oauth2",
+        },
+      ],
+    },
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true,
+      "title": "Quincena",
+    },
+    "description": "Una quincena (aaaa-mm-Q1: días 1 a 15; aaaa-mm-Q2: del 16 al fin de mes): si está abierta o cerrada, su revisión y sus incidencias por persona. Si está cerrada son las incidencias congeladas en el cierre, las que lee la pre-nómina, y snapshot_matches dice si aún coinciden con las registradas. Si está abierta son las registradas hasta ahora, lo que congelaría un cierre. Sólo lectura: cerrar y reabrir se hace en Workia.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "cursor": {
+          "description": "Cursor opaco devuelto como next_cursor en la página anterior.",
+          "maxLength": 1000,
+          "type": "string",
+        },
+        "limit": {
+          "default": 25,
+          "description": "Cuántos resultados (por defecto 25, máximo 100).",
+          "maximum": 100,
+          "minimum": 1,
+          "type": "integer",
+        },
+        "period": {
+          "description": "La quincena, p. ej. 2026-11-Q1.",
+          "pattern": "^\\d{4}-(0[1-9]|1[0-2])-Q[12]$",
+          "type": "string",
+        },
+      },
+      "required": [
+        "period",
+      ],
+      "type": "object",
+    },
+    "name": "get_pay_period",
+    "outputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "closed_at": {
+          "anyOf": [
+            {
+              "type": "string",
+            },
+            {
+              "type": "null",
+            },
+          ],
+        },
+        "differences": {
+          "anyOf": [
+            {
+              "maximum": 9007199254740991,
+              "minimum": -9007199254740991,
+              "type": "integer",
+            },
+            {
+              "type": "null",
+            },
+          ],
+          "description": "Filas (persona y tipo) que cambiaron después del cierre.",
+        },
+        "ends_on": {
+          "type": "string",
+        },
+        "label": {
+          "type": "string",
+        },
+        "next_cursor": {
+          "anyOf": [
+            {
+              "type": "string",
+            },
+            {
+              "type": "null",
+            },
+          ],
+          "description": "Cursor para la página siguiente; null si no hay más.",
+        },
+        "people": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "incidencias": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "count": {
+                      "description": "Días con esta incidencia.",
+                      "maximum": 9007199254740991,
+                      "minimum": -9007199254740991,
+                      "type": "integer",
+                    },
+                    "justified": {
+                      "description": "De esos, justificados.",
+                      "maximum": 9007199254740991,
+                      "minimum": -9007199254740991,
+                      "type": "integer",
+                    },
+                    "kind": {
+                      "type": "string",
+                    },
+                    "kind_label": {
+                      "type": "string",
+                    },
+                    "minutes": {
+                      "description": "Minutos sumados (retardo, salida anticipada).",
+                      "maximum": 9007199254740991,
+                      "minimum": -9007199254740991,
+                      "type": "integer",
+                    },
+                  },
+                  "required": [
+                    "kind",
+                    "kind_label",
+                    "count",
+                    "justified",
+                    "minutes",
+                  ],
+                  "type": "object",
+                },
+                "type": "array",
+              },
+              "person": {
+                "additionalProperties": false,
+                "properties": {
+                  "id": {
+                    "type": "string",
+                  },
+                  "nombre_completo": {
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "id",
+                  "nombre_completo",
+                ],
+                "type": "object",
+              },
+              "url": {
+                "type": "string",
+              },
+            },
+            "required": [
+              "person",
+              "incidencias",
+              "url",
+            ],
+            "type": "object",
+          },
+          "type": "array",
+        },
+        "period": {
+          "type": "string",
+        },
+        "person_count": {
+          "maximum": 9007199254740991,
+          "minimum": -9007199254740991,
+          "type": "integer",
+        },
+        "revision": {
+          "description": "Cuántas veces se ha cerrado.",
+          "maximum": 9007199254740991,
+          "minimum": -9007199254740991,
+          "type": "integer",
+        },
+        "snapshot_matches": {
+          "anyOf": [
+            {
+              "type": "boolean",
+            },
+            {
+              "type": "null",
+            },
+          ],
+          "description": "Cerrada: si lo congelado coincide con lo registrado. Abierta: null.",
+        },
+        "source": {
+          "description": "snapshot: congelado en el cierre. live: calculado ahora.",
+          "enum": [
+            "snapshot",
+            "live",
+          ],
+          "type": "string",
+        },
+        "starts_on": {
+          "type": "string",
+        },
+        "status": {
+          "enum": [
+            "open",
+            "closed",
+          ],
+          "type": "string",
+        },
+        "totals": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "count": {
+                "description": "Días con esta incidencia.",
+                "maximum": 9007199254740991,
+                "minimum": -9007199254740991,
+                "type": "integer",
+              },
+              "justified": {
+                "description": "De esos, justificados.",
+                "maximum": 9007199254740991,
+                "minimum": -9007199254740991,
+                "type": "integer",
+              },
+              "kind": {
+                "type": "string",
+              },
+              "kind_label": {
+                "type": "string",
+              },
+              "minutes": {
+                "description": "Minutos sumados (retardo, salida anticipada).",
+                "maximum": 9007199254740991,
+                "minimum": -9007199254740991,
+                "type": "integer",
+              },
+            },
+            "required": [
+              "kind",
+              "kind_label",
+              "count",
+              "justified",
+              "minutes",
+            ],
+            "type": "object",
+          },
+          "type": "array",
+        },
+        "url": {
+          "type": "string",
+        },
+      },
+      "required": [
+        "period",
+        "label",
+        "starts_on",
+        "ends_on",
+        "status",
+        "revision",
+        "closed_at",
+        "source",
+        "snapshot_matches",
+        "differences",
+        "totals",
+        "person_count",
+        "people",
+        "url",
+        "next_cursor",
+      ],
+      "type": "object",
+    },
+    "title": "Quincena",
+  },
+  {
+    "_meta": {
+      "securitySchemes": [
+        {
+          "scopes": [
             "write:people",
           ],
           "type": "oauth2",
@@ -4771,7 +5304,7 @@ exports[`/api/mcp transport > keeps the tools/list contract (snapshot) 1`] = `
       "readOnlyHint": false,
       "title": "Alta de persona",
     },
-    "description": "Da de alta un expediente con las mismas reglas que la app (D-04). RFC, CURP y NSS sólo con el scope pii. CONFLICT si un RFC, CURP o NSS ya es de otra persona activa. Primero responde una vista previa; repite con confirmation_token para hacerlo.",
+    "description": "Da de alta un expediente con las mismas reglas que la app (D-04). La CURP es obligatoria (una persona activa siempre tiene CURP válida). RFC, CURP y NSS sólo con el scope pii. CONFLICT si un RFC, CURP o NSS ya es de otra persona activa. Primero responde una vista previa; repite con confirmation_token para hacerlo.",
     "inputSchema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "properties": {
@@ -4826,7 +5359,7 @@ exports[`/api/mcp transport > keeps the tools/list contract (snapshot) 1`] = `
           "type": "string",
         },
         "curp": {
-          "description": "Sólo con el scope pii.",
+          "description": "Obligatoria en un alta: toda persona activa tiene una CURP válida. Sólo con el scope pii.",
           "maxLength": 18,
           "type": "string",
         },
@@ -5555,7 +6088,7 @@ exports[`/api/mcp transport > keeps the tools/list contract (snapshot) 1`] = `
       "readOnlyHint": false,
       "title": "Baja o reingreso",
     },
-    "description": "Da de baja laboral o reingresa a una persona (estatus activa | baja). No es borrar: el expediente sigue ahí. Baja: fecha_baja, tipo_baja, motivo (motivo_id de list_termination_reasons, o su nombre en motivo) y recontratable son obligatorios; comentario y finiquito opcionales (el monto sólo con el scope pii y compensation:read). Cierra el periodo laboral y el contrato vigente queda «terminado» en la fecha de baja. Reingreso (status activa): abre un nuevo periodo en el mismo expediente con fecha_ingreso (por defecto hoy) y reconocer_antiguedad (por defecto false: la antigüedad reinicia). La vista previa avisa si tiene contrato vigente, activos en resguardo o si su última baja dice no recontratable. Primero responde una vista previa; repite con confirmation_token para hacerlo.",
+    "description": "Da de baja laboral o reingresa a una persona (estatus activa | baja). No es borrar: el expediente sigue ahí. Baja: fecha_baja, tipo_baja, motivo (motivo_id de list_termination_reasons, o su nombre en motivo) y recontratable son obligatorios; comentario y finiquito opcionales (el monto sólo con el scope pii y compensation:read). Cierra el periodo laboral y el contrato vigente queda «terminado» en la fecha de baja. Reingreso (status activa): necesita CURP válida en el expediente; abre un nuevo periodo en el mismo expediente con fecha_ingreso (por defecto hoy) y reconocer_antiguedad (por defecto false: la antigüedad reinicia). La vista previa avisa si tiene contrato vigente, activos en resguardo o si su última baja dice no recontratable. Primero responde una vista previa; repite con confirmation_token para hacerlo.",
     "inputSchema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "properties": {

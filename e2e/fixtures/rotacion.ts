@@ -10,6 +10,7 @@
  *     Removes that person (and the period) even when the spec failed.
  */
 import { config } from "dotenv";
+import { e2eCurp } from "../curp";
 
 config({ path: ".env.local" });
 config();
@@ -57,7 +58,7 @@ const main = async () => {
       managerId: "",
       siteId: "",
       rfc: "",
-      curp: "",
+      curp: e2eCurp(),
       nss: "",
       horarioEntrada: "",
       horarioSalidaComer: "",

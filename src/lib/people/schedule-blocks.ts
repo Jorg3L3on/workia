@@ -58,6 +58,20 @@ const optionalTime = z
   .optional()
   .transform((value) => value || null);
 
+/** A shift that ends the next day lasts at most this long. */
+const MAX_NIGHT_SHIFT_MINUTES = 14 * 60;
+
+const minutesOf = (time: string) =>
+  Number(time.slice(0, 2)) * 60 + Number(time.slice(3, 5));
+
+/** Minutes from the entry to a time of the shift, past midnight included. */
+const sinceEntry = (entrada: string, time: string) =>
+  (minutesOf(time) - minutesOf(entrada) + 24 * 60) % (24 * 60);
+
+/** Length of a shift; an exit before the entry ends the next day. */
+const shiftMinutes = (entrada: string, salida: string) =>
+  sinceEntry(entrada, salida) || 24 * 60;
+
 export const scheduleBlockSchema = z
   .object({
     dias: z
@@ -69,7 +83,13 @@ export const scheduleBlockSchema = z
     comidaFin: optionalTime,
   })
   .superRefine((block, ctx) => {
-    if (block.entrada >= block.salida) {
+    // An exit before the entry is a night shift that ends the next day
+    // (W2-14), as long as it is not longer than a night shift can be.
+    if (
+      block.entrada === block.salida ||
+      (block.salida < block.entrada &&
+        shiftMinutes(block.entrada, block.salida) > MAX_NIGHT_SHIFT_MINUTES)
+    ) {
       ctx.addIssue({
         code: "custom",
         message: "La salida debe ser después de la entrada.",
@@ -90,9 +110,10 @@ export const scheduleBlockSchema = z
       block.comidaInicio &&
       block.comidaFin &&
       !(
-        block.entrada <= block.comidaInicio &&
-        block.comidaInicio < block.comidaFin &&
-        block.comidaFin <= block.salida
+        sinceEntry(block.entrada, block.comidaInicio) <
+          sinceEntry(block.entrada, block.comidaFin) &&
+        sinceEntry(block.entrada, block.comidaFin) <=
+          shiftMinutes(block.entrada, block.salida)
       )
     ) {
       ctx.addIssue({
