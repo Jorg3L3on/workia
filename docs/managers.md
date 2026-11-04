@@ -67,6 +67,32 @@ The team list pages with a keyset on the name and the id (no `OFFSET`,
 helper `src/lib/db/keyset.ts` arrives with P-04; switch to it once both are in
 `sandbox`.
 
+## Today view (W2-17)
+
+`/mi/equipo/hoy` shows the manager's team for today (Mexico date): on shift,
+faltas, retardos and people with no record yet, plus the list by name, with a
+filter per site or area of the team (`listTeamPlaces`). It reads through
+`src/lib/timeline/today.ts` with the scope `{ team: access, siteId?, areaId? }`,
+so indirect reports and delegations count exactly as in «Mi equipo»:
+
+- `todayCounts`: roster, present, faltas and retardos from the P-02
+  aggregates (never a counter).
+- `todayImports`: per attendance source, the people it covers and its latest
+  punch, which is "as of the last import"; also who is on shift (last punch an
+  entry). One statement through the roster and one probe of
+  `person_events_dedupe_unique` per person.
+- `listTodayPage`: the keyset list (P-04), with `todayStatus` per row: a falta
+  wins, then the last punch (entry = en turno, exit = salió), else sin
+  registro. Incidencias follow the P-02 correction contract (highest `rev`
+  per kind, `voided` cancels).
+
+Each row drills into `/mi/equipo/[personId]`, which now lists the person's
+attendance and incidencias newest first (`listPersonEvents`, keyset), after
+the same team check. A team of 100 people with five years of attendance
+renders in about 100 ms locally (`src/test/idor/team-today.db.test.ts` checks
+under a second). When W2-12 records import runs, "last import" can read them
+instead of the latest punch.
+
 ## For W2-06 (requests and approvals)
 
 - When a request is created, store `approver_person_id =

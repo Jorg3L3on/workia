@@ -356,6 +356,7 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `lib:timeline/listPersonEvents`                               | ✅     | `src/test/idor/timeline.db.test.ts`                                                                               | —       |
 | `lib:timeline/today/listTodayPage`                            | ✅     | `src/test/idor/today.db.test.ts`                                                                                  | —       |
 | `lib:timeline/today/todayCounts`                              | ✅     | `src/test/idor/period-close.db.test.ts`                                                                           | —       |
+| `lib:timeline/today/todayImports`                             | ✅     | `src/test/idor/team-today.db.test.ts`                                                                             | —       |
 | `lib:timeline/writers/appendEmploymentChanges`                | ⏭️     | Exento: escritor de W2-13 para el flujo que ya validó la empresa; probado en `src/lib/timeline/writes.db.test.ts` | —       |
 | `lib:timeline/writers/replacePeriodIncidencias`               | ✅     | `src/test/idor/period-close.db.test.ts`                                                                           | —       |
 | `lib:timeline/writers/writeAttendanceDays`                    | ⏭️     | Exento: escritor de W2-13 para el flujo que ya validó la empresa; probado en `src/lib/timeline/writes.db.test.ts` | —       |

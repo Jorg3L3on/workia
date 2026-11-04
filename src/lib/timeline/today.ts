@@ -1,10 +1,11 @@
-import { eq, getTableName, isNull, sql } from "drizzle-orm";
+import { and, eq, getTableName, isNull, sql, type SQL } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 
 import { db, tdb } from "@/lib/db";
 import { clampPageSize, defineKeyset, type KeysetPage } from "@/lib/db/keyset";
 import { people, personEvents } from "@/lib/db/schema";
 import { DISPLAY_TIME_ZONE } from "@/lib/format/date";
+import { teamCondition, type ManagerAccess } from "@/lib/managers/scope";
 import { withTenant } from "@/lib/tenant/scope";
 
 import { absenteeismBy, incidenciasBy } from "./aggregates";
@@ -26,9 +27,22 @@ export const MAX_TODAY_PAGE = 200;
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/** Whose day it is: one site, one area, or a manager's direct reports (W2-07). */
+/**
+ * Whose day it is: one site, one area, or a manager's direct reports (P-04),
+ * or a signed-in manager's live team (W2-07 scope, with indirect reports and
+ * the teams they cover for), optionally narrowed to one site or area of it.
+ */
 export type TodayScope =
-  { siteId: string } | { areaId: string } | { managerId: string };
+  | { siteId: string }
+  | { areaId: string }
+  | { managerId: string }
+  | TeamTodayScope;
+
+export type TeamTodayScope = {
+  team: ManagerAccess;
+  siteId?: string | null;
+  areaId?: string | null;
+};
 
 export type TodayRow = {
   personId: string;
@@ -60,18 +74,36 @@ const roster = defineKeyset([
 const outer = (column: AnyPgColumn) =>
   sql`${sql.identifier(getTableName(column.table))}.${sql.identifier(column.name)}`;
 
-const scopeCondition = (scope: TodayScope) => {
+const scopeCondition = (scope: TodayScope): SQL => {
+  if ("team" in scope) {
+    return and(
+      teamCondition(scope.team),
+      scope.siteId ? eq(people.siteId, scope.siteId) : undefined,
+      scope.areaId ? eq(people.areaId, scope.areaId) : undefined,
+    ) as SQL;
+  }
   if ("siteId" in scope) return eq(people.siteId, scope.siteId);
   if ("areaId" in scope) return eq(people.areaId, scope.areaId);
   return eq(people.managerId, scope.managerId);
 };
 
-const scopeId = (scope: TodayScope) =>
-  "siteId" in scope
-    ? scope.siteId
-    : "areaId" in scope
-      ? scope.areaId
-      : scope.managerId;
+/** Every id the scope carries is a uuid; anything else is an empty day. */
+const validScope = (companyId: string, scope: TodayScope) => {
+  if ("team" in scope) {
+    return (
+      scope.team.companyId === companyId &&
+      [scope.siteId, scope.areaId].every((id) => !id || UUID.test(id))
+    );
+  }
+
+  return UUID.test(
+    "siteId" in scope
+      ? scope.siteId
+      : "areaId" in scope
+        ? scope.areaId
+        : scope.managerId,
+  );
+};
 
 type TodayOptions = { day: string; cursor?: string | null; limit?: number };
 
@@ -144,7 +176,7 @@ export const listTodayPage = async (
     throw new Error(`Invalid day: ${options.day}`);
   }
 
-  if (!UUID.test(scopeId(scope))) {
+  if (!validScope(companyId, scope)) {
     return { items: [], next: null };
   }
 
@@ -184,7 +216,7 @@ export const todayCounts = async (
     throw new Error(`Invalid day: ${day}`);
   }
 
-  if (!UUID.test(scopeId(scope))) {
+  if (!validScope(companyId, scope)) {
     return empty;
   }
 
@@ -221,5 +253,87 @@ export const todayCounts = async (
     absent: absenteeism[0]?.absentDays ?? 0,
     late: kind("retardo"),
     leftEarly: kind("salida_anticipada"),
+  };
+};
+
+export type TodaySource = {
+  /** person_events.source of the day's attendance rows: "checador:<device>", "import", ... */
+  source: string;
+  /** People of the scope whose day came from it. */
+  people: number;
+  /** The latest punch it brought for the scope (ISO instant), or null. */
+  lastPunchAt: string | null;
+};
+
+export type TodayImports = {
+  /** People whose last punch of the day is an entry: in the building now, as of the last import. */
+  onShift: number;
+  /** Newest punch first. */
+  sources: TodaySource[];
+};
+
+/**
+ * Where the day's attendance of a scope came from, and how fresh it is
+ * (Workia 2.0 W2-17): per source, the people it covers and its latest punch,
+ * which is how far the screen is current. Also counts who is on shift (last
+ * punch an entry). One statement: the roster through the scope's people
+ * index, one probe of person_events_dedupe_unique per person, then a group by
+ * source. It reads the stored tuples ([at, kind, device?], sorted by time),
+ * so the last element is the last punch.
+ */
+export const todayImports = async (
+  companyId: string,
+  scope: TodayScope,
+  day: string,
+): Promise<TodayImports> => {
+  if (!DAY.test(day)) {
+    throw new Error(`Invalid day: ${day}`);
+  }
+
+  if (!validScope(companyId, scope)) {
+    return { onShift: 0, sources: [] };
+  }
+
+  const last = sql`(case when jsonb_typeof(${personEvents.payload}->'punches') = 'array' then ${personEvents.payload}->'punches'->-1 end)`;
+  const rows = await tdb(companyId)
+    .select({
+      source: personEvents.source,
+      people: sql<number>`count(*)::int`,
+      onShift: sql<number>`(count(*) filter (where ${last}->>1 = 'in'))::int`,
+      lastPunchAt: sql<string | null>`max(${last}->>0)`,
+    })
+    .from(people)
+    .innerJoin(
+      personEvents,
+      and(
+        eq(personEvents.companyId, people.companyId),
+        eq(personEvents.personId, people.id),
+        eq(personEvents.dedupeKey, attendanceDedupeKey(day)),
+      ),
+    )
+    .where(
+      withTenant(
+        people,
+        companyId,
+        scopeCondition(scope),
+        eq(people.status, "activa"),
+        isNull(people.deletedAt),
+      ),
+    )
+    .groupBy(personEvents.source);
+
+  return {
+    onShift: rows.reduce((sum, row) => sum + row.onShift, 0),
+    sources: rows
+      .map(({ source, people: count, lastPunchAt }) => ({
+        source,
+        people: count,
+        lastPunchAt,
+      }))
+      .sort(
+        (a, b) =>
+          (b.lastPunchAt ?? "").localeCompare(a.lastPunchAt ?? "") ||
+          a.source.localeCompare(b.source),
+      ),
   };
 };

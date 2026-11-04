@@ -63,7 +63,8 @@ opaque string (`cursor`, not `before`).
 
 `listTodayPage(companyId, scope, { day, cursor?, limit? })` returns the active
 people of a site, an area or a manager's direct reports (`{ siteId }`,
-`{ areaId }` or `{ managerId }`) in name order, each with the day's attendance
+`{ areaId }` or `{ managerId }`), or a signed-in manager's live team
+(`{ team, siteId?, areaId? }`, W2-17, [managers.md](managers.md)), in name order, each with the day's attendance
 payload (null when nobody punched) and the day's incidencias. `day` is the
 local date in America/Mexico_City, the date the attendance dedupe key holds.
 

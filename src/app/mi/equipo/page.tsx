@@ -76,6 +76,22 @@ const TeamPage = async ({ searchParams }: TeamPageProps) => {
 
       <Link
         className="workia-pass-card flex items-center justify-between gap-3 px-5 py-4"
+        href="/mi/equipo/hoy"
+      >
+        <span className="space-y-0.5">
+          <span className="block text-base font-semibold">Hoy</span>
+          <span className="text-muted-foreground block text-sm">
+            Quién está en turno, quién faltó y quién llegó tarde.
+          </span>
+        </span>
+        <ChevronRightIcon
+          aria-hidden
+          className="text-muted-foreground size-5"
+        />
+      </Link>
+
+      <Link
+        className="workia-pass-card flex items-center justify-between gap-3 px-5 py-4"
         href="/mi/equipo/aprobaciones"
       >
         <span className="space-y-0.5">

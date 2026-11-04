@@ -521,3 +521,57 @@ export const currentApprover = async (companyId: string, personId: string) => {
 
   return row?.managerPersonId ?? null;
 };
+
+export type TeamPlace = { kind: "site" | "area"; id: string; name: string };
+
+/**
+ * The sites and areas the team works in, by name: the filters of the today
+ * view (W2-17). One grouped pass over the team's people rows.
+ */
+export const listTeamPlaces = async (
+  access: ManagerAccess,
+): Promise<TeamPlace[]> => {
+  const rows = await tdb(access.companyId)
+    .select({
+      siteId: sites.id,
+      siteName: sites.name,
+      areaId: areas.id,
+      areaName: areas.name,
+    })
+    .from(people)
+    .leftJoin(
+      areas,
+      and(eq(areas.companyId, people.companyId), eq(areas.id, people.areaId)),
+    )
+    .leftJoin(
+      sites,
+      and(eq(sites.companyId, people.companyId), eq(sites.id, people.siteId)),
+    )
+    .where(teamCondition(access))
+    .groupBy(sites.id, sites.name, areas.id, areas.name);
+
+  const places = new Map<string, TeamPlace>();
+
+  for (const row of rows) {
+    if (row.siteId && row.siteName) {
+      places.set(`site:${row.siteId}`, {
+        kind: "site",
+        id: row.siteId,
+        name: row.siteName,
+      });
+    }
+    if (row.areaId && row.areaName) {
+      places.set(`area:${row.areaId}`, {
+        kind: "area",
+        id: row.areaId,
+        name: row.areaName,
+      });
+    }
+  }
+
+  return [...places.values()].sort(
+    (a, b) =>
+      (a.kind === b.kind ? 0 : a.kind === "site" ? -1 : 1) ||
+      a.name.localeCompare(b.name, "es"),
+  );
+};
