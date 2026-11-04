@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { RecomputeButton } from "@/components/incidencias/recompute-button";
 import { PayPeriodActions } from "@/components/pay-periods/pay-period-actions";
 import { PayPeriodStatusBadge } from "@/components/pay-periods/pay-periods-table";
+import { PrenominaPanel } from "@/components/prenomina/prenomina-panel";
 import { PeriodPeopleTable } from "@/components/pay-periods/period-people-table";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +24,12 @@ import {
 } from "@/lib/pay-periods/actions";
 import { recomputePayPeriodAction } from "@/lib/incidencias/actions";
 import { requirePayPeriodsRead } from "@/lib/pay-periods/auth";
+import { getPrenominaOverview } from "@/lib/prenomina";
+import { PRENOMINA_COPY } from "@/lib/prenomina/copy";
+import {
+  PRENOMINA_CONCEPT_LABELS,
+  type PrenominaConcept,
+} from "@/lib/prenomina/template";
 import {
   incidenciaKindLabel,
   orderedKinds,
@@ -40,6 +47,18 @@ type PeriodoPageProps = {
   searchParams: Promise<{ desde?: string }>;
 };
 
+/** The summary the pre-nómina card shows, in this order (W2-18). */
+const SUMMARY_CONCEPTS: PrenominaConcept[] = [
+  "faltas",
+  "retardos",
+  "salidas_anticipadas",
+  "permisos_con_goce",
+  "permisos_sin_goce",
+  "incapacidades",
+  "vacaciones",
+  "faltas_justificadas_rh",
+];
+
 /**
  * One quincena (W2-15): its status, its incidencias by person (the frozen
  * snapshot once closed, the live aggregate while open), close and reopen with
@@ -55,9 +74,10 @@ const PeriodoPage = async ({ params, searchParams }: PeriodoPageProps) => {
   }
 
   const { desde } = await searchParams;
-  const [detail, check] = await Promise.all([
+  const [detail, check, prenomina] = await Promise.all([
     getPayPeriodDetail(session.companyId, period, { cursor: desde ?? null }),
     verifyPeriodSnapshot(session.companyId, period),
+    getPrenominaOverview(session.companyId, period),
   ]);
   const canManage = session.permissions.has("pay_periods:manage");
   const kinds = orderedKinds(Object.keys(detail.totals));
@@ -144,6 +164,56 @@ const PeriodoPage = async ({ params, searchParams }: PeriodoPageProps) => {
           })}
         </div>
       ) : null}
+      <Card data-testid="prenomina-card">
+        <CardHeader>
+          <CardTitle>{PRENOMINA_COPY.title}</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          {prenomina ? (
+            <>
+              <p className="text-muted-foreground text-sm">
+                {PRENOMINA_COPY.closedDescription}{" "}
+                {PRENOMINA_COPY.people(prenomina.people)}.
+              </p>
+              <dl
+                className="grid grid-cols-2 gap-3 sm:grid-cols-4"
+                data-testid="prenomina-summary"
+              >
+                {SUMMARY_CONCEPTS.map((concept) => (
+                  <div key={concept}>
+                    <dt className="text-muted-foreground text-sm">
+                      {PRENOMINA_CONCEPT_LABELS[concept]}
+                    </dt>
+                    <dd
+                      className="text-xl font-semibold tabular-nums"
+                      data-testid={`prenomina-total-${concept}`}
+                    >
+                      {prenomina.totals[concept].toLocaleString("es-MX")}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+              <PrenominaPanel
+                canExport={session.permissions.has("people:export")}
+                period={detail.period}
+                templates={prenomina.templates}
+              />
+              <p className="text-sm">
+                <Link
+                  className="underline underline-offset-4"
+                  href="/app/periodos/plantillas"
+                >
+                  {PRENOMINA_COPY.templatesTitle}
+                </Link>
+              </p>
+            </>
+          ) : (
+            <p className="text-muted-foreground text-sm">
+              {PRENOMINA_COPY.openDescription}
+            </p>
+          )}
+        </CardContent>
+      </Card>
       <PeriodPeopleTable
         emptyTitle={PAY_PERIOD_COPY.empty}
         kinds={kinds}

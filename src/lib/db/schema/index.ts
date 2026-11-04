@@ -15,6 +15,7 @@ export * from "./onboardings";
 export * from "./pay-periods";
 export * from "./people";
 export * from "./people-views";
+export * from "./prenomina";
 export * from "./privacy";
 export * from "./rbac";
 export * from "./sites";

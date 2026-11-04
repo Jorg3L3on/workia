@@ -4100,6 +4100,8 @@ exports[`/api/mcp transport > keeps the tools/list contract (snapshot) 1`] = `
             "pay_period",
             "incidencia_rules",
             "incidencia_justification",
+            "prenomina_template",
+            "prenomina_export",
             "employee_account",
             "privacy_notice",
             "privacy_acceptance",

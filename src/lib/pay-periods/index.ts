@@ -126,8 +126,12 @@ export const closePayPeriod = async (
     const written = await tx.execute(sql`
       with inserted as (
         insert into incidencias_period_snapshot
-          (company_id, pay_period_id, person_id, kind, count, justified, minutes)
-        select ${companyId}::uuid, ${current.id}::uuid, person_id, kind, count, justified, minutes
+          (company_id, pay_period_id, person_id, kind, count, justified, minutes,
+           justified_minutes, justified_vacation, justified_permiso_con_goce,
+           justified_permiso_sin_goce, justified_incapacidad)
+        select ${companyId}::uuid, ${current.id}::uuid, person_id, kind, count, justified, minutes,
+          justified_minutes, justified_vacation, justified_permiso_con_goce,
+          justified_permiso_sin_goce, justified_incapacidad
         from (${incidenciasByPersonSql(companyId, range)}) agg
         returning 1
       )
@@ -422,7 +426,9 @@ export const verifyPeriodSnapshot = async (
   const range = quincenaRange(period);
   const result = await tdb(companyId).execute(sql`
     with snap as (
-      select person_id, kind, count, justified, minutes
+      select person_id, kind, count, justified, minutes, justified_minutes,
+        justified_vacation, justified_permiso_con_goce,
+        justified_permiso_sin_goce, justified_incapacidad
       from incidencias_period_snapshot
       where company_id = ${companyId} and pay_period_id = ${current.id}
     ),
@@ -433,8 +439,12 @@ export const verifyPeriodSnapshot = async (
       l.count as l_count, l.justified as l_justified, l.minutes as l_minutes
     from snap s
     full join live l on l.person_id = s.person_id and l.kind = s.kind
-    where (s.count, s.justified, s.minutes)
-      is distinct from (l.count, l.justified, l.minutes)
+    where (s.count, s.justified, s.minutes, s.justified_minutes,
+        s.justified_vacation, s.justified_permiso_con_goce,
+        s.justified_permiso_sin_goce, s.justified_incapacidad)
+      is distinct from (l.count, l.justified, l.minutes, l.justified_minutes,
+        l.justified_vacation, l.justified_permiso_con_goce,
+        l.justified_permiso_sin_goce, l.justified_incapacidad)
     order by 1, 2`);
 
   type Row = {

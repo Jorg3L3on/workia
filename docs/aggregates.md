@@ -101,7 +101,9 @@ await reopenPayPeriod(companyId, "2026-11-Q1", { reason, actorUserId });
   changes only by reopen (delete) and close (insert). Both tables have company
   RLS and composite foreign keys to the company's people and periods.
 
-The pre-nómina file is W2-18. The engine that writes the incidencias, its
+The pre-nómina file is W2-18 ([prenomina.md](prenomina.md)); migration 0052
+adds to the snapshot what justified each incidencia, so it counts permisos,
+incapacidades and vacations apart. The engine that writes the incidencias, its
 rules and HR's justifications are in [incidencias.md](incidencias.md) (W2-14).
 
 ## Close wired to the engine and the screens (W2-15)

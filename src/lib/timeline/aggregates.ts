@@ -157,15 +157,16 @@ const effectiveIncidencias = (
   range: DayRange,
   scope: Scope,
 ): SQL => sql`
-  select person_id, site_id, day, kind, minutes, justified
+  select person_id, site_id, day, kind, minutes, justified, justification_ref
   from (
     select distinct on (person_id, day, kind)
-      person_id, site_id, day, kind, minutes, justified, voided
+      person_id, site_id, day, kind, minutes, justified, justification_ref, voided
     from (
       select person_id, site_id, day,
         payload ->> 'kind' as kind,
         case when payload ->> 'minutes' ~ '^[0-9]{1,5}$' then (payload ->> 'minutes')::int else 0 end as minutes,
         coalesce(payload -> 'justified' = 'true'::jsonb, false) as justified,
+        payload ->> 'justification_ref' as justification_ref,
         coalesce(payload -> 'voided' = 'true'::jsonb, false) as voided,
         case when payload ->> 'rev' ~ '^[0-9]{1,6}$' then (payload ->> 'rev')::int else 0 end as rev,
         occurred_at, id
@@ -190,7 +191,10 @@ const groupKey = (by: AggregateGroup) => {
 /**
  * Incidencias per person and kind in a range, as the statement the period
  * close inserts from (src/lib/pay-periods). Columns: person_id, kind, count,
- * justified, minutes.
+ * justified, minutes, and (W2-18, for pre-nómina) justified_minutes and the
+ * justified ones by what justified them, read from the prefix of
+ * justification_ref (W2-14): vacation, permiso_con_goce, permiso_sin_goce,
+ * incapacidad_imss. The rest of the justified ones are HR overrides.
  */
 export const incidenciasByPersonSql = (
   companyId: string,
@@ -199,7 +203,12 @@ export const incidenciasByPersonSql = (
   select person_id, kind,
     count(*)::int as count,
     (count(*) filter (where justified))::int as justified,
-    sum(minutes)::int as minutes
+    sum(minutes)::int as minutes,
+    coalesce(sum(minutes) filter (where justified), 0)::int as justified_minutes,
+    (count(*) filter (where justified and starts_with(justification_ref, 'vacation:')))::int as justified_vacation,
+    (count(*) filter (where justified and starts_with(justification_ref, 'permiso_con_goce:')))::int as justified_permiso_con_goce,
+    (count(*) filter (where justified and starts_with(justification_ref, 'permiso_sin_goce:')))::int as justified_permiso_sin_goce,
+    (count(*) filter (where justified and starts_with(justification_ref, 'incapacidad_imss:')))::int as justified_incapacidad
   from (${effectiveIncidencias(companyId, range, {})}) eff
   group by person_id, kind`;
 

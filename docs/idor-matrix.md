@@ -93,6 +93,8 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `action:people/updateFiniquitoAction`                      | ✅     | `src/test/idor/employment.db.test.ts`                                                                  | `people:update`             |
 | `action:people/updatePeopleViewAction`                     | ✅     | `src/test/idor/people-views.db.test.ts`                                                                | `people:read`               |
 | `action:people/updatePersonAction`                         | ✅     | `src/test/idor/people.db.test.ts`                                                                      | `people:update`             |
+| `action:prenomina/archivePrenominaTemplateAction`          | ✅     | `src/test/idor/prenomina.db.test.ts`                                                                   | `pay_periods:manage`        |
+| `action:prenomina/savePrenominaTemplateAction`             | ✅     | `src/test/idor/prenomina.db.test.ts`                                                                   | `pay_periods:manage`        |
 | `action:privacy/createArcoRequestAction`                   | ✅     | `src/test/idor/privacy.db.test.ts`                                                                     | `privacy:manage`            |
 | `action:privacy/publishPrivacyNoticeAction`                | ✅     | `src/test/idor/privacy.db.test.ts`                                                                     | `privacy:manage`            |
 | `action:privacy/recordPrivacyAcceptanceAction`             | ✅     | `src/test/idor/privacy.db.test.ts`                                                                     | `privacy:manage`            |
@@ -143,6 +145,7 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `route:GET /api/mi/google/callback`                             | ✅     | `src/test/idor/employee-accounts.db.test.ts`                           | —                                      |
 | `route:GET /api/mi/google`                                      | ✅     | `src/test/idor/employee-accounts.db.test.ts`                           | —                                      |
 | `route:GET /api/oauth/authorize`                                | ✅     | `src/test/idor/mcp.db.test.ts`                                         | —                                      |
+| `route:GET /app/periodos/[period]/prenomina`                    | ✅     | `src/test/idor/prenomina.db.test.ts`                                   | `pay_periods:read` + `people:export`   |
 | `route:GET /app/personas/[id]/contratos/[contractId]/pdf`       | ✅     | `src/test/idor/contract-pdf.db.test.ts`                                | `contracts:read` + `compensation:read` |
 | `route:GET /app/personas/exportar`                              | ✅     | `src/test/idor/import.db.test.ts`                                      | `people:export`                        |
 | `route:GET /app/personas/plantilla`                             | ✅     | `src/test/idor/import.db.test.ts`                                      | `people:import`                        |
@@ -348,6 +351,13 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `lib:people/views/getPeopleView`                              | ✅     | `src/test/idor/people-views.db.test.ts`                                                                           | —       |
 | `lib:people/views/listPeopleViews`                            | ✅     | `src/test/idor/people-views.db.test.ts`                                                                           | —       |
 | `lib:people/views/updatePeopleView`                           | ✅     | `src/test/idor/people-views.db.test.ts`                                                                           | —       |
+| `lib:prenomina/archivePrenominaTemplate`                      | ✅     | `src/test/idor/prenomina.db.test.ts`                                                                              | —       |
+| `lib:prenomina/createPrenominaTemplate`                       | ✅     | `src/test/idor/prenomina.db.test.ts`                                                                              | —       |
+| `lib:prenomina/exportPrenomina`                               | ✅     | `src/test/idor/prenomina.db.test.ts`                                                                              | —       |
+| `lib:prenomina/getPrenominaOverview`                          | ✅     | `src/test/idor/prenomina.db.test.ts`                                                                              | —       |
+| `lib:prenomina/getPrenominaTemplate`                          | ✅     | `src/test/idor/prenomina.db.test.ts`                                                                              | —       |
+| `lib:prenomina/listPrenominaTemplates`                        | ✅     | `src/test/idor/prenomina.db.test.ts`                                                                              | —       |
+| `lib:prenomina/updatePrenominaTemplate`                       | ✅     | `src/test/idor/prenomina.db.test.ts`                                                                              | —       |
 | `lib:privacy/buildPersonDataExport`                           | ✅     | `src/test/idor/privacy.db.test.ts`                                                                                | —       |
 | `lib:privacy/createArcoRequest`                               | ✅     | `src/test/idor/privacy.db.test.ts`                                                                                | —       |
 | `lib:privacy/getArcoRequest`                                  | ✅     | `src/test/idor/privacy.db.test.ts`                                                                                | —       |

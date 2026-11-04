@@ -76,6 +76,21 @@ export const incidenciasPeriodSnapshot = pgTable(
     justified: integer("justified").notNull(),
     /** Minutes added up (retardo, salida anticipada); 0 for a falta. */
     minutes: integer("minutes").notNull(),
+    /**
+     * Why the justified ones were justified (W2-18, from the incidencia's
+     * justification_ref), so pre-nómina counts permisos, incapacidades and
+     * vacations apart. Justified minus these four is HR overrides.
+     */
+    justifiedVacation: integer("justified_vacation").notNull().default(0),
+    justifiedPermisoConGoce: integer("justified_permiso_con_goce")
+      .notNull()
+      .default(0),
+    justifiedPermisoSinGoce: integer("justified_permiso_sin_goce")
+      .notNull()
+      .default(0),
+    justifiedIncapacidad: integer("justified_incapacidad").notNull().default(0),
+    /** Minutes of the justified ones (W2-18). */
+    justifiedMinutes: integer("justified_minutes").notNull().default(0),
   },
   (table) => [
     // Reading a period is a range scan of this key.
@@ -100,6 +115,10 @@ export const incidenciasPeriodSnapshot = pgTable(
     check(
       "incidencias_period_snapshot_counts_check",
       sql`${table.count} > 0 AND ${table.justified} BETWEEN 0 AND ${table.count} AND ${table.minutes} >= 0`,
+    ),
+    check(
+      "incidencias_period_snapshot_justified_check",
+      sql`${table.justifiedMinutes} BETWEEN 0 AND ${table.minutes} AND ${table.justifiedVacation} >= 0 AND ${table.justifiedPermisoConGoce} >= 0 AND ${table.justifiedPermisoSinGoce} >= 0 AND ${table.justifiedIncapacidad} >= 0 AND ${table.justifiedVacation} + ${table.justifiedPermisoConGoce} + ${table.justifiedPermisoSinGoce} + ${table.justifiedIncapacidad} <= ${table.justified}`,
     ),
   ],
 );

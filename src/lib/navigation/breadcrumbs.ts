@@ -72,6 +72,13 @@ export const resolveBreadcrumbs = (
     ];
   }
 
+  if (path === "/app/periodos/plantillas") {
+    return [
+      { label: "Periodos de pago", href: "/app/periodos" },
+      { label: "Plantillas de pre-nómina" },
+    ];
+  }
+
   // One person's quincena (W2-14): /app/periodos/2026-11-Q1/<person id>.
   const personPeriod = /^\/app\/periodos\/(\d{4}-\d{2}-Q[12])\/[^/]+$/.exec(
     path,

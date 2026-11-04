@@ -58,6 +58,7 @@ export const pageTitles = {
   periodos: "Periodos de pago",
   periodo: "Quincena",
   reglasIncidencias: "Reglas de incidencias",
+  plantillasPrenomina: "Plantillas de pre-nómina",
 } as const;
 
 export const companyCopy = {
