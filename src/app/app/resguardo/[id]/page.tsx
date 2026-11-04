@@ -13,6 +13,7 @@ import { AssetMovementsTable } from "@/components/resguardo/assets-data-table";
 import { Badge, Tag } from "@/components/ui/badge";
 import { PageHeader } from "@/components/layout/page-header";
 import { listAuditEvents } from "@/lib/audit";
+import { formatDateMx } from "@/lib/format/date";
 import { getAssetWithHolder, listAssetMovements } from "@/lib/resguardo";
 import { deleteAssetAction } from "@/lib/resguardo/actions";
 import { requireAssetsRead } from "@/lib/resguardo/auth";
@@ -238,7 +239,10 @@ const AssetDetailPage = async ({
             movements={movements.map((movement) => ({
               id: movement.id,
               date: movement.movementDate,
-              typeLabel: assetMovementTypeLabels[movement.type],
+              // W2-11: the employee accepted this entrega from the employee app.
+              typeLabel: movement.acceptedAt
+                ? `${assetMovementTypeLabels[movement.type]} · aceptada el ${formatDateMx(movement.acceptedAt)}`
+                : assetMovementTypeLabels[movement.type],
               personId: movement.person.id,
               personName: formatPersonName(movement.person),
               condition: [movement.conditionNote, movement.notes]

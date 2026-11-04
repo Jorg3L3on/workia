@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { personFormSchema } from "@/lib/people/schema";
+import { CURP_REQUIRED_MESSAGE, sampleCurp } from "@/lib/people/identity";
+import { personFieldsSchema, personFormSchema } from "@/lib/people/schema";
+
+const CURP = sampleCurp(1);
 
 describe("personFormSchema", () => {
   it("accepts valid minimum expediente fields", () => {
@@ -17,7 +20,7 @@ describe("personFormSchema", () => {
       managerId: "",
       siteId: "",
       rfc: "",
-      curp: "",
+      curp: CURP,
       nss: "",
       status: "activa",
     });
@@ -39,7 +42,7 @@ describe("personFormSchema", () => {
       managerId: "",
       siteId: "",
       rfc: "",
-      curp: "",
+      curp: CURP,
       nss: "",
       status: "activa",
     });
@@ -61,7 +64,7 @@ describe("personFormSchema", () => {
       managerId: "",
       siteId: "",
       rfc: "",
-      curp: "",
+      curp: CURP,
       nss: "",
       horarioEntrada: "08:00",
       horarioSalidaComer: "13:00",
@@ -87,7 +90,7 @@ describe("personFormSchema", () => {
       managerId: "",
       siteId: "",
       rfc: "",
-      curp: "",
+      curp: CURP,
       nss: "",
       horarioEntrada: "25:99",
       horarioSalidaComer: "",
@@ -113,7 +116,7 @@ describe("personFormSchema", () => {
       managerId: "",
       siteId: "",
       rfc: "",
-      curp: "",
+      curp: CURP,
       nss: "",
       status: "activa",
     });
@@ -148,6 +151,7 @@ describe("personFormSchema identifiers", () => {
   const base = {
     nombres: "Ana",
     apellidoPaterno: "López",
+    curp: CURP,
     status: "activa" as const,
   };
 
@@ -168,9 +172,68 @@ describe("personFormSchema identifiers", () => {
     expect(bad.success).toBe(false);
   });
 
-  it("accepts blank identifiers", () => {
+  it("accepts blank RFC and NSS", () => {
     expect(
-      personFormSchema.safeParse({ ...base, rfc: "", curp: "", nss: "" })
+      personFormSchema.safeParse({ ...base, rfc: "", nss: "" }).success,
+    ).toBe(true);
+  });
+});
+
+describe("identity model: CURP on active people (P-00)", () => {
+  const base = { nombres: "Ana", apellidoPaterno: "López" };
+
+  it("rejects an active person without a CURP, on the curp field", () => {
+    for (const curp of [undefined, "", "   "]) {
+      const parsed = personFormSchema.safeParse({
+        ...base,
+        curp,
+        status: "activa",
+      });
+
+      expect(parsed.success).toBe(false);
+      expect(parsed.error?.issues).toEqual([
+        expect.objectContaining({
+          path: ["curp"],
+          message: CURP_REQUIRED_MESSAGE,
+        }),
+      ]);
+    }
+  });
+
+  it("reports one CURP error for an invalid CURP, not two", () => {
+    const parsed = personFormSchema.safeParse({
+      ...base,
+      curp: "NOPE",
+      status: "activa",
+    });
+
+    expect(parsed.error?.issues.map((issue) => issue.message)).toEqual([
+      "CURP inválida",
+    ]);
+  });
+
+  it("reports the missing CURP next to the other field errors", () => {
+    const parsed = personFormSchema.safeParse({
+      nombres: "",
+      apellidoPaterno: "López",
+      status: "activa",
+    });
+
+    expect(parsed.error?.issues.map((issue) => issue.path[0])).toEqual([
+      "nombres",
+      "curp",
+    ]);
+  });
+
+  it("lets someone de baja keep a blank CURP", () => {
+    expect(
+      personFormSchema.safeParse({ ...base, curp: "", status: "baja" }).success,
+    ).toBe(true);
+  });
+
+  it("leaves the rule out of the field-only schema the importer merges", () => {
+    expect(
+      personFieldsSchema.safeParse({ ...base, curp: "", status: "activa" })
         .success,
     ).toBe(true);
   });
@@ -180,6 +243,7 @@ describe("expediente México (WRK-I5-1)", () => {
   const base = {
     nombres: "Ana",
     apellidoPaterno: "López",
+    curp: CURP,
     status: "activa" as const,
   };
 

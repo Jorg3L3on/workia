@@ -68,6 +68,10 @@ export const resolveBreadcrumbs = (
     return [{ label: "Documentos" }];
   }
 
+  if (path === "/app/privacidad") {
+    return [{ label: "Privacidad" }];
+  }
+
   if (path === "/app/contratos/plantillas") {
     return [
       { label: "Contratos", href: "/app/contratos" },

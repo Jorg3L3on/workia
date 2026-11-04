@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { VacationConstanciaDocument } from "@/components/people/vacation-constancia";
 import { isoToday } from "@/lib/format/date";
 import { requirePeopleRead } from "@/lib/people/auth";
+import { recordPersonalDataAccess } from "@/lib/privacy";
 import { getVacationConstancia } from "@/lib/vacations/constancia";
 
 export const dynamic = "force-dynamic";
@@ -36,6 +37,7 @@ const readServiceYear = (
  * Printable vacation constancia (WRK-I14-4). Needs vacations:read and
  * contracts:read. A missing permission and a person outside the company
  * both end as not found, so the answer does not reveal which one it was.
+ * Every view is in the personal data access log (W2-09).
  */
 const VacationConstanciaPage = async ({
   params,
@@ -64,6 +66,13 @@ const VacationConstanciaPage = async ({
   if (!constancia) {
     notFound();
   }
+
+  await recordPersonalDataAccess(session.companyId, {
+    personId: id,
+    resource: "vacation_constancia",
+    actorKind: "hr_user",
+    actorUserId: session.user.id,
+  });
 
   return <VacationConstanciaDocument constancia={constancia} />;
 };

@@ -257,3 +257,30 @@ export const renderContractPdf = async (input: ContractPdfInput) => {
 
   return renderToBuffer(<ContractPdf {...input} />);
 };
+
+export type LetterPdfInput = {
+  /** Document title in the PDF metadata. */
+  title: string;
+  /** The letter as plain text; a line of underscores starts a signature block. */
+  text: string;
+};
+
+/** A one-off letter (W2-11 seniority letter) with the contract's font and layout. */
+export const LetterPdf = ({ title, text }: LetterPdfInput) => (
+  <Document author="Workia" creator="Workia" title={title}>
+    <Page size="LETTER" style={styles.page}>
+      <ContractLines text={normalizePdfText(text)} />
+    </Page>
+  </Document>
+);
+
+/** PDF bytes of a letter, or ContractPdfGlyphError when the font cannot draw it. */
+export const renderLetterPdf = async (input: LetterPdfInput) => {
+  const missing = missingGlyphs(normalizePdfText(input.text));
+
+  if (missing.length > 0) throw new ContractPdfGlyphError(missing);
+
+  ensureFont();
+
+  return renderToBuffer(<LetterPdf {...input} />);
+};
