@@ -6,7 +6,8 @@ export type PermissionAction =
   | "manage"
   | "import"
   | "export"
-  | "approve";
+  | "approve"
+  | "transfer";
 
 export type PermissionResource =
   | "users"
@@ -29,7 +30,9 @@ export type PermissionResource =
   | "payroll"
   | "reports"
   | "documents"
-  | "vacations";
+  | "vacations"
+  | "pay_periods"
+  | "employee_accounts";
 
 export type PermissionSlug = `${PermissionResource}:${PermissionAction}`;
 
@@ -172,6 +175,14 @@ export const PERMISSIONS: Array<{
     resource: "people",
     action: "delete",
     description: "Logically delete people records",
+  },
+  {
+    slug: "people:transfer",
+    name: "Transfer People",
+    resource: "people",
+    action: "transfer",
+    description:
+      "Move a person to another company of the group, keeping their seniority (needed in both companies)",
   },
   {
     slug: "people:import",
@@ -453,6 +464,30 @@ export const PERMISSIONS: Array<{
     description: "Void a vacation record",
   },
   {
+    slug: "pay_periods:read",
+    name: "Read Pay Periods",
+    resource: "pay_periods",
+    action: "read",
+    description:
+      "See the quincenas, their incidencias and what each close froze for pre-nómina",
+  },
+  {
+    slug: "pay_periods:manage",
+    name: "Manage Pay Periods",
+    resource: "pay_periods",
+    action: "manage",
+    description:
+      "Close a quincena (freeze its incidencias) and reopen it with a reason",
+  },
+  {
+    slug: "employee_accounts:manage",
+    name: "Manage Employee Accounts",
+    resource: "employee_accounts",
+    action: "manage",
+    description:
+      "Invite people to the employee app, issue activation codes and disable accounts",
+  },
+  {
     slug: "companies:read",
     name: "Read Companies",
     resource: "companies",
@@ -516,6 +551,7 @@ export const ROLES = [
       "people:create",
       "people:update",
       "people:delete",
+      "people:transfer",
       "people:import",
       "people:export",
       "audit:read",
@@ -555,6 +591,9 @@ export const ROLES = [
       "vacations:read",
       "vacations:create",
       "vacations:update",
+      "pay_periods:read",
+      "pay_periods:manage",
+      "employee_accounts:manage",
     ] satisfies PermissionSlug[],
   },
   {

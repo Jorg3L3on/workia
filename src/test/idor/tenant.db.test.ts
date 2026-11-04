@@ -46,6 +46,7 @@ import {
   type Tenant,
 } from "./fixtures";
 import { actAs, sessionState } from "./session-state";
+import { uniqueCurp } from "@/test/curp";
 
 let a: Tenant;
 let b: Tenant;
@@ -101,6 +102,7 @@ describe("audit stays inside the company", () => {
       {
         nombres: "Auditada",
         apellidoPaterno: "A",
+        curp: uniqueCurp(),
         status: "activa",
       },
       a.admin.id,

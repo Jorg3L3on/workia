@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { FileSignatureIcon, PencilIcon } from "lucide-react";
 
 import { pageTitles } from "@/lib/brand/chrome-copy";
+import { getEmployeeAccount } from "@/lib/employee-accounts";
 
 import { PersonContractsSection } from "@/components/contracts/person-contracts-section";
 import { PersonDocumentsCard } from "@/components/documents/person-documents-card";
@@ -37,6 +39,7 @@ import { PersonHistory } from "@/components/people/person-history";
 import { PersonRehireButton } from "@/components/people/person-rehire-button";
 import { PersonSectionNav } from "@/components/people/person-section-nav";
 import { PersonVacationCard } from "@/components/people/person-vacation-card";
+import { PersonAccountControls } from "@/components/employee-accounts/person-account-card";
 import { SectionSkeleton } from "@/components/loading/page-skeletons";
 import { PageBreadcrumbLabel } from "@/components/layout/app-breadcrumbs";
 import { Badge } from "@/components/ui/badge";
@@ -87,6 +90,8 @@ import {
 } from "@/lib/vacations/actions";
 import { listVacationRecords } from "@/lib/vacations";
 import { getPersonEmploymentMenuData } from "@/lib/people/employment-menu";
+import { listPersonLinks } from "@/lib/transfers";
+import { listTransferTargets } from "@/lib/transfers/access";
 
 export const metadata: Metadata = {
   title: pageTitles.expediente,
@@ -119,6 +124,9 @@ type PersonaDetailPageProps = {
     baja?: string;
     reingreso?: string;
     finiquito?: string;
+    /** After a transfer to another company of the group (W2-24). */
+    traslado?: string;
+    invitacion?: string;
   }>;
 };
 
@@ -153,6 +161,8 @@ const PersonaDetailPage = async ({
     baja,
     reingreso,
     finiquito,
+    traslado,
+    invitacion,
   } = await searchParams;
 
   const [
@@ -170,9 +180,11 @@ const PersonaDetailPage = async ({
     canUpdateVacations,
     canReadDocuments,
     canManageDocuments,
+    canManageAccounts,
     positionActivities,
     beneficiaries,
     periods,
+    links,
   ] = await Promise.all([
     getPersonWithRelations(session.companyId, id, true),
     userHasPermission(session.user.id, "people:update"),
@@ -188,9 +200,11 @@ const PersonaDetailPage = async ({
     userHasPermission(session.user.id, "vacations:update"),
     userHasPermission(session.user.id, "documents:read"),
     userHasPermission(session.user.id, "documents:manage"),
+    userHasPermission(session.user.id, "employee_accounts:manage"),
     listActivitiesForPersonPosition(session.companyId, id),
     listPersonBeneficiaries(session.companyId, id),
     listEmploymentPeriods(session.companyId, id),
+    listPersonLinks(session.companyId, id),
   ]);
 
   if (!person) {
@@ -198,6 +212,9 @@ const PersonaDetailPage = async ({
   }
 
   const isDeleted = personIsDeleted(person);
+  const employeeAccount = canManageAccounts
+    ? await getEmployeeAccount(session.companyId, id)
+    : null;
   const isEditing = edit === "1" && canUpdate && !isDeleted;
   const personName = formatPersonName(person);
 
@@ -260,6 +277,13 @@ const PersonaDetailPage = async ({
         canSeeCompensation,
       )
     : undefined;
+  // «Trasladar a otra empresa» (W2-24): people:transfer here and in a target.
+  const canTransfer =
+    !isDeleted &&
+    person.status === "activa" &&
+    session.permissions.has("people:transfer") &&
+    (await listTransferTargets(session)).length > 0;
+  const lastLink = links.at(-1);
   // Bound once: the ⋯ menu and the baja block's «Reingresar» share it.
   const statusAction = canEdit
     ? setPersonStatusAction.bind(
@@ -436,6 +460,7 @@ const PersonaDetailPage = async ({
     "laboral",
     "vacaciones",
     "contacto",
+    ...(canManageAccounts ? (["cuenta"] as const) : []),
     ...(canReadDocuments || canManageDocuments
       ? (["documentos"] as const)
       : []),
@@ -464,7 +489,17 @@ const PersonaDetailPage = async ({
                 emitContractHref={canEmit ? emitHref : undefined}
                 personId={person.id}
                 personName={personName}
+                groupHistoryHref={
+                  links.length > 0
+                    ? `/app/personas/${person.id}/grupo`
+                    : undefined
+                }
                 showConstancia={canReadContracts}
+                transferHref={
+                  canTransfer
+                    ? `/app/personas/${person.id}/traslado`
+                    : undefined
+                }
                 showStartAlta={canEdit && person.status === "activa"}
                 status={person.status}
                 employment={employment}
@@ -558,6 +593,37 @@ const PersonaDetailPage = async ({
             role="status"
           >
             Reingreso registrado: se abrió un nuevo periodo laboral.
+          </p>
+        ) : null}
+
+        {traslado === "1" && isBaja ? (
+          <p
+            className="text-sm font-medium text-[color:var(--workia-accent-blue)]"
+            role="status"
+          >
+            Traslado registrado: su periodo aquí quedó cerrado y se abrió uno en
+            la otra empresa con su antigüedad.
+            {invitacion === "1"
+              ? " Se le envió la invitación a la app de empleados de la empresa nueva."
+              : ""}
+          </p>
+        ) : null}
+
+        {lastLink ? (
+          <p
+            className="border-border/70 bg-muted/40 rounded-lg border px-3 py-2 text-sm"
+            data-testid="person-transfer-notice"
+            role="status"
+          >
+            {lastLink.direction === "out"
+              ? `Se trasladó a ${lastLink.linkedCompanyName} el ${formatDateLabel(lastLink.transferDate)}.`
+              : `Llegó por traslado desde ${lastLink.linkedCompanyName} el ${formatDateLabel(lastLink.transferDate)}.`}{" "}
+            <Link
+              className="font-medium underline underline-offset-2"
+              href={`/app/personas/${person.id}/grupo`}
+            >
+              Ver historial del grupo
+            </Link>
           </p>
         ) : null}
 
@@ -737,6 +803,38 @@ const PersonaDetailPage = async ({
                 personId={person.id}
               />
             </DetailCard>
+
+            {canManageAccounts ? (
+              <DetailCard id="cuenta">
+                <PersonAccountControls
+                  account={
+                    employeeAccount
+                      ? {
+                          status: employeeAccount.status,
+                          email: employeeAccount.email,
+                          emailVerified: Boolean(
+                            employeeAccount.emailVerifiedAt,
+                          ),
+                          hasPassword: employeeAccount.hasPassword,
+                          activatedAt:
+                            employeeAccount.activatedAt?.toISOString() ?? null,
+                          lastLoginAt:
+                            employeeAccount.lastLoginAt?.toISOString() ?? null,
+                          disabledAt:
+                            employeeAccount.disabledAt?.toISOString() ?? null,
+                          disabledReason: employeeAccount.disabledReason,
+                          activationCodeExpiresAt:
+                            employeeAccount.activationCodeExpiresAt?.toISOString() ??
+                            null,
+                        }
+                      : null
+                  }
+                  canManage={!isDeleted && person.status === "activa"}
+                  personEmail={person.email}
+                  personId={person.id}
+                />
+              </DetailCard>
+            ) : null}
           </div>
           <div className="flex min-w-0 flex-col gap-4">
             {canReadDocuments || canManageDocuments ? (

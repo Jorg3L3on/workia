@@ -34,6 +34,15 @@ export const env = createEnv({
     MCP_PUBLIC_URL: z.string().url().optional(),
     // Extra browser origins allowed to call /api/mcp, comma separated.
     MCP_ALLOWED_ORIGINS: z.string().optional(),
+    // Email (W2-01 login codes and invitations). Any SMTP server works, so a
+    // free tier or the company's own mail server adds no cost, e.g.
+    // smtps://user:password@smtp.example.com:465. Without it, development and
+    // tests write each message to EMAIL_OUTBOX_DIR instead of sending it.
+    EMAIL_SMTP_URL: z.string().url().optional(),
+    EMAIL_FROM: z.string().min(3).optional(),
+    EMAIL_OUTBOX_DIR: z.string().optional(),
+    // Public base URL for links in emails and the Google redirect (falls back to the request origin).
+    APP_PUBLIC_URL: z.string().url().optional(),
     NODE_ENV: z
       .enum(["development", "test", "production"])
       .default("development"),
@@ -51,6 +60,10 @@ export const env = createEnv({
     DEMO_RRHH_EMAIL: process.env.DEMO_RRHH_EMAIL,
     DEMO_RRHH_PASSWORD: process.env.DEMO_RRHH_PASSWORD,
     DEMO_RRHH_NAME: process.env.DEMO_RRHH_NAME,
+    EMAIL_SMTP_URL: process.env.EMAIL_SMTP_URL,
+    EMAIL_FROM: process.env.EMAIL_FROM,
+    EMAIL_OUTBOX_DIR: process.env.EMAIL_OUTBOX_DIR,
+    APP_PUBLIC_URL: process.env.APP_PUBLIC_URL,
     NODE_ENV: process.env.NODE_ENV,
   },
   emptyStringAsUndefined: true,

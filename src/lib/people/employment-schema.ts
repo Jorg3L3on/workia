@@ -18,6 +18,7 @@ export const terminationTypeLabels: Record<TerminationType, string> = {
   despido: "Despido",
   termino_contrato: "Término de contrato",
   otra: "Otra",
+  traslado: "Traslado a otra empresa del grupo",
 };
 
 export const FINIQUITO_STATUSES = [

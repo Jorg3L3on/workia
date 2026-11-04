@@ -1,4 +1,7 @@
 import {
+  Building2Icon,
+  CalendarCheckIcon,
+  CalendarXIcon,
   ChartLineIcon,
   FilesIcon,
   FileTextIcon,
@@ -27,8 +30,12 @@ export type NavAccess = {
   canReadMembers: boolean;
   canUseConnections: boolean;
   canReadReports: boolean;
+  /** reports:read in the active company and another company to compare: shows Grupo. */
+  canReadGroupReports: boolean;
   /** documents:read in the active company: shows Documentos. */
   canReadDocuments: boolean;
+  /** pay_periods:read in the active company: shows Periodos de pago. */
+  canReadPayPeriods: boolean;
 };
 
 export type NavLink = {
@@ -82,6 +89,13 @@ export const NAV_GROUPS: readonly NavGroup[] = [
         requires: "canReadDocuments",
       },
       {
+        title: "Periodos de pago",
+        href: "/app/periodos",
+        icon: CalendarCheckIcon,
+        keywords: ["quincena", "cierre", "incidencias", "pre-nómina"],
+        requires: "canReadPayPeriods",
+      },
+      {
         title: "Altas",
         href: "/app/altas",
         icon: UserPlusIcon,
@@ -104,6 +118,20 @@ export const NAV_GROUPS: readonly NavGroup[] = [
         icon: ChartLineIcon,
         keywords: ["bajas", "rotación", "prueba", "90 días", "motivos"],
         requires: "canReadReports",
+      },
+      {
+        title: "Ausentismo",
+        href: "/app/reportes/ausentismo",
+        icon: CalendarXIcon,
+        keywords: ["faltas", "retardos", "región", "sucursal", "rotación"],
+        requires: "canReadReports",
+      },
+      {
+        title: "Grupo",
+        href: "/app/reportes/grupo",
+        icon: Building2Icon,
+        keywords: ["empresas", "subsidiarias", "tablero", "plantilla"],
+        requires: "canReadGroupReports",
       },
     ],
   },

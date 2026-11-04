@@ -12,6 +12,7 @@ const actionLabels: Record<string, string> = {
   import: "Importar",
   export: "Exportar",
   approve: "Aprobar",
+  transfer: "Trasladar",
 };
 
 const resourceLabels: Record<string, string> = {
@@ -24,8 +25,10 @@ const resourceLabels: Record<string, string> = {
   contract_templates: "plantillas de contrato",
   contracts: "contratos",
   documents: "documentos",
+  employee_accounts: "cuentas de empleado",
   mcp_connections: "conexiones",
   members: "miembros",
+  pay_periods: "periodos de pago",
   payroll: "altas de Nóminas",
   people: "personas",
   permissions: "permisos",

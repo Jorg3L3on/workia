@@ -67,7 +67,7 @@ export type TurnoverFilterOptions = {
 };
 
 const TIPO_OPTIONS: FilterOption[] = (
-  ["voluntaria", "despido", "termino_contrato", "otra"] as const
+  ["voluntaria", "despido", "termino_contrato", "otra", "traslado"] as const
 ).map((value) => ({ value, label: terminationTypeLabels[value] }));
 
 const CLASS_OPTIONS: FilterOption[] = TERMINATION_CLASSIFICATIONS.map(
@@ -86,7 +86,7 @@ const triggerClass =
   "h-8 gap-1.5 rounded-md border-dashed px-2.5 text-sm font-normal";
 
 /** A «campo ▾» button with a searchable checklist. */
-const MultiSelect = ({
+export const MultiSelect = ({
   label,
   options,
   selected,
@@ -235,13 +235,13 @@ const ManagerSelect = ({
 );
 
 /** Presets plus «Personalizado» with two dates. */
-const RangePicker = ({
+export const RangePicker = ({
   filter,
   today,
   historyMonths,
   onChange,
 }: {
-  filter: TurnoverFilter;
+  filter: Pick<TurnoverFilter, "from" | "to">;
   today: string;
   historyMonths: number;
   onChange: (range: { from: string; to: string }) => void;
