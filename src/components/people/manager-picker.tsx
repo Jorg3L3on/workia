@@ -17,6 +17,12 @@ type ManagerPickerProps = {
   initial: ManagerOption | null;
   /** The person being edited, who cannot be their own manager. */
   excludeId?: string;
+  /** Where options come from; defaults to active people (people:read). */
+  search?: (query: string, excludeId?: string) => Promise<ManagerOption[]>;
+  /** Shown in the empty field. */
+  placeholder?: string;
+  /** Text before the chosen name under the field. */
+  selectedPrefix?: string;
 };
 
 /** Search-as-you-type manager field; submits the chosen id under `name`. */
@@ -25,6 +31,9 @@ export const ManagerPicker = ({
   name,
   initial,
   excludeId,
+  search = searchManagerOptionsAction,
+  placeholder = "Sin jefe directo",
+  selectedPrefix = "Jefe directo actual",
 }: ManagerPickerProps) => {
   const listId = useId();
   const [selected, setSelected] = useState<ManagerOption | null>(initial);
@@ -44,7 +53,7 @@ export const ManagerPicker = ({
       setLoading(true);
 
       try {
-        const found = await searchManagerOptionsAction(text, excludeId);
+        const found = await search(text, excludeId);
 
         if (request === requestRef.current) {
           setOptions(found);
@@ -57,7 +66,7 @@ export const ManagerPicker = ({
     }, SEARCH_DEBOUNCE_MS);
 
     return () => clearTimeout(timer);
-  }, [text, open, excludeId]);
+  }, [text, open, excludeId, search]);
 
   const choose = (option: ManagerOption | null) => {
     setSelected(option);
@@ -81,7 +90,7 @@ export const ManagerPicker = ({
             setOpen(true);
           }}
           onFocus={() => setOpen(true)}
-          placeholder={selected ? selected.label : "Sin jefe directo"}
+          placeholder={selected ? selected.label : placeholder}
           role="combobox"
           value={text}
         />
@@ -98,7 +107,7 @@ export const ManagerPicker = ({
       </div>
       {selected ? (
         <p className="text-muted-foreground text-xs">
-          Jefe directo actual: {selected.label}
+          {selectedPrefix}: {selected.label}
         </p>
       ) : null}
       {open ? (
