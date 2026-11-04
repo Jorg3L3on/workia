@@ -40,6 +40,12 @@ export const statusTone = {
     failed: "danger",
     undone: "neutral",
   },
+  arco: {
+    received: "info",
+    late: "danger",
+    resolved: "success",
+    rejected: "neutral",
+  },
   document: {
     missing: "info",
     valid: "success",

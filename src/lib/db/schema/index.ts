@@ -11,6 +11,7 @@ export * from "./mcp";
 export * from "./onboardings";
 export * from "./people";
 export * from "./people-views";
+export * from "./privacy";
 export * from "./rbac";
 export * from "./sites";
 export * from "./vacations";
