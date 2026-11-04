@@ -681,12 +681,15 @@ describe("attendance and incidencias", () => {
           ],
           tx,
         );
-        const mocked = vi.spyOn(tx, "select").mockImplementationOnce(
-          () =>
-            ({
-              from: () => ({ where: async () => [] }),
-            }) as never,
-        );
+        // The second select is the read of stored days: make it miss.
+        const select = tx.select.bind(tx);
+        let calls = 0;
+        const mocked = vi
+          .spyOn(tx, "select")
+          .mockImplementation(((...args: Parameters<typeof tx.select>) =>
+            ++calls === 2
+              ? ({ from: () => ({ where: async () => [] }) } as never)
+              : select(...args)) as typeof tx.select);
         try {
           await writeAttendanceDays(
             a.companyId,
