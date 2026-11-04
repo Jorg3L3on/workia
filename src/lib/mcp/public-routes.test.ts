@@ -44,9 +44,12 @@ const PUBLIC_EMPLOYEE_ROUTES = [
 /** Scheduled jobs (W2-09): no session, a Bearer CRON_SECRET instead. */
 const SCHEDULED_JOB_ROUTES = ["/api/cron/retention"];
 
-/** A route is guarded when it goes through the company context or Auth.js. */
+/**
+ * A route is guarded when it goes through the company context, Auth.js or
+ * the employee session (W2-11 downloads under /mi).
+ */
 const isSessionGuarded = (source: string) =>
-  /require(CompanyContext|Auth|PeopleImport|PeopleExport|[A-Z]\w*(Read|Create|Update|Delete|Import|Export|Manage))\b|requireImportRoute|withImportRoute|auth\(\)/.test(
+  /require(CompanyContext|Auth|PeopleImport|PeopleExport|[A-Z]\w*(Read|Create|Update|Delete|Import|Export|Manage))\b|requireImportRoute|withImportRoute|auth\(\)|getEmployeeContext\(\)/.test(
     source,
   );
 

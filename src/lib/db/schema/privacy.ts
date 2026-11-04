@@ -118,6 +118,8 @@ export const PERSONAL_DATA_RESOURCES = [
   "payroll_receipt",
   "vacation_constancia",
   "arco_export",
+  // W2-11: the seniority letter (constancia de antigüedad).
+  "seniority_letter",
 ] as const;
 export type PersonalDataResource = (typeof PERSONAL_DATA_RESOURCES)[number];
 
@@ -163,7 +165,7 @@ export const personalDataAccessLog = pgTable(
     ),
     check(
       "personal_data_access_log_resource_check",
-      sql`${table.resource} IN ('contract_pdf', 'document_file', 'payroll_receipt', 'vacation_constancia', 'arco_export')`,
+      sql`${table.resource} IN ('contract_pdf', 'document_file', 'payroll_receipt', 'vacation_constancia', 'arco_export', 'seniority_letter')`,
     ),
     check(
       "personal_data_access_log_actor_check",

@@ -46,6 +46,7 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `action:employee-accounts/disableEmployeeAccountAction`    | ✅     | `src/test/idor/employee-accounts.db.test.ts`                                                           | `employee_accounts:manage`  |
 | `action:employee-accounts/inviteEmployeeAction`            | ✅     | `src/test/idor/employee-accounts.db.test.ts`                                                           | `employee_accounts:manage`  |
 | `action:employee-accounts/issueActivationCodeAction`       | ✅     | `src/test/idor/employee-accounts.db.test.ts`                                                           | `employee_accounts:manage`  |
+| `action:employee/acceptResguardoAction`                    | ✅     | `src/test/idor/employee-constancias.db.test.ts`                                                        | —                           |
 | `action:employee/activateAccountAction`                    | ✅     | `src/test/idor/employee-accounts.db.test.ts`                                                           | —                           |
 | `action:employee/passwordSignInAction`                     | ✅     | `src/test/idor/employee-accounts.db.test.ts`                                                           | —                           |
 | `action:employee/requestLoginCodeAction`                   | ✅     | `src/test/idor/employee-accounts.db.test.ts`                                                           | —                           |
@@ -127,6 +128,8 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `route:GET /app/personas/exportar`                              | ✅     | `src/test/idor/import.db.test.ts`                                      | `people:export`                        |
 | `route:GET /app/reportes/rotacion/exportar`                     | ✅     | `src/test/idor/turnover.db.test.ts`                                    | `reports:read` + `people:export`       |
 | `route:GET /app/personas/plantilla`                             | ✅     | `src/test/idor/import.db.test.ts`                                      | `people:import`                        |
+| `route:GET /mi/constancia/pdf`                                  | ✅     | `src/test/idor/employee-constancias.db.test.ts`                        | —                                      |
+| `route:GET /mi/contrato/[contractId]/pdf`                       | ✅     | `src/test/idor/employee-constancias.db.test.ts`                        | —                                      |
 | `route:GET /mi/manifest.webmanifest`                            | ⏭️     | Exento: manifiesto estático de la app de empleados, sin datos          | —                                      |
 | `route:GET /mi/sw.js`                                           | ⏭️     | Exento: service worker estático que no guarda nada en caché, sin datos | —                                      |
 | `route:POST /api/import/personas`                               | ✅     | `src/test/idor/import.db.test.ts`                                      | `people:import`                        |

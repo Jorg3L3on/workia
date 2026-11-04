@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import { ConstanciasCard } from "@/components/employee/constancias-card";
 import { InstallPrompt } from "@/components/employee/install-prompt";
 import { WorkiaMark } from "@/components/brand/workia-mark";
 import { Button } from "@/components/ui/button";
@@ -77,6 +78,8 @@ const EmployeeHomePage = async () => {
           </p>
         )}
       </section>
+
+      <ConstanciasCard context={context} />
     </main>
   );
 };

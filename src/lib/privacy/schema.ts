@@ -80,6 +80,7 @@ export const personalDataResourceLabels: Record<PersonalDataResource, string> =
     payroll_receipt: "Recibo de nómina",
     vacation_constancia: "Constancia de vacaciones",
     arco_export: "Exportación ARCO",
+    seniority_letter: "Constancia de antigüedad",
   };
 
 const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;

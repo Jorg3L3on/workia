@@ -1,6 +1,7 @@
 import { relations, sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   date,
   foreignKey,
   index,
@@ -16,6 +17,7 @@ import {
 import { people } from "./people";
 
 import { companies } from "./companies";
+import { employeeAccounts } from "./employee-accounts";
 
 export const assetStatusEnum = pgEnum("asset_status", [
   "disponible",
@@ -91,11 +93,32 @@ export const assetMovements = pgTable(
     movementDate: date("movement_date").notNull(),
     conditionNote: text("condition_note").notNull(),
     notes: text("notes"),
+    /**
+     * The employee accepted this entrega from the employee app (W2-11, 0041).
+     * Only an entrega, once; an acceptance click, not an e-signature.
+     */
+    acceptedAt: timestamp("accepted_at", { withTimezone: true }),
+    acceptedByEmployeeAccountId: uuid("accepted_by_employee_account_id"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
   },
   (table) => [
+    // 0041 declares ON DELETE SET NULL (accepted_by_employee_account_id), so a
+    // removed account clears the actor and keeps company_id and accepted_at.
+    foreignKey({
+      name: "asset_movements_company_accepted_by_fk",
+      columns: [table.companyId, table.acceptedByEmployeeAccountId],
+      foreignColumns: [employeeAccounts.companyId, employeeAccounts.id],
+    }),
+    check(
+      "asset_movements_acceptance_check",
+      sql`${table.acceptedAt} IS NULL OR ${table.type} = 'entrega'`,
+    ),
+    check(
+      "asset_movements_accepted_by_check",
+      sql`${table.acceptedByEmployeeAccountId} IS NULL OR ${table.acceptedAt} IS NOT NULL`,
+    ),
     index("asset_movements_company_id_idx").on(table.companyId),
     foreignKey({
       name: "asset_movements_company_asset_fk",

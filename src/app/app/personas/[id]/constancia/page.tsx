@@ -11,6 +11,7 @@ import {
 import { isoToday } from "@/lib/format/date";
 import { requirePeopleRead } from "@/lib/people/auth";
 import { formatPersonName } from "@/lib/people/schema";
+import { recordPersonalDataAccess } from "@/lib/privacy";
 import { userHasPermission } from "@/lib/rbac";
 
 export const dynamic = "force-dynamic";
@@ -42,6 +43,15 @@ const ConstanciaPage = async ({ params }: ConstanciaPageProps) => {
   if (!certificate) {
     notFound();
   }
+
+  // W2-09/W2-11: each view of a person's seniority letter is one access row.
+  await recordPersonalDataAccess(session.companyId, {
+    personId: certificate.person.id,
+    resource: "seniority_letter",
+    resourceId: certificate.person.id,
+    actorKind: "hr_user",
+    actorUserId: session.user.id,
+  });
 
   const { person, company, contratos } = certificate;
   const companyName = company?.legalName || company?.name || "La empresa";

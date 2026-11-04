@@ -62,6 +62,8 @@ export const AUDIT_ACTIONS = [
   "code_requested",
   "login",
   "logout",
+  // Workia 2.0 W2-11: an employee accepts a resguardo.
+  "accept",
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
@@ -95,6 +97,7 @@ export const auditActionLabels: Record<AuditAction, string> = {
   code_requested: "Código de acceso enviado",
   login: "Inicio de sesión",
   logout: "Cierre de sesión",
+  accept: "Aceptación",
 };
 
 export const auditResourceTypeLabels: Record<AuditResourceType, string> = {

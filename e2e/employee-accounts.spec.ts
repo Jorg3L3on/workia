@@ -77,6 +77,8 @@ test("HR invites, the employee signs in with an email code, HR disables", async 
   page,
   browser,
 }) => {
+  // Two browsers and the W2-11 downloads; a cold dev server needs the room.
+  test.slow();
   const suffix = Date.now().toString().slice(-6);
   const nombres = `Invitada${suffix}`;
   const email = `invitada${suffix}@empleo.test`;
@@ -105,6 +107,24 @@ test("HR invites, the employee signs in with an email code, HR disables", async 
     employee.getByRole("heading", { name: `${nombres} Empleada` }),
   ).toBeVisible();
   expect(Date.now() - started).toBeLessThan(60_000);
+
+  // W2-11: the seniority letter downloads from the home; the resguardo is one tap away.
+  const constancias = employee.getByTestId("employee-constancias");
+  await expect(
+    constancias.getByText("RH aún no registra tu contrato."),
+  ).toBeVisible();
+  const download = employee.waitForEvent("download");
+  await constancias
+    .getByRole("link", { name: "Constancia de antigüedad" })
+    .click();
+  expect((await download).suggestedFilename()).toMatch(
+    /^constancia-antiguedad-\d{4}-\d{2}-\d{2}\.pdf$/,
+  );
+  await constancias.getByRole("link", { name: /Mi resguardo/ }).click();
+  await expect(
+    employee.getByText("No tienes nada en resguardo."),
+  ).toBeVisible();
+  await employee.goto("/mi");
 
   await page.reload();
   await expect(card.getByText("Activa", { exact: true })).toBeVisible();

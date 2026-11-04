@@ -4038,6 +4038,7 @@ exports[`/api/mcp transport > keeps the tools/list contract (snapshot) 1`] = `
             "code_requested",
             "login",
             "logout",
+            "accept",
           ],
           "type": "string",
         },
