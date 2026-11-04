@@ -5,6 +5,7 @@ export * from "./catalog";
 export * from "./companies";
 export * from "./contracts";
 export * from "./documents";
+export * from "./employee-accounts";
 export * from "./employment";
 export * from "./imports";
 export * from "./mcp";

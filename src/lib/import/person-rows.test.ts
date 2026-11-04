@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { curpCheckDigit } from "@/lib/people/identity";
+import { curpCheckDigit, sampleCurp } from "@/lib/people/identity";
 
 import type { EmploymentSummary } from "@/lib/people/employment";
 
@@ -254,7 +254,7 @@ describe("classifyPersonRow", () => {
     const a = existing();
     const b = existing({
       id: "22222222-2222-4222-8222-222222222222",
-      curp: null,
+      curp: sampleCurp(7),
       rfc: "XAXX010101000",
     });
     const byId = row({ idWorkia: b.id, curp: "" });
@@ -273,6 +273,41 @@ describe("classifyPersonRow", () => {
 
     expect(conflict.action).toBe("error");
     expect(conflict.errors[0].field).toBe("curp");
+  });
+
+  it("refuses to leave a person activa without a valid CURP (P-00)", () => {
+    const blank = row({ curp: "" });
+    const noCurp = { ...blank, values: { ...blank.values, curp: null } };
+
+    const created = classifyPersonRow(noCurp, lookupsOf());
+    expect(created.action).toBe("error");
+    expect(created.errors[0].field).toBe("curp");
+
+    // An update with a blank cell keeps the stored CURP.
+    const keeper = existing({ email: "a@x.mx" });
+    const byId = { ...noCurp, idWorkia: keeper.id };
+    expect(classifyPersonRow(byId, lookupsOf(keeper)).action).toBe("unchanged");
+
+    // Stored without one (legacy data): the row must bring it.
+    const legacy = existing({ curp: null });
+    const outcome = classifyPersonRow(
+      { ...noCurp, idWorkia: legacy.id },
+      lookupsOf(legacy),
+    );
+    expect(outcome.action).toBe("error");
+    expect(outcome.errors[0].message).toMatch(/no tiene una CURP válida/);
+
+    // Someone de baja may stay without one.
+    expect(
+      classifyPersonRow(
+        {
+          ...noCurp,
+          idWorkia: legacy.id,
+          values: { ...noCurp.values, status: "baja" },
+        },
+        lookupsOf({ ...legacy, status: "baja" }),
+      ).action,
+    ).not.toBe("error");
   });
 
   it("rejects unknown and deleted ID Workia", () => {

@@ -10,6 +10,7 @@
  *     Hard-deletes that dummy; its periods and alta go with it.
  */
 import { config } from "dotenv";
+import { e2eCurp } from "../curp";
 
 config({ path: ".env.local" });
 config();
@@ -46,6 +47,7 @@ const main = async () => {
         companyId: company.id,
         nombres: "Persona",
         apellidoPaterno: `Alta${argument}`,
+        curp: e2eCurp(),
         status: "activa",
       })
       .returning({ id: people.id });

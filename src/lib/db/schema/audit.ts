@@ -11,6 +11,7 @@ import {
 import { users } from "./rbac";
 
 import { companies } from "./companies";
+import { employeeAccounts } from "./employee-accounts";
 
 export const auditEvents = pgTable(
   "audit_events",
@@ -22,6 +23,11 @@ export const auditEvents = pgTable(
     actorUserId: uuid("actor_user_id").references(() => users.id, {
       onDelete: "set null",
     }),
+    /** An employee acting on their own record (W2-01); HR actions keep actor_user_id. */
+    actorEmployeeAccountId: uuid("actor_employee_account_id").references(
+      () => employeeAccounts.id,
+      { onDelete: "set null" },
+    ),
     resourceType: text("resource_type").notNull(),
     resourceId: text("resource_id").notNull(),
     action: text("action").notNull(),
@@ -48,6 +54,9 @@ export const auditEvents = pgTable(
       table.occurredAt.desc().nullsFirst(),
     ),
     index("audit_events_actor_user_id_idx").on(table.actorUserId),
+    index("audit_events_actor_employee_account_id_idx").on(
+      table.actorEmployeeAccountId,
+    ),
   ],
 );
 

@@ -66,26 +66,26 @@ birth match an existing one. Horarios and Contratos rows find their person by
 
 ## Personas
 
-| Header (canonical)                      | Key               | Notes                                                  |
-| --------------------------------------- | ----------------- | ------------------------------------------------------ |
-| Nombres \*                              | `nombres`         | Required                                               |
-| Apellido paterno \*                     | `apellidoPaterno` | Required                                               |
-| Apellido materno                        | `apellidoMaterno` |                                                        |
-| Correo electrónico                      | `email`           |                                                        |
-| Teléfono                                | `telefono`        |                                                        |
-| Fecha de nacimiento                     | `fechaNacimiento` | Date                                                   |
-| Fecha de ingreso                        | `fechaIngreso`    | Date                                                   |
-| Área / Puesto / Sucursal                | `area` ...        | Catalog names; unknown name = error unless creating    |
-| Jefe directo (nombre, CURP o ID Workia) | `jefeDirecto`     | See below; resolved in a second pass                   |
-| RFC / CURP / NSS                        | `rfc` ...         | Normalized (uppercase, no spaces) and validated        |
-| Fecha de antigüedad                     | `fechaAntiguedad` | Date; see «Bajas y antigüedad»                         |
-| Estatus                                 | `estatus`         | `Activa` (default) or `Baja`                           |
-| Fecha de baja                           | `fechaBaja`       | Date; only with Estatus Baja                           |
-| Tipo de baja                            | `tipoBaja`        | `Voluntaria`, `Despido`, `Término de contrato`, `Otra` |
-| Motivo de baja                          | `motivoBaja`      | Name in Catálogo > Motivos de baja                     |
-| Comentario de baja                      | `comentarioBaja`  | Optional, ≤ 1,000 characters                           |
-| Recontratable                           | `recontratable`   | `Sí` / `No`                                            |
-| ID Workia                               | `idWorkia`        | Empty for new people; last column                      |
+| Header (canonical)                      | Key               | Notes                                                                                                                                                                        |
+| --------------------------------------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Nombres \*                              | `nombres`         | Required                                                                                                                                                                     |
+| Apellido paterno \*                     | `apellidoPaterno` | Required                                                                                                                                                                     |
+| Apellido materno                        | `apellidoMaterno` |                                                                                                                                                                              |
+| Correo electrónico                      | `email`           |                                                                                                                                                                              |
+| Teléfono                                | `telefono`        |                                                                                                                                                                              |
+| Fecha de nacimiento                     | `fechaNacimiento` | Date                                                                                                                                                                         |
+| Fecha de ingreso                        | `fechaIngreso`    | Date                                                                                                                                                                         |
+| Área / Puesto / Sucursal                | `area` ...        | Catalog names; unknown name = error unless creating                                                                                                                          |
+| Jefe directo (nombre, CURP o ID Workia) | `jefeDirecto`     | See below; resolved in a second pass                                                                                                                                         |
+| RFC / CURP / NSS                        | `rfc` ...         | Normalized (uppercase, no spaces) and validated; CURP required for an active person (a blank cell on an update keeps the stored one, [identity-model.md](identity-model.md)) |
+| Fecha de antigüedad                     | `fechaAntiguedad` | Date; see «Bajas y antigüedad»                                                                                                                                               |
+| Estatus                                 | `estatus`         | `Activa` (default) or `Baja`                                                                                                                                                 |
+| Fecha de baja                           | `fechaBaja`       | Date; only with Estatus Baja                                                                                                                                                 |
+| Tipo de baja                            | `tipoBaja`        | `Voluntaria`, `Despido`, `Término de contrato`, `Otra`                                                                                                                       |
+| Motivo de baja                          | `motivoBaja`      | Name in Catálogo > Motivos de baja                                                                                                                                           |
+| Comentario de baja                      | `comentarioBaja`  | Optional, ≤ 1,000 characters                                                                                                                                                 |
+| Recontratable                           | `recontratable`   | `Sí` / `No`                                                                                                                                                                  |
+| ID Workia                               | `idWorkia`        | Empty for new people; last column                                                                                                                                            |
 
 Jefe directo accepts, in this order: an ID Workia, a CURP, or a full name
 (nombres + apellidos, ignoring case and accents). Each is looked up among the
