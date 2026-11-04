@@ -360,7 +360,7 @@ export type IncidenciaInput = {
   /** Local date, YYYY-MM-DD. */
   day: string;
   kind: IncidenciaKind;
-  /** Pay period, e.g. "2026-11-1" for the first quincena of November. */
+  /** Pay period, a quincena: "2026-11-Q1" for the first of November (src/lib/pay-periods). */
   period: string;
   minutes?: number | null;
   justified?: boolean;

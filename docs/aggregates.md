@@ -101,8 +101,45 @@ await reopenPayPeriod(companyId, "2026-11-Q1", { reason, actorUserId });
   changes only by reopen (delete) and close (insert). Both tables have company
   RLS and composite foreign keys to the company's people and periods.
 
-Wiring close and reopen to screens, permissions and the incidencias engine
-is W2-15; the pre-nómina file is W2-18.
+The pre-nómina file is W2-18.
+
+## Close wired to the engine and the screens (W2-15)
+
+- **Engine writes.** `replacePeriodIncidencias` (W2-13, the writer the W2-14
+  engine calls) takes a quincena and calls `lockOpenPayPeriod` first: it
+  creates the period row if needed, locks it `FOR SHARE` and refuses a closed
+  period (`PayPeriodError` `period_closed`). The close locks the same row `FOR
+UPDATE`, so a close waits for an engine write in flight and snapshots its
+  result, and an engine write after a close is refused until a reopen. The
+  lock is on `pay_periods` because `workia_app` has UPDATE there (which
+  `FOR SHARE` needs) and not on `person_events`.
+- **Check.** `verifyPeriodSnapshot(companyId, period)` recomputes a closed
+  period with the statement the close inserted from and compares it row by
+  row with the snapshot (null while open). The screen shows whether they still
+  match; a difference means an incidencia of the period was appended after the
+  close by something other than the engine. Pre-nómina keeps reading the
+  snapshot until HR reopens and closes again.
+- **Screens.** Periodos de pago (`/app/periodos`, `pay_periods:read`) lists
+  the quincenas newest first, 12 a page: the calendar is generated and the
+  rows are read by `(company_id, period)`, with the last period as the cursor
+  and no OFFSET (`listPayPeriods`). A quincena (`/app/periodos/2026-11-Q1`)
+  shows its totals and its people in name order (`getPayPeriodDetail`, 100 a
+  page after a cursor): the snapshot once closed, the live aggregate while
+  open. Close (behind a confirm) and reopen (with a reason) need
+  `pay_periods:manage`; a quincena that has not started cannot be closed.
+  Both permissions go to the admin role; run `npm run db:sync-permissions`
+  after deploying.
+- **MCP.** `get_incidencias_summary` (aggregates over a range, by person,
+  site or month, with absenteeism) and `get_pay_period` (status, revision,
+  snapshot or live rows, and whether the snapshot still matches), both
+  read-only with `pay_periods:read`. Closing and reopening stay in the app.
+- **Today counts.** `todayCounts(companyId, scope, day)` in
+  `src/lib/timeline/today.ts` gives the roster, present, absent, late and
+  left-early counts of one site, area or manager's team for a day from
+  `absenteeismBy` and `incidenciasBy`, for W2-17's header.
+
+Not here: the approvals inbox and its index belong to W2-06, which creates
+the requests table (docs/keyset.md).
 
 ## Measured
 

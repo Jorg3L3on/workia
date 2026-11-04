@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { PayPeriodError, quincenaOf, quincenaRange } from "./quincena";
+import {
+  isQuincena,
+  PayPeriodError,
+  previousQuincena,
+  quincenaLabel,
+  quincenaOf,
+  quincenaRange,
+} from "./quincena";
 
 describe("quincenas", () => {
   it("maps a day to its quincena", () => {
@@ -28,5 +35,20 @@ describe("quincenas", () => {
     for (const period of ["2026-13-Q1", "2026-11-Q3", "2026-11", "x"]) {
       expect(() => quincenaRange(period)).toThrow(PayPeriodError);
     }
+  });
+
+  it("walks back one quincena at a time, across years", () => {
+    expect(previousQuincena("2026-11-Q2")).toBe("2026-11-Q1");
+    expect(previousQuincena("2026-11-Q1")).toBe("2026-10-Q2");
+    expect(previousQuincena("2026-01-Q1")).toBe("2025-12-Q2");
+    expect(() => previousQuincena("2026-11-1")).toThrow(PayPeriodError);
+  });
+
+  it("names a quincena in words", () => {
+    expect(quincenaLabel("2026-11-Q1")).toBe("1.ª quincena de noviembre 2026");
+    expect(quincenaLabel("2026-02-Q2")).toBe("2.ª quincena de febrero 2026");
+    expect(isQuincena("2026-11-Q2")).toBe(true);
+    expect(isQuincena("2026-11-1")).toBe(false);
+    expect(isQuincena("2026-13-Q1")).toBe(false);
   });
 });

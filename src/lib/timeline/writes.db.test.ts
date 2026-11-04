@@ -719,7 +719,7 @@ describe("attendance and incidencias", () => {
 
     expect(
       await replacePeriodIncidencias(a.companyId, {
-        period: "2026-11-1",
+        period: "2026-11-Q1",
         personIds: [person.id],
         incidencias: [retardo, falta],
       }),
@@ -727,7 +727,7 @@ describe("attendance and incidencias", () => {
     // The falta is justified by a permiso; the retardo stays as it was.
     expect(
       await replacePeriodIncidencias(a.companyId, {
-        period: "2026-11-1",
+        period: "2026-11-Q1",
         personIds: [person.id],
         incidencias: [
           retardo,
@@ -737,13 +737,13 @@ describe("attendance and incidencias", () => {
     ).toEqual({ inserted: 1, deleted: 1, unchanged: 1 });
     // Another period of the same person is left alone.
     await replacePeriodIncidencias(a.companyId, {
-      period: "2026-10-2",
+      period: "2026-10-Q2",
       personIds: [person.id],
       incidencias: [{ ...falta, day: "2026-10-20" }],
     });
     expect(
       await replacePeriodIncidencias(a.companyId, {
-        period: "2026-11-1",
+        period: "2026-11-Q1",
         personIds: [person.id],
         incidencias: [],
       }),
@@ -753,7 +753,7 @@ describe("attendance and incidencias", () => {
       (event) => event.type === "incidencia",
     );
     expect(left.map((event) => event.dedupeKey)).toEqual([
-      "incidencia:2026-10-2:2026-10-20:falta",
+      "incidencia:2026-10-Q2:2026-10-20:falta",
     ]);
   });
 });
@@ -815,7 +815,7 @@ describe("one person's timeline", () => {
       },
     ]);
     await replacePeriodIncidencias(a.companyId, {
-      period: "2025-02-1",
+      period: "2025-02-Q1",
       personIds: [person.id],
       incidencias: [
         {

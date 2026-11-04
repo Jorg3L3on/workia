@@ -145,7 +145,11 @@ tuples and no derived fields keep a day with two punches near 160 bytes.
 `replacePeriodIncidencias(companyId, { period, personIds, incidencias })`
 makes the incidencias of an open pay period exactly the engine's output:
 unchanged rows stay, changed and gone ones are deleted and the new ones
-inserted. A closed period is frozen by P-02's snapshot.
+inserted. `period` is a quincena (`2026-11-Q1`, as in
+[aggregates](aggregates.md)) and every day must be inside it. A closed period
+is frozen by P-02's snapshot: the call throws `PayPeriodError`
+(`period_closed`) and writes nothing. It holds the period's `pay_periods` row
+`FOR SHARE` while it writes (W2-15), so a close waits for it.
 
 Neither takes a row lock: `SELECT … FOR UPDATE` needs the UPDATE privilege
 that `workia_app` does not have. A concurrent writer on the same rows leaves

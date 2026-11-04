@@ -60,6 +60,17 @@ export const resolveBreadcrumbs = (
     return [{ label: "Reportes" }, { label: "Rotación" }];
   }
 
+  if (path === "/app/periodos") {
+    return [{ label: "Periodos de pago" }];
+  }
+
+  if (path.startsWith("/app/periodos/")) {
+    return [
+      { label: "Periodos de pago", href: "/app/periodos" },
+      { label: labels.current ?? "Quincena" },
+    ];
+  }
+
   if (path === "/app/contratos") {
     return [{ label: "Contratos" }];
   }

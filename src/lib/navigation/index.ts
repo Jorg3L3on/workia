@@ -1,4 +1,5 @@
 import {
+  CalendarCheckIcon,
   ChartLineIcon,
   FilesIcon,
   FileTextIcon,
@@ -29,6 +30,8 @@ export type NavAccess = {
   canReadReports: boolean;
   /** documents:read in the active company: shows Documentos. */
   canReadDocuments: boolean;
+  /** pay_periods:read in the active company: shows Periodos de pago. */
+  canReadPayPeriods: boolean;
 };
 
 export type NavLink = {
@@ -80,6 +83,13 @@ export const NAV_GROUPS: readonly NavGroup[] = [
         icon: FilesIcon,
         keywords: ["por vencer", "vencidos", "vigencia"],
         requires: "canReadDocuments",
+      },
+      {
+        title: "Periodos de pago",
+        href: "/app/periodos",
+        icon: CalendarCheckIcon,
+        keywords: ["quincena", "cierre", "incidencias", "pre-nómina"],
+        requires: "canReadPayPeriods",
       },
       {
         title: "Altas",
