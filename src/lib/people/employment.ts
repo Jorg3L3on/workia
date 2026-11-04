@@ -23,6 +23,7 @@ import {
 } from "@/lib/db/schema";
 import type { EmploymentPeriod } from "@/lib/db/schema/employment";
 import { formatDateMx } from "@/lib/format/date";
+import { revokeEmployeeAccess } from "@/lib/employee-accounts/revoke";
 import { withTenant } from "@/lib/tenant/scope";
 
 import {
@@ -33,6 +34,7 @@ import {
   type TerminationValues,
 } from "./employment-schema";
 import { seniorityDate } from "./seniority";
+import { activePersonLacksCurp } from "./identity";
 
 /**
  * Baja y periodos laborales (Iniciativa 2). Every person has employment
@@ -650,6 +652,16 @@ export const recordTermination = async (
     .where(withTenant(people, companyId, eq(people.id, personId)))
     .returning();
 
+  // W2-01: the employee account goes off with the baja, in this transaction.
+  await revokeEmployeeAccess(
+    tx,
+    companyId,
+    personId,
+    "baja",
+    actorUserId,
+    options.source,
+  );
+
   const terminated = await terminateVigenteContract(
     tx,
     companyId,
@@ -908,6 +920,14 @@ export const rehirePerson = async (
 
     if (existing.status === "activa") {
       throw new EmploymentError("La persona ya está activa.");
+    }
+
+    // Nobody becomes activa without a valid CURP (docs/identity-model.md).
+    if (activePersonLacksCurp({ ...existing, status: "activa" })) {
+      throw new EmploymentError(
+        "Para reingresar a esta persona primero captura su CURP en el expediente.",
+        "curp",
+      );
     }
 
     await syncEmploymentPeriods(tx, companyId, [personId], actorUserId);
