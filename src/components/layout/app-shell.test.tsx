@@ -55,6 +55,8 @@ const renderShell = (
     canUseConnections?: boolean;
     canReadReports?: boolean;
     canReadDocuments?: boolean;
+    canReadPrivacy?: boolean;
+    canReadAttendance?: boolean;
     isPlatformAdmin?: boolean;
   } = {},
 ) =>
@@ -206,6 +208,8 @@ describe("AppShell", () => {
       canUseConnections: true,
       canReadReports: true,
       canReadDocuments: true,
+      canReadPrivacy: true,
+      canReadAttendance: true,
     });
 
     const sidebar = within(
@@ -221,11 +225,18 @@ describe("AppShell", () => {
       "Personas",
       "Contratos",
       "Documentos",
+      "Alertas LFT",
+      "Asistencia",
       "Altas",
       "Resguardo",
     ]);
     expect(linksIn("Reportes")).toEqual(["Rotación"]);
-    expect(linksIn("Empresa")).toEqual(["Miembros", "Conexiones", "Auditoría"]);
+    expect(linksIn("Empresa")).toEqual([
+      "Miembros",
+      "Conexiones",
+      "Privacidad",
+      "Auditoría",
+    ]);
     expect(sidebar.getByRole("button", { name: "Catálogo" })).toBeTruthy();
     expect(sidebar.queryByText("Expediente")).toBeNull();
     expect(sidebar.queryByText("Inventario")).toBeNull();
@@ -241,6 +252,7 @@ describe("AppShell", () => {
     expect(sidebar.queryByRole("link", { name: "Conexiones" })).toBeNull();
     expect(sidebar.queryByRole("link", { name: "Rotación" })).toBeNull();
     expect(sidebar.queryByRole("link", { name: "Documentos" })).toBeNull();
+    expect(sidebar.queryByRole("link", { name: "Privacidad" })).toBeNull();
     expect(sidebar.getByRole("link", { name: "Auditoría" })).toBeTruthy();
   });
 

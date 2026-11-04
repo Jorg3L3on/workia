@@ -1,4 +1,5 @@
 import { CATALOG_PATHS } from "@/lib/catalog/paths";
+import { quincenaLabel } from "@/lib/pay-periods/quincena";
 
 export type BreadcrumbCrumb = {
   label: string;
@@ -60,12 +61,61 @@ export const resolveBreadcrumbs = (
     return [{ label: "Reportes" }, { label: "Rotación" }];
   }
 
+  if (path === "/app/periodos") {
+    return [{ label: "Periodos de pago" }];
+  }
+
+  if (path === "/app/periodos/reglas") {
+    return [
+      { label: "Periodos de pago", href: "/app/periodos" },
+      { label: "Reglas de incidencias" },
+    ];
+  }
+
+  // One person's quincena (W2-14): /app/periodos/2026-11-Q1/<person id>.
+  const personPeriod = /^\/app\/periodos\/(\d{4}-\d{2}-Q[12])\/[^/]+$/.exec(
+    path,
+  );
+
+  if (personPeriod) {
+    return [
+      { label: "Periodos de pago", href: "/app/periodos" },
+      {
+        label: quincenaLabel(personPeriod[1]),
+        href: `/app/periodos/${personPeriod[1]}`,
+      },
+      { label: labels.current ?? "Persona" },
+    ];
+  }
+
+  if (path.startsWith("/app/periodos/")) {
+    return [
+      { label: "Periodos de pago", href: "/app/periodos" },
+      { label: labels.current ?? "Quincena" },
+    ];
+  }
+
   if (path === "/app/contratos") {
     return [{ label: "Contratos" }];
   }
 
   if (path === "/app/documentos") {
     return [{ label: "Documentos" }];
+  }
+
+  if (path === "/app/asistencia") {
+    return [{ label: "Asistencia" }];
+  }
+
+  if (path.startsWith("/app/asistencia/qr/")) {
+    return [
+      { label: "Asistencia", href: "/app/asistencia?vista=app" },
+      { label: "Código para checar" },
+    ];
+  }
+
+  if (path === "/app/privacidad") {
+    return [{ label: "Privacidad" }];
   }
 
   if (path === "/app/contratos/plantillas") {
@@ -160,6 +210,14 @@ export const resolveBreadcrumbs = (
       { label: "Catálogo", href: CATALOG_PATHS.index },
       { label: "Motivos de baja" },
     ];
+  }
+
+  if (path === "/app/avisos") {
+    return [{ label: "Avisos" }];
+  }
+
+  if (path === "/app/alertas") {
+    return [{ label: "Alertas LFT" }];
   }
 
   if (path === "/app/auditoria") {

@@ -34,6 +34,24 @@ export const env = createEnv({
     MCP_PUBLIC_URL: z.string().url().optional(),
     // Extra browser origins allowed to call /api/mcp, comma separated.
     MCP_ALLOWED_ORIGINS: z.string().optional(),
+    // Email (W2-01 login codes and invitations). Any SMTP server works, so a
+    // free tier or the company's own mail server adds no cost, e.g.
+    // smtps://user:password@smtp.example.com:465. Without it, development and
+    // tests write each message to EMAIL_OUTBOX_DIR instead of sending it.
+    EMAIL_SMTP_URL: z.string().url().optional(),
+    EMAIL_FROM: z.string().min(3).optional(),
+    EMAIL_OUTBOX_DIR: z.string().optional(),
+    // Web push (W2-08). VAPID keys are free: generate them once with
+    // `npm run push:vapid-keys`. Without them, push is off and notifications
+    // still go by email and to the in-app inbox.
+    VAPID_PUBLIC_KEY: z.string().min(20).optional(),
+    VAPID_PRIVATE_KEY: z.string().min(20).optional(),
+    // Contact the push services may use, e.g. mailto:soporte@example.com.
+    VAPID_SUBJECT: z.string().min(5).optional(),
+    // Bearer secret of sessionless scheduled routes (/api/cron/*). Without it they answer 404.
+    CRON_SECRET: z.string().min(16).optional(),
+    // Public base URL for links in emails and the Google redirect (falls back to the request origin).
+    APP_PUBLIC_URL: z.string().url().optional(),
     NODE_ENV: z
       .enum(["development", "test", "production"])
       .default("development"),
@@ -48,9 +66,17 @@ export const env = createEnv({
     MCP_ENABLED: process.env.MCP_ENABLED,
     MCP_PUBLIC_URL: process.env.MCP_PUBLIC_URL,
     MCP_ALLOWED_ORIGINS: process.env.MCP_ALLOWED_ORIGINS,
+    CRON_SECRET: process.env.CRON_SECRET,
     DEMO_RRHH_EMAIL: process.env.DEMO_RRHH_EMAIL,
     DEMO_RRHH_PASSWORD: process.env.DEMO_RRHH_PASSWORD,
     DEMO_RRHH_NAME: process.env.DEMO_RRHH_NAME,
+    EMAIL_SMTP_URL: process.env.EMAIL_SMTP_URL,
+    EMAIL_FROM: process.env.EMAIL_FROM,
+    EMAIL_OUTBOX_DIR: process.env.EMAIL_OUTBOX_DIR,
+    APP_PUBLIC_URL: process.env.APP_PUBLIC_URL,
+    VAPID_PUBLIC_KEY: process.env.VAPID_PUBLIC_KEY,
+    VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY,
+    VAPID_SUBJECT: process.env.VAPID_SUBJECT,
     NODE_ENV: process.env.NODE_ENV,
   },
   emptyStringAsUndefined: true,

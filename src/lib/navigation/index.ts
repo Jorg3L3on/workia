@@ -1,5 +1,8 @@
 import {
+  BellRingIcon,
+  CalendarCheckIcon,
   ChartLineIcon,
+  ClockIcon,
   FilesIcon,
   FileTextIcon,
   FolderTreeIcon,
@@ -8,6 +11,7 @@ import {
   PlugIcon,
   PlusIcon,
   ScrollTextIcon,
+  ShieldCheckIcon,
   UploadIcon,
   UserCogIcon,
   UserPlusIcon,
@@ -29,6 +33,11 @@ export type NavAccess = {
   canReadReports: boolean;
   /** documents:read in the active company: shows Documentos. */
   canReadDocuments: boolean;
+  /** pay_periods:read in the active company: shows Periodos de pago. */
+  canReadPayPeriods: boolean;
+  /** privacy:read in the active company: shows Privacidad. */
+  canReadPrivacy: boolean;
+  canReadAttendance: boolean;
 };
 
 export type NavLink = {
@@ -80,6 +89,26 @@ export const NAV_GROUPS: readonly NavGroup[] = [
         icon: FilesIcon,
         keywords: ["por vencer", "vencidos", "vigencia"],
         requires: "canReadDocuments",
+      },
+      {
+        title: "Periodos de pago",
+        href: "/app/periodos",
+        icon: CalendarCheckIcon,
+        keywords: ["quincena", "cierre", "incidencias", "pre-nómina"],
+        requires: "canReadPayPeriods",
+      },
+      {
+        title: "Alertas LFT",
+        href: "/app/alertas",
+        icon: BellRingIcon,
+        keywords: ["faltas", "rescisión", "artículo 47", "vencimientos"],
+      },
+      {
+        title: "Asistencia",
+        href: "/app/asistencia",
+        icon: ClockIcon,
+        keywords: ["checador", "checadas", "reloj", "qr", "entrada", "salida"],
+        requires: "canReadAttendance",
       },
       {
         title: "Altas",
@@ -134,6 +163,13 @@ export const NAV_GROUPS: readonly NavGroup[] = [
         icon: PlugIcon,
         keywords: ["mcp", "conector", "claude"],
         requires: "canUseConnections",
+      },
+      {
+        title: "Privacidad",
+        href: "/app/privacidad",
+        icon: ShieldCheckIcon,
+        keywords: ["aviso", "arco", "datos personales", "conservación"],
+        requires: "canReadPrivacy",
       },
       {
         title: "Auditoría",

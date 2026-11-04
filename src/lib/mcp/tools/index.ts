@@ -43,6 +43,7 @@ import { listTerminationReasonsTool } from "./employment";
 import { getPersonTool, listPeopleTool } from "./people";
 import { listExpiringDocumentsTool } from "./documents";
 import { getVacationEntitlementTool } from "./vacation";
+import { getIncidenciasSummaryTool, getPayPeriodTool } from "./pay-periods";
 import {
   createPersonTool,
   setPersonStatusTool,
@@ -85,6 +86,9 @@ export const WORKIA_TOOLS: WorkiaTool[] = [
   getVacationEntitlementTool,
   // WRK-I15-4: the 30-day documents tray.
   listExpiringDocumentsTool,
+  // Workia 2.0 W2-15: aggregates and the quincena close, read-only.
+  getIncidenciasSummaryTool,
+  getPayPeriodTool,
   // Phase 2: writes (preview + confirmation + idempotency).
   createPersonTool,
   updatePersonTool,

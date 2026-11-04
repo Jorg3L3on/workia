@@ -107,3 +107,58 @@ export class DuplicateIdentityError extends Error {
     this.name = "DuplicateIdentityError";
   }
 }
+
+/**
+ * Identity model (docs/identity-model.md): every active, non-deleted person
+ * carries a valid CURP. A baja or a borrado may keep a blank one (records
+ * captured before the rule), but nobody becomes or stays activa without it.
+ */
+export const CURP_REQUIRED_MESSAGE =
+  "La CURP es obligatoria para una persona activa";
+
+export const activePersonLacksCurp = (person: {
+  status: string;
+  curp?: string | null;
+  deletedAt?: Date | string | null;
+}) =>
+  person.status === "activa" &&
+  !person.deletedAt &&
+  !isValidCurp(person.curp ?? "");
+
+export class MissingCurpError extends Error {
+  readonly field = "curp" as const;
+
+  constructor(message = CURP_REQUIRED_MESSAGE) {
+    super(message);
+    this.name = "MissingCurpError";
+  }
+}
+
+/** Throws MissingCurpError when an active person would be saved without a valid CURP. */
+export const assertActivePersonHasCurp = (
+  person: Parameters<typeof activePersonLacksCurp>[0],
+) => {
+  if (activePersonLacksCurp(person)) {
+    throw new MissingCurpError();
+  }
+};
+
+/**
+ * A CURP that passes isValidCurp for test data and demo seeds, unique per
+ * index (0 ≤ index < 800 000; below 8 000 it is the demo seed's old value).
+ * Never a real person's: «XAXX» names nobody.
+ */
+export const sampleCurp = (index: number) => {
+  const consonants = "BCDFGHJKLMNPQRSTVWXZ";
+  const body = [
+    index % 20,
+    Math.floor(index / 20) % 20,
+    Math.floor(index / 400) % 20,
+  ]
+    .map((digit) => consonants[digit])
+    .join("");
+  const year = String((1 + Math.floor(index / 8000)) % 100).padStart(2, "0");
+  const base = `XAXX${year}0101HDF${body}0`;
+
+  return `${base}${curpCheckDigit(base)}`;
+};

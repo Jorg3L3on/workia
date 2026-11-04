@@ -113,7 +113,7 @@ describe("createPersonAction", () => {
     formData.set("positionId", "");
     formData.set("managerId", "");
     formData.set("rfc", "XAXX010101000");
-    formData.set("curp", "");
+    formData.set("curp", "XAXX010101HDFCBB07");
     formData.set("nss", "");
     formData.set("status", "activa");
 
@@ -131,6 +131,32 @@ describe("createPersonAction", () => {
       }),
       "user-1",
     );
+  });
+});
+
+describe("createPersonAction identity model (P-00)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("refuses an active person without a CURP before writing anything", async () => {
+    requirePeopleCreateMock.mockResolvedValue({
+      user: { id: "user-1" },
+      companyId: "company-1",
+    });
+
+    const { createPersonAction } = await import("@/lib/people/actions");
+    const formData = new FormData();
+    formData.set("nombres", "Persona");
+    formData.set("apellidoPaterno", "Demo");
+    formData.set("curp", "");
+
+    const result = await createPersonAction({}, formData);
+
+    expect(result.fieldErrors?.curp).toBe(
+      "La CURP es obligatoria para una persona activa",
+    );
+    expect(createPersonMock).not.toHaveBeenCalled();
   });
 });
 

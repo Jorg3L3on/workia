@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowUpRightIcon } from "lucide-react";
+import { ArrowUpRightIcon, BellIcon } from "lucide-react";
 
 import { WorkiaMark } from "@/components/brand/workia-mark";
 import {
@@ -58,8 +58,15 @@ type AppShellProps = {
   canReadReports?: boolean;
   /** documents:read in the active company: shows Documentos. */
   canReadDocuments?: boolean;
+  /** pay_periods:read in the active company: shows Periodos de pago. */
+  canReadPayPeriods?: boolean;
+  /** privacy:read in the active company: shows Privacidad. */
+  canReadPrivacy?: boolean;
+  canReadAttendance?: boolean;
   /** Platform admins also get a link to the platform console. */
   isPlatformAdmin?: boolean;
+  /** Unread messages of the user's inbox in this company (W2-08), capped at 100. */
+  unreadNotifications?: number;
   user: {
     name?: string | null;
     email?: string | null;
@@ -76,13 +83,20 @@ export const AppShell = ({
   canUseConnections = false,
   canReadReports = false,
   canReadDocuments = false,
+  canReadPayPeriods = false,
+  canReadPrivacy = false,
+  canReadAttendance = false,
   isPlatformAdmin = false,
+  unreadNotifications = 0,
 }: AppShellProps) => {
   const access = {
     canReadMembers,
     canUseConnections,
     canReadReports,
     canReadDocuments,
+    canReadPayPeriods,
+    canReadPrivacy,
+    canReadAttendance,
   };
   const groups = visibleNavGroups(access);
   const initials = (user.name ?? "RRHH")
@@ -179,6 +193,27 @@ export const AppShell = ({
                 </div>
                 <div className="flex items-center gap-1 px-4">
                   <AppCommandPaletteHint />
+                  <Link
+                    aria-label={
+                      unreadNotifications > 0
+                        ? `Avisos, ${unreadNotifications >= 100 ? "más de 99" : unreadNotifications} sin leer`
+                        : "Avisos"
+                    }
+                    className="hover:bg-accent relative inline-flex size-8 items-center justify-center rounded-md"
+                    href="/app/avisos"
+                  >
+                    <BellIcon aria-hidden className="size-4" />
+                    {unreadNotifications > 0 ? (
+                      <span
+                        aria-hidden
+                        className="bg-primary text-primary-foreground absolute -top-0.5 -right-0.5 min-w-4 rounded-full px-1 text-center text-[10px] leading-4 font-semibold"
+                      >
+                        {unreadNotifications >= 100
+                          ? "99+"
+                          : unreadNotifications}
+                      </span>
+                    ) : null}
+                  </Link>
                   <ThemeToggle />
                 </div>
               </header>

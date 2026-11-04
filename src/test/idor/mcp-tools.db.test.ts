@@ -20,6 +20,8 @@ import {
   previewContract,
 } from "@/lib/contracts";
 import { listExpiringDocuments } from "@/lib/documents";
+import { closePayPeriod } from "@/lib/pay-periods";
+import { replacePeriodIncidencias } from "@/lib/timeline/writers";
 import {
   auditEvents,
   companyMemberships,
@@ -202,8 +204,9 @@ describe("protocol surface", () => {
     // 18 reads (phase 1) + 13 writes (phase 2) + phase 3 (3 reads, 4 writes)
     // + list_termination_reasons (Iniciativa 2)
     // + get_vacation_entitlement (WRK-I14-2)
-    // + list_expiring_documents (WRK-I15-4).
-    expect(tools).toHaveLength(41);
+    // + list_expiring_documents (WRK-I15-4)
+    // + get_incidencias_summary and get_pay_period (Workia 2.0 W2-15).
+    expect(tools).toHaveLength(43);
     expect(resources.map((r: { uri: string }) => r.uri).sort()).toEqual([
       "workia://catalogo",
       "workia://glosario",
@@ -884,6 +887,101 @@ describe("documents", () => {
     return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`;
   };
 
+  it("mcp:get_pay_period", async () => {
+    const period = "2026-09-Q1";
+    await replacePeriodIncidencias(a.companyId, {
+      period,
+      personIds: [a.person.id],
+      incidencias: [
+        {
+          personId: a.person.id,
+          day: "2026-09-03",
+          kind: "retardo",
+          minutes: 11,
+          source: "engine",
+        },
+      ],
+    });
+
+    const open = await call(tokens.aRead, "get_pay_period", { period });
+    expect(open.isError).toBeFalsy();
+    expect(open.structuredContent).toMatchObject({
+      status: "open",
+      source: "live",
+      snapshot_matches: null,
+      person_count: 1,
+      totals: [{ kind: "retardo", count: 1, minutes: 11 }],
+    });
+
+    await closePayPeriod(a.companyId, period);
+    const closed = await call(tokens.aRead, "get_pay_period", { period });
+    expect(closed.structuredContent).toMatchObject({
+      status: "closed",
+      source: "snapshot",
+      revision: 1,
+      snapshot_matches: true,
+      differences: 0,
+      people: [
+        expect.objectContaining({
+          person: expect.objectContaining({ id: a.person.id }),
+        }),
+      ],
+    });
+
+    const cross = await call(tokens.bAll, "get_pay_period", { period });
+    expect(cross.isError).toBeFalsy();
+    expect(cross.structuredContent).toMatchObject({
+      status: "open",
+      revision: 0,
+      person_count: 0,
+      people: [],
+      totals: [],
+    });
+    expectNoLeak(cross.structuredContent);
+
+    // The viewer role has no pay_periods:read.
+    expect(
+      errorCode(await call(tokens.aViewerAudit, "get_pay_period", { period })),
+    ).toBe("FORBIDDEN_RBAC");
+  });
+
+  it("mcp:get_incidencias_summary", async () => {
+    const args = { from: "2026-09-01", to: "2026-09-15", group_by: "person" };
+    const own = await call(tokens.aRead, "get_incidencias_summary", args);
+    expect(own.isError).toBeFalsy();
+    expect(own.structuredContent.items).toEqual([
+      expect.objectContaining({
+        key: a.person.id,
+        incidencias: [expect.objectContaining({ kind: "retardo", count: 1 })],
+      }),
+    ]);
+
+    const cross = await call(tokens.bAll, "get_incidencias_summary", {
+      ...args,
+      site_id: a.site.id,
+    });
+    expect(cross.structuredContent.items).toEqual([]);
+    expectNoLeak(cross.structuredContent);
+    expect(
+      (await call(tokens.bAll, "get_incidencias_summary", args))
+        .structuredContent.items,
+    ).toEqual([]);
+
+    expect(
+      errorCode(
+        await call(tokens.aRead, "get_incidencias_summary", {
+          from: "2026-09-15",
+          to: "2026-09-01",
+        }),
+      ),
+    ).toBe("VALIDATION");
+    expect(
+      errorCode(
+        await call(tokens.aViewerAudit, "get_incidencias_summary", args),
+      ),
+    ).toBe("FORBIDDEN_RBAC");
+  });
+
   it("mcp:list_expiring_documents", async () => {
     const today = isoToday();
     const [requirement] = await ownerDb
@@ -1051,6 +1149,12 @@ describe("PII sweep and output contracts", () => {
     get_seniority_certificate: { person_id: a.person.id },
     get_vacation_entitlement: { person_id: a.person.id },
     list_expiring_documents: {},
+    get_incidencias_summary: {
+      from: "2026-10-16",
+      to: "2026-10-31",
+      group_by: "person",
+    },
+    get_pay_period: { period: "2026-10-Q2" },
     list_contracts: { person_id: a.person.id },
     list_expiring_contracts: { within_days: 365 },
     list_renewal_tray: {},
