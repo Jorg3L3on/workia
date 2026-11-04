@@ -51,7 +51,7 @@ describe("PersonForm", () => {
 
   it("marks every optional field and leaves the required ones unmarked", () => {
     const { container } = renderCreate();
-    const required = ["Nombre(s)", "Apellido paterno"];
+    const required = ["Nombre(s)", "Apellido paterno", "CURP"];
     const labels = labelTexts(container).filter(
       (text) => !required.includes(text),
     );
@@ -61,6 +61,30 @@ describe("PersonForm", () => {
       expect(labels).toContain(`${text} (opcional)`);
     }
     expect(labels.filter((text) => !text.endsWith("(opcional)"))).toEqual([]);
+  });
+
+  it("makes the CURP optional only when editing someone de baja", () => {
+    const { container } = render(
+      <PersonForm
+        areas={[]}
+        mode="edit"
+        person={
+          {
+            id: "p1",
+            nombres: "Ana",
+            apellidoPaterno: "Demo",
+            status: "baja",
+          } as never
+        }
+        positions={[]}
+        sites={[]}
+      />,
+    );
+
+    expect(labelTexts(container)).toContain("CURP (opcional)");
+    expect(container.querySelector<HTMLInputElement>("#curp")?.required).toBe(
+      false,
+    );
   });
 
   it("has no Relación laboral field", () => {
@@ -74,15 +98,20 @@ describe("PersonForm", () => {
     renderCreate();
     const pending = screen.getByTestId("pendientes-obligatorios");
 
-    expect(pending.textContent).toBe("2 campos obligatorios pendientes");
+    expect(pending.textContent).toBe("3 campos obligatorios pendientes");
 
     fireEvent.input(screen.getByLabelText("Nombre(s)"), {
       target: { value: "Ana" },
     });
-    expect(pending.textContent).toBe("1 campo obligatorio pendiente");
+    expect(pending.textContent).toBe("2 campos obligatorios pendientes");
 
     fireEvent.input(screen.getByLabelText("Apellido paterno"), {
       target: { value: "Demo" },
+    });
+    expect(pending.textContent).toBe("1 campo obligatorio pendiente");
+
+    fireEvent.input(screen.getByLabelText("CURP"), {
+      target: { value: "XAXX010101HDFBBB00" },
     });
     expect(pending.textContent).toBe("Campos obligatorios completos");
     expect(

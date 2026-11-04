@@ -84,6 +84,17 @@ export const withTransaction = <T>(
     return fn(tx);
   });
 
+/**
+ * Inside an open transaction, makes row-level security see `companyId` from
+ * here on. Only a flow that writes to two companies in one transaction uses
+ * it (a transfer between subsidiaries, W2-24); RLS stays on throughout.
+ */
+export const actInCompany = async (tx: DbTransaction, companyId: string) => {
+  if (rlsEnabled()) {
+    await setCompany(tx, companyId);
+  }
+};
+
 type ChainStep = [method: PropertyKey, args: unknown[]];
 
 /**

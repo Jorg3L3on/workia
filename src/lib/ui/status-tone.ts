@@ -40,6 +40,12 @@ export const statusTone = {
     failed: "danger",
     undone: "neutral",
   },
+  employeeAccount: {
+    none: "neutral",
+    invited: "info",
+    active: "success",
+    disabled: "neutral",
+  },
   document: {
     missing: "info",
     valid: "success",

@@ -23,7 +23,14 @@ import {
 } from "@/lib/db/schema";
 import type { EmploymentPeriod } from "@/lib/db/schema/employment";
 import { formatDateMx } from "@/lib/format/date";
+import { revokeEmployeeAccess } from "@/lib/employee-accounts/revoke";
 import { withTenant } from "@/lib/tenant/scope";
+import { appendPersonEvents } from "@/lib/timeline";
+import {
+  employmentAltaEvent,
+  employmentBajaCorrectionEvent,
+  employmentBajaEvent,
+} from "@/lib/timeline/events";
 
 import {
   finiquitoStatusLabels,
@@ -33,6 +40,7 @@ import {
   type TerminationValues,
 } from "./employment-schema";
 import { seniorityDate } from "./seniority";
+import { activePersonLacksCurp } from "./identity";
 
 /**
  * Baja y periodos laborales (Iniciativa 2). Every person has employment
@@ -240,6 +248,8 @@ export const syncEmploymentPeriods = async (
   companyId: string,
   personIds: string[],
   actorUserId?: string | null,
+  /** The timeline source of the altas and bajas it writes (W2-13). */
+  source = "app",
 ) => {
   if (personIds.length === 0) {
     return;
@@ -261,6 +271,8 @@ export const syncEmploymentPeriods = async (
 
   const opened: (typeof employmentPeriods.$inferInsert)[] = [];
   const firstPeriodOf: string[] = [];
+  const events: Parameters<typeof appendPersonEvents>[1] = [];
+  const personById = new Map(persons.map((person) => [person.id, person]));
 
   for (const person of persons) {
     const own = periods
@@ -304,7 +316,7 @@ export const syncEmploymentPeriods = async (
     }
 
     if (person.status === "baja" && open) {
-      await tx
+      const [closed] = await tx
         .update(employmentPeriods)
         .set({
           bajaSinFecha: true,
@@ -317,7 +329,10 @@ export const syncEmploymentPeriods = async (
             companyId,
             eq(employmentPeriods.id, open.id),
           ),
-        );
+        )
+        .returning();
+
+      if (closed) events.push(employmentBajaEvent(closed, source, new Date()));
       continue;
     }
 
@@ -356,7 +371,24 @@ export const syncEmploymentPeriods = async (
   }
 
   if (opened.length > 0) {
-    await tx.insert(employmentPeriods).values(opened);
+    const inserted = await tx
+      .insert(employmentPeriods)
+      .values(opened)
+      .returning();
+
+    for (const period of inserted) {
+      const person = personById.get(period.personId);
+      events.push(employmentAltaEvent(period, source, person ?? {}));
+
+      if (period.bajaSinFecha) {
+        events.push(employmentBajaEvent(period, source, new Date()));
+      }
+    }
+  }
+
+  // The person timeline (W2-13): the altas and bajas, in the same transaction.
+  if (events.length > 0) {
+    await appendPersonEvents(companyId, events, tx);
   }
 
   if (firstPeriodOf.length > 0) {
@@ -472,6 +504,13 @@ export type TerminationResult = {
 /** Where a baja comes from, for the audit: the app (default) or an import. */
 export type TerminationOptions = {
   source?: NonNullable<RecordAuditEventInput["source"]>;
+  /**
+   * A transfer to another subsidiary (W2-24, src/lib/transfers): the period
+   * closes as tipo «traslado» with no motivo of the catalog and no
+   * recontratable, and the summary names the company the person went to.
+   * Only transferPerson() passes it.
+   */
+  transfer?: { toCompanyName: string };
 };
 
 /**
@@ -613,7 +652,13 @@ export const recordTermination = async (
     throw new EmploymentError("La persona ya está dada de baja.");
   }
 
-  await syncEmploymentPeriods(tx, companyId, [personId], actorUserId);
+  await syncEmploymentPeriods(
+    tx,
+    companyId,
+    [personId],
+    actorUserId,
+    options.source,
+  );
   const periods = await listEmploymentPeriods(companyId, personId, tx);
   const open = periods.find(isOpenPeriod);
 
@@ -623,15 +668,26 @@ export const recordTermination = async (
     );
   }
 
-  const reason = await checkTermination(tx, companyId, open, input);
+  const transfer = options.transfer;
+
+  if (transfer && open.fechaIngreso && input.fechaBaja < open.fechaIngreso) {
+    throw new EmploymentError(
+      `El traslado debe ser posterior al ingreso (${formatDateMx(open.fechaIngreso)}).`,
+      "fechaTraslado",
+    );
+  }
+
+  const reason = transfer
+    ? null
+    : await checkTermination(tx, companyId, open, input);
   const [period] = await tx
     .update(employmentPeriods)
     .set({
       fechaBaja: input.fechaBaja,
-      tipoBaja: input.tipoBaja,
-      motivoBajaId: reason.id,
+      tipoBaja: transfer ? "traslado" : input.tipoBaja,
+      motivoBajaId: reason?.id ?? null,
       comentarioBaja: input.comentario?.trim() || null,
-      recontratable: input.recontratable,
+      recontratable: transfer ? null : input.recontratable,
       ...finiquitoValues(input.finiquito),
       ...frozenDimensions(existing),
     })
@@ -650,6 +706,16 @@ export const recordTermination = async (
     .where(withTenant(people, companyId, eq(people.id, personId)))
     .returning();
 
+  // W2-01: the employee account goes off with the baja, in this transaction.
+  await revokeEmployeeAccess(
+    tx,
+    companyId,
+    personId,
+    "baja",
+    actorUserId,
+    options.source,
+  );
+
   const terminated = await terminateVigenteContract(
     tx,
     companyId,
@@ -659,7 +725,13 @@ export const recordTermination = async (
     options,
   );
   const periodBefore = snapshotEmploymentPeriod(open, open.motivoBaja);
-  const periodAfter = snapshotEmploymentPeriod(period, reason.name);
+  const periodAfter = snapshotEmploymentPeriod(period, reason?.name ?? null);
+
+  await appendPersonEvents(
+    companyId,
+    [employmentBajaEvent(period, options.source ?? "app")],
+    tx,
+  );
 
   await recordAuditEvent(
     {
@@ -677,13 +749,20 @@ export const recordTermination = async (
           ...periodChanges(periodBefore, periodAfter),
         },
         // Never the amount: the summary is not masked.
-        summary: [
-          `Baja laboral el ${formatDateMx(input.fechaBaja)}`,
-          terminationTypeLabels[input.tipoBaja],
-          reason.name,
-          input.recontratable ? "recontratable" : "no recontratable",
-          terminated ? "contrato terminado" : null,
-        ]
+        summary: (transfer
+          ? [
+              `Baja laboral el ${formatDateMx(input.fechaBaja)}`,
+              `traslado a ${transfer.toCompanyName}`,
+              terminated ? "contrato terminado" : null,
+            ]
+          : [
+              `Baja laboral el ${formatDateMx(input.fechaBaja)}`,
+              terminationTypeLabels[input.tipoBaja],
+              reason?.name,
+              input.recontratable ? "recontratable" : "no recontratable",
+              terminated ? "contrato terminado" : null,
+            ]
+        )
           .filter(Boolean)
           .join(" · "),
       },
@@ -734,7 +813,13 @@ export const correctTermination = async (
     throw new EmploymentError("La persona no está dada de baja.");
   }
 
-  await syncEmploymentPeriods(tx, companyId, [personId], actorUserId);
+  await syncEmploymentPeriods(
+    tx,
+    companyId,
+    [personId],
+    actorUserId,
+    options.source,
+  );
   const last = (await listEmploymentPeriods(companyId, personId, tx)).at(-1);
 
   if (!last || isOpenPeriod(last)) {
@@ -789,7 +874,7 @@ export const correctTermination = async (
   const changes = periodChanges(before, after);
 
   if (Object.keys(changes).length > 0) {
-    await recordAuditEvent(
+    const audit = await recordAuditEvent(
       {
         companyId,
         actorUserId,
@@ -814,6 +899,21 @@ export const correctTermination = async (
       },
       tx,
     );
+
+    // Append-only: the corrected baja is a new event (W2-13).
+    if (audit) {
+      await appendPersonEvents(
+        companyId,
+        [
+          employmentBajaCorrectionEvent(
+            period,
+            audit.id,
+            options.source ?? "app",
+          ),
+        ],
+        tx,
+      );
+    }
   }
 
   return { person: existing, period, contract: terminated, warnings: [] };
@@ -910,6 +1010,14 @@ export const rehirePerson = async (
       throw new EmploymentError("La persona ya está activa.");
     }
 
+    // Nobody becomes activa without a valid CURP (docs/identity-model.md).
+    if (activePersonLacksCurp({ ...existing, status: "activa" })) {
+      throw new EmploymentError(
+        "Para reingresar a esta persona primero captura su CURP en el expediente.",
+        "curp",
+      );
+    }
+
     await syncEmploymentPeriods(tx, companyId, [personId], actorUserId);
     const periods = await listEmploymentPeriods(companyId, personId, tx);
 
@@ -961,6 +1069,12 @@ export const rehirePerson = async (
       .returning();
     const warnings = rehireWarnings(last);
     const after = snapshotEmploymentPeriod(period);
+
+    await appendPersonEvents(
+      companyId,
+      [employmentAltaEvent(period, "app", existing)],
+      tx,
+    );
 
     await recordAuditEvent(
       {

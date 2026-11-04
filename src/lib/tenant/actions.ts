@@ -39,5 +39,7 @@ export const switchCompanyAction = async (
     action: "switch",
     payload: { summary: `Entró a ${target.companyName}` },
   });
-  redirect("/app");
+  // «Abrir en <empresa>» (a transfer's other row, W2-24) lands on that page.
+  const next = String(formData.get("next") ?? "");
+  redirect(/^\/app(\/[\w\-/]*)?$/.test(next) ? next : "/app");
 };

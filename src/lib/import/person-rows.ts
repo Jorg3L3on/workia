@@ -5,8 +5,8 @@ import {
   terminationTypeLabels,
   type TerminationValues,
 } from "@/lib/people/employment-schema";
-import { identifierOrNull } from "@/lib/people/identity";
-import { personFormSchema } from "@/lib/people/schema";
+import { activePersonLacksCurp, identifierOrNull } from "@/lib/people/identity";
+import { personFieldsSchema } from "@/lib/people/schema";
 
 import {
   catalogKey,
@@ -243,7 +243,7 @@ const resolveBaja = (
   };
 };
 
-/** Validates a Personas row with the same zod schema as the person form. */
+/** Validates a Personas row with the same field rules as the person form. */
 export const normalizePersonRow = (
   cells: Cells,
   catalogs: CatalogIndex,
@@ -281,7 +281,9 @@ export const normalizePersonRow = (
   const baja = resolveBaja(cells, catalogs, errors);
   const fechaAntiguedad = dateCell(cells, "fechaAntiguedad", errors);
 
-  const parsed = personFormSchema.safeParse({
+  // Field rules only: the CURP an active person needs is judged against what
+  // is stored (a blank cell keeps it) in classifyPersonRow.
+  const parsed = personFieldsSchema.safeParse({
     nombres: text(cells, "nombres"),
     apellidoPaterno: text(cells, "apellidoPaterno"),
     apellidoMaterno: text(cells, "apellidoMaterno"),
@@ -507,7 +509,17 @@ export const planEmployment = (
       yesNo(baja.recontratable),
     );
 
-    if (Object.keys(plan.diff).length > 0) {
+    if (
+      Object.keys(plan.diff).length > 0 &&
+      (current?.tipoBaja === "traslado" || baja.tipoBaja === "traslado")
+    ) {
+      // Only the transfer flow writes or changes a traslado (W2-24).
+      plan.errors.push({
+        field: "tipoBaja",
+        message:
+          "Un traslado a otra empresa del grupo no se registra ni se corrige desde la importación. Deja las columnas de baja como están.",
+      });
+    } else if (Object.keys(plan.diff).length > 0) {
       const missing = BAJA_COLUMNS.filter(([key]) =>
         key === "motivoBaja"
           ? merged.motivoBajaId === null
@@ -533,7 +545,11 @@ export const planEmployment = (
           mode: becomesBaja ? "close" : "correct",
           values: {
             fechaBaja: merged.fechaBaja!,
-            tipoBaja: merged.tipoBaja!,
+            // Never «traslado»: refused above.
+            tipoBaja: merged.tipoBaja as Exclude<
+              NonNullable<typeof merged.tipoBaja>,
+              "traslado"
+            >,
             motivoBajaId: merged.motivoBajaId!,
             comentario: merged.comentario,
             recontratable: merged.recontratable!,
@@ -661,6 +677,23 @@ export const classifyPersonRow = (
   lookups: PersonLookups,
 ): RowOutcome => {
   const { person, errors } = matchPerson(normalized, lookups);
+
+  // Identity model: the person, as the row leaves them, is activa only with a
+  // valid CURP (a blank cell keeps the stored one).
+  if (
+    errors.length === 0 &&
+    activePersonLacksCurp({
+      status: normalized.values.status ?? person?.status ?? "activa",
+      curp: normalized.values.curp ?? person?.curp ?? null,
+    })
+  ) {
+    errors.push({
+      field: "curp",
+      message: person
+        ? "Esta persona está activa y no tiene una CURP válida en Workia. Escribe su CURP (18 caracteres) en la columna CURP."
+        : "La CURP es obligatoria para una persona activa. Escribe sus 18 caracteres en la columna CURP.",
+    });
+  }
 
   if (errors.length > 0) {
     return {
