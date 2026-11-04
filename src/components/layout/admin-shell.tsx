@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   ArrowLeftIcon,
   Building2Icon,
+  DatabaseIcon,
   LayoutDashboardIcon,
   ShieldIcon,
 } from "lucide-react";
@@ -49,6 +50,7 @@ const adminNavItems = [
   { title: "Resumen", href: "/admin", icon: LayoutDashboardIcon, exact: true },
   { title: "Empresas", href: "/admin/empresas", icon: Building2Icon },
   { title: pageTitles.rbac, href: "/admin/rbac", icon: ShieldIcon },
+  { title: pageTitles.usoBaseDatos, href: "/admin/uso", icon: DatabaseIcon },
 ];
 
 type AdminShellProps = {

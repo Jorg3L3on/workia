@@ -32,6 +32,8 @@ export type TodayDashboardProps = {
   templates: ContractTemplate[];
   positions: { id: string; name: string }[];
   today: string;
+  /** A warning shown under the header, e.g. the Neon Free usage notice. */
+  notice?: React.ReactNode;
 };
 
 type KpiTileProps = {
@@ -103,6 +105,7 @@ export const TodayDashboard = ({
   templates,
   positions,
   today,
+  notice,
 }: TodayDashboardProps) => (
   <div className="flex flex-col gap-6">
     <ListPageHeader
@@ -119,6 +122,8 @@ export const TodayDashboard = ({
       description="Contratos por vencer, altas en proceso y equipo por recuperar."
       title="Qué hay que atender hoy"
     />
+
+    {notice}
 
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       {activePeopleCount !== null ? (

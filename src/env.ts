@@ -34,6 +34,10 @@ export const env = createEnv({
     MCP_PUBLIC_URL: z.string().url().optional(),
     // Extra browser origins allowed to call /api/mcp, comma separated.
     MCP_ALLOWED_ORIGINS: z.string().optional(),
+    // Optional (P-03): read-only Neon API access to show month-to-date compute
+    // and egress against the Free limits. Without them only the size is shown.
+    NEON_API_KEY: z.string().optional(),
+    NEON_PROJECT_ID: z.string().optional(),
     NODE_ENV: z
       .enum(["development", "test", "production"])
       .default("development"),
@@ -48,6 +52,8 @@ export const env = createEnv({
     MCP_ENABLED: process.env.MCP_ENABLED,
     MCP_PUBLIC_URL: process.env.MCP_PUBLIC_URL,
     MCP_ALLOWED_ORIGINS: process.env.MCP_ALLOWED_ORIGINS,
+    NEON_API_KEY: process.env.NEON_API_KEY,
+    NEON_PROJECT_ID: process.env.NEON_PROJECT_ID,
     DEMO_RRHH_EMAIL: process.env.DEMO_RRHH_EMAIL,
     DEMO_RRHH_PASSWORD: process.env.DEMO_RRHH_PASSWORD,
     DEMO_RRHH_NAME: process.env.DEMO_RRHH_NAME,
