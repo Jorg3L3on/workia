@@ -20,109 +20,147 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 
 ## Acciones de servidor
 
-| Superficie                                                 | Estado | Prueba                                                                                                 | Permiso                     |
-| ---------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------ | --------------------------- |
-| `action:catalog/assignActivityToPositionAction`            | ✅     | `src/test/idor/catalog.db.test.ts`                                                                     | `positions:update`          |
-| `action:catalog/createActivityAction`                      | ✅     | `src/test/idor/catalog.db.test.ts`                                                                     | `positions:create`          |
-| `action:catalog/createAreaAction`                          | ✅     | `src/test/idor/catalog.db.test.ts`                                                                     | `areas:create`              |
-| `action:catalog/createPositionAction`                      | ✅     | `src/test/idor/catalog.db.test.ts`                                                                     | `positions:create`          |
-| `action:catalog/deleteActivityAction`                      | ✅     | `src/test/idor/catalog.db.test.ts`                                                                     | `positions:delete`          |
-| `action:catalog/deleteAreaAction`                          | ✅     | `src/test/idor/catalog.db.test.ts`                                                                     | `areas:delete`              |
-| `action:catalog/deletePositionAction`                      | ✅     | `src/test/idor/catalog.db.test.ts`                                                                     | `positions:delete`          |
-| `action:catalog/unassignActivityFromPositionAction`        | ✅     | `src/test/idor/catalog.db.test.ts`                                                                     | `positions:update`          |
-| `action:catalog/updateActivityAction`                      | ✅     | `src/test/idor/catalog.db.test.ts`                                                                     | `positions:update`          |
-| `action:catalog/updateAreaAction`                          | ✅     | `src/test/idor/catalog.db.test.ts`                                                                     | `areas:update`              |
-| `action:catalog/updatePositionAction`                      | ✅     | `src/test/idor/catalog.db.test.ts`                                                                     | `positions:update`          |
-| `action:contracts/addOfficialTemplatesAction`              | ✅     | `src/test/idor/official-templates.db.test.ts`                                                          | `contract_templates:create` |
-| `action:contracts/createContractAction`                    | ✅     | `src/test/idor/contracts.db.test.ts`                                                                   | `contracts:create`          |
-| `action:contracts/createContractTemplateAction`            | ✅     | `src/test/idor/contracts.db.test.ts`                                                                   | `contract_templates:create` |
-| `action:contracts/deactivateContractTemplateAction`        | ✅     | `src/test/idor/contracts.db.test.ts`                                                                   | `contract_templates:delete` |
-| `action:contracts/decideContractRenewalAction`             | ✅     | `src/test/idor/renewal-decision.db.test.ts`                                                            | `contracts:update`          |
-| `action:contracts/deleteContractTemplateAction`            | ✅     | `src/test/idor/contracts.db.test.ts`                                                                   | `contract_templates:delete` |
-| `action:contracts/noRenewContractAction`                   | ✅     | `src/test/idor/contracts.db.test.ts`                                                                   | `contracts:update`          |
-| `action:contracts/updateContractTemplateAction`            | ✅     | `src/test/idor/contracts.db.test.ts`                                                                   | `contract_templates:update` |
-| `action:documents/recordDeliveryAction`                    | ✅     | `src/test/idor/documents.db.test.ts`                                                                   | `documents:manage`          |
-| `action:documents/setRequirementsAction`                   | ✅     | `src/test/idor/documents.db.test.ts`                                                                   | `documents:manage`          |
-| `action:mcp/approveConsentAction`                          | ✅     | `src/test/idor/mcp.db.test.ts`                                                                         | `mcp_connections:create`    |
-| `action:mcp/createPersonalTokenAction`                     | ✅     | `src/test/idor/mcp.db.test.ts`                                                                         | `mcp_connections:create`    |
-| `action:mcp/denyConsentAction`                             | ✅     | `src/test/idor/mcp.db.test.ts`                                                                         | —                           |
-| `action:mcp/hideConnectionAction`                          | ✅     | `src/test/idor/mcp.db.test.ts`                                                                         | `mcp_connections:create`    |
-| `action:mcp/revokeConnectionAction`                        | ✅     | `src/test/idor/mcp.db.test.ts`                                                                         | `mcp_connections:create`    |
-| `action:mcp/setWritesEnabledAction`                        | ✅     | `src/test/idor/mcp-writes.db.test.ts`                                                                  | `mcp_connections:manage`    |
-| `action:onboarding/approveOnboardingAction`                | ✅     | `src/test/idor/onboarding.db.test.ts`                                                                  | `people:update`             |
-| `action:onboarding/rejectOnboardingAction`                 | ✅     | `src/test/idor/onboarding.db.test.ts`                                                                  | `payroll:approve`           |
-| `action:onboarding/startOnboardingAction`                  | ✅     | `src/test/idor/onboarding.db.test.ts`                                                                  | `people:update`             |
-| `action:onboarding/updateOnboardingAction`                 | ✅     | `src/test/idor/onboarding.db.test.ts`                                                                  | `people:update`             |
-| `action:people/assertPeopleListAccess`                     | ⏭️     | Exento: guard de lectura sin datos (requirePeopleRead); la lista la cubre lib:people/listPeoplePage    | `people:read`               |
-| `action:people/countPeopleFilterAction`                    | ✅     | `src/test/idor/people-filter.db.test.ts`                                                               | `people:read`               |
-| `action:people/countPeopleFilterOptionsAction`             | ✅     | `src/test/idor/people-filter.db.test.ts`                                                               | `people:read`               |
-| `action:people/createPeopleViewAction`                     | ✅     | `src/test/idor/people-views.db.test.ts`                                                                | `people:read`               |
-| `action:people/createPersonAction`                         | ✅     | `src/test/idor/people.db.test.ts`                                                                      | `people:create`             |
-| `action:people/deletePeopleViewAction`                     | ✅     | `src/test/idor/people-views.db.test.ts`                                                                | `people:read`               |
-| `action:people/deletePersonAction`                         | ✅     | `src/test/idor/people.db.test.ts`                                                                      | `people:delete`             |
-| `action:people/searchManagerOptionsAction`                 | ✅     | `src/test/idor/people.db.test.ts`                                                                      | `people:read`               |
-| `action:people/searchPeopleForPaletteAction`               | ✅     | `src/test/idor/people.db.test.ts`                                                                      | `people:read`               |
-| `action:people/setPersonStatusAction`                      | ✅     | `src/test/idor/people.db.test.ts`                                                                      | `people:update`             |
-| `action:people/updateFiniquitoAction`                      | ✅     | `src/test/idor/employment.db.test.ts`                                                                  | `people:update`             |
-| `action:people/updatePeopleViewAction`                     | ✅     | `src/test/idor/people-views.db.test.ts`                                                                | `people:read`               |
-| `action:people/updatePersonAction`                         | ✅     | `src/test/idor/people.db.test.ts`                                                                      | `people:update`             |
-| `action:regions/createRegionAction`                        | ✅     | `src/test/idor/regions.db.test.ts`                                                                     | `sites:create`              |
-| `action:regions/deleteRegionAction`                        | ✅     | `src/test/idor/regions.db.test.ts`                                                                     | `sites:delete`              |
-| `action:regions/updateRegionAction`                        | ✅     | `src/test/idor/regions.db.test.ts`                                                                     | `sites:update`              |
-| `action:resguardo/assertAssetsListAccess`                  | ⏭️     | Exento: guard de lectura sin datos (requireAssetsRead); la lista la cubre lib:resguardo/listAssetsPage | `assets:read`               |
-| `action:resguardo/assignAssetAction`                       | ✅     | `src/test/idor/resguardo.db.test.ts`                                                                   | `assets:update`             |
-| `action:resguardo/createAssetAction`                       | ✅     | `src/test/idor/resguardo.db.test.ts`                                                                   | `assets:create`             |
-| `action:resguardo/deleteAssetAction`                       | ✅     | `src/test/idor/resguardo.db.test.ts`                                                                   | `assets:delete`             |
-| `action:resguardo/returnAssetAction`                       | ✅     | `src/test/idor/resguardo.db.test.ts`                                                                   | `assets:update`             |
-| `action:sites/createSiteAction`                            | ✅     | `src/test/idor/catalog.db.test.ts`                                                                     | `sites:create`              |
-| `action:sites/deleteSiteAction`                            | ✅     | `src/test/idor/catalog.db.test.ts`                                                                     | `sites:delete`              |
-| `action:sites/setSiteRegionAction`                         | ✅     | `src/test/idor/regions.db.test.ts`                                                                     | `sites:update`              |
-| `action:sites/updateSiteAction`                            | ✅     | `src/test/idor/catalog.db.test.ts`                                                                     | `sites:update`              |
-| `action:tenant/addMemberAction`                            | ✅     | `src/test/idor/tenant.db.test.ts`                                                                      | `members:manage`            |
-| `action:tenant/changeMemberRoleAction`                     | ✅     | `src/test/idor/tenant.db.test.ts`                                                                      | `members:manage`            |
-| `action:tenant/createCompanyAction`                        | ✅     | `src/test/idor/tenant.db.test.ts`                                                                      | `companies:manage`          |
-| `action:tenant/revokeMemberAction`                         | ✅     | `src/test/idor/tenant.db.test.ts`                                                                      | `members:manage`            |
-| `action:tenant/setCompanyStatusAction`                     | ✅     | `src/test/idor/tenant.db.test.ts`                                                                      | `companies:manage`          |
-| `action:tenant/switchCompanyAction`                        | ✅     | `src/test/idor/tenant.db.test.ts`                                                                      | —                           |
-| `action:tenant/updateCompanyAction`                        | ✅     | `src/test/idor/tenant.db.test.ts`                                                                      | `companies:manage`          |
-| `action:termination-reasons/createTerminationReasonAction` | ✅     | `src/test/idor/employment.db.test.ts`                                                                  | `settings:update`           |
-| `action:termination-reasons/deleteTerminationReasonAction` | ✅     | `src/test/idor/employment.db.test.ts`                                                                  | `settings:update`           |
-| `action:termination-reasons/updateTerminationReasonAction` | ✅     | `src/test/idor/employment.db.test.ts`                                                                  | `settings:update`           |
-| `action:reports/setTurnoverGoalAction`                     | ✅     | `src/test/idor/turnover.db.test.ts`                                                                    | `settings:update`           |
-| `action:reports/createTurnoverViewAction`                  | ✅     | `src/test/idor/turnover.db.test.ts`                                                                    | `reports:read`              |
-| `action:reports/deleteTurnoverViewAction`                  | ✅     | `src/test/idor/turnover.db.test.ts`                                                                    | `reports:read`              |
-| `action:vacations/registerVacationAction`                  | ✅     | `src/test/idor/vacations.db.test.ts`                                                                   | `vacations:create`          |
-| `action:vacations/voidVacationAction`                      | ✅     | `src/test/idor/vacations.db.test.ts`                                                                   | `vacations:update`          |
+| Superficie                                                    | Estado | Prueba                                                                                                 | Permiso                     |
+| ------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------ | --------------------------- |
+| `action:catalog/assignActivityToPositionAction`               | ✅     | `src/test/idor/catalog.db.test.ts`                                                                     | `positions:update`          |
+| `action:catalog/createActivityAction`                         | ✅     | `src/test/idor/catalog.db.test.ts`                                                                     | `positions:create`          |
+| `action:catalog/createAreaAction`                             | ✅     | `src/test/idor/catalog.db.test.ts`                                                                     | `areas:create`              |
+| `action:catalog/createPositionAction`                         | ✅     | `src/test/idor/catalog.db.test.ts`                                                                     | `positions:create`          |
+| `action:catalog/deleteActivityAction`                         | ✅     | `src/test/idor/catalog.db.test.ts`                                                                     | `positions:delete`          |
+| `action:catalog/deleteAreaAction`                             | ✅     | `src/test/idor/catalog.db.test.ts`                                                                     | `areas:delete`              |
+| `action:catalog/deletePositionAction`                         | ✅     | `src/test/idor/catalog.db.test.ts`                                                                     | `positions:delete`          |
+| `action:catalog/unassignActivityFromPositionAction`           | ✅     | `src/test/idor/catalog.db.test.ts`                                                                     | `positions:update`          |
+| `action:catalog/updateActivityAction`                         | ✅     | `src/test/idor/catalog.db.test.ts`                                                                     | `positions:update`          |
+| `action:catalog/updateAreaAction`                             | ✅     | `src/test/idor/catalog.db.test.ts`                                                                     | `areas:update`              |
+| `action:catalog/updatePositionAction`                         | ✅     | `src/test/idor/catalog.db.test.ts`                                                                     | `positions:update`          |
+| `action:contracts/addOfficialTemplatesAction`                 | ✅     | `src/test/idor/official-templates.db.test.ts`                                                          | `contract_templates:create` |
+| `action:contracts/createContractAction`                       | ✅     | `src/test/idor/contracts.db.test.ts`                                                                   | `contracts:create`          |
+| `action:contracts/createContractTemplateAction`               | ✅     | `src/test/idor/contracts.db.test.ts`                                                                   | `contract_templates:create` |
+| `action:contracts/deactivateContractTemplateAction`           | ✅     | `src/test/idor/contracts.db.test.ts`                                                                   | `contract_templates:delete` |
+| `action:contracts/decideContractRenewalAction`                | ✅     | `src/test/idor/renewal-decision.db.test.ts`                                                            | `contracts:update`          |
+| `action:contracts/deleteContractTemplateAction`               | ✅     | `src/test/idor/contracts.db.test.ts`                                                                   | `contract_templates:delete` |
+| `action:contracts/noRenewContractAction`                      | ✅     | `src/test/idor/contracts.db.test.ts`                                                                   | `contracts:update`          |
+| `action:contracts/updateContractTemplateAction`               | ✅     | `src/test/idor/contracts.db.test.ts`                                                                   | `contract_templates:update` |
+| `action:documents/recordDeliveryAction`                       | ✅     | `src/test/idor/documents.db.test.ts`                                                                   | `documents:manage`          |
+| `action:documents/reviewDocumentAction`                       | ✅     | `src/test/idor/document-files.db.test.ts`                                                              | `documents:manage`          |
+| `action:documents/setRequirementsAction`                      | ✅     | `src/test/idor/documents.db.test.ts`                                                                   | `documents:manage`          |
+| `action:employee-accounts/disableEmployeeAccountAction`       | ✅     | `src/test/idor/employee-accounts.db.test.ts`                                                           | `employee_accounts:manage`  |
+| `action:employee-accounts/inviteEmployeeAction`               | ✅     | `src/test/idor/employee-accounts.db.test.ts`                                                           | `employee_accounts:manage`  |
+| `action:employee-accounts/issueActivationCodeAction`          | ✅     | `src/test/idor/employee-accounts.db.test.ts`                                                           | `employee_accounts:manage`  |
+| `action:employee/activateAccountAction`                       | ✅     | `src/test/idor/employee-accounts.db.test.ts`                                                           | —                           |
+| `action:employee/passwordSignInAction`                        | ✅     | `src/test/idor/employee-accounts.db.test.ts`                                                           | —                           |
+| `action:employee/requestLoginCodeAction`                      | ✅     | `src/test/idor/employee-accounts.db.test.ts`                                                           | —                           |
+| `action:employee/signOutEmployeeAction`                       | ✅     | `src/test/idor/employee-accounts.db.test.ts`                                                           | —                           |
+| `action:employee/verifyLoginCodeAction`                       | ✅     | `src/test/idor/employee-accounts.db.test.ts`                                                           | —                           |
+| `action:mcp/approveConsentAction`                             | ✅     | `src/test/idor/mcp.db.test.ts`                                                                         | `mcp_connections:create`    |
+| `action:mcp/createPersonalTokenAction`                        | ✅     | `src/test/idor/mcp.db.test.ts`                                                                         | `mcp_connections:create`    |
+| `action:mcp/denyConsentAction`                                | ✅     | `src/test/idor/mcp.db.test.ts`                                                                         | —                           |
+| `action:mcp/hideConnectionAction`                             | ✅     | `src/test/idor/mcp.db.test.ts`                                                                         | `mcp_connections:create`    |
+| `action:mcp/revokeConnectionAction`                           | ✅     | `src/test/idor/mcp.db.test.ts`                                                                         | `mcp_connections:create`    |
+| `action:mcp/setWritesEnabledAction`                           | ✅     | `src/test/idor/mcp-writes.db.test.ts`                                                                  | `mcp_connections:manage`    |
+| `action:notifications/markAllEmployeeNotificationsReadAction` | ✅     | `src/test/idor/notifications.db.test.ts`                                                               | —                           |
+| `action:notifications/markAllUserNotificationsReadAction`     | ✅     | `src/test/idor/notifications.db.test.ts`                                                               | —                           |
+| `action:notifications/openEmployeeNotificationAction`         | ✅     | `src/test/idor/notifications.db.test.ts`                                                               | —                           |
+| `action:notifications/openUserNotificationAction`             | ✅     | `src/test/idor/notifications.db.test.ts`                                                               | —                           |
+| `action:notifications/setEmployeeChannelAction`               | ✅     | `src/test/idor/notifications.db.test.ts`                                                               | —                           |
+| `action:notifications/setUserEmailChannelAction`              | ✅     | `src/test/idor/notifications.db.test.ts`                                                               | —                           |
+| `action:onboarding/applyIntakeAction`                         | ✅     | `src/test/idor/onboarding-intake.db.test.ts`                                                           | `people:update`             |
+| `action:onboarding/approveOnboardingAction`                   | ✅     | `src/test/idor/onboarding.db.test.ts`                                                                  | `people:update`             |
+| `action:onboarding/openSelfServiceAction`                     | ✅     | `src/test/idor/onboarding-intake.db.test.ts`                                                           | `people:update`             |
+| `action:onboarding/rejectOnboardingAction`                    | ✅     | `src/test/idor/onboarding.db.test.ts`                                                                  | `payroll:approve`           |
+| `action:onboarding/returnIntakeAction`                        | ✅     | `src/test/idor/onboarding-intake.db.test.ts`                                                           | `people:update`             |
+| `action:onboarding/saveEmployeeIntakeAction`                  | ✅     | `src/test/idor/onboarding-intake.db.test.ts`                                                           | —                           |
+| `action:onboarding/startOnboardingAction`                     | ✅     | `src/test/idor/onboarding.db.test.ts`                                                                  | `people:update`             |
+| `action:onboarding/updateOnboardingAction`                    | ✅     | `src/test/idor/onboarding.db.test.ts`                                                                  | `people:update`             |
+| `action:people/assertPeopleListAccess`                        | ⏭️     | Exento: guard de lectura sin datos (requirePeopleRead); la lista la cubre lib:people/listPeoplePage    | `people:read`               |
+| `action:people/countPeopleFilterAction`                       | ✅     | `src/test/idor/people-filter.db.test.ts`                                                               | `people:read`               |
+| `action:people/countPeopleFilterOptionsAction`                | ✅     | `src/test/idor/people-filter.db.test.ts`                                                               | `people:read`               |
+| `action:people/createPeopleViewAction`                        | ✅     | `src/test/idor/people-views.db.test.ts`                                                                | `people:read`               |
+| `action:people/createPersonAction`                            | ✅     | `src/test/idor/people.db.test.ts`                                                                      | `people:create`             |
+| `action:people/deletePeopleViewAction`                        | ✅     | `src/test/idor/people-views.db.test.ts`                                                                | `people:read`               |
+| `action:people/deletePersonAction`                            | ✅     | `src/test/idor/people.db.test.ts`                                                                      | `people:delete`             |
+| `action:people/searchManagerOptionsAction`                    | ✅     | `src/test/idor/people.db.test.ts`                                                                      | `people:read`               |
+| `action:people/searchPeopleForPaletteAction`                  | ✅     | `src/test/idor/people.db.test.ts`                                                                      | `people:read`               |
+| `action:people/setPersonStatusAction`                         | ✅     | `src/test/idor/people.db.test.ts`                                                                      | `people:update`             |
+| `action:people/updateFiniquitoAction`                         | ✅     | `src/test/idor/employment.db.test.ts`                                                                  | `people:update`             |
+| `action:people/updatePeopleViewAction`                        | ✅     | `src/test/idor/people-views.db.test.ts`                                                                | `people:read`               |
+| `action:people/updatePersonAction`                            | ✅     | `src/test/idor/people.db.test.ts`                                                                      | `people:update`             |
+| `action:privacy/acceptPrivacyNoticeFromAppAction`             | ✅     | `src/test/idor/document-files.db.test.ts`                                                              | —                           |
+| `action:privacy/createArcoRequestAction`                      | ✅     | `src/test/idor/privacy.db.test.ts`                                                                     | `privacy:manage`            |
+| `action:privacy/publishPrivacyNoticeAction`                   | ✅     | `src/test/idor/privacy.db.test.ts`                                                                     | `privacy:manage`            |
+| `action:privacy/recordPrivacyAcceptanceAction`                | ✅     | `src/test/idor/privacy.db.test.ts`                                                                     | `privacy:manage`            |
+| `action:privacy/resolveArcoRequestAction`                     | ✅     | `src/test/idor/privacy.db.test.ts`                                                                     | `privacy:manage`            |
+| `action:privacy/searchPrivacyPeopleAction`                    | ✅     | `src/test/idor/privacy.db.test.ts`                                                                     | `privacy:manage`            |
+| `action:regions/createRegionAction`                           | ✅     | `src/test/idor/regions.db.test.ts`                                                                     | `sites:create`              |
+| `action:regions/deleteRegionAction`                           | ✅     | `src/test/idor/regions.db.test.ts`                                                                     | `sites:delete`              |
+| `action:regions/updateRegionAction`                           | ✅     | `src/test/idor/regions.db.test.ts`                                                                     | `sites:update`              |
+| `action:reports/createTurnoverViewAction`                     | ✅     | `src/test/idor/turnover.db.test.ts`                                                                    | `reports:read`              |
+| `action:reports/deleteTurnoverViewAction`                     | ✅     | `src/test/idor/turnover.db.test.ts`                                                                    | `reports:read`              |
+| `action:reports/setTurnoverGoalAction`                        | ✅     | `src/test/idor/turnover.db.test.ts`                                                                    | `settings:update`           |
+| `action:resguardo/assertAssetsListAccess`                     | ⏭️     | Exento: guard de lectura sin datos (requireAssetsRead); la lista la cubre lib:resguardo/listAssetsPage | `assets:read`               |
+| `action:resguardo/assignAssetAction`                          | ✅     | `src/test/idor/resguardo.db.test.ts`                                                                   | `assets:update`             |
+| `action:resguardo/createAssetAction`                          | ✅     | `src/test/idor/resguardo.db.test.ts`                                                                   | `assets:create`             |
+| `action:resguardo/deleteAssetAction`                          | ✅     | `src/test/idor/resguardo.db.test.ts`                                                                   | `assets:delete`             |
+| `action:resguardo/returnAssetAction`                          | ✅     | `src/test/idor/resguardo.db.test.ts`                                                                   | `assets:update`             |
+| `action:sites/createSiteAction`                               | ✅     | `src/test/idor/catalog.db.test.ts`                                                                     | `sites:create`              |
+| `action:sites/deleteSiteAction`                               | ✅     | `src/test/idor/catalog.db.test.ts`                                                                     | `sites:delete`              |
+| `action:sites/setSiteRegionAction`                            | ✅     | `src/test/idor/regions.db.test.ts`                                                                     | `sites:update`              |
+| `action:sites/updateSiteAction`                               | ✅     | `src/test/idor/catalog.db.test.ts`                                                                     | `sites:update`              |
+| `action:tenant/addMemberAction`                               | ✅     | `src/test/idor/tenant.db.test.ts`                                                                      | `members:manage`            |
+| `action:tenant/changeMemberRoleAction`                        | ✅     | `src/test/idor/tenant.db.test.ts`                                                                      | `members:manage`            |
+| `action:tenant/createCompanyAction`                           | ✅     | `src/test/idor/tenant.db.test.ts`                                                                      | `companies:manage`          |
+| `action:tenant/revokeMemberAction`                            | ✅     | `src/test/idor/tenant.db.test.ts`                                                                      | `members:manage`            |
+| `action:tenant/setCompanyStatusAction`                        | ✅     | `src/test/idor/tenant.db.test.ts`                                                                      | `companies:manage`          |
+| `action:tenant/switchCompanyAction`                           | ✅     | `src/test/idor/tenant.db.test.ts`                                                                      | —                           |
+| `action:tenant/updateCompanyAction`                           | ✅     | `src/test/idor/tenant.db.test.ts`                                                                      | `companies:manage`          |
+| `action:termination-reasons/createTerminationReasonAction`    | ✅     | `src/test/idor/employment.db.test.ts`                                                                  | `settings:update`           |
+| `action:termination-reasons/deleteTerminationReasonAction`    | ✅     | `src/test/idor/employment.db.test.ts`                                                                  | `settings:update`           |
+| `action:termination-reasons/updateTerminationReasonAction`    | ✅     | `src/test/idor/employment.db.test.ts`                                                                  | `settings:update`           |
+| `action:vacations/registerVacationAction`                     | ✅     | `src/test/idor/vacations.db.test.ts`                                                                   | `vacations:create`          |
+| `action:vacations/voidVacationAction`                         | ✅     | `src/test/idor/vacations.db.test.ts`                                                                   | `vacations:update`          |
 
 ## Rutas
 
-| Superficie                                                      | Estado | Prueba                                  | Permiso                                |
-| --------------------------------------------------------------- | ------ | --------------------------------------- | -------------------------------------- |
-| `route:DELETE /api/import/personas/[jobId]/apply`               | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                        |
-| `route:DELETE /api/mcp`                                         | ✅     | `src/test/idor/mcp.db.test.ts`          | —                                      |
-| `route:GET /.well-known/oauth-authorization-server/[[...path]]` | ✅     | `src/test/idor/mcp.db.test.ts`          | —                                      |
-| `route:GET /.well-known/oauth-protected-resource/[[...path]]`   | ✅     | `src/test/idor/mcp.db.test.ts`          | —                                      |
-| `route:GET /api/import/personas/[jobId]`                        | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                        |
-| `route:GET /api/import/personas/[jobId]/errors`                 | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                        |
-| `route:GET /api/import/personas/[jobId]/rows`                   | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                        |
-| `route:GET /api/import/personas/[jobId]/undo`                   | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                        |
-| `route:GET /api/mcp`                                            | ✅     | `src/test/idor/mcp.db.test.ts`          | —                                      |
-| `route:GET /api/oauth/authorize`                                | ✅     | `src/test/idor/mcp.db.test.ts`          | —                                      |
-| `route:GET /app/personas/[id]/contratos/[contractId]/pdf`       | ✅     | `src/test/idor/contract-pdf.db.test.ts` | `contracts:read` + `compensation:read` |
-| `route:GET /app/personas/exportar`                              | ✅     | `src/test/idor/import.db.test.ts`       | `people:export`                        |
-| `route:GET /app/reportes/rotacion/exportar`                     | ✅     | `src/test/idor/turnover.db.test.ts`     | `reports:read` + `people:export`       |
-| `route:GET /app/personas/plantilla`                             | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                        |
-| `route:POST /api/import/personas`                               | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                        |
-| `route:POST /api/import/personas/[jobId]/apply`                 | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                        |
-| `route:POST /api/import/personas/[jobId]/finalize`              | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                        |
-| `route:POST /api/import/personas/[jobId]/rows`                  | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                        |
-| `route:POST /api/import/personas/[jobId]/undo`                  | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                        |
-| `route:POST /api/import/personas/[jobId]/validate`              | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                        |
-| `route:POST /api/mcp`                                           | ✅     | `src/test/idor/mcp.db.test.ts`          | —                                      |
-| `route:POST /api/oauth/register`                                | ✅     | `src/test/idor/mcp.db.test.ts`          | —                                      |
-| `route:POST /api/oauth/revoke`                                  | ✅     | `src/test/idor/mcp.db.test.ts`          | —                                      |
-| `route:POST /api/oauth/token`                                   | ✅     | `src/test/idor/mcp.db.test.ts`          | —                                      |
-| `route:PUT /api/import/personas/[jobId]/validate`               | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                        |
+| Superficie                                                      | Estado | Prueba                                                                                                                                             | Permiso                                |
+| --------------------------------------------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| `route:DELETE /api/import/personas/[jobId]/apply`               | ✅     | `src/test/idor/import.db.test.ts`                                                                                                                  | `people:import`                        |
+| `route:DELETE /api/mcp`                                         | ✅     | `src/test/idor/mcp.db.test.ts`                                                                                                                     | —                                      |
+| `route:DELETE /api/mi/push`                                     | ✅     | `src/test/idor/notifications.db.test.ts`                                                                                                           | —                                      |
+| `route:GET /.well-known/oauth-authorization-server/[[...path]]` | ✅     | `src/test/idor/mcp.db.test.ts`                                                                                                                     | —                                      |
+| `route:GET /.well-known/oauth-protected-resource/[[...path]]`   | ✅     | `src/test/idor/mcp.db.test.ts`                                                                                                                     | —                                      |
+| `route:GET /api/cron/notifications`                             | ✅     | `src/test/idor/notifications.db.test.ts`                                                                                                           | —                                      |
+| `route:GET /api/cron/retention`                                 | ⏭️     | Exento: sin empresa; usa CRON_SECRET                                                                                                               | —                                      |
+| `route:GET /api/import/personas/[jobId]`                        | ✅     | `src/test/idor/import.db.test.ts`                                                                                                                  | `people:import`                        |
+| `route:GET /api/import/personas/[jobId]/errors`                 | ✅     | `src/test/idor/import.db.test.ts`                                                                                                                  | `people:import`                        |
+| `route:GET /api/import/personas/[jobId]/rows`                   | ✅     | `src/test/idor/import.db.test.ts`                                                                                                                  | `people:import`                        |
+| `route:GET /api/import/personas/[jobId]/undo`                   | ✅     | `src/test/idor/import.db.test.ts`                                                                                                                  | `people:import`                        |
+| `route:GET /api/mcp`                                            | ✅     | `src/test/idor/mcp.db.test.ts`                                                                                                                     | —                                      |
+| `route:GET /api/mi/google`                                      | ✅     | `src/test/idor/employee-accounts.db.test.ts`                                                                                                       | —                                      |
+| `route:GET /api/mi/google/callback`                             | ✅     | `src/test/idor/employee-accounts.db.test.ts`                                                                                                       | —                                      |
+| `route:GET /api/oauth/authorize`                                | ✅     | `src/test/idor/mcp.db.test.ts`                                                                                                                     | —                                      |
+| `route:GET /api/storage/local/[...key]`                         | ⏭️     | Exento: solo desarrollo y pruebas (404 en producción); la URL firmada con HMAC y su vencimiento son el control, como una URL prefirmada del bucket | —                                      |
+| `route:GET /app/documentos/revision/[documentId]/archivo`       | ✅     | `src/test/idor/document-files.db.test.ts`                                                                                                          | `documents:read`                       |
+| `route:GET /app/personas/[id]/contratos/[contractId]/pdf`       | ✅     | `src/test/idor/contract-pdf.db.test.ts`                                                                                                            | `contracts:read` + `compensation:read` |
+| `route:GET /app/personas/exportar`                              | ✅     | `src/test/idor/import.db.test.ts`                                                                                                                  | `people:export`                        |
+| `route:GET /app/personas/plantilla`                             | ✅     | `src/test/idor/import.db.test.ts`                                                                                                                  | `people:import`                        |
+| `route:GET /app/privacidad/arco/[id]/exportar`                  | ✅     | `src/test/idor/privacy.db.test.ts`                                                                                                                 | `privacy:manage`                       |
+| `route:GET /app/reportes/rotacion/exportar`                     | ✅     | `src/test/idor/turnover.db.test.ts`                                                                                                                | `reports:read` + `people:export`       |
+| `route:GET /mi/documentos/[documentId]/archivo`                 | ✅     | `src/test/idor/document-files.db.test.ts`                                                                                                          | —                                      |
+| `route:GET /mi/manifest.webmanifest`                            | ⏭️     | Exento: manifiesto estático de la app de empleados, sin datos                                                                                      | —                                      |
+| `route:GET /mi/sw.js`                                           | ⏭️     | Exento: service worker estático que no guarda nada en caché, sin datos                                                                             | —                                      |
+| `route:POST /api/import/personas`                               | ✅     | `src/test/idor/import.db.test.ts`                                                                                                                  | `people:import`                        |
+| `route:POST /api/import/personas/[jobId]/apply`                 | ✅     | `src/test/idor/import.db.test.ts`                                                                                                                  | `people:import`                        |
+| `route:POST /api/import/personas/[jobId]/finalize`              | ✅     | `src/test/idor/import.db.test.ts`                                                                                                                  | `people:import`                        |
+| `route:POST /api/import/personas/[jobId]/rows`                  | ✅     | `src/test/idor/import.db.test.ts`                                                                                                                  | `people:import`                        |
+| `route:POST /api/import/personas/[jobId]/undo`                  | ✅     | `src/test/idor/import.db.test.ts`                                                                                                                  | `people:import`                        |
+| `route:POST /api/import/personas/[jobId]/validate`              | ✅     | `src/test/idor/import.db.test.ts`                                                                                                                  | `people:import`                        |
+| `route:POST /api/mcp`                                           | ✅     | `src/test/idor/mcp.db.test.ts`                                                                                                                     | —                                      |
+| `route:POST /api/mi/documentos`                                 | ✅     | `src/test/idor/document-files.db.test.ts`                                                                                                          | —                                      |
+| `route:POST /api/mi/push`                                       | ✅     | `src/test/idor/notifications.db.test.ts`                                                                                                           | —                                      |
+| `route:POST /api/oauth/register`                                | ✅     | `src/test/idor/mcp.db.test.ts`                                                                                                                     | —                                      |
+| `route:POST /api/oauth/revoke`                                  | ✅     | `src/test/idor/mcp.db.test.ts`                                                                                                                     | —                                      |
+| `route:POST /api/oauth/token`                                   | ✅     | `src/test/idor/mcp.db.test.ts`                                                                                                                     | —                                      |
+| `route:PUT /api/import/personas/[jobId]/validate`               | ✅     | `src/test/idor/import.db.test.ts`                                                                                                                  | `people:import`                        |
 
 ## Funciones de datos (lib)
 
@@ -181,9 +219,16 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `lib:documents/listDocumentRequirements`                      | ✅     | `src/test/idor/documents.db.test.ts`          | —       |
 | `lib:documents/listExpiringDocuments`                         | ✅     | `src/test/idor/documents.db.test.ts`          | —       |
 | `lib:documents/listPersonDocuments`                           | ✅     | `src/test/idor/documents.db.test.ts`          | —       |
+| `lib:documents/files/documentFileUrlForHr`                    | ✅     | `src/test/idor/document-files.db.test.ts`     | —       |
+| `lib:documents/files/listDocumentReviewQueue`                 | ✅     | `src/test/idor/document-files.db.test.ts`     | —       |
+| `lib:documents/files/reviewDocument`                          | ✅     | `src/test/idor/document-files.db.test.ts`     | —       |
 | `lib:documents/listPersonDocumentCard`                        | ✅     | `src/test/idor/documents.db.test.ts`          | —       |
 | `lib:documents/recordDelivery`                                | ✅     | `src/test/idor/documents.db.test.ts`          | —       |
 | `lib:documents/setRequirements`                               | ✅     | `src/test/idor/documents.db.test.ts`          | —       |
+| `lib:employee-accounts/disableEmployeeAccount`                | ✅     | `src/test/idor/employee-accounts.db.test.ts`  | —       |
+| `lib:employee-accounts/getEmployeeAccount`                    | ✅     | `src/test/idor/employee-accounts.db.test.ts`  | —       |
+| `lib:employee-accounts/inviteEmployee`                        | ✅     | `src/test/idor/employee-accounts.db.test.ts`  | —       |
+| `lib:employee-accounts/issueActivationCode`                   | ✅     | `src/test/idor/employee-accounts.db.test.ts`  | —       |
 | `lib:import/apply/applyJobStep`                               | ✅     | `src/test/idor/import.db.test.ts`             | —       |
 | `lib:import/apply/pauseApply`                                 | ✅     | `src/test/idor/import.db.test.ts`             | —       |
 | `lib:import/error-report/buildErrorReport`                    | ✅     | `src/test/idor/import.db.test.ts`             | —       |
@@ -224,10 +269,29 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `lib:mcp/idempotency/reserveIdempotencyKey`                   | ✅     | `src/test/idor/mcp-writes.db.test.ts`         | —       |
 | `lib:mcp/settings/getMcpSettings`                             | ✅     | `src/test/idor/mcp-writes.db.test.ts`         | —       |
 | `lib:mcp/settings/setMcpWritesEnabled`                        | ✅     | `src/test/idor/mcp-writes.db.test.ts`         | —       |
+| `lib:notifications/countUnread`                               | ✅     | `src/test/idor/notifications.db.test.ts`      | —       |
+| `lib:notifications/delivery/pruneOldNotifications`            | ✅     | `src/test/idor/notifications.db.test.ts`      | —       |
+| `lib:notifications/delivery/sendDueNotifications`             | ✅     | `src/test/idor/notifications.db.test.ts`      | —       |
+| `lib:notifications/delivery/sendNotificationsSoon`            | ✅     | `src/test/idor/notifications.db.test.ts`      | —       |
+| `lib:notifications/listInboxPage`                             | ✅     | `src/test/idor/notifications.db.test.ts`      | —       |
+| `lib:notifications/listOptOuts`                               | ✅     | `src/test/idor/notifications.db.test.ts`      | —       |
+| `lib:notifications/markAllNotificationsRead`                  | ✅     | `src/test/idor/notifications.db.test.ts`      | —       |
+| `lib:notifications/markNotificationRead`                      | ✅     | `src/test/idor/notifications.db.test.ts`      | —       |
+| `lib:notifications/push/deletePushSubscription`               | ✅     | `src/test/idor/notifications.db.test.ts`      | —       |
+| `lib:notifications/push/savePushSubscription`                 | ✅     | `src/test/idor/notifications.db.test.ts`      | —       |
+| `lib:notifications/push/sendPushToPerson`                     | ✅     | `src/test/idor/notifications.db.test.ts`      | —       |
+| `lib:notifications/recipients/hrRecipientsWithPermission`     | ✅     | `src/test/idor/notifications.db.test.ts`      | —       |
+| `lib:notifications/recipients/managerRecipientOf`             | ✅     | `src/test/idor/notifications.db.test.ts`      | —       |
+| `lib:notifications/setChannelEnabled`                         | ✅     | `src/test/idor/notifications.db.test.ts`      | —       |
 | `lib:onboarding/approveOnboardingStep`                        | ✅     | `src/test/idor/onboarding.db.test.ts`         | —       |
 | `lib:onboarding/findBlockingOnboarding`                       | ✅     | `src/test/idor/employment.db.test.ts`         | —       |
 | `lib:onboarding/getOnboardingById`                            | ✅     | `src/test/idor/onboarding.db.test.ts`         | —       |
 | `lib:onboarding/getOnboardingByPerson`                        | ✅     | `src/test/idor/onboarding.db.test.ts`         | —       |
+| `lib:onboarding/intake/applyIntake`                           | ✅     | `src/test/idor/onboarding-intake.db.test.ts`  | —       |
+| `lib:onboarding/intake/getIntakeForOnboarding`                | ✅     | `src/test/idor/onboarding-intake.db.test.ts`  | —       |
+| `lib:onboarding/intake/intakeBlocksHrApproval`                | ✅     | `src/test/idor/onboarding-intake.db.test.ts`  | —       |
+| `lib:onboarding/intake/openSelfService`                       | ✅     | `src/test/idor/onboarding-intake.db.test.ts`  | —       |
+| `lib:onboarding/intake/returnIntake`                          | ✅     | `src/test/idor/onboarding-intake.db.test.ts`  | —       |
 | `lib:onboarding/listOnboardings`                              | ✅     | `src/test/idor/onboarding.db.test.ts`         | —       |
 | `lib:onboarding/rejectOnboarding`                             | ✅     | `src/test/idor/onboarding.db.test.ts`         | —       |
 | `lib:onboarding/startOnboarding`                              | ✅     | `src/test/idor/onboarding.db.test.ts`         | —       |
@@ -267,6 +331,20 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `lib:people/views/getPeopleView`                              | ✅     | `src/test/idor/people-views.db.test.ts`       | —       |
 | `lib:people/views/listPeopleViews`                            | ✅     | `src/test/idor/people-views.db.test.ts`       | —       |
 | `lib:people/views/updatePeopleView`                           | ✅     | `src/test/idor/people-views.db.test.ts`       | —       |
+| `lib:privacy/buildPersonDataExport`                           | ✅     | `src/test/idor/privacy.db.test.ts`            | —       |
+| `lib:privacy/createArcoRequest`                               | ✅     | `src/test/idor/privacy.db.test.ts`            | —       |
+| `lib:privacy/getArcoRequest`                                  | ✅     | `src/test/idor/privacy.db.test.ts`            | —       |
+| `lib:privacy/getCurrentPrivacyNotice`                         | ✅     | `src/test/idor/privacy.db.test.ts`            | —       |
+| `lib:privacy/listArcoRequests`                                | ✅     | `src/test/idor/privacy.db.test.ts`            | —       |
+| `lib:privacy/listPersonalDataAccess`                          | ✅     | `src/test/idor/privacy.db.test.ts`            | —       |
+| `lib:privacy/listPrivacyNotices`                              | ✅     | `src/test/idor/privacy.db.test.ts`            | —       |
+| `lib:privacy/pendingPrivacyNotice`                            | ✅     | `src/test/idor/privacy.db.test.ts`            | —       |
+| `lib:privacy/publishPrivacyNotice`                            | ✅     | `src/test/idor/privacy.db.test.ts`            | —       |
+| `lib:privacy/recordPersonalDataAccess`                        | ✅     | `src/test/idor/privacy.db.test.ts`            | —       |
+| `lib:privacy/recordPrivacyAcceptance`                         | ✅     | `src/test/idor/privacy.db.test.ts`            | —       |
+| `lib:privacy/resolveArcoRequest`                              | ✅     | `src/test/idor/privacy.db.test.ts`            | —       |
+| `lib:privacy/retention/purgeExpiredPersonalData`              | ✅     | `src/test/idor/privacy.db.test.ts`            | —       |
+| `lib:privacy/searchPeopleForPrivacy`                          | ✅     | `src/test/idor/privacy.db.test.ts`            | —       |
 | `lib:regions/createRegion`                                    | ✅     | `src/test/idor/regions.db.test.ts`            | —       |
 | `lib:regions/getRegionById`                                   | ✅     | `src/test/idor/regions.db.test.ts`            | —       |
 | `lib:regions/listRegionsWithSiteCounts`                       | ✅     | `src/test/idor/regions.db.test.ts`            | —       |
@@ -302,6 +380,11 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `lib:termination-reasons/listTerminationReasonsWithUsage`     | ✅     | `src/test/idor/employment.db.test.ts`         | —       |
 | `lib:termination-reasons/listTerminationReasons`              | ✅     | `src/test/idor/employment.db.test.ts`         | —       |
 | `lib:termination-reasons/softDeleteTerminationReason`         | ✅     | `src/test/idor/employment.db.test.ts`         | —       |
+| `lib:timeline/appendPersonEvents`                             | ✅     | `src/test/idor/timeline.db.test.ts`           | —       |
+| `lib:timeline/listPersonEvents`                               | ✅     | `src/test/idor/timeline.db.test.ts`           | —       |
+| `lib:timeline/writers/appendEmploymentChanges`                | ✅     | `src/test/idor/timeline-writers.db.test.ts`   | —       |
+| `lib:timeline/writers/replacePeriodIncidencias`               | ✅     | `src/test/idor/timeline-writers.db.test.ts`   | —       |
+| `lib:timeline/writers/writeAttendanceDays`                    | ✅     | `src/test/idor/timeline-writers.db.test.ts`   | —       |
 | `lib:termination-reasons/updateTerminationReason`             | ✅     | `src/test/idor/employment.db.test.ts`         | —       |
 | `lib:reports/turnover/data/getTurnoverGoal`                   | ✅     | `src/test/idor/turnover.db.test.ts`           | —       |
 | `lib:reports/turnover/data/loadTurnoverFacts`                 | ✅     | `src/test/idor/turnover.db.test.ts`           | —       |

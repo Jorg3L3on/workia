@@ -17,8 +17,15 @@ import {
 
 import { positions } from "./catalog";
 import { companies } from "./companies";
+import { employeeAccounts } from "./employee-accounts";
 import { people } from "./people";
 import { users } from "./rbac";
+import {
+  DOCUMENT_REJECTION_REASONS,
+  PERSON_DOCUMENT_STATUSES,
+} from "./document-review";
+
+export * from "./document-review";
 
 /** catalog_key(name): the importer's catalogKey() in SQL (migration 0017). */
 const catalogKeyOf = (column: AnyPgColumn) => sql`catalog_key(${column})`;
@@ -77,6 +84,9 @@ export const documentRequirements = pgTable(
 /**
  * One delivery of a requirement by a person: the date it was handed in and,
  * when it expires, that date. No note, result or observation column.
+ *
+ * W2-04 adds the file an employee uploads (file_key in object storage, never
+ * the bytes) and HR's review. Only accepted rows count as deliveries.
  */
 export const personDocuments = pgTable(
   "person_documents",
@@ -91,6 +101,20 @@ export const personDocuments = pgTable(
     expiresOn: date("expires_on"),
     createdBy: uuid("created_by").references(() => users.id, {
       onDelete: "set null",
+    }),
+    status: text("status", { enum: PERSON_DOCUMENT_STATUSES })
+      .notNull()
+      .default("accepted"),
+    fileKey: text("file_key"),
+    fileContentType: text("file_content_type"),
+    fileSize: integer("file_size"),
+    uploadedByAccountId: uuid("uploaded_by_account_id"),
+    reviewedBy: uuid("reviewed_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    rejectionReason: text("rejection_reason", {
+      enum: DOCUMENT_REJECTION_REASONS,
     }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
@@ -122,6 +146,34 @@ export const personDocuments = pgTable(
     index("person_documents_company_expires_on_idx").on(
       table.companyId,
       table.expiresOn,
+    ),
+    // ON DELETE SET NULL (uploaded_by_account_id) is in 0043 by hand.
+    foreignKey({
+      name: "person_documents_company_uploaded_by_fk",
+      columns: [table.companyId, table.uploadedByAccountId],
+      foreignColumns: [employeeAccounts.companyId, employeeAccounts.id],
+    }),
+    index("person_documents_review_queue_idx")
+      .on(table.companyId, table.createdAt, table.id)
+      .where(sql`${table.status} = 'uploaded'`),
+    uniqueIndex("person_documents_one_pending_unique")
+      .on(table.companyId, table.personId, table.requirementId)
+      .where(sql`${table.status} = 'uploaded'`),
+    check(
+      "person_documents_status_check",
+      sql`${table.status} IN ('uploaded', 'accepted', 'rejected')`,
+    ),
+    check(
+      "person_documents_file_check",
+      sql`(${table.fileKey} IS NULL) = (${table.fileContentType} IS NULL) AND (${table.fileKey} IS NULL) = (${table.fileSize} IS NULL) AND (${table.fileSize} IS NULL OR ${table.fileSize} > 0) AND (${table.status} <> 'uploaded' OR ${table.fileKey} IS NOT NULL) AND (${table.status} <> 'rejected' OR ${table.fileKey} IS NULL)`,
+    ),
+    check(
+      "person_documents_rejection_check",
+      sql`(${table.status} = 'rejected') = (${table.rejectionReason} IS NOT NULL) AND (${table.rejectionReason} IS NULL OR ${table.rejectionReason} IN ('illegible', 'wrong_document', 'expired', 'incomplete', 'wrong_person'))`,
+    ),
+    check(
+      "person_documents_review_check",
+      sql`(${table.status} <> 'uploaded' OR ${table.reviewedAt} IS NULL) AND (${table.status} <> 'rejected' OR ${table.reviewedAt} IS NOT NULL)`,
     ),
     check(
       "person_documents_dates_check",

@@ -17,6 +17,7 @@ import {
 } from "@/lib/audit";
 import { tdb, withTransaction, type DbExecutor } from "@/lib/db";
 import { withTenant } from "@/lib/tenant/scope";
+import { appendEmploymentChanges } from "@/lib/timeline/writers";
 import {
   areas,
   contractTemplates,
@@ -877,7 +878,7 @@ const changePersonPosition = async (
     .set({ positionId: position.id })
     .where(withTenant(people, companyId, eq(people.id, personId)));
 
-  await recordAuditEvent(
+  const audit = await recordAuditEvent(
     {
       companyId,
       actorUserId,
@@ -893,6 +894,8 @@ const changePersonPosition = async (
     },
     tx,
   );
+  // The new puesto is a «cambio» on the person timeline (W2-13).
+  await appendEmploymentChanges(companyId, [audit], tx);
 };
 
 /**

@@ -68,6 +68,17 @@ export const resolveBreadcrumbs = (
     return [{ label: "Documentos" }];
   }
 
+  if (path === "/app/documentos/revision") {
+    return [
+      { label: "Documentos", href: "/app/documentos" },
+      { label: "Por revisar" },
+    ];
+  }
+
+  if (path === "/app/privacidad") {
+    return [{ label: "Privacidad" }];
+  }
+
   if (path === "/app/contratos/plantillas") {
     return [
       { label: "Contratos", href: "/app/contratos" },
@@ -160,6 +171,10 @@ export const resolveBreadcrumbs = (
       { label: "Catálogo", href: CATALOG_PATHS.index },
       { label: "Motivos de baja" },
     ];
+  }
+
+  if (path === "/app/avisos") {
+    return [{ label: "Avisos" }];
   }
 
   if (path === "/app/auditoria") {

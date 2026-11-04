@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
 
 import { expect, test } from "@playwright/test";
+import { e2eCurp } from "./curp";
 
 const loginAsDemoAdmin = async (page: import("@playwright/test").Page) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
@@ -96,6 +97,7 @@ test.describe("Personas: filtros avanzados (Iniciativa 3)", () => {
     await page.goto("/app/personas/nueva");
     await page.locator("#nombres").fill("Persona");
     await page.locator("#apellidoPaterno").fill(`FiltroBaja${suffix}`);
+    await page.locator("#curp").fill(e2eCurp());
     await page.locator("#fechaIngreso").fill(mxDate(shiftDays(-8 * 366)));
     await page.getByRole("button", { name: "Guardar persona" }).click();
     await expect(page).toHaveURL(/\/app\/personas\/[0-9a-f-]{36}$/);

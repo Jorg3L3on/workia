@@ -16,6 +16,8 @@ import {
 } from "@/lib/db/schema";
 import { formatPersonName } from "@/lib/people/schema";
 import { withTenant } from "@/lib/tenant/scope";
+import { appendPersonEvents } from "@/lib/timeline";
+import { documentEvent } from "@/lib/timeline/events";
 
 import {
   selectExpiringDocumentRows,
@@ -479,6 +481,8 @@ export const recordDelivery = async (
       },
       tx,
     );
+    // The person timeline (W2-13), in the same transaction.
+    await appendPersonEvents(companyId, [documentEvent(created, "app")], tx);
 
     return created;
   }, companyId);
@@ -571,7 +575,15 @@ export const listExpiringDocuments = async (
         isNull(positions.deletedAt),
       ),
     )
-    .where(withTenant(personDocuments, companyId));
+    // Only accepted rows are deliveries; a pending or rejected upload (W2-04)
+    // never shows in the tray.
+    .where(
+      withTenant(
+        personDocuments,
+        companyId,
+        eq(personDocuments.status, "accepted"),
+      ),
+    );
 
   return selectExpiringDocumentRows(
     rows.map((row) => ({

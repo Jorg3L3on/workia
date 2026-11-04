@@ -12,6 +12,7 @@ import {
   type PersonWithRelations as MaybePerson,
 } from "@/lib/people";
 import { listEmploymentPeriods, rehireWarnings } from "@/lib/people/employment";
+import { personFormFromRecord } from "@/lib/people/form-values";
 import {
   FINIQUITO_STATUSES,
   rehireSchema,
@@ -105,43 +106,6 @@ const assertIdentifiersAllowed = (
   }
 };
 
-/** The whole form as the app would submit it, from the person as stored. */
-const formFromPerson = (person: PersonWithRelations): PersonFormValues => ({
-  nombres: person.nombres,
-  apellidoPaterno: person.apellidoPaterno,
-  apellidoMaterno: person.apellidoMaterno ?? "",
-  email: person.email ?? "",
-  telefono: person.telefono ?? "",
-  fechaNacimiento: person.fechaNacimiento ?? "",
-  fechaIngreso: person.fechaIngreso ?? "",
-  areaId: person.areaId ?? "",
-  positionId: person.positionId ?? "",
-  managerId: person.managerId ?? "",
-  siteId: person.siteId ?? "",
-  rfc: person.rfc ?? "",
-  curp: person.curp ?? "",
-  nss: person.nss ?? "",
-  horarioEntrada: person.schedule?.entrada ?? "",
-  horarioSalidaComer: person.schedule?.salidaComer ?? "",
-  horarioRegresoComer: person.schedule?.regresoComer ?? "",
-  horarioSalida: person.schedule?.salida ?? "",
-  status: person.status,
-  domicilioCalle: person.domicilioCalle ?? "",
-  domicilioNumeroExterior: person.domicilioNumeroExterior ?? "",
-  domicilioNumeroInterior: person.domicilioNumeroInterior ?? "",
-  domicilioColonia: person.domicilioColonia ?? "",
-  domicilioMunicipio: person.domicilioMunicipio ?? "",
-  domicilioEstado: (person.domicilioEstado ??
-    "") as PersonFormValues["domicilioEstado"],
-  domicilioCodigoPostal: person.domicilioCodigoPostal ?? "",
-  estadoCivil: person.estadoCivil ?? "",
-  sexo: person.sexo ?? "",
-  lugarNacimiento: (person.lugarNacimiento ??
-    "") as PersonFormValues["lugarNacimiento"],
-  nacionalidad: person.nacionalidad ?? "",
-  ineClaveElector: person.ineClaveElector ?? "",
-});
-
 const loadPerson = async (ctx: WorkiaToolContext, personId: string) => {
   const person = await getPersonWithRelations(ctx.companyId, personId);
 
@@ -222,7 +186,14 @@ const personFields = {
   manager_id: uuid("Jefe directo.").optional(),
   site_id: uuid("Sucursal o corporativo.").optional(),
   rfc: z.string().trim().max(13).optional().describe("Sólo con el scope pii."),
-  curp: z.string().trim().max(18).optional().describe("Sólo con el scope pii."),
+  curp: z
+    .string()
+    .trim()
+    .max(18)
+    .optional()
+    .describe(
+      "Obligatoria en un alta: toda persona activa tiene una CURP válida. Sólo con el scope pii.",
+    ),
   nss: z.string().trim().max(11).optional().describe("Sólo con el scope pii."),
   ...Object.fromEntries(
     Object.entries(mexicoWriteFields).map(([key, schema]) => [
@@ -291,7 +262,7 @@ export const createPersonTool = defineWriteTool({
   name: "create_person",
   title: "Alta de persona",
   description:
-    "Da de alta un expediente con las mismas reglas que la app (D-04). RFC, CURP y NSS sólo con el scope pii. CONFLICT si un RFC, CURP o NSS ya es de otra persona activa. Primero responde una vista previa; repite con confirmation_token para hacerlo.",
+    "Da de alta un expediente con las mismas reglas que la app (D-04). La CURP es obligatoria (una persona activa siempre tiene CURP válida). RFC, CURP y NSS sólo con el scope pii. CONFLICT si un RFC, CURP o NSS ya es de otra persona activa. Primero responde una vista previa; repite con confirmation_token para hacerlo.",
   scope: "write:people",
   permission: "people:create",
   input: createInput,
@@ -378,7 +349,7 @@ const applyChanges = (
   person: PersonWithRelations,
   changes: Record<string, unknown>,
 ) => {
-  const form = formFromPerson(person);
+  const form = personFormFromRecord(person);
 
   for (const [field, value] of Object.entries(changes)) {
     const key = FIELD_MAP[field];
@@ -444,7 +415,7 @@ export const updatePersonTool = defineWriteTool({
       throw notFound("La persona");
     }
 
-    const before = formFromPerson(person) as Record<string, unknown>;
+    const before = personFormFromRecord(person) as Record<string, unknown>;
     const diff = Object.fromEntries(
       Object.keys(changes)
         .map((field) => [field, FIELD_MAP[field]] as const)
@@ -629,7 +600,7 @@ export const setPersonStatusTool = defineWriteTool({
   name: "set_person_status",
   title: "Baja o reingreso",
   description:
-    "Da de baja laboral o reingresa a una persona (estatus activa | baja). No es borrar: el expediente sigue ahí. Baja: fecha_baja, tipo_baja, motivo (motivo_id de list_termination_reasons, o su nombre en motivo) y recontratable son obligatorios; comentario y finiquito opcionales (el monto sólo con el scope pii y compensation:read). Cierra el periodo laboral y el contrato vigente queda «terminado» en la fecha de baja. Reingreso (status activa): abre un nuevo periodo en el mismo expediente con fecha_ingreso (por defecto hoy) y reconocer_antiguedad (por defecto false: la antigüedad reinicia). La vista previa avisa si tiene contrato vigente, activos en resguardo o si su última baja dice no recontratable. Primero responde una vista previa; repite con confirmation_token para hacerlo.",
+    "Da de baja laboral o reingresa a una persona (estatus activa | baja). No es borrar: el expediente sigue ahí. Baja: fecha_baja, tipo_baja, motivo (motivo_id de list_termination_reasons, o su nombre en motivo) y recontratable son obligatorios; comentario y finiquito opcionales (el monto sólo con el scope pii y compensation:read). Cierra el periodo laboral y el contrato vigente queda «terminado» en la fecha de baja. Reingreso (status activa): necesita CURP válida en el expediente; abre un nuevo periodo en el mismo expediente con fecha_ingreso (por defecto hoy) y reconocer_antiguedad (por defecto false: la antigüedad reinicia). La vista previa avisa si tiene contrato vigente, activos en resguardo o si su última baja dice no recontratable. Primero responde una vista previa; repite con confirmation_token para hacerlo.",
   scope: "write:people",
   permission: "people:update",
   input: statusInput,
@@ -765,7 +736,7 @@ export const updatePersonScheduleTool = defineWriteTool({
     const person = await loadPerson(ctx, args.person_id);
     const form = parseForm(
       {
-        ...formFromPerson(person),
+        ...personFormFromRecord(person),
         horarioEntrada: args.entrada ?? "",
         horarioSalidaComer: args.salida_comer ?? "",
         horarioRegresoComer: args.regreso_comer ?? "",
@@ -828,7 +799,7 @@ export const updatePersonScheduleBlocksTool = defineWriteTool({
     const person = await loadPerson(ctx, args.person_id);
     const next = toScheduleBlocks(args.bloques, args.dia_descanso);
     const form = parseForm(
-      { ...formFromPerson(person), horarioBloques: next },
+      { ...personFormFromRecord(person), horarioBloques: next },
       ["horarioBloques"],
     );
 
