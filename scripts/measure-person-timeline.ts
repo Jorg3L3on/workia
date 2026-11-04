@@ -88,8 +88,11 @@ const main = async () => {
       `INSERT INTO person_events (company_id, person_id, type, occurred_at, source, dedupe_key, payload)
        SELECT p.company_id, p.id, 'attendance', d + time '14:00', 'checador',
               'attendance:' || to_char(d, 'YYYY-MM-DD'),
-              jsonb_build_object('site_id', 'site-' || (hashtext(p.id::text) & 7),
-                                 'first_in', '08:0' || (extract(dow FROM d)::int), 'last_out', '17:01', 'punches', 2)
+              -- The shape writeAttendanceDays stores (W2-13): a site uuid and two punches.
+              jsonb_build_object('site_id', md5('site' || (hashtext(p.id::text) & 7))::uuid,
+                                 'punches', jsonb_build_array(
+                                   jsonb_build_array(to_char(d + make_interval(hours => 14, mins => extract(dow FROM d)::int), 'YYYY-MM-DD"T"HH24:MI:SS"Z"'), 'in'),
+                                   jsonb_build_array(to_char(d + interval '23 hours 1 minute', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'), 'out')))
        FROM people p,
             generate_series(current_date - interval '5 years', current_date - interval '1 day', interval '1 day') d
        WHERE p.company_id = $1`,

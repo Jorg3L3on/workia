@@ -37,6 +37,7 @@ import type { PersonStatus } from "@/lib/db/schema/people";
 import { CompanyReferenceError, isUniqueViolation } from "@/lib/db/errors";
 import { revokeEmployeeAccess } from "@/lib/employee-accounts/revoke";
 import { withTenant } from "@/lib/tenant/scope";
+import { appendEmploymentChanges } from "@/lib/timeline/writers";
 
 import { buildPeopleWhere, peopleFilterContext } from "./filter/query";
 import { coercePeopleFilter } from "./filter/schema";
@@ -932,13 +933,15 @@ export const updatePerson = async (
       action = updated.status === "baja" ? "baja" : "reactivate";
     }
 
-    await audit({
+    const audited = await audit({
       actorUserId,
       resourceType: "person",
       resourceId: id,
       action,
       payload: { before, after, changes },
     });
+    // A new puesto, sucursal, área or jefe is a «cambio» on the timeline (W2-13).
+    await appendEmploymentChanges(companyId, [audited], tx);
 
     if (changes.status || changes.fechaIngreso) {
       // The current employment period follows the ingreso (and the status).
