@@ -342,6 +342,7 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `lib:termination-reasons/countUnclassifiedTerminationReasons` | ✅     | `src/test/idor/employment.db.test.ts`         | —       |
 | `lib:vacations/constancia/getVacationConstancia`              | ✅     | `src/test/idor/vacations.db.test.ts`          | —       |
 | `lib:vacations/listVacationRecords`                           | ✅     | `src/test/idor/vacations.db.test.ts`          | —       |
+| `lib:vacations/person-balance/getPersonVacationBalance`       | ✅     | `src/test/idor/vacations.db.test.ts`          | —       |
 | `lib:vacations/registerVacationRecord`                        | ✅     | `src/test/idor/vacations.db.test.ts`          | —       |
 | `lib:vacations/voidVacationRecord`                            | ✅     | `src/test/idor/vacations.db.test.ts`          | —       |
 

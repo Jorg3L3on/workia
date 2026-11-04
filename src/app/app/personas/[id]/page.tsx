@@ -83,13 +83,12 @@ import {
   listEmploymentPeriods,
   summarizePeriods,
 } from "@/lib/people/employment";
-import { vacationEntitlementForPerson } from "@/lib/people/vacation-card";
-import { serviceYearBalance } from "@/lib/vacations/balance";
 import {
   registerVacationAction,
   voidVacationAction,
 } from "@/lib/vacations/actions";
 import { listVacationRecords } from "@/lib/vacations";
+import { composeVacationBalance } from "@/lib/vacations/summary";
 import { getPersonEmploymentMenuData } from "@/lib/people/employment-menu";
 
 export const metadata: Metadata = {
@@ -302,35 +301,25 @@ const PersonaDetailPage = async ({
     .filter(Boolean)
     .join(" · ");
   const horario = formatHorarioToken(person.schedule);
-  // people:read (requirePeopleRead). asOf is explicit: today, or the baja.
-  const vacation = vacationEntitlementForPerson({
-    seniorityDate: employmentSummary
-      ? employmentSummary.fechaAntiguedad
-      : person.fechaIngreso,
-    status: person.status,
-    fechaBaja: employmentSummary?.fechaBaja ?? null,
-    today,
-  });
   const canSeeVacationLedger =
     canReadVacations || canCreateVacations || canUpdateVacations;
   const vacationHistory = canSeeVacationLedger
     ? await listVacationRecords(session.companyId, person.id)
     : [];
   const showVacationHistory = canReadVacations || canUpdateVacations;
-  const vacationBalance =
-    showVacationHistory &&
-    vacation.serviceYearsCompleted !== null &&
-    vacation.entitlementDays !== null
-      ? serviceYearBalance({
-          serviceYear: vacation.serviceYearsCompleted,
-          entitlementDays: vacation.entitlementDays,
-          entries: vacationHistory.map((record) => ({
-            serviceYear: record.serviceYear,
-            days: record.days,
-            voided: false,
-          })),
-        })
-      : null;
+  // people:read (requirePeopleRead). asOf is explicit: today, or the baja.
+  // The employee view (W2-05) uses the same composeVacationBalance.
+  const vacationSummary = composeVacationBalance({
+    seniorityDate: employmentSummary
+      ? employmentSummary.fechaAntiguedad
+      : person.fechaIngreso,
+    status: person.status,
+    fechaBaja: employmentSummary?.fechaBaja ?? null,
+    today,
+    records: vacationHistory,
+  });
+  const vacation = vacationSummary.view;
+  const vacationBalance = showVacationHistory ? vacationSummary.current : null;
   const vacationLedger = canSeeVacationLedger
     ? {
         showHistory: showVacationHistory,
