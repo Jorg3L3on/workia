@@ -1,6 +1,7 @@
 import {
   CalendarCheckIcon,
   ChartLineIcon,
+  ClockIcon,
   FilesIcon,
   FileTextIcon,
   FolderTreeIcon,
@@ -9,6 +10,7 @@ import {
   PlugIcon,
   PlusIcon,
   ScrollTextIcon,
+  ShieldCheckIcon,
   UploadIcon,
   UserCogIcon,
   UserPlusIcon,
@@ -32,6 +34,9 @@ export type NavAccess = {
   canReadDocuments: boolean;
   /** pay_periods:read in the active company: shows Periodos de pago. */
   canReadPayPeriods: boolean;
+  /** privacy:read in the active company: shows Privacidad. */
+  canReadPrivacy: boolean;
+  canReadAttendance: boolean;
 };
 
 export type NavLink = {
@@ -92,6 +97,13 @@ export const NAV_GROUPS: readonly NavGroup[] = [
         requires: "canReadPayPeriods",
       },
       {
+        title: "Asistencia",
+        href: "/app/asistencia",
+        icon: ClockIcon,
+        keywords: ["checador", "checadas", "reloj", "qr", "entrada", "salida"],
+        requires: "canReadAttendance",
+      },
+      {
         title: "Altas",
         href: "/app/altas",
         icon: UserPlusIcon,
@@ -144,6 +156,13 @@ export const NAV_GROUPS: readonly NavGroup[] = [
         icon: PlugIcon,
         keywords: ["mcp", "conector", "claude"],
         requires: "canUseConnections",
+      },
+      {
+        title: "Privacidad",
+        href: "/app/privacidad",
+        icon: ShieldCheckIcon,
+        keywords: ["aviso", "arco", "datos personales", "conservación"],
+        requires: "canReadPrivacy",
       },
       {
         title: "Auditoría",

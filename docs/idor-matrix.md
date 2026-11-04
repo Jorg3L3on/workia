@@ -22,6 +22,18 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 
 | Superficie                                                 | Estado | Prueba                                                                                                 | Permiso                     |
 | ---------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------ | --------------------------- |
+| `action:attendance/assignBadgeAction`                      | ✅     | `src/test/idor/attendance.db.test.ts`                                                                  | `attendance:manage`         |
+| `action:attendance/checkInAction`                          | ✅     | `src/test/idor/attendance.db.test.ts`                                                                  | —                           |
+| `action:attendance/dismissUnmatchedAction`                 | ✅     | `src/test/idor/attendance.db.test.ts`                                                                  | `attendance:manage`         |
+| `action:attendance/importChecadorCsvAction`                | ✅     | `src/test/idor/attendance.db.test.ts`                                                                  | `attendance:manage`         |
+| `action:attendance/issueDeviceTokenAction`                 | ✅     | `src/test/idor/attendance.db.test.ts`                                                                  | `attendance:manage`         |
+| `action:attendance/kioskCodeAction`                        | ✅     | `src/test/idor/attendance.db.test.ts`                                                                  | `attendance:manage`         |
+| `action:attendance/removeBadgeAction`                      | ✅     | `src/test/idor/attendance.db.test.ts`                                                                  | `attendance:manage`         |
+| `action:attendance/rotateCheckinSecretAction`              | ✅     | `src/test/idor/attendance.db.test.ts`                                                                  | `attendance:manage`         |
+| `action:attendance/saveAttendanceDeviceAction`             | ✅     | `src/test/idor/attendance.db.test.ts`                                                                  | `attendance:manage`         |
+| `action:attendance/saveCheckinSiteAction`                  | ✅     | `src/test/idor/attendance.db.test.ts`                                                                  | `attendance:manage`         |
+| `action:attendance/searchAttendancePeopleAction`           | ✅     | `src/test/idor/attendance.db.test.ts`                                                                  | `attendance:manage`         |
+| `action:attendance/setAttendanceDeviceActiveAction`        | ✅     | `src/test/idor/attendance.db.test.ts`                                                                  | `attendance:manage`         |
 | `action:catalog/assignActivityToPositionAction`            | ✅     | `src/test/idor/catalog.db.test.ts`                                                                     | `positions:update`          |
 | `action:catalog/createActivityAction`                      | ✅     | `src/test/idor/catalog.db.test.ts`                                                                     | `positions:create`          |
 | `action:catalog/createAreaAction`                          | ✅     | `src/test/idor/catalog.db.test.ts`                                                                     | `areas:create`              |
@@ -79,9 +91,17 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `action:people/updateFiniquitoAction`                      | ✅     | `src/test/idor/employment.db.test.ts`                                                                  | `people:update`             |
 | `action:people/updatePeopleViewAction`                     | ✅     | `src/test/idor/people-views.db.test.ts`                                                                | `people:read`               |
 | `action:people/updatePersonAction`                         | ✅     | `src/test/idor/people.db.test.ts`                                                                      | `people:update`             |
+| `action:privacy/createArcoRequestAction`                   | ✅     | `src/test/idor/privacy.db.test.ts`                                                                     | `privacy:manage`            |
+| `action:privacy/publishPrivacyNoticeAction`                | ✅     | `src/test/idor/privacy.db.test.ts`                                                                     | `privacy:manage`            |
+| `action:privacy/recordPrivacyAcceptanceAction`             | ✅     | `src/test/idor/privacy.db.test.ts`                                                                     | `privacy:manage`            |
+| `action:privacy/resolveArcoRequestAction`                  | ✅     | `src/test/idor/privacy.db.test.ts`                                                                     | `privacy:manage`            |
+| `action:privacy/searchPrivacyPeopleAction`                 | ✅     | `src/test/idor/privacy.db.test.ts`                                                                     | `privacy:manage`            |
 | `action:regions/createRegionAction`                        | ✅     | `src/test/idor/regions.db.test.ts`                                                                     | `sites:create`              |
 | `action:regions/deleteRegionAction`                        | ✅     | `src/test/idor/regions.db.test.ts`                                                                     | `sites:delete`              |
 | `action:regions/updateRegionAction`                        | ✅     | `src/test/idor/regions.db.test.ts`                                                                     | `sites:update`              |
+| `action:reports/createTurnoverViewAction`                  | ✅     | `src/test/idor/turnover.db.test.ts`                                                                    | `reports:read`              |
+| `action:reports/deleteTurnoverViewAction`                  | ✅     | `src/test/idor/turnover.db.test.ts`                                                                    | `reports:read`              |
+| `action:reports/setTurnoverGoalAction`                     | ✅     | `src/test/idor/turnover.db.test.ts`                                                                    | `settings:update`           |
 | `action:resguardo/assertAssetsListAccess`                  | ⏭️     | Exento: guard de lectura sin datos (requireAssetsRead); la lista la cubre lib:resguardo/listAssetsPage | `assets:read`               |
 | `action:resguardo/assignAssetAction`                       | ✅     | `src/test/idor/resguardo.db.test.ts`                                                                   | `assets:update`             |
 | `action:resguardo/createAssetAction`                       | ✅     | `src/test/idor/resguardo.db.test.ts`                                                                   | `assets:create`             |
@@ -101,9 +121,6 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `action:termination-reasons/createTerminationReasonAction` | ✅     | `src/test/idor/employment.db.test.ts`                                                                  | `settings:update`           |
 | `action:termination-reasons/deleteTerminationReasonAction` | ✅     | `src/test/idor/employment.db.test.ts`                                                                  | `settings:update`           |
 | `action:termination-reasons/updateTerminationReasonAction` | ✅     | `src/test/idor/employment.db.test.ts`                                                                  | `settings:update`           |
-| `action:reports/setTurnoverGoalAction`                     | ✅     | `src/test/idor/turnover.db.test.ts`                                                                    | `settings:update`           |
-| `action:reports/createTurnoverViewAction`                  | ✅     | `src/test/idor/turnover.db.test.ts`                                                                    | `reports:read`              |
-| `action:reports/deleteTurnoverViewAction`                  | ✅     | `src/test/idor/turnover.db.test.ts`                                                                    | `reports:read`              |
 | `action:vacations/registerVacationAction`                  | ✅     | `src/test/idor/vacations.db.test.ts`                                                                   | `vacations:create`          |
 | `action:vacations/voidVacationAction`                      | ✅     | `src/test/idor/vacations.db.test.ts`                                                                   | `vacations:update`          |
 | `action:pay-periods/closePayPeriodAction`                  | ✅     | `src/test/idor/period-close.db.test.ts`                                                                | `pay_periods:manage`        |
@@ -117,26 +134,29 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `route:DELETE /api/mcp`                                         | ✅     | `src/test/idor/mcp.db.test.ts`                                         | —                                      |
 | `route:GET /.well-known/oauth-authorization-server/[[...path]]` | ✅     | `src/test/idor/mcp.db.test.ts`                                         | —                                      |
 | `route:GET /.well-known/oauth-protected-resource/[[...path]]`   | ✅     | `src/test/idor/mcp.db.test.ts`                                         | —                                      |
-| `route:GET /api/import/personas/[jobId]`                        | ✅     | `src/test/idor/import.db.test.ts`                                      | `people:import`                        |
+| `route:GET /api/cron/retention`                                 | ⏭️     | Exento: sin empresa; usa CRON_SECRET                                   | —                                      |
 | `route:GET /api/import/personas/[jobId]/errors`                 | ✅     | `src/test/idor/import.db.test.ts`                                      | `people:import`                        |
 | `route:GET /api/import/personas/[jobId]/rows`                   | ✅     | `src/test/idor/import.db.test.ts`                                      | `people:import`                        |
 | `route:GET /api/import/personas/[jobId]/undo`                   | ✅     | `src/test/idor/import.db.test.ts`                                      | `people:import`                        |
+| `route:GET /api/import/personas/[jobId]`                        | ✅     | `src/test/idor/import.db.test.ts`                                      | `people:import`                        |
 | `route:GET /api/mcp`                                            | ✅     | `src/test/idor/mcp.db.test.ts`                                         | —                                      |
-| `route:GET /api/mi/google`                                      | ✅     | `src/test/idor/employee-accounts.db.test.ts`                           | —                                      |
 | `route:GET /api/mi/google/callback`                             | ✅     | `src/test/idor/employee-accounts.db.test.ts`                           | —                                      |
+| `route:GET /api/mi/google`                                      | ✅     | `src/test/idor/employee-accounts.db.test.ts`                           | —                                      |
 | `route:GET /api/oauth/authorize`                                | ✅     | `src/test/idor/mcp.db.test.ts`                                         | —                                      |
 | `route:GET /app/personas/[id]/contratos/[contractId]/pdf`       | ✅     | `src/test/idor/contract-pdf.db.test.ts`                                | `contracts:read` + `compensation:read` |
 | `route:GET /app/personas/exportar`                              | ✅     | `src/test/idor/import.db.test.ts`                                      | `people:export`                        |
-| `route:GET /app/reportes/rotacion/exportar`                     | ✅     | `src/test/idor/turnover.db.test.ts`                                    | `reports:read` + `people:export`       |
 | `route:GET /app/personas/plantilla`                             | ✅     | `src/test/idor/import.db.test.ts`                                      | `people:import`                        |
+| `route:GET /app/privacidad/arco/[id]/exportar`                  | ✅     | `src/test/idor/privacy.db.test.ts`                                     | `privacy:manage`                       |
+| `route:GET /app/reportes/rotacion/exportar`                     | ✅     | `src/test/idor/turnover.db.test.ts`                                    | `reports:read` + `people:export`       |
 | `route:GET /mi/manifest.webmanifest`                            | ⏭️     | Exento: manifiesto estático de la app de empleados, sin datos          | —                                      |
 | `route:GET /mi/sw.js`                                           | ⏭️     | Exento: service worker estático que no guarda nada en caché, sin datos | —                                      |
-| `route:POST /api/import/personas`                               | ✅     | `src/test/idor/import.db.test.ts`                                      | `people:import`                        |
+| `route:POST /api/asistencia/checadas`                           | ✅     | `src/test/idor/attendance.db.test.ts`                                  | —                                      |
 | `route:POST /api/import/personas/[jobId]/apply`                 | ✅     | `src/test/idor/import.db.test.ts`                                      | `people:import`                        |
 | `route:POST /api/import/personas/[jobId]/finalize`              | ✅     | `src/test/idor/import.db.test.ts`                                      | `people:import`                        |
 | `route:POST /api/import/personas/[jobId]/rows`                  | ✅     | `src/test/idor/import.db.test.ts`                                      | `people:import`                        |
 | `route:POST /api/import/personas/[jobId]/undo`                  | ✅     | `src/test/idor/import.db.test.ts`                                      | `people:import`                        |
 | `route:POST /api/import/personas/[jobId]/validate`              | ✅     | `src/test/idor/import.db.test.ts`                                      | `people:import`                        |
+| `route:POST /api/import/personas`                               | ✅     | `src/test/idor/import.db.test.ts`                                      | `people:import`                        |
 | `route:POST /api/mcp`                                           | ✅     | `src/test/idor/mcp.db.test.ts`                                         | —                                      |
 | `route:POST /api/oauth/register`                                | ✅     | `src/test/idor/mcp.db.test.ts`                                         | —                                      |
 | `route:POST /api/oauth/revoke`                                  | ✅     | `src/test/idor/mcp.db.test.ts`                                         | —                                      |
@@ -147,6 +167,25 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 
 | Superficie                                                    | Estado | Prueba                                                                                                            | Permiso |
 | ------------------------------------------------------------- | ------ | ----------------------------------------------------------------------------------------------------------------- | ------- |
+| `lib:attendance/assignBadge`                                  | ✅     | `src/test/idor/attendance.db.test.ts`                                                                             | —       |
+| `lib:attendance/checkin/checkinSiteFor`                       | ✅     | `src/test/idor/attendance.db.test.ts`                                                                             | —       |
+| `lib:attendance/countOpenUnmatched`                           | ✅     | `src/test/idor/attendance.db.test.ts`                                                                             | —       |
+| `lib:attendance/createAttendanceDevice`                       | ✅     | `src/test/idor/attendance.db.test.ts`                                                                             | —       |
+| `lib:attendance/dismissUnmatched`                             | ✅     | `src/test/idor/attendance.db.test.ts`                                                                             | —       |
+| `lib:attendance/importChecadorCsv`                            | ✅     | `src/test/idor/attendance.db.test.ts`                                                                             | —       |
+| `lib:attendance/ingest/ingestPunches`                         | ✅     | `src/test/idor/attendance.db.test.ts`                                                                             | —       |
+| `lib:attendance/issueDeviceToken`                             | ✅     | `src/test/idor/attendance.db.test.ts`                                                                             | —       |
+| `lib:attendance/listAttendanceBatches`                        | ✅     | `src/test/idor/attendance.db.test.ts`                                                                             | —       |
+| `lib:attendance/listAttendanceDevices`                        | ✅     | `src/test/idor/attendance.db.test.ts`                                                                             | —       |
+| `lib:attendance/listBadges`                                   | ✅     | `src/test/idor/attendance.db.test.ts`                                                                             | —       |
+| `lib:attendance/listCheckinSites`                             | ✅     | `src/test/idor/attendance.db.test.ts`                                                                             | —       |
+| `lib:attendance/listOpenUnmatched`                            | ✅     | `src/test/idor/attendance.db.test.ts`                                                                             | —       |
+| `lib:attendance/markDevicePush`                               | ✅     | `src/test/idor/attendance.db.test.ts`                                                                             | —       |
+| `lib:attendance/removeBadge`                                  | ✅     | `src/test/idor/attendance.db.test.ts`                                                                             | —       |
+| `lib:attendance/rotateCheckinSecret`                          | ✅     | `src/test/idor/attendance.db.test.ts`                                                                             | —       |
+| `lib:attendance/saveCheckinSite`                              | ✅     | `src/test/idor/attendance.db.test.ts`                                                                             | —       |
+| `lib:attendance/setAttendanceDeviceActive`                    | ✅     | `src/test/idor/attendance.db.test.ts`                                                                             | —       |
+| `lib:attendance/updateAttendanceDevice`                       | ✅     | `src/test/idor/attendance.db.test.ts`                                                                             | —       |
 | `lib:audit/listAuditActors`                                   | ✅     | `src/test/idor/tenant.db.test.ts`                                                                                 | —       |
 | `lib:audit/listAuditEventsKeyset`                             | ✅     | `src/test/idor/mcp-tools.db.test.ts`                                                                              | —       |
 | `lib:catalog/assignActivityToPosition`                        | ✅     | `src/test/idor/catalog.db.test.ts`                                                                                | —       |
@@ -304,6 +343,20 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `lib:people/views/getPeopleView`                              | ✅     | `src/test/idor/people-views.db.test.ts`                                                                           | —       |
 | `lib:people/views/listPeopleViews`                            | ✅     | `src/test/idor/people-views.db.test.ts`                                                                           | —       |
 | `lib:people/views/updatePeopleView`                           | ✅     | `src/test/idor/people-views.db.test.ts`                                                                           | —       |
+| `lib:privacy/buildPersonDataExport`                           | ✅     | `src/test/idor/privacy.db.test.ts`                                                                                | —       |
+| `lib:privacy/createArcoRequest`                               | ✅     | `src/test/idor/privacy.db.test.ts`                                                                                | —       |
+| `lib:privacy/getArcoRequest`                                  | ✅     | `src/test/idor/privacy.db.test.ts`                                                                                | —       |
+| `lib:privacy/getCurrentPrivacyNotice`                         | ✅     | `src/test/idor/privacy.db.test.ts`                                                                                | —       |
+| `lib:privacy/listArcoRequests`                                | ✅     | `src/test/idor/privacy.db.test.ts`                                                                                | —       |
+| `lib:privacy/listPersonalDataAccess`                          | ✅     | `src/test/idor/privacy.db.test.ts`                                                                                | —       |
+| `lib:privacy/listPrivacyNotices`                              | ✅     | `src/test/idor/privacy.db.test.ts`                                                                                | —       |
+| `lib:privacy/pendingPrivacyNotice`                            | ✅     | `src/test/idor/privacy.db.test.ts`                                                                                | —       |
+| `lib:privacy/publishPrivacyNotice`                            | ✅     | `src/test/idor/privacy.db.test.ts`                                                                                | —       |
+| `lib:privacy/recordPersonalDataAccess`                        | ✅     | `src/test/idor/privacy.db.test.ts`                                                                                | —       |
+| `lib:privacy/recordPrivacyAcceptance`                         | ✅     | `src/test/idor/privacy.db.test.ts`                                                                                | —       |
+| `lib:privacy/resolveArcoRequest`                              | ✅     | `src/test/idor/privacy.db.test.ts`                                                                                | —       |
+| `lib:privacy/retention/purgeExpiredPersonalData`              | ✅     | `src/test/idor/privacy.db.test.ts`                                                                                | —       |
+| `lib:privacy/searchPeopleForPrivacy`                          | ✅     | `src/test/idor/privacy.db.test.ts`                                                                                | —       |
 | `lib:regions/createRegion`                                    | ✅     | `src/test/idor/regions.db.test.ts`                                                                                | —       |
 | `lib:regions/getRegionById`                                   | ✅     | `src/test/idor/regions.db.test.ts`                                                                                | —       |
 | `lib:regions/listRegionsWithSiteCounts`                       | ✅     | `src/test/idor/regions.db.test.ts`                                                                                | —       |

@@ -212,6 +212,12 @@ count):
 | Table                                     | 206 MB                                                                    |
 | Indexes                                   | 224 MB (person index 118 MB, primary key 38 MB, dedupe 59 MB, site 10 MB) |
 
+After 0036 dropped the site index, the same load measured 206 MB of table and
+215 MB of indexes (421 MB), and the today view of one site of 100 people read
+in p50 1.21 ms, p95 2.07 ms, max 2.71 ms over 100 days, through
+`people_site_id_idx`, `person_events_dedupe_unique` and
+`person_events_person_time_idx`.
+
 With the payload `writeAttendanceDays` stores (a site uuid and two punch
 tuples, W2-13), the same load measures a 268 MB table and the same 224 MB of
 indexes: 492 MB, and the one-person read p50 0.22 ms, p95 0.31 ms. Stored as

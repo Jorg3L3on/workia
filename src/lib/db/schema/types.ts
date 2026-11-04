@@ -31,7 +31,9 @@ export type PermissionResource =
   | "documents"
   | "vacations"
   | "pay_periods"
-  | "employee_accounts";
+  | "employee_accounts"
+  | "privacy"
+  | "attendance";
 
 export type PermissionSlug = `${PermissionResource}:${PermissionAction}`;
 
@@ -479,6 +481,38 @@ export const PERMISSIONS: Array<{
       "Invite people to the employee app, issue activation codes and disable accounts",
   },
   {
+    slug: "privacy:read",
+    name: "Read Privacy",
+    resource: "privacy",
+    action: "read",
+    description:
+      "View the privacy notice versions, ARCO requests, the retention policy and the personal data access log",
+  },
+  {
+    slug: "privacy:manage",
+    name: "Manage Privacy",
+    resource: "privacy",
+    action: "manage",
+    description:
+      "Publish privacy notice versions, register and answer ARCO requests and download a person's data export",
+  },
+  {
+    slug: "attendance:read",
+    name: "Read Attendance",
+    resource: "attendance",
+    action: "read",
+    description:
+      "View checador uploads, unmatched punches, checadores and app check-in points",
+  },
+  {
+    slug: "attendance:manage",
+    name: "Manage Attendance",
+    resource: "attendance",
+    action: "manage",
+    description:
+      "Upload checador exports, configure checadores and their tokens, assign checador numbers and set up app check-in",
+  },
+  {
     slug: "companies:read",
     name: "Read Companies",
     resource: "companies",
@@ -584,6 +618,10 @@ export const ROLES = [
       "pay_periods:read",
       "pay_periods:manage",
       "employee_accounts:manage",
+      "privacy:read",
+      "privacy:manage",
+      "attendance:read",
+      "attendance:manage",
     ] satisfies PermissionSlug[],
   },
   {

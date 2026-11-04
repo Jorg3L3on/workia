@@ -26,6 +26,14 @@ export const AUDIT_RESOURCE_TYPES = [
   "employee_account",
   "manager_grant",
   "manager_delegation",
+  "privacy_notice",
+  "privacy_acceptance",
+  "arco_request",
+  "data_retention",
+  "attendance_device",
+  "attendance_import",
+  "attendance_badge",
+  "attendance_checkin",
 ] as const;
 
 export type AuditResourceType = (typeof AUDIT_RESOURCE_TYPES)[number];
@@ -129,6 +137,14 @@ export const auditResourceTypeLabels: Record<AuditResourceType, string> = {
   employee_account: "Cuenta de empleado",
   manager_grant: "Rol de jefe",
   manager_delegation: "Suplencia de jefe",
+  privacy_notice: "Aviso de privacidad",
+  privacy_acceptance: "Aceptación del aviso de privacidad",
+  arco_request: "Solicitud ARCO",
+  data_retention: "Conservación de datos",
+  attendance_device: "Checador",
+  attendance_import: "Carga de checadas",
+  attendance_badge: "Número de checador",
+  attendance_checkin: "Checado en la app",
 };
 
 export const AUDIT_SOURCES = [
