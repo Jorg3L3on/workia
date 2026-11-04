@@ -11,6 +11,7 @@ export * from "./employment";
 export * from "./imports";
 export * from "./incidencias";
 export * from "./mcp";
+export * from "./notifications";
 export * from "./onboardings";
 export * from "./pay-periods";
 export * from "./people";

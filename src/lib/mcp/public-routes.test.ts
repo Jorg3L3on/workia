@@ -48,12 +48,15 @@ const PUBLIC_EMPLOYEE_ROUTES = [
  */
 const DEVICE_ROUTES = ["/api/asistencia/checadas"];
 
-/** Scheduled jobs (W2-09): no session, a Bearer CRON_SECRET instead. */
-const SCHEDULED_JOB_ROUTES = ["/api/cron/retention"];
+/**
+ * Scheduled jobs (W2-09, W2-08): sessionless, answer only to the CRON_SECRET
+ * bearer.
+ */
+const SCHEDULED_JOB_ROUTES = ["/api/cron/retention", "/api/cron/notifications"];
 
 /** A route is guarded when it goes through the company context or Auth.js. */
 const isSessionGuarded = (source: string) =>
-  /require(CompanyContext|Auth|PeopleImport|PeopleExport|[A-Z]\w*(Read|Create|Update|Delete|Import|Export|Manage))\b|requireImportRoute|withImportRoute|auth\(\)/.test(
+  /getEmployeeContext\(|require(CompanyContext|EmployeeContext|Auth|PeopleImport|PeopleExport|[A-Z]\w*(Read|Create|Update|Delete|Import|Export|Manage))\b|requireImportRoute|withImportRoute|auth\(\)/.test(
     source,
   );
 

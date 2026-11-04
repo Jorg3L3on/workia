@@ -46,6 +46,7 @@ export const pageTitles = {
   regiones: "Regiones",
   motivosBaja: "Motivos de baja",
   auditoria: "Auditoría",
+  avisos: "Avisos",
   administracion: "Administración",
   rbac: "Roles y permisos",
   notFound: "Página no encontrada",
