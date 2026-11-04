@@ -114,7 +114,7 @@ describe("lib:timeline/listPersonEvents", () => {
 
     const second = await listPersonEvents(a.companyId, a.person.id, {
       limit: 2,
-      before: first.next,
+      cursor: first.next,
     });
 
     expect(second.events.map((event) => event.type)).toEqual([
@@ -122,6 +122,38 @@ describe("lib:timeline/listPersonEvents", () => {
       "document",
     ]);
     expect(second.next).toBeNull();
+  });
+
+  it("pages through microsecond timestamps and ties without skipping a row", async () => {
+    // Backfilled rows can carry microseconds that a JS Date cannot hold.
+    await ownerDb.$client.query(
+      `INSERT INTO person_events (company_id, person_id, type, occurred_at, source)
+       SELECT $1, $2, 'employment', timestamptz '2020-01-01 10:00:00.000001+00' + (i % 2) * interval '1 microsecond', 'backfill'
+       FROM generate_series(1, 5) i`,
+      [b.companyId, b.person.id],
+    );
+
+    const seen: string[] = [];
+    let cursor: string | null = null;
+
+    do {
+      const page: Awaited<ReturnType<typeof listPersonEvents>> =
+        await listPersonEvents(b.companyId, b.person.id, {
+          types: ["employment"],
+          cursor,
+          limit: 2,
+        });
+      seen.push(...page.events.map((event) => event.id));
+      cursor = page.next;
+    } while (cursor);
+
+    expect(seen).toHaveLength(5);
+    expect(new Set(seen).size).toBe(5);
+
+    await ownerDb.$client.query(
+      "DELETE FROM person_events WHERE company_id = $1 AND source = 'backfill'",
+      [b.companyId],
+    );
   });
 
   it("filters by type", async () => {

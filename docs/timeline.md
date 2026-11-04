@@ -43,11 +43,15 @@ row in each table, in the same transaction.
 
 ### Indexes
 
-| Index                           | On                                                                                      | For                                           |
-| ------------------------------- | --------------------------------------------------------------------------------------- | --------------------------------------------- |
-| `person_events_person_time_idx` | `(company_id, person_id, occurred_at DESC, id DESC)`                                    | one person's history, keyset pages, retention |
-| `person_events_site_day_idx`    | `(company_id, payload->>'site_id', occurred_at)` where type is attendance or incidencia | the today view of one site                    |
-| `person_events_dedupe_unique`   | unique `(person_id, dedupe_key)` where the key is not null                              | idempotent ingestion                          |
+| Index                           | On                                                         | For                                           |
+| ------------------------------- | ---------------------------------------------------------- | --------------------------------------------- |
+| `person_events_person_time_idx` | `(company_id, person_id, occurred_at DESC, id DESC)`       | one person's history, keyset pages, retention |
+| `person_events_dedupe_unique`   | unique `(person_id, dedupe_key)` where the key is not null | idempotent ingestion, the today view (P-04)   |
+
+0031 also had `person_events_site_day_idx` on `payload->>'site_id'`. P-04
+dropped it in `0036_today_view_indexes`: the today view starts from the
+roster in `people`, so it lists absent people too, and finds each person's day
+through the two indexes above ([keyset.md](keyset.md)).
 
 The dedupe index leaves out `company_id` because person ids are already unique
 across companies, and attendance keys hold only the date. Attendance is most of
@@ -87,14 +91,14 @@ await withTransaction(async (tx) => {
 // One person, newest first, 50 at a time:
 const page = await listPersonEvents(companyId, personId, { limit: 50 });
 const older = await listPersonEvents(companyId, personId, {
-  before: page.next,
+  cursor: page.next,
 });
 ```
 
 - `appendPersonEvents(companyId, events, executor?)` inserts in batches of 500
   rows and returns how many it inserted. A person outside the company is a
   `CompanyReferenceError` on `personId`.
-- `listPersonEvents(companyId, personId, { types?, before?, limit? })` reads at
+- `listPersonEvents(companyId, personId, { types?, cursor?, limit? })` reads at
   most 200 rows per page through `person_events_person_time_idx`, and returns
   nothing for a person of another company. It is an HR/company read; employee
   routes call it with the guard's `personId` only (W2-01).
@@ -126,8 +130,8 @@ rows.
 
 `npm run db:measure-timeline -- --people 500 --runs 100` loads a throwaway
 company with five years of daily attendance per person, a receipt every 15 days
-and two documents a year, times the one-person read with `EXPLAIN ANALYZE` and
-deletes the company at the end. Use it on a local Postgres or on a Neon branch
+and two documents a year, times the one-person read and the today view of one site of 100 people
+(P-04) with `EXPLAIN ANALYZE`, and deletes the company at the end. Use it on a local Postgres or on a Neon branch
 made for the test, never on the production branch.
 
 On a local Postgres 16 (2026-11-04), 500 people, 979,500 rows:
@@ -138,6 +142,12 @@ On a local Postgres 16 (2026-11-04), 500 people, 979,500 rows:
 | Execution time over 100 people            | p50 0.13 ms, p95 0.18 ms, max 0.23 ms                                     |
 | Table                                     | 206 MB                                                                    |
 | Indexes                                   | 224 MB (person index 118 MB, primary key 38 MB, dedupe 59 MB, site 10 MB) |
+
+After 0036 dropped the site index, the same load measured 206 MB of table and
+215 MB of indexes (421 MB), and the today view of one site of 100 people read
+in p50 1.21 ms, p95 2.07 ms, max 2.71 ms over 100 days, through
+`people_site_id_idx`, `person_events_dedupe_unique` and
+`person_events_person_time_idx`.
 
 That is 430 MB of the 1 GB of storage on the Neon Free plan for 500 people
 over five years, almost all of it attendance. The Neon measurement in region
