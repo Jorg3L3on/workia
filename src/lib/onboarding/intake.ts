@@ -6,6 +6,7 @@ import { isUniqueViolation } from "@/lib/db/errors";
 import {
   onboardingIntakes,
   onboardings,
+  people,
   type OnboardingIntake,
   type OnboardingIntakeReturnReason,
 } from "@/lib/db/schema";
@@ -16,6 +17,12 @@ import { personFormFromRecord } from "@/lib/people/form-values";
 import { DuplicateIdentityError } from "@/lib/people/identity";
 import { personFormSchema } from "@/lib/people/schema";
 import { getCurrentPrivacyNotice, pendingPrivacyNotice } from "@/lib/privacy";
+import {
+  createNotifications,
+  hrRecipientsWithPermission,
+  sendNotificationsSoon,
+} from "@/lib/notifications";
+import { formatPersonName } from "@/lib/people/schema";
 import { withTenant } from "@/lib/tenant/scope";
 
 import {
@@ -430,6 +437,7 @@ export const saveEmployeeIntake = async (
     ),
   );
   const now = new Date();
+  let notified: string[] = [];
 
   const saved = await withTransaction(async (tx) => {
     const [row] = await tx
@@ -457,6 +465,37 @@ export const saveEmployeeIntake = async (
 
     if (!row) return null;
 
+    // W2-08: HR hears that there is something to review, in the same commit.
+    if (options.submit) {
+      const [person] = await tx
+        .select({
+          nombres: people.nombres,
+          apellidoPaterno: people.apellidoPaterno,
+          apellidoMaterno: people.apellidoMaterno,
+        })
+        .from(people)
+        .where(
+          withTenant(people, context.companyId, eq(people.id, row.personId)),
+        )
+        .limit(1);
+      notified = await createNotifications(
+        context.companyId,
+        {
+          template: "onboarding_submitted",
+          data: {
+            onboardingId: row.onboardingId,
+            personName: person ? formatPersonName(person) : "Una persona",
+          },
+          recipients: await hrRecipientsWithPermission(
+            context.companyId,
+            "people:update",
+          ),
+          eventKey: `onboarding_intake:${row.id}:submitted:${now.toISOString()}`,
+        },
+        tx,
+      );
+    }
+
     await recordAuditEvent(
       {
         companyId: context.companyId,
@@ -482,5 +521,6 @@ export const saveEmployeeIntake = async (
   }, context.companyId);
 
   if (!saved) return fail(INTAKE_COPY.locked);
+  if (notified.length > 0) await sendNotificationsSoon(context.companyId);
   return { ok: true, submitted: options.submit };
 };

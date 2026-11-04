@@ -33,6 +33,8 @@ export type TemplateData = {
     from: string;
     to: string;
   };
+  /** A new hire sent their self-service alta for HR to review (W2-10). */
+  onboarding_submitted: { onboardingId: string; personName: string };
 };
 
 export type NotificationContent = {
@@ -97,6 +99,11 @@ const RENDERERS: Renderers = {
     title: `${requesterName} pide ${REQUEST_LABEL[request]}`,
     body: `Solicitud de ${REQUEST_LABEL[request]} ${dateRange(from, to)}. Espera tu decisión.`,
     url: "/mi",
+  }),
+  onboarding_submitted: ({ onboardingId, personName }, recipient) => ({
+    title: `${personName} envió sus datos de alta`,
+    body: "Revisa lo que capturó y aplícalo al expediente, o devuélveselo para que lo corrija.",
+    url: recipient === "user" ? `/app/altas/${onboardingId}` : "/mi",
   }),
 };
 

@@ -29,6 +29,7 @@ export const NOTIFICATION_TEMPLATES = [
   "document_rejected",
   "contract_ending",
   "request_pending",
+  "onboarding_submitted",
 ] as const;
 
 export type NotificationTemplate = (typeof NOTIFICATION_TEMPLATES)[number];

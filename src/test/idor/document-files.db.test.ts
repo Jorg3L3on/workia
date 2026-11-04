@@ -40,8 +40,10 @@ import { GET as employeeFileRoute } from "@/app/mi/documentos/[documentId]/archi
 import {
   auditEvents,
   employeeAccounts,
+  notifications,
   personalDataAccessLog,
   personDocuments,
+  personEvents,
   privacyNoticeAcceptances,
 } from "@/lib/db/schema";
 import { setRequirements, listPersonDocumentCard } from "@/lib/documents";
@@ -482,6 +484,36 @@ describe("HR reviews only its company's uploads", () => {
         status: "rejected",
         rejectionReason: "incomplete",
       },
+    });
+
+    // Upload, acceptance and rejection are on the timeline (W2-13), and
+    // the person is told about the rejection (W2-08).
+    const events = await ownerDb
+      .select({ key: personEvents.dedupeKey, payload: personEvents.payload })
+      .from(personEvents)
+      .where(eq(personEvents.personId, a.person.id));
+    const keys = events.map((event) => event.key);
+    expect(keys).toEqual(
+      expect.arrayContaining([
+        `document:person_document:${documentId}:uploaded`,
+        `document:person_document:${documentId}:accepted`,
+        `document:person_document:${rejectedId}:uploaded`,
+        `document:person_document:${rejectedId}:rejected`,
+      ]),
+    );
+    const [notice] = await ownerDb
+      .select()
+      .from(notifications)
+      .where(
+        and(
+          eq(notifications.recipientPersonId, a.person.id),
+          eq(notifications.template, "document_rejected"),
+        ),
+      );
+    expect(notice).toMatchObject({
+      companyId: a.companyId,
+      url: "/mi/documentos",
+      title: "RH rechazó tu documento: INE",
     });
   });
 

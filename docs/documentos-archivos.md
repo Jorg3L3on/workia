@@ -58,5 +58,6 @@ nada de Vercel ni de Neon.
 - Al borrar a una persona, sus archivos quedan en el bucket (las filas se
   borran en cascada). Un trabajo de limpieza puede seguir a la decisión de
   retención.
-- Eventos de línea de tiempo (`documentEvent`, W2-13) y la notificación
-  «documento rechazado» (W2-08) se conectan cuando esas ramas se integren.
+- Subida, aceptación y rechazo escriben su evento `document` en la línea de
+  tiempo (W2-13) en la misma transacción, y un rechazo avisa a la persona con
+  `document_rejected` (W2-08).

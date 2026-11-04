@@ -8,6 +8,9 @@
 -- El motivo de devolución es un código de una lista cerrada, sin texto libre.
 -- fields_total y fields_by_employee se guardan al aplicar: cuántos campos del
 -- formulario llenó la persona (criterio de aceptación: 80 % o más).
+-- Aviso a RH cuando la persona envía (W2-08): una plantilla más.
+ALTER TABLE "notifications" DROP CONSTRAINT "notifications_template_check";--> statement-breakpoint
+ALTER TABLE "notifications" ADD CONSTRAINT "notifications_template_check" CHECK ("notifications"."template" IN ('receipt_available', 'request_decision', 'document_rejected', 'contract_ending', 'request_pending', 'onboarding_submitted'));--> statement-breakpoint
 ALTER TABLE "onboardings" ADD CONSTRAINT "onboardings_company_id_id_unique" UNIQUE("company_id","id");--> statement-breakpoint
 CREATE TABLE "onboarding_intakes" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
@@ -51,6 +54,8 @@ BEGIN
 END $$;
 
 -- Rollback (by hand; nothing outside this migration references these objects):
+--   DELETE FROM "notifications" WHERE "template" = 'onboarding_submitted';
+--   (then restore notifications_template_check without it)
 --   DROP TABLE "onboarding_intakes";
 --   ALTER TABLE "onboardings" DROP CONSTRAINT "onboardings_company_id_id_unique";
 --   DELETE FROM drizzle.applied_migrations WHERE tag = '0048_onboarding_intake';

@@ -144,6 +144,10 @@ const SAMPLE_DATA: { [T in NotificationTemplate]: NotifyInput<T>["data"] } = {
     from: "2026-11-10",
     to: "2026-11-10",
   },
+  onboarding_submitted: {
+    onboardingId: "00000000-0000-4000-8000-000000000002",
+    personName: "Ana López",
+  },
 };
 
 const notifyPerson = async (

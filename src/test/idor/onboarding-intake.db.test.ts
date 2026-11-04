@@ -47,6 +47,7 @@ vi.mock("@/lib/email", () => ({
 import {
   auditEvents,
   employeeAccounts,
+  notifications,
   onboardingIntakes,
   people,
 } from "@/lib/db/schema";
@@ -70,6 +71,7 @@ import {
   returnIntakeAction,
 } from "@/lib/onboarding/intake-actions";
 import { INTAKE_COPY } from "@/lib/onboarding/intake-schema";
+import { sampleCurp } from "@/lib/people/identity";
 import { ONBOARDING_CHECKLIST } from "@/lib/onboarding/schema";
 import { publishPrivacyNotice, recordPrivacyAcceptance } from "@/lib/privacy";
 import { STALE_COMPANY_MESSAGE } from "@/lib/tenant/scope";
@@ -154,6 +156,12 @@ beforeAll(async () => {
   b = await seedTenant("IB");
   altaA = (await startOnboarding(a.companyId, a.person.id, a.admin.id)).id;
   altaB = (await startOnboarding(b.companyId, b.person.id, b.admin.id)).id;
+  // A CURP no other test file uses: one live employee account per CURP
+  // across companies, and the shared fixtures reuse theirs.
+  await ownerDb
+    .update(people)
+    .set({ curp: sampleCurp(4801) })
+    .where(eq(people.id, a.teammate.id));
   altaTeammateA = (
     await startOnboarding(a.companyId, a.teammate.id, a.admin.id)
   ).id;
@@ -326,6 +334,22 @@ describe("the employee fills only their own form", () => {
     expect(await intakeOf(altaA)).toMatchObject({
       status: "enviado",
       submittedByAccountId: ctx.a.accountId,
+    });
+    // HR with people:update hears about it (W2-08); B's HR does not.
+    const sentNotices = await ownerDb
+      .select()
+      .from(notifications)
+      .where(eq(notifications.template, "onboarding_submitted"));
+    expect(sentNotices.map((row) => row.recipientUserId)).toContain(a.admin.id);
+    expect(sentNotices.map((row) => row.recipientUserId)).not.toContain(
+      a.viewer.id,
+    );
+    expect(sentNotices.every((row) => row.companyId === a.companyId)).toBe(
+      true,
+    );
+    expect(sentNotices[0]).toMatchObject({
+      url: `/app/altas/${altaA}`,
+      title: `${a.person.nombres} Idor envió sus datos de alta`,
     });
 
     // Sent: locked until HR decides.

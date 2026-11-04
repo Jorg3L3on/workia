@@ -64,9 +64,18 @@ archivos en Neon.
 
 La auditoría registra nombres de campos, nunca los valores.
 
+## Avisos y línea de tiempo
+
+- Al enviar, RH con `people:update` recibe el aviso `onboarding_submitted`
+  (W2-08) en la misma transacción; abre el alta.
+- Los documentos que sube la persona y su revisión quedan en la línea de
+  tiempo (`document` con estado `uploaded`, `accepted` o `rejected`, W2-13), y
+  un rechazo le avisa con `document_rejected`.
+- Aplicar los datos usa `updatePerson`, que ya escribe sus propios eventos
+  `employment` cuando cambia el puesto o la sucursal. El formulario en sí no
+  tiene tipo de evento: lo registra la auditoría.
+
 ## Pendiente
 
-- Aviso a RH cuando la persona envía (W2-08 notificaciones) y evento de línea
-  de tiempo (W2-13) cuando esas ramas se integren.
 - El checklist del alta sigue siendo de RH: no se marca solo con los
   documentos aceptados.

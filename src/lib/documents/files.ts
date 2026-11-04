@@ -19,7 +19,14 @@ import {
   getCurrentPrivacyNotice,
   recordPersonalDataAccess,
 } from "@/lib/privacy";
+import {
+  createNotifications,
+  personRecipient,
+  sendNotificationsSoon,
+} from "@/lib/notifications";
 import { getObjectStorage, objectKey } from "@/lib/storage";
+import { appendPersonEvents } from "@/lib/timeline";
+import { documentEvent } from "@/lib/timeline/events";
 import { withTenant } from "@/lib/tenant/scope";
 
 import { listPersonDocumentCard } from "./index";
@@ -143,6 +150,16 @@ export const uploadEmployeeDocument = async (
             summary: `Documento subido para revisión: ${row.name}`,
           },
         },
+        tx,
+      );
+      // W2-13: the upload is on the person's timeline, in the same commit.
+      await appendPersonEvents(
+        companyId,
+        [
+          documentEvent(created, "employee_app", "uploaded", {
+            occurredAt: created.createdAt,
+          }),
+        ],
         tx,
       );
     }, companyId);
@@ -449,11 +466,52 @@ export const reviewDocument = async (
       tx,
     );
 
+    // W2-13: the review on the timeline. An accepted paper counts on the
+    // day it was handed in, like recordDelivery; a rejection when decided.
+    await appendPersonEvents(
+      companyId,
+      [
+        documentEvent(
+          updated,
+          "app",
+          updated.status === "accepted" ? "accepted" : "rejected",
+          updated.status === "accepted"
+            ? {}
+            : { occurredAt: reviewedAt, reason: updated.rejectionReason },
+        ),
+      ],
+      tx,
+    );
+
+    // W2-08: the person hears that a rejected paper needs a new upload.
+    const notified =
+      input.decision === "reject"
+        ? await createNotifications(
+            companyId,
+            {
+              template: "document_rejected",
+              data: {
+                document: current.requirementName,
+                reason: `${documentRejectionReasonLabels[input.reason]}.`,
+              },
+              recipients: [personRecipient(before.personId)],
+              eventKey: `person_document:${before.id}:rejected`,
+              url: "/mi/documentos",
+            },
+            tx,
+          )
+        : [];
+
     return {
       updated,
+      notified: notified.length > 0,
       deletedKey: input.decision === "reject" ? before.fileKey : null,
     };
   }, companyId);
+
+  if (outcome && "notified" in outcome && outcome.notified) {
+    await sendNotificationsSoon(companyId);
+  }
 
   if (outcome && "deletedKey" in outcome && outcome.deletedKey) {
     const storage = getObjectStorage();
