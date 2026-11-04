@@ -91,6 +91,8 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `action:reports/setTurnoverGoalAction`                     | ✅     | `src/test/idor/turnover.db.test.ts`                                                                    | `settings:update`           |
 | `action:reports/createTurnoverViewAction`                  | ✅     | `src/test/idor/turnover.db.test.ts`                                                                    | `reports:read`              |
 | `action:reports/deleteTurnoverViewAction`                  | ✅     | `src/test/idor/turnover.db.test.ts`                                                                    | `reports:read`              |
+| `action:reports/createAbsenteeismViewAction`               | ✅     | `src/test/idor/absenteeism.db.test.ts`                                                                 | `reports:read`              |
+| `action:reports/deleteAbsenteeismViewAction`               | ✅     | `src/test/idor/absenteeism.db.test.ts`                                                                 | `reports:read`              |
 | `action:vacations/registerVacationAction`                  | ✅     | `src/test/idor/vacations.db.test.ts`                                                                   | `vacations:create`          |
 | `action:vacations/voidVacationAction`                      | ✅     | `src/test/idor/vacations.db.test.ts`                                                                   | `vacations:update`          |
 | `action:pay-periods/closePayPeriodAction`                  | ✅     | `src/test/idor/period-close.db.test.ts`                                                                | `pay_periods:manage`        |
@@ -98,33 +100,34 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 
 ## Rutas
 
-| Superficie                                                      | Estado | Prueba                                  | Permiso                                |
-| --------------------------------------------------------------- | ------ | --------------------------------------- | -------------------------------------- |
-| `route:DELETE /api/import/personas/[jobId]/apply`               | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                        |
-| `route:DELETE /api/mcp`                                         | ✅     | `src/test/idor/mcp.db.test.ts`          | —                                      |
-| `route:GET /.well-known/oauth-authorization-server/[[...path]]` | ✅     | `src/test/idor/mcp.db.test.ts`          | —                                      |
-| `route:GET /.well-known/oauth-protected-resource/[[...path]]`   | ✅     | `src/test/idor/mcp.db.test.ts`          | —                                      |
-| `route:GET /api/import/personas/[jobId]`                        | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                        |
-| `route:GET /api/import/personas/[jobId]/errors`                 | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                        |
-| `route:GET /api/import/personas/[jobId]/rows`                   | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                        |
-| `route:GET /api/import/personas/[jobId]/undo`                   | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                        |
-| `route:GET /api/mcp`                                            | ✅     | `src/test/idor/mcp.db.test.ts`          | —                                      |
-| `route:GET /api/oauth/authorize`                                | ✅     | `src/test/idor/mcp.db.test.ts`          | —                                      |
-| `route:GET /app/personas/[id]/contratos/[contractId]/pdf`       | ✅     | `src/test/idor/contract-pdf.db.test.ts` | `contracts:read` + `compensation:read` |
-| `route:GET /app/personas/exportar`                              | ✅     | `src/test/idor/import.db.test.ts`       | `people:export`                        |
-| `route:GET /app/reportes/rotacion/exportar`                     | ✅     | `src/test/idor/turnover.db.test.ts`     | `reports:read` + `people:export`       |
-| `route:GET /app/personas/plantilla`                             | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                        |
-| `route:POST /api/import/personas`                               | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                        |
-| `route:POST /api/import/personas/[jobId]/apply`                 | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                        |
-| `route:POST /api/import/personas/[jobId]/finalize`              | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                        |
-| `route:POST /api/import/personas/[jobId]/rows`                  | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                        |
-| `route:POST /api/import/personas/[jobId]/undo`                  | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                        |
-| `route:POST /api/import/personas/[jobId]/validate`              | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                        |
-| `route:POST /api/mcp`                                           | ✅     | `src/test/idor/mcp.db.test.ts`          | —                                      |
-| `route:POST /api/oauth/register`                                | ✅     | `src/test/idor/mcp.db.test.ts`          | —                                      |
-| `route:POST /api/oauth/revoke`                                  | ✅     | `src/test/idor/mcp.db.test.ts`          | —                                      |
-| `route:POST /api/oauth/token`                                   | ✅     | `src/test/idor/mcp.db.test.ts`          | —                                      |
-| `route:PUT /api/import/personas/[jobId]/validate`               | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                        |
+| Superficie                                                      | Estado | Prueba                                  | Permiso                                      |
+| --------------------------------------------------------------- | ------ | --------------------------------------- | -------------------------------------------- |
+| `route:DELETE /api/import/personas/[jobId]/apply`               | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                              |
+| `route:DELETE /api/mcp`                                         | ✅     | `src/test/idor/mcp.db.test.ts`          | —                                            |
+| `route:GET /.well-known/oauth-authorization-server/[[...path]]` | ✅     | `src/test/idor/mcp.db.test.ts`          | —                                            |
+| `route:GET /.well-known/oauth-protected-resource/[[...path]]`   | ✅     | `src/test/idor/mcp.db.test.ts`          | —                                            |
+| `route:GET /api/import/personas/[jobId]`                        | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                              |
+| `route:GET /api/import/personas/[jobId]/errors`                 | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                              |
+| `route:GET /api/import/personas/[jobId]/rows`                   | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                              |
+| `route:GET /api/import/personas/[jobId]/undo`                   | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                              |
+| `route:GET /api/mcp`                                            | ✅     | `src/test/idor/mcp.db.test.ts`          | —                                            |
+| `route:GET /api/oauth/authorize`                                | ✅     | `src/test/idor/mcp.db.test.ts`          | —                                            |
+| `route:GET /app/personas/[id]/contratos/[contractId]/pdf`       | ✅     | `src/test/idor/contract-pdf.db.test.ts` | `contracts:read` + `compensation:read`       |
+| `route:GET /app/personas/exportar`                              | ✅     | `src/test/idor/import.db.test.ts`       | `people:export`                              |
+| `route:GET /app/reportes/rotacion/exportar`                     | ✅     | `src/test/idor/turnover.db.test.ts`     | `reports:read` + `people:export`             |
+| `route:GET /app/reportes/ausentismo/exportar`                   | ✅     | `src/test/idor/absenteeism.db.test.ts`  | `reports:read` (+ `people:export` for Excel) |
+| `route:GET /app/personas/plantilla`                             | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                              |
+| `route:POST /api/import/personas`                               | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                              |
+| `route:POST /api/import/personas/[jobId]/apply`                 | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                              |
+| `route:POST /api/import/personas/[jobId]/finalize`              | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                              |
+| `route:POST /api/import/personas/[jobId]/rows`                  | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                              |
+| `route:POST /api/import/personas/[jobId]/undo`                  | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                              |
+| `route:POST /api/import/personas/[jobId]/validate`              | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                              |
+| `route:POST /api/mcp`                                           | ✅     | `src/test/idor/mcp.db.test.ts`          | —                                            |
+| `route:POST /api/oauth/register`                                | ✅     | `src/test/idor/mcp.db.test.ts`          | —                                            |
+| `route:POST /api/oauth/revoke`                                  | ✅     | `src/test/idor/mcp.db.test.ts`          | —                                            |
+| `route:POST /api/oauth/token`                                   | ✅     | `src/test/idor/mcp.db.test.ts`          | —                                            |
+| `route:PUT /api/import/personas/[jobId]/validate`               | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                              |
 
 ## Funciones de datos (lib)
 
@@ -327,6 +330,12 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `lib:reports/turnover/data/loadTurnoverLabels`                | ✅     | `src/test/idor/turnover.db.test.ts`                                                                               | —       |
 | `lib:reports/turnover/data/setTurnoverGoal`                   | ✅     | `src/test/idor/turnover.db.test.ts`                                                                               | —       |
 | `lib:reports/turnover/data/loadTurnoverFiniquitos`            | ✅     | `src/test/idor/turnover.db.test.ts`                                                                               | —       |
+| `lib:reports/absenteeism/data/getAbsenteeismReport`           | ✅     | `src/test/idor/absenteeism.db.test.ts`                                                                            | —       |
+| `lib:reports/absenteeism/data/loadAbsenteeismDetail`          | ✅     | `src/test/idor/absenteeism.db.test.ts`                                                                            | —       |
+| `lib:reports/absenteeism/data/loadReportStructure`            | ✅     | `src/test/idor/absenteeism.db.test.ts`                                                                            | —       |
+| `lib:reports/absenteeism/views/createAbsenteeismView`         | ✅     | `src/test/idor/absenteeism.db.test.ts`                                                                            | —       |
+| `lib:reports/absenteeism/views/deleteAbsenteeismView`         | ✅     | `src/test/idor/absenteeism.db.test.ts`                                                                            | —       |
+| `lib:reports/absenteeism/views/listAbsenteeismViews`          | ✅     | `src/test/idor/absenteeism.db.test.ts`                                                                            | —       |
 | `lib:reports/turnover/views/createTurnoverView`               | ✅     | `src/test/idor/turnover.db.test.ts`                                                                               | —       |
 | `lib:reports/turnover/views/deleteTurnoverView`               | ✅     | `src/test/idor/turnover.db.test.ts`                                                                               | —       |
 | `lib:reports/turnover/views/listTurnoverViews`                | ✅     | `src/test/idor/turnover.db.test.ts`                                                                               | —       |

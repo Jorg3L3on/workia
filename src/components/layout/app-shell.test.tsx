@@ -224,7 +224,7 @@ describe("AppShell", () => {
       "Altas",
       "Resguardo",
     ]);
-    expect(linksIn("Reportes")).toEqual(["Rotación"]);
+    expect(linksIn("Reportes")).toEqual(["Rotación", "Ausentismo"]);
     expect(linksIn("Empresa")).toEqual(["Miembros", "Conexiones", "Auditoría"]);
     expect(sidebar.getByRole("button", { name: "Catálogo" })).toBeTruthy();
     expect(sidebar.queryByText("Expediente")).toBeNull();
@@ -240,6 +240,7 @@ describe("AppShell", () => {
     expect(sidebar.queryByRole("link", { name: "Miembros" })).toBeNull();
     expect(sidebar.queryByRole("link", { name: "Conexiones" })).toBeNull();
     expect(sidebar.queryByRole("link", { name: "Rotación" })).toBeNull();
+    expect(sidebar.queryByRole("link", { name: "Ausentismo" })).toBeNull();
     expect(sidebar.queryByRole("link", { name: "Documentos" })).toBeNull();
     expect(sidebar.getByRole("link", { name: "Auditoría" })).toBeTruthy();
   });

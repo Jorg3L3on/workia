@@ -13,8 +13,11 @@ import {
 import { companies } from "./companies";
 import { users } from "./rbac";
 
-/** What a saved view filters: the Personas list or the turnover report. */
-export const PEOPLE_VIEW_KINDS = ["people", "turnover"] as const;
+/**
+ * What a saved view filters: the Personas list, the turnover report or the
+ * absenteeism and turnover report by region and sucursal (W2-20).
+ */
+export const PEOPLE_VIEW_KINDS = ["people", "turnover", "absenteeism"] as const;
 
 export type PeopleViewKind = (typeof PEOPLE_VIEW_KINDS)[number];
 
@@ -23,7 +26,8 @@ export type PeopleViewKind = (typeof PEOPLE_VIEW_KINDS)[number];
  * columns, personal or shared with the members of the same company. The
  * filter is the PeopleFilter object and is validated again when read.
  * kind (migration 0027): «people» for the Personas list, «turnover» for the
- * turnover report, whose filter is a TurnoverFilter.
+ * turnover report, whose filter is a TurnoverFilter; «absenteeism»
+ * (migration 0050) for /app/reportes/ausentismo, an AbsenteeismFilter.
  */
 export const peopleViews = pgTable(
   "people_views",
@@ -58,7 +62,7 @@ export const peopleViews = pgTable(
       .where(sql`${table.shared}`),
     check(
       "people_views_kind_check",
-      sql`${table.kind} IN ('people', 'turnover')`,
+      sql`${table.kind} IN ('people', 'turnover', 'absenteeism')`,
     ),
   ],
 );

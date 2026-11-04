@@ -1,5 +1,6 @@
 import {
   CalendarCheckIcon,
+  CalendarXIcon,
   ChartLineIcon,
   FilesIcon,
   FileTextIcon,
@@ -113,6 +114,13 @@ export const NAV_GROUPS: readonly NavGroup[] = [
         href: "/app/reportes/rotacion",
         icon: ChartLineIcon,
         keywords: ["bajas", "rotación", "prueba", "90 días", "motivos"],
+        requires: "canReadReports",
+      },
+      {
+        title: "Ausentismo",
+        href: "/app/reportes/ausentismo",
+        icon: CalendarXIcon,
+        keywords: ["faltas", "retardos", "región", "sucursal", "rotación"],
         requires: "canReadReports",
       },
     ],
