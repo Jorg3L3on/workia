@@ -1,7 +1,8 @@
 import { eq, inArray, like } from "drizzle-orm";
 
 import { withTransaction, type DbExecutor, type DbTransaction } from "@/lib/db";
-import { personEvents } from "@/lib/db/schema";
+import { CompanyReferenceError } from "@/lib/db/errors";
+import { people, personEvents } from "@/lib/db/schema";
 import { withTenant } from "@/lib/tenant/scope";
 
 import {
@@ -154,6 +155,29 @@ const attendanceRow = (
   payload: attendancePayload(punches, siteId),
 });
 
+/**
+ * Every person of the batch is in the company. Checked up front: the dedupe
+ * index has no company, so another company's day would otherwise surface as
+ * a conflict instead of a refusal.
+ */
+const assertPeopleInCompany = async (
+  tx: DbTransaction,
+  companyId: string,
+  personIds: string[],
+) => {
+  const found = await tx
+    .select({ id: people.id })
+    .from(people)
+    .where(withTenant(people, companyId, inArray(people.id, personIds)));
+
+  if (found.length !== personIds.length) {
+    throw new CompanyReferenceError(
+      "personId",
+      "Esa persona no existe en esta empresa.",
+    );
+  }
+};
+
 const writeAttendanceBatch = async (
   tx: DbTransaction,
   companyId: string,
@@ -162,6 +186,7 @@ const writeAttendanceBatch = async (
 ) => {
   const keys = [...new Set(days.map((day) => attendanceDedupeKey(day.day)))];
   const personIds = [...new Set(days.map((day) => day.personId))];
+  await assertPeopleInCompany(tx, companyId, personIds);
   const existing = await tx
     .select({
       id: personEvents.id,
@@ -350,6 +375,7 @@ export const replacePeriodIncidencias = async (
     for (let start = 0; start < ids.length; start += APPEND_BATCH_SIZE) {
       const batch = ids.slice(start, start + APPEND_BATCH_SIZE);
       const inBatch = new Set(batch);
+      await assertPeopleInCompany(tx, companyId, batch);
       const stored = await tx
         .select({
           id: personEvents.id,
