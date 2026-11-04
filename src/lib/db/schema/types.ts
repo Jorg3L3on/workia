@@ -29,7 +29,8 @@ export type PermissionResource =
   | "payroll"
   | "reports"
   | "documents"
-  | "vacations";
+  | "vacations"
+  | "pay_periods";
 
 export type PermissionSlug = `${PermissionResource}:${PermissionAction}`;
 
@@ -453,6 +454,22 @@ export const PERMISSIONS: Array<{
     description: "Void a vacation record",
   },
   {
+    slug: "pay_periods:read",
+    name: "Read Pay Periods",
+    resource: "pay_periods",
+    action: "read",
+    description:
+      "See the quincenas, their incidencias and what each close froze for pre-nómina",
+  },
+  {
+    slug: "pay_periods:manage",
+    name: "Manage Pay Periods",
+    resource: "pay_periods",
+    action: "manage",
+    description:
+      "Close a quincena (freeze its incidencias) and reopen it with a reason",
+  },
+  {
     slug: "companies:read",
     name: "Read Companies",
     resource: "companies",
@@ -555,6 +572,8 @@ export const ROLES = [
       "vacations:read",
       "vacations:create",
       "vacations:update",
+      "pay_periods:read",
+      "pay_periods:manage",
     ] satisfies PermissionSlug[],
   },
   {

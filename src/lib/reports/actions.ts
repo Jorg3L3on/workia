@@ -6,6 +6,14 @@ import { z } from "zod";
 import { isoToday } from "@/lib/format/date";
 import { STALE_COMPANY_MESSAGE } from "@/lib/tenant/scope";
 
+import { absenteeismFilterSchema } from "./absenteeism/schema";
+import { ABSENTEEISM_PATH } from "./absenteeism/url";
+import {
+  AbsenteeismViewLimitError,
+  createAbsenteeismView,
+  deleteAbsenteeismView,
+  MAX_ABSENTEEISM_VIEW_NAME,
+} from "./absenteeism/views";
 import { requireReportsRead, requireReportsSettings } from "./auth";
 import { setTurnoverGoal } from "./turnover/data";
 import { turnoverFilterSchema } from "./turnover/schema";
@@ -144,6 +152,85 @@ export const deleteTurnoverViewAction = async (
     viewId,
   );
   revalidatePath("/app/reportes/rotacion");
+
+  return deleted
+    ? { ok: true }
+    : { ok: false, error: "La vista ya no existe o no es tuya." };
+};
+
+const absenteeismViewSchema = z.object({
+  companyId: z.uuid(),
+  name: z
+    .string()
+    .trim()
+    .min(1, "Escribe un nombre para la vista.")
+    .max(MAX_ABSENTEEISM_VIEW_NAME, "El nombre es demasiado largo."),
+  shared: z.boolean(),
+  filter: absenteeismFilterSchema,
+});
+
+/** Saves the absenteeism report's current filter as a view (reports:read). */
+export const createAbsenteeismViewAction = async (
+  input: unknown,
+): Promise<TurnoverViewActionResult> => {
+  let session;
+
+  try {
+    session = await requireReportsRead();
+  } catch {
+    return { ok: false, error: NO_REPORTS };
+  }
+
+  const parsed = absenteeismViewSchema.safeParse(input);
+
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Inválido" };
+  }
+
+  if (parsed.data.companyId !== session.companyId) {
+    return { ok: false, error: STALE_COMPANY_MESSAGE };
+  }
+
+  try {
+    const view = await createAbsenteeismView(
+      session.companyId,
+      session.user.id,
+      parsed.data,
+      isoToday(),
+    );
+    revalidatePath(ABSENTEEISM_PATH);
+
+    return { ok: true, id: view.id };
+  } catch (error) {
+    if (error instanceof AbsenteeismViewLimitError) {
+      return { ok: false, error: error.message };
+    }
+    throw error;
+  }
+};
+
+/** Deletes one of the user's own views of the absenteeism report. */
+export const deleteAbsenteeismViewAction = async (
+  viewId: string,
+): Promise<{ ok: boolean; error?: string }> => {
+  let session;
+
+  try {
+    session = await requireReportsRead();
+  } catch {
+    return { ok: false, error: NO_REPORTS };
+  }
+
+  if (!z.uuid().safeParse(viewId).success) {
+    return { ok: false, error: "La vista ya no existe o no es tuya." };
+  }
+
+  const deleted = await deleteAbsenteeismView(
+    session.companyId,
+    session.user.id,
+    viewId,
+  );
+  revalidatePath(ABSENTEEISM_PATH);
 
   return deleted
     ? { ok: true }

@@ -124,6 +124,8 @@ America/Mexico_City. Las listas grandes paginan con `cursor` opaco y firmado
 | `list_termination_reasons` | Motivos de baja del catálogo de la empresa. | `read` (Leer) | `people:read` |
 | `get_vacation_entitlement` | Derecho a vacaciones de una persona, el mismo que muestra la tarjeta Vacaciones del expediente: año de servicio cumplido, aniversario actual y siguiente, días de derecho y fecha límite para otorgarlas. | `read` (Leer) | `people:read` |
 | `list_expiring_documents` | La bandeja «Documentos por vencer»: la entrega más reciente de cada persona y requisito que vence hoy o en los próximos 30 días (por_vencer, el valor por defecto) o que ya venció (vencido). | `read` (Leer) | `documents:read` |
+| `get_incidencias_summary` | Incidencias (faltas, retardos, salidas anticipadas) y ausentismo de un rango de días, agrupados por persona, sucursal o mes. | `read` (Leer) | `pay_periods:read` |
+| `get_pay_period` | Una quincena (aaaa-mm-Q1: días 1 a 15; aaaa-mm-Q2: del 16 al fin de mes): si está abierta o cerrada, su revisión y sus incidencias por persona. | `read` (Leer) | `pay_periods:read` |
 | `create_person` | Da de alta un expediente con las mismas reglas que la app (D-04). | `write:people` (Escribir personas) | `people:create` |
 | `update_person` | Edita sólo los campos enviados en changes (null borra el dato); el resto del expediente y el horario no cambian. | `write:people` (Escribir personas) | `people:update` |
 | `set_person_status` | Da de baja laboral o reingresa a una persona (estatus activa \| baja). | `write:people` (Escribir personas) | `people:update` |

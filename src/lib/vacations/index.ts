@@ -14,6 +14,11 @@ import {
 } from "@/lib/db/schema";
 import { formatDateMx } from "@/lib/format/date";
 import { withTenant } from "@/lib/tenant/scope";
+import { appendPersonEvents } from "@/lib/timeline";
+import {
+  vacationEnjoymentEvent,
+  vacationVoidEvent,
+} from "@/lib/timeline/events";
 
 import {
   VACATION_COPY,
@@ -199,6 +204,12 @@ export const registerVacationRecord = async (
       },
       tx,
     );
+    // The person timeline (W2-13), in the same transaction.
+    await appendPersonEvents(
+      companyId,
+      [vacationEnjoymentEvent(created, "app")],
+      tx,
+    );
 
     return { ok: true, id: created.id, warning: preview.warning };
   }, companyId);
@@ -271,6 +282,11 @@ export const voidVacationRecord = async (
           summary: `Vacaciones anuladas del ${formatDateMx(current.startDate)} al ${formatDateMx(current.endDate)}`,
         },
       },
+      tx,
+    );
+    await appendPersonEvents(
+      companyId,
+      [vacationVoidEvent({ ...updated, voidedAt: updated.voidedAt! }, "app")],
       tx,
     );
 

@@ -36,6 +36,7 @@ import {
 import type { PersonStatus } from "@/lib/db/schema/people";
 import { CompanyReferenceError, isUniqueViolation } from "@/lib/db/errors";
 import { withTenant } from "@/lib/tenant/scope";
+import { appendEmploymentChanges } from "@/lib/timeline/writers";
 
 import { buildPeopleWhere, peopleFilterContext } from "./filter/query";
 import { coercePeopleFilter } from "./filter/schema";
@@ -52,6 +53,7 @@ import {
   identifierOrNull,
   normalizeNss,
   type IdentityField,
+  assertActivePersonHasCurp,
 } from "./identity";
 import {
   personScheduleHasTimes,
@@ -823,6 +825,7 @@ export const createPerson = async (
 
     const values = toPersonValues(input);
 
+    assertActivePersonHasCurp(values);
     await assertNoIdentityConflicts(companyId, input, undefined, tx);
     await assertReferencesInCompany(companyId, values, tx);
 
@@ -888,6 +891,7 @@ export const updatePerson = async (
     const before = snapshotPerson(existing);
     const values = toPersonValues(input);
 
+    assertActivePersonHasCurp(values);
     await assertNoIdentityConflicts(companyId, input, id, tx);
     await assertReferencesInCompany(companyId, values, tx);
 
@@ -928,13 +932,15 @@ export const updatePerson = async (
       action = updated.status === "baja" ? "baja" : "reactivate";
     }
 
-    await audit({
+    const audited = await audit({
       actorUserId,
       resourceType: "person",
       resourceId: id,
       action,
       payload: { before, after, changes },
     });
+    // A new puesto, sucursal, área or jefe is a «cambio» on the timeline (W2-13).
+    await appendEmploymentChanges(companyId, [audited], tx);
 
     if (changes.status || changes.fechaIngreso) {
       // The current employment period follows the ingreso (and the status).

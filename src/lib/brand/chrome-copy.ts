@@ -53,6 +53,9 @@ export const pageTitles = {
   miembros: "Miembros",
   conexiones: "Conexiones",
   rotacion: "Rotación",
+  ausentismo: "Ausentismo y rotación",
+  periodos: "Periodos de pago",
+  periodo: "Quincena",
 } as const;
 
 export const companyCopy = {
