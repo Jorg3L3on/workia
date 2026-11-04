@@ -5,6 +5,7 @@ import { expect, test } from "@playwright/test";
 import { OFFICIAL_DELETED_DEMO_FULL_NAME } from "../src/lib/people/borrados-cleanup";
 
 import { chooseSelectOption } from "./choose-select-option";
+import { e2eCurp } from "./curp";
 
 test.describe.configure({ mode: "serial" });
 
@@ -38,6 +39,7 @@ const createAndSoftDeleteDummy = async (
   await page.goto("/app/personas/nueva");
   await page.locator("#nombres").fill("Persona");
   await page.locator("#apellidoPaterno").fill("Borrada");
+  await page.locator("#curp").fill(e2eCurp());
   await page.locator("#apellidoMaterno").fill(`Demo${suffix}`);
   await page.getByRole("button", { name: "Guardar persona" }).click();
 
@@ -149,9 +151,10 @@ test("baja and reingreso live in the expediente menu, not the form", async ({
     await expect(page.getByText("Relación laboral")).toHaveCount(0);
     await expect(
       page.getByRole("main").getByTestId("pendientes-obligatorios"),
-    ).toHaveText("2 campos obligatorios pendientes");
+    ).toHaveText("3 campos obligatorios pendientes");
     await page.locator("#nombres").fill("Persona");
     await page.locator("#apellidoPaterno").fill("Baja");
+    await page.locator("#curp").fill(e2eCurp());
     await page.locator("#apellidoMaterno").fill(`Demo${suffix}`);
     await expect(
       page.getByRole("main").getByTestId("pendientes-obligatorios"),

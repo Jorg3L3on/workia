@@ -7,7 +7,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { recordAuditEvent } from "@/lib/audit";
 import { fillContractTemplate } from "@/lib/contracts/schema";
 import { db } from "@/lib/db";
-import { curpCheckDigit, isValidNss } from "@/lib/people/identity";
+import { isValidNss, sampleCurp } from "@/lib/people/identity";
 import { formatHorarioToken } from "@/lib/people/schema";
 import {
   activities,
@@ -35,23 +35,11 @@ const subtractDays = (base: Date, days: number) => addDays(base, -days);
 
 // Fake identifiers must be unique per person (active people cannot share a
 // CURP or RFC) and pass the same validation as the person form.
-const CURP_CONSONANTS = "BCDFGHJKLMNPQRSTVWXZ";
 
 const fakeRfc = (index: number) =>
   `XAXX010101${index.toString(36).toUpperCase().padStart(3, "0")}`;
 
-const fakeCurp = (index: number) => {
-  const consonants = [
-    index % 20,
-    Math.floor(index / 20) % 20,
-    Math.floor(index / 400) % 20,
-  ]
-    .map((digit) => CURP_CONSONANTS[digit])
-    .join("");
-  const base = `XAXX010101HDF${consonants}0`;
-
-  return `${base}${curpCheckDigit(base)}`;
-};
+const fakeCurp = sampleCurp;
 
 const fakeNss = (index: number) => {
   const body = `9999999${String(index).padStart(3, "0")}`;
