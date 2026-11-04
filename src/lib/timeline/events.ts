@@ -396,11 +396,13 @@ export type IncidenciaInput = {
   /** Local date, YYYY-MM-DD. */
   day: string;
   kind: IncidenciaKind;
-  /** Pay period, e.g. "2026-11-1" for the first quincena of November. */
+  /** Pay period, a quincena: "2026-11-Q1" for the first of November (src/lib/pay-periods). */
   period: string;
   minutes?: number | null;
   justified?: boolean;
   justificationRef?: string | null;
+  /** Cancelled by HR (an override); kept so the decision stays on the timeline. */
+  voided?: boolean;
   siteId?: string | null;
   source: Source;
 };
@@ -423,6 +425,7 @@ export const incidenciaEvent = (input: IncidenciaInput): PersonEventInput => ({
     minutes: input.minutes ?? undefined,
     justified: input.justified ?? false,
     justification_ref: input.justificationRef ?? undefined,
+    voided: input.voided ? true : undefined,
     site_id: input.siteId ?? undefined,
   }),
 });

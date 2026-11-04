@@ -40,6 +40,9 @@ const openPalette = (
     canReadReports: true,
     canReadDocuments: true,
     canReadRequests: true,
+    canReadPayPeriods: true,
+    canReadPrivacy: true,
+    canReadAttendance: true,
   },
 ) => {
   render(<AppCommandPalette access={access} />);
@@ -77,12 +80,17 @@ describe("AppCommandPalette", () => {
       canReadReports: false,
       canReadDocuments: false,
       canReadRequests: false,
+      canReadPayPeriods: false,
+      canReadPrivacy: false,
+      canReadAttendance: false,
     });
 
     expect(optionLabels()).not.toContain("Miembros");
     expect(optionLabels()).not.toContain("Conexiones");
     expect(optionLabels()).not.toContain("Rotación");
     expect(optionLabels()).not.toContain("Documentos");
+    expect(optionLabels()).not.toContain("Periodos de pago");
+    expect(optionLabels()).not.toContain("Privacidad");
   });
 
   it("finds people by RFC as you type and opens the expediente", async () => {

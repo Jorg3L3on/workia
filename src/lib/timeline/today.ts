@@ -7,6 +7,7 @@ import { people, personEvents } from "@/lib/db/schema";
 import { DISPLAY_TIME_ZONE } from "@/lib/format/date";
 import { withTenant } from "@/lib/tenant/scope";
 
+import { absenteeismBy, incidenciasBy } from "./aggregates";
 import { attendanceDedupeKey } from "./index";
 
 /**
@@ -150,4 +151,75 @@ export const listTodayPage = async (
   const rows = await todayPageQuery(companyId, scope, options);
 
   return roster.page(rows, clampPageSize(options.limit, 100, MAX_TODAY_PAGE));
+};
+
+export type TodayCounts = {
+  /** Active people in the scope. */
+  roster: number;
+  /** With an attendance row for the day. */
+  present: number;
+  /** With a falta in force for the day. */
+  absent: number;
+  /** With a retardo in force for the day. */
+  late: number;
+  /** With a salida anticipada in force for the day. */
+  leftEarly: number;
+};
+
+/**
+ * The counts above the today view (Workia 2.0 W2-15, for W2-17): the same
+ * numbers every screen and the HR MCP tools read, from the P-02 aggregates
+ * (absenteeismBy and incidenciasBy over the scope's active people for one
+ * day), never from a counter. Two statements: the roster ids through the
+ * scope's people index, then one aggregate pass over their day.
+ */
+export const todayCounts = async (
+  companyId: string,
+  scope: TodayScope,
+  day: string,
+): Promise<TodayCounts> => {
+  const empty = { roster: 0, present: 0, absent: 0, late: 0, leftEarly: 0 };
+
+  if (!DAY.test(day)) {
+    throw new Error(`Invalid day: ${day}`);
+  }
+
+  if (!UUID.test(scopeId(scope))) {
+    return empty;
+  }
+
+  const ids = (
+    await tdb(companyId)
+      .select({ id: people.id })
+      .from(people)
+      .where(
+        withTenant(
+          people,
+          companyId,
+          scopeCondition(scope),
+          eq(people.status, "activa"),
+          isNull(people.deletedAt),
+        ),
+      )
+  ).map((row) => row.id);
+
+  if (ids.length === 0) {
+    return empty;
+  }
+
+  const range = { from: day, to: day };
+  const [absenteeism, incidencias] = await Promise.all([
+    absenteeismBy(companyId, range, { by: "month", personIds: ids }),
+    incidenciasBy(companyId, range, { by: "month", personIds: ids }),
+  ]);
+  const kind = (name: string) =>
+    incidencias.find((row) => row.kind === name)?.count ?? 0;
+
+  return {
+    roster: ids.length,
+    present: absenteeism[0]?.presentDays ?? 0,
+    absent: absenteeism[0]?.absentDays ?? 0,
+    late: kind("retardo"),
+    leftEarly: kind("salida_anticipada"),
+  };
 };

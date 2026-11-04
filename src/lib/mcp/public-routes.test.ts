@@ -43,19 +43,25 @@ const PUBLIC_EMPLOYEE_ROUTES = [
 ];
 
 /**
- * Scheduled jobs (W2-08): sessionless, answer only to the CRON_SECRET bearer
- * and 404 while it is unset.
+ * Device pushes (W2-12): no session; the Bearer token names one checador and
+ * its company.
  */
-const SCHEDULED_JOB_ROUTES = ["/api/cron/notifications"];
+const DEVICE_ROUTES = ["/api/asistencia/checadas"];
+
+/**
+ * Scheduled jobs (W2-08, W2-09): sessionless, answer only to the CRON_SECRET
+ * bearer and 404 while it is unset.
+ */
+const SCHEDULED_JOB_ROUTES = ["/api/cron/notifications", "/api/cron/retention"];
 
 /** A route is guarded when it goes through the company context or Auth.js. */
 const isSessionGuarded = (source: string) =>
-  /getEmployeeContext\(|require(CompanyContext|EmployeeContext|Auth|PeopleImport|PeopleExport|[A-Z]\w*(Read|Create|Update|Delete|Import|Export))\b|requireImportRoute|withImportRoute|auth\(\)/.test(
+  /getEmployeeContext\(|require(CompanyContext|EmployeeContext|Auth|PeopleImport|PeopleExport|[A-Z]\w*(Read|Create|Update|Delete|Import|Export|Manage))\b|requireImportRoute|withImportRoute|auth\(\)/.test(
     source,
   );
 
 describe("public routes", () => {
-  it("adds only /api/mcp, /api/oauth/* and /.well-known/* as routes without a session", () => {
+  it("adds only /api/mcp, /api/oauth/*, /.well-known/* and the scheduled jobs as routes without a session", () => {
     const unguarded = routes
       .filter(({ route }) => !route.startsWith("/api/auth"))
       .filter(({ source }) => !isSessionGuarded(source))
@@ -67,8 +73,27 @@ describe("public routes", () => {
         ...PUBLIC_MCP_ROUTES,
         ...PUBLIC_EMPLOYEE_ROUTES,
         ...SCHEDULED_JOB_ROUTES,
+        ...DEVICE_ROUTES,
       ].sort(),
     );
+  });
+
+  it("puts every scheduled job behind CRON_SECRET", () => {
+    for (const { route, source } of routes.filter((r) =>
+      SCHEDULED_JOB_ROUTES.includes(r.route),
+    )) {
+      expect(source, route).toMatch(/env\.CRON_SECRET/);
+      expect(source, route).toMatch(/timingSafeEqual/);
+    }
+  });
+
+  it("puts every device route behind a device token and a rate limit", () => {
+    for (const { route, source } of routes.filter((r) =>
+      DEVICE_ROUTES.includes(r.route),
+    )) {
+      expect(source, route).toMatch(/deviceForToken/);
+      expect(source, route).toMatch(/hitRateLimit/);
+    }
   });
 
   it("puts every public MCP route behind MCP_ENABLED", () => {

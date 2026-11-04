@@ -146,7 +146,11 @@ tuples and no derived fields keep a day with two punches near 160 bytes.
 `replacePeriodIncidencias(companyId, { period, personIds, incidencias })`
 makes the incidencias of an open pay period exactly the engine's output:
 unchanged rows stay, changed and gone ones are deleted and the new ones
-inserted. A closed period is frozen by P-02's snapshot.
+inserted. `period` is a quincena (`2026-11-Q1`, as in
+[aggregates](aggregates.md)) and every day must be inside it. A closed period
+is frozen by P-02's snapshot: the call throws `PayPeriodError`
+(`period_closed`) and writes nothing. It holds the period's `pay_periods` row
+`FOR SHARE` while it writes (W2-15), so a close waits for it.
 
 Neither takes a row lock: `SELECT … FOR UPDATE` needs the UPDATE privilege
 that `workia_app` does not have. A concurrent writer on the same rows leaves
@@ -164,6 +168,10 @@ the database owner, 500 source rows per transaction, and can run before,
 after or while the app writes. It prints, per kind, the facts in the source
 tables, the events inserted and the events stored, and exits with an error
 when an applied run's counts do not match. A second run inserts nothing.
+
+Writing the events from each flow, and the backfill, is W2-13. The numbers
+over these rows, and the snapshot a pay period freezes when it closes, are in
+[aggregates](aggregates.md) (P-02).
 
 ## Retention
 
@@ -216,6 +224,12 @@ tuples, W2-13), the same load measures a 268 MB table and the same 224 MB of
 indexes: 492 MB, and the one-person read p50 0.22 ms, p95 0.31 ms. Stored as
 objects with `first_in` and `last_out`, attendance would have cost about
 110 bytes more per row, roughly another 100 MB.
+
+After 0036 dropped the site index, P-01's load measured 206 MB of table and
+215 MB of indexes (421 MB), and the today view of one site of 100 people read
+in p50 1.21 ms, p95 2.07 ms, max 2.71 ms over 100 days, through
+`people_site_id_idx`, `person_events_dedupe_unique` and
+`person_events_person_time_idx`.
 
 The first measurement was 430 MB of the 1 GB of storage on the Neon Free plan for 500 people
 over five years, almost all of it attendance. The Neon measurement in region

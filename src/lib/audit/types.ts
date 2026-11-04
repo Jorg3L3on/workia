@@ -22,10 +22,21 @@ export const AUDIT_RESOURCE_TYPES = [
   "document_requirement",
   "person_document",
   "vacation_record",
+  "pay_period",
+  "incidencia_rules",
+  "incidencia_justification",
   "employee_account",
   "manager_grant",
   "manager_delegation",
   "time_off_request",
+  "privacy_notice",
+  "privacy_acceptance",
+  "arco_request",
+  "data_retention",
+  "attendance_device",
+  "attendance_import",
+  "attendance_badge",
+  "attendance_checkin",
 ] as const;
 
 export type AuditResourceType = (typeof AUDIT_RESOURCE_TYPES)[number];
@@ -55,6 +66,11 @@ export const AUDIT_ACTIONS = [
   "reingreso",
   "finiquito_actualizado",
   "terminado",
+  // Workia 2.0 P-02: cierre de periodo de pago.
+  "close",
+  "reopen",
+  // Workia 2.0 W2-14: HR decides on one incidencia.
+  "override",
   // Workia 2.0 W2-01: employee accounts.
   "invite",
   "activation_code",
@@ -91,6 +107,9 @@ export const auditActionLabels: Record<AuditAction, string> = {
   reingreso: "Reingreso",
   finiquito_actualizado: "Finiquito actualizado",
   terminado: "Contrato terminado",
+  close: "Cierre",
+  reopen: "Reapertura",
+  override: "Decisión sobre incidencia",
   invite: "Invitación",
   activation_code: "Código de activación",
   code_requested: "Código de acceso enviado",
@@ -123,10 +142,21 @@ export const auditResourceTypeLabels: Record<AuditResourceType, string> = {
   document_requirement: "Requisito de documento",
   person_document: "Documento de la persona",
   vacation_record: "Vacaciones tomadas",
+  pay_period: "Periodo de pago",
+  incidencia_rules: "Reglas de incidencias",
+  incidencia_justification: "Justificación de incidencias",
   employee_account: "Cuenta de empleado",
   manager_grant: "Rol de jefe",
   manager_delegation: "Suplencia de jefe",
   time_off_request: "Solicitud de vacaciones o permiso",
+  privacy_notice: "Aviso de privacidad",
+  privacy_acceptance: "Aceptación del aviso de privacidad",
+  arco_request: "Solicitud ARCO",
+  data_retention: "Conservación de datos",
+  attendance_device: "Checador",
+  attendance_import: "Carga de checadas",
+  attendance_badge: "Número de checador",
+  attendance_checkin: "Checado en la app",
 };
 
 export const AUDIT_SOURCES = [

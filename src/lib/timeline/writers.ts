@@ -3,6 +3,8 @@ import { eq, inArray, like } from "drizzle-orm";
 import { withTransaction, type DbExecutor, type DbTransaction } from "@/lib/db";
 import { CompanyReferenceError } from "@/lib/db/errors";
 import { people, personEvents } from "@/lib/db/schema";
+import { lockOpenPayPeriod } from "@/lib/pay-periods/lock";
+import { PayPeriodError, quincenaRange } from "@/lib/pay-periods/quincena";
 import { withTenant } from "@/lib/tenant/scope";
 
 import {
@@ -337,8 +339,13 @@ const sameJson = (a: unknown, b: unknown) => canonical(a) === canonical(b);
  * The engine's output for one open pay period and these people: their
  * incidencias of the period become exactly `incidencias`. Rows that did not
  * change stay; changed or gone ones are deleted and the new ones inserted,
- * in one transaction. A closed period is frozen by P-02's snapshot, so the
- * engine does not call this for it.
+ * in one transaction. `period` is a quincena ('YYYY-MM-Q1' or 'YYYY-MM-Q2',
+ * src/lib/pay-periods) and every day must fall inside it.
+ *
+ * A closed period is frozen by P-02's snapshot: this throws PayPeriodError
+ * ('period_closed') and writes nothing. The period row is held FOR SHARE for
+ * the whole transaction (lockOpenPayPeriod, W2-15), so a close of the same
+ * period waits for this write and snapshots its result.
  */
 export const replacePeriodIncidencias = async (
   companyId: string,
@@ -349,8 +356,15 @@ export const replacePeriodIncidencias = async (
   },
   executor?: DbTransaction,
 ): Promise<IncidenciasWriteResult> => {
-  if (!/^[0-9A-Za-z-]{1,32}$/.test(input.period)) {
-    throw new Error(`Invalid pay period: ${input.period}`);
+  const range = quincenaRange(input.period);
+
+  for (const item of input.incidencias) {
+    if (item.day < range.from || item.day > range.to) {
+      throw new PayPeriodError(
+        "outside_period",
+        `La incidencia del ${item.day} no es de la quincena ${input.period}.`,
+      );
+    }
   }
 
   const people = new Set(input.personIds);
@@ -371,6 +385,8 @@ export const replacePeriodIncidencias = async (
       unchanged: 0,
     };
     const ids = [...people];
+
+    await lockOpenPayPeriod(tx, companyId, input.period);
 
     for (let start = 0; start < ids.length; start += APPEND_BATCH_SIZE) {
       const batch = ids.slice(start, start + APPEND_BATCH_SIZE);
@@ -405,9 +421,26 @@ export const replacePeriodIncidencias = async (
         const key = `${event.personId}|${event.dedupeKey}`;
         const current = byKey.get(key);
 
-        if (current && sameJson(current.payload, event.payload)) {
-          keep.add(current.id);
-          result.unchanged += 1;
+        if (current) {
+          const { rev: storedRev, ...stored } = current.payload as {
+            rev?: unknown;
+          };
+
+          if (sameJson(stored, event.payload)) {
+            keep.add(current.id);
+            result.unchanged += 1;
+            continue;
+          }
+
+          // A correction (docs/aggregates.md): the full payload again, one
+          // revision higher than the row it replaces.
+          rows.push({
+            ...event,
+            payload: {
+              ...event.payload,
+              rev: (typeof storedRev === "number" ? storedRev : 0) + 1,
+            },
+          });
           continue;
         }
 
