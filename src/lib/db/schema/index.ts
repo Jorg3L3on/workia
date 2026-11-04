@@ -10,6 +10,7 @@ export * from "./employment";
 export * from "./imports";
 export * from "./mcp";
 export * from "./onboarding-intakes";
+export * from "./notifications";
 export * from "./onboardings";
 export * from "./people";
 export * from "./people-views";

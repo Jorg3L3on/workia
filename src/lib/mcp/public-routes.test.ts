@@ -42,8 +42,11 @@ const PUBLIC_EMPLOYEE_ROUTES = [
   "/mi/sw.js",
 ];
 
-/** Scheduled jobs (W2-09): no session, a Bearer CRON_SECRET instead. */
-const SCHEDULED_JOB_ROUTES = ["/api/cron/retention"];
+/**
+ * Scheduled jobs (W2-08, W2-09): sessionless, answer only to the CRON_SECRET
+ * bearer.
+ */
+const SCHEDULED_JOB_ROUTES = ["/api/cron/notifications", "/api/cron/retention"];
 
 /**
  * The local storage driver (development and tests only) serves files for an
@@ -53,7 +56,7 @@ const SIGNED_STORAGE_ROUTES = ["/api/storage/local/[...key]"];
 
 /** A route is guarded when it goes through the company context or Auth.js. */
 const isSessionGuarded = (source: string) =>
-  /require(CompanyContext|EmployeeContext|Auth|PeopleImport|PeopleExport|[A-Z]\w*(Read|Create|Update|Delete|Import|Export|Manage))\b|requireImportRoute|withImportRoute|getEmployeeContext\(\)|auth\(\)/.test(
+  /getEmployeeContext\(|require(CompanyContext|EmployeeContext|Auth|PeopleImport|PeopleExport|[A-Z]\w*(Read|Create|Update|Delete|Import|Export|Manage))\b|requireImportRoute|withImportRoute|auth\(\)/.test(
     source,
   );
 
@@ -98,6 +101,14 @@ describe("public routes", () => {
       PUBLIC_MCP_ROUTES.includes(r.route),
     )) {
       expect(source, route).toMatch(/whenEnabled|isMcpEnabled/);
+    }
+  });
+
+  it("puts every scheduled job route behind CRON_SECRET", () => {
+    for (const { route, source } of routes.filter((r) =>
+      SCHEDULED_JOB_ROUTES.includes(r.route),
+    )) {
+      expect(source, route).toMatch(/env\.CRON_SECRET/);
     }
   });
 });

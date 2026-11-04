@@ -173,6 +173,10 @@ export const resolveBreadcrumbs = (
     ];
   }
 
+  if (path === "/app/avisos") {
+    return [{ label: "Avisos" }];
+  }
+
   if (path === "/app/auditoria") {
     return [{ label: "Auditoría" }];
   }

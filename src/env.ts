@@ -41,6 +41,13 @@ export const env = createEnv({
     EMAIL_SMTP_URL: z.string().url().optional(),
     EMAIL_FROM: z.string().min(3).optional(),
     EMAIL_OUTBOX_DIR: z.string().optional(),
+    // Web push (W2-08). VAPID keys are free: generate them once with
+    // `npm run push:vapid-keys`. Without them, push is off and notifications
+    // still go by email and to the in-app inbox.
+    VAPID_PUBLIC_KEY: z.string().min(20).optional(),
+    VAPID_PRIVATE_KEY: z.string().min(20).optional(),
+    // Contact the push services may use, e.g. mailto:soporte@example.com.
+    VAPID_SUBJECT: z.string().min(5).optional(),
     // Public base URL for links in emails and the Google redirect (falls back to the request origin).
     APP_PUBLIC_URL: z.string().url().optional(),
     // Bearer secret of the scheduled jobs (/api/cron/*). Unset turns them off.
@@ -84,6 +91,9 @@ export const env = createEnv({
     S3_BUCKET: process.env.S3_BUCKET,
     S3_ACCESS_KEY_ID: process.env.S3_ACCESS_KEY_ID,
     S3_SECRET_ACCESS_KEY: process.env.S3_SECRET_ACCESS_KEY,
+    VAPID_PUBLIC_KEY: process.env.VAPID_PUBLIC_KEY,
+    VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY,
+    VAPID_SUBJECT: process.env.VAPID_SUBJECT,
     NODE_ENV: process.env.NODE_ENV,
   },
   emptyStringAsUndefined: true,
