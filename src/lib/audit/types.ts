@@ -27,6 +27,10 @@ export const AUDIT_RESOURCE_TYPES = [
   "privacy_acceptance",
   "arco_request",
   "data_retention",
+  "attendance_device",
+  "attendance_import",
+  "attendance_badge",
+  "attendance_checkin",
 ] as const;
 
 export type AuditResourceType = (typeof AUDIT_RESOURCE_TYPES)[number];
@@ -126,6 +130,10 @@ export const auditResourceTypeLabels: Record<AuditResourceType, string> = {
   privacy_acceptance: "Aceptación del aviso de privacidad",
   arco_request: "Solicitud ARCO",
   data_retention: "Conservación de datos",
+  attendance_device: "Checador",
+  attendance_import: "Carga de checadas",
+  attendance_badge: "Número de checador",
+  attendance_checkin: "Checado en la app",
 };
 
 export const AUDIT_SOURCES = [

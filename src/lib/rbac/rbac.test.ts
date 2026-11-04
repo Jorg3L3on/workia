@@ -141,3 +141,21 @@ describe("reports permission", () => {
     }
   });
 });
+
+describe("attendance permissions", () => {
+  it("grants read and manage to super_admin and admin only", async () => {
+    const { PERMISSIONS, ROLES } = await import("@/lib/db/schema/types");
+
+    expect(PERMISSIONS.map((permission) => permission.slug)).toEqual(
+      expect.arrayContaining(["attendance:read", "attendance:manage"]),
+    );
+
+    for (const role of ROLES) {
+      const permissions: readonly string[] = role.permissions;
+      const admin = ["super_admin", "admin"].includes(role.slug);
+
+      expect(permissions.includes("attendance:read")).toBe(admin);
+      expect(permissions.includes("attendance:manage")).toBe(admin);
+    }
+  });
+});

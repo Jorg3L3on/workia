@@ -69,8 +69,7 @@ export class TimelineConflictError extends Error {
   }
 }
 
-const punchKey = (punch: Punch) =>
-  `${punch.at}|${punch.kind}|${punch.device_id ?? ""}`;
+const punchKey = (punch: Punch) => `${punch.at}|${punch.device_id ?? ""}`;
 
 /** An instant to the second, in UTC, without milliseconds. */
 const toSecond = (value: string) => {

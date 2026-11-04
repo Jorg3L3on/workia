@@ -56,6 +56,7 @@ const renderShell = (
     canReadReports?: boolean;
     canReadDocuments?: boolean;
     canReadPrivacy?: boolean;
+    canReadAttendance?: boolean;
     isPlatformAdmin?: boolean;
   } = {},
 ) =>
@@ -208,6 +209,7 @@ describe("AppShell", () => {
       canReadReports: true,
       canReadDocuments: true,
       canReadPrivacy: true,
+      canReadAttendance: true,
     });
 
     const sidebar = within(

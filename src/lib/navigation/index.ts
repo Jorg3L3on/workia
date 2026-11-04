@@ -1,5 +1,6 @@
 import {
   ChartLineIcon,
+  ClockIcon,
   FilesIcon,
   FileTextIcon,
   FolderTreeIcon,
@@ -32,6 +33,7 @@ export type NavAccess = {
   canReadDocuments: boolean;
   /** privacy:read in the active company: shows Privacidad. */
   canReadPrivacy: boolean;
+  canReadAttendance: boolean;
 };
 
 export type NavLink = {
@@ -83,6 +85,13 @@ export const NAV_GROUPS: readonly NavGroup[] = [
         icon: FilesIcon,
         keywords: ["por vencer", "vencidos", "vigencia"],
         requires: "canReadDocuments",
+      },
+      {
+        title: "Asistencia",
+        href: "/app/asistencia",
+        icon: ClockIcon,
+        keywords: ["checador", "checadas", "reloj", "qr", "entrada", "salida"],
+        requires: "canReadAttendance",
       },
       {
         title: "Altas",
