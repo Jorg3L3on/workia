@@ -59,7 +59,7 @@ describe("timeline events", () => {
       receiptEvent({
         personId: "p1",
         cfdiUuid: "ABC",
-        period: "2026-11-1",
+        period: "2026-11-Q1",
         deliveredAt: new Date("2026-11-15T12:00:00Z"),
         source: "payroll",
       }).dedupeKey,
@@ -69,12 +69,12 @@ describe("timeline events", () => {
         personId: "p1",
         day: "2026-11-03",
         kind: "retardo",
-        period: "2026-11-1",
+        period: "2026-11-Q1",
         minutes: 7,
         source: "engine",
       }),
     ).toMatchObject({
-      dedupeKey: "incidencia:2026-11-1:2026-11-03:retardo",
+      dedupeKey: "incidencia:2026-11-Q1:2026-11-03:retardo",
       payload: { minutes: 7, justified: false },
     });
   });

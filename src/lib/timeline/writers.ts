@@ -311,6 +311,9 @@ export const writeAttendanceDays = async (
   return executor ? run(executor) : withTransaction(run, companyId);
 };
 
+/** A pay period: the first or second quincena of a month. */
+const QUINCENA = /^\d{4}-(0[1-9]|1[0-2])-Q[12]$/;
+
 export type IncidenciasWriteResult = {
   inserted: number;
   deleted: number;
@@ -349,7 +352,7 @@ export const replacePeriodIncidencias = async (
   },
   executor?: DbTransaction,
 ): Promise<IncidenciasWriteResult> => {
-  if (!/^[0-9A-Za-z-]{1,32}$/.test(input.period)) {
+  if (!QUINCENA.test(input.period)) {
     throw new Error(`Invalid pay period: ${input.period}`);
   }
 
