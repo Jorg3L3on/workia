@@ -79,6 +79,21 @@ export const resolveBreadcrumbs = (
     return [{ label: "Documentos" }];
   }
 
+  if (path === "/app/asistencia") {
+    return [{ label: "Asistencia" }];
+  }
+
+  if (path.startsWith("/app/asistencia/qr/")) {
+    return [
+      { label: "Asistencia", href: "/app/asistencia?vista=app" },
+      { label: "Código para checar" },
+    ];
+  }
+
+  if (path === "/app/privacidad") {
+    return [{ label: "Privacidad" }];
+  }
+
   if (path === "/app/contratos/plantillas") {
     return [
       { label: "Contratos", href: "/app/contratos" },

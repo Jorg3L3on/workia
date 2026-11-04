@@ -594,6 +594,12 @@ describe("attendance and incidencias", () => {
         day([{ at: "2026-11-03T14:02:00Z", kind: "in" }]),
       ]),
     ).toEqual({ inserted: 0, merged: 0, unchanged: 1 });
+    // A re-upload that infers another kind for the same instant adds nothing.
+    expect(
+      await writeAttendanceDays(a.companyId, [
+        day([{ at: "2026-11-03T14:02:00Z", kind: "out" }]),
+      ]),
+    ).toEqual({ inserted: 0, merged: 0, unchanged: 1 });
     // The exit arrives later, twice in one call.
     expect(
       await writeAttendanceDays(a.companyId, [
@@ -675,12 +681,15 @@ describe("attendance and incidencias", () => {
           ],
           tx,
         );
-        const mocked = vi.spyOn(tx, "select").mockImplementationOnce(
-          () =>
-            ({
-              from: () => ({ where: async () => [] }),
-            }) as never,
-        );
+        // The second select is the read of stored days: make it miss.
+        const select = tx.select.bind(tx);
+        let calls = 0;
+        const mocked = vi
+          .spyOn(tx, "select")
+          .mockImplementation(((...args: Parameters<typeof tx.select>) =>
+            ++calls === 2
+              ? ({ from: () => ({ where: async () => [] }) } as never)
+              : select(...args)) as typeof tx.select);
         try {
           await writeAttendanceDays(
             a.companyId,

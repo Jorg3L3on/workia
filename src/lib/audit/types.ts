@@ -23,6 +23,15 @@ export const AUDIT_RESOURCE_TYPES = [
   "person_document",
   "vacation_record",
   "pay_period",
+  "employee_account",
+  "privacy_notice",
+  "privacy_acceptance",
+  "arco_request",
+  "data_retention",
+  "attendance_device",
+  "attendance_import",
+  "attendance_badge",
+  "attendance_checkin",
 ] as const;
 
 export type AuditResourceType = (typeof AUDIT_RESOURCE_TYPES)[number];
@@ -55,6 +64,12 @@ export const AUDIT_ACTIONS = [
   // Workia 2.0 P-02: cierre de periodo de pago.
   "close",
   "reopen",
+  // Workia 2.0 W2-01: employee accounts.
+  "invite",
+  "activation_code",
+  "code_requested",
+  "login",
+  "logout",
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
@@ -85,6 +100,11 @@ export const auditActionLabels: Record<AuditAction, string> = {
   terminado: "Contrato terminado",
   close: "Cierre",
   reopen: "Reapertura",
+  invite: "Invitación",
+  activation_code: "Código de activación",
+  code_requested: "Código de acceso enviado",
+  login: "Inicio de sesión",
+  logout: "Cierre de sesión",
 };
 
 export const auditResourceTypeLabels: Record<AuditResourceType, string> = {
@@ -112,6 +132,15 @@ export const auditResourceTypeLabels: Record<AuditResourceType, string> = {
   person_document: "Documento de la persona",
   vacation_record: "Vacaciones tomadas",
   pay_period: "Periodo de pago",
+  employee_account: "Cuenta de empleado",
+  privacy_notice: "Aviso de privacidad",
+  privacy_acceptance: "Aceptación del aviso de privacidad",
+  arco_request: "Solicitud ARCO",
+  data_retention: "Conservación de datos",
+  attendance_device: "Checador",
+  attendance_import: "Carga de checadas",
+  attendance_badge: "Número de checador",
+  attendance_checkin: "Checado en la app",
 };
 
 export const AUDIT_SOURCES = [
@@ -120,6 +149,7 @@ export const AUDIT_SOURCES = [
   "mcp",
   "seed",
   "system",
+  "employee",
 ] as const;
 
 export const auditSourceLabels: Record<(typeof AUDIT_SOURCES)[number], string> =
@@ -129,6 +159,7 @@ export const auditSourceLabels: Record<(typeof AUDIT_SOURCES)[number], string> =
     mcp: "Asistente (MCP)",
     seed: "Datos iniciales",
     system: "Sistema",
+    employee: "Portal del empleado",
   };
 
 /**
@@ -194,12 +225,14 @@ export type RecordAuditEventInput = {
   /** Company the event belongs to; platform events use the company they affect. */
   companyId: string;
   actorUserId?: string | null;
+  /** An employee acting on their own account or record (W2-01). */
+  actorEmployeeAccountId?: string | null;
   resourceType: AuditResourceType;
   resourceId: string;
   action: AuditAction;
   result?: "success" | "failure";
   /** Where the write came from; MCP tools record "mcp". */
-  source?: "app" | "seed" | "system" | "import" | "mcp";
+  source?: "app" | "seed" | "system" | "import" | "mcp" | "employee";
   payload?: AuditPayload;
   requestMeta?: AuditRequestMeta;
 };
