@@ -84,7 +84,7 @@ import { terminatePerson } from "@/lib/people/employment";
 import type { PersonFormValues } from "@/lib/people/schema";
 import { listTerminationReasons } from "@/lib/termination-reasons";
 import { STALE_COMPANY_MESSAGE } from "@/lib/tenant/scope";
-import { uniqueCurp } from "@/test/curp";
+import { randomCurp } from "@/test/curp";
 
 import { ownerDb, seedTenant, type Tenant } from "./fixtures";
 import { actAs, NavigationThrow } from "./session-state";
@@ -96,7 +96,11 @@ const curps = {} as Record<
   string
 >;
 const origin = { origin: "https://workia.test" };
-const emailA = () => `ana.${a.label.toLowerCase()}@empleo.test`;
+// Emails are unique across companies, and other files create accounts too:
+// every address of this file carries a token of this run.
+const run = Math.random().toString(36).slice(2, 10);
+const mail = (local: string) => `${local}.${run}@empleo.test`;
+const emailA = () => mail(`ana.${a.label.toLowerCase()}`);
 
 const formData = (values: Record<string, string>) => {
   const data = new FormData();
@@ -146,7 +150,7 @@ const personForm = (
   managerId: "",
   siteId: "",
   rfc: "",
-  curp: uniqueCurp(),
+  curp: randomCurp(),
   nss: "",
   horarioEntrada: "",
   horarioSalidaComer: "",
@@ -181,7 +185,7 @@ beforeAll(async () => {
     ["bPerson", b.person.id],
     ["bTeammate", b.teammate.id],
   ] as const) {
-    curps[key] = uniqueCurp();
+    curps[key] = randomCurp();
     await ownerDb
       .update(people)
       .set({ curp: curps[key] })
@@ -356,7 +360,7 @@ describe("HR manages employee accounts inside its company", () => {
       await inviteEmployee(
         b.companyId,
         b.teammate.id,
-        "otra@empleo.test",
+        mail("otra"),
         b.admin.id,
         origin,
       ),
@@ -376,7 +380,7 @@ describe("HR manages employee accounts inside its company", () => {
     expect(await accountsOf(a.companyId)).toEqual(before);
 
     // HR disables B's invitation: the email is free again for another person.
-    const email = "libre@empleo.test";
+    const email = mail("libre");
     await inviteEmployee(b.companyId, b.person.id, email, b.admin.id, origin);
     expect(
       await disableEmployeeAccount(b.companyId, b.person.id, b.admin.id),
@@ -412,7 +416,7 @@ describe("HR manages employee accounts inside its company", () => {
         formData({
           companyId: b.companyId,
           personId: a.teammate.id,
-          email: "x@empleo.test",
+          email: mail("x"),
         }),
       ),
     ).toEqual({ error: EMPLOYEE_ACCOUNT_COPY.personNotFound });
@@ -422,7 +426,7 @@ describe("HR manages employee accounts inside its company", () => {
         formData({
           companyId: a.companyId,
           personId: a.teammate.id,
-          email: "x@empleo.test",
+          email: mail("x"),
         }),
       ),
     ).toEqual({ error: STALE_COMPANY_MESSAGE });
@@ -437,7 +441,7 @@ describe("HR manages employee accounts inside its company", () => {
         formData({
           companyId: a.companyId,
           personId: a.teammate.id,
-          email: "x@empleo.test",
+          email: mail("x"),
         }),
       ),
     ).toEqual({ error: EMPLOYEE_ACCOUNT_COPY.denied });
@@ -507,11 +511,8 @@ describe("employee sign-in", () => {
 
     // An unknown email gets the same answer and no email.
     expect(
-      await requestLoginCodeAction(
-        {},
-        formData({ email: "nadie@empleo.test" }),
-      ),
-    ).toEqual({ codeSent: true, email: "nadie@empleo.test" });
+      await requestLoginCodeAction({}, formData({ email: mail("nadie") })),
+    ).toEqual({ codeSent: true, email: mail("nadie") });
     expect(jar.sent.length).toBe(sentBefore);
 
     expect(
@@ -608,14 +609,14 @@ describe("employee sign-in", () => {
 
     for (let request = 0; request < 10; request += 1) {
       await requestLoginCode({
-        email: `x${request}@empleo.test`,
+        email: mail(`x${request}`),
         ip: jar.ip,
         ...origin,
       });
     }
 
     expect(
-      await requestLoginCode({ email: "y@empleo.test", ip: jar.ip, ...origin }),
+      await requestLoginCode({ email: mail("y"), ip: jar.ip, ...origin }),
     ).toMatchObject({ ok: false });
   });
 
@@ -816,7 +817,7 @@ describe("revocation", () => {
       personForm({ nombres: "Baja" }),
       a.admin.id,
     );
-    const email = `baja.${a.label.toLowerCase()}@empleo.test`;
+    const email = mail(`baja.${a.label.toLowerCase()}`);
     await inviteEmployee(a.companyId, person.id, email, a.admin.id, origin);
     const token = await signInByEmail(email);
     expect(await resolveEmployeeSession(token)).toMatchObject({
