@@ -29,6 +29,8 @@ export const pageTitles = {
   expediente: "Expediente",
   contratos: "Contratos",
   documentos: "Documentos por vencer",
+  privacidad: "Privacidad",
+  asistencia: "Asistencia",
   plantillas: "Plantillas",
   nuevaPlantilla: "Nueva plantilla",
   plantilla: "Plantilla",
@@ -53,6 +55,8 @@ export const pageTitles = {
   miembros: "Miembros",
   conexiones: "Conexiones",
   rotacion: "Rotación",
+  periodos: "Periodos de pago",
+  periodo: "Quincena",
 } as const;
 
 export const companyCopy = {

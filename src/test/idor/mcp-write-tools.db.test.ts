@@ -27,6 +27,7 @@ import { setMcpWritesEnabled } from "@/lib/mcp/settings";
 import { generateToken } from "@/lib/mcp/tokens";
 
 import { ownerDb, seedTenant, snapshotTenant, type Tenant } from "./fixtures";
+import { uniqueCurp } from "@/test/curp";
 
 const ORIGIN = "http://localhost:3000";
 const ALL_WRITES: McpScope[] = [
@@ -676,9 +677,20 @@ describe("people", () => {
     });
     expect(code(invalid.done)).toBe("VALIDATION");
 
+    // Identity model (P-00): an active person always has a valid CURP.
+    const noCurp = await confirm(tokens.a, "create_person", {
+      nombres: "Nueva",
+      apellido_paterno: "Persona",
+    });
+    expect(code(noCurp.done)).toBe("VALIDATION");
+    expect(JSON.stringify(noCurp.done.structuredContent.error)).toMatch(
+      /"path":"curp".*CURP es obligatoria/,
+    );
+
     const { done } = await confirm(tokens.a, "create_person", {
       nombres: "Nueva",
       apellido_paterno: "Persona",
+      curp: uniqueCurp(),
       fecha_ingreso: "2026-10-12",
       site_id: a.site.id,
     });
@@ -694,7 +706,12 @@ describe("people", () => {
     await expectRefusedWithoutEffect(
       tokens.b,
       "create_person",
-      { nombres: "Cruzada", apellido_paterno: "B", site_id: a.site.id },
+      {
+        nombres: "Cruzada",
+        apellido_paterno: "B",
+        curp: uniqueCurp(),
+        site_id: a.site.id,
+      },
       "CONFLICT",
     );
   });
@@ -771,6 +788,7 @@ describe("people", () => {
           companyId: a.companyId,
           nombres,
           apellidoPaterno: "Estatus",
+          curp: uniqueCurp(),
           fechaIngreso: "2022-01-10",
         })
         .returning()
@@ -1146,6 +1164,7 @@ describe("expediente México writes (WRK-I1-9)", () => {
     const { done } = await confirm(tokens.a, "create_person", {
       nombres: "Con",
       apellido_paterno: "Domicilio",
+      curp: uniqueCurp(),
       domicilio_calle: "Av. Siempre Viva",
       domicilio_codigo_postal: "29010",
       domicilio_estado: "Chiapas",

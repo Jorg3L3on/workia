@@ -19,7 +19,7 @@ import {
   rehireSchema,
   terminationSchema,
 } from "./employment-schema";
-import { DuplicateIdentityError } from "./identity";
+import { DuplicateIdentityError, MissingCurpError } from "./identity";
 import {
   createPerson,
   getPersonById,
@@ -149,10 +149,18 @@ const mexicoValuesFromForm = (formData: FormData) => {
   return values;
 };
 
+/**
+ * `status` is the one the save will keep (the form never posts it): an edit
+ * of someone de baja does not need the CURP an active person does.
+ */
 const parsePersonForm = (
   formData: FormData,
+  status?: PersonStatusValue,
 ): PersonActionState | PersonFormValues => {
-  const parsed = personFormSchema.safeParse(formDataToValues(formData));
+  const values = formDataToValues(formData);
+  const parsed = personFormSchema.safeParse(
+    status ? { ...values, status } : values,
+  );
 
   if (!parsed.success) {
     const fieldErrors: PersonActionState["fieldErrors"] = {};
@@ -249,6 +257,10 @@ export const createPersonAction = async (
       return referenceState(error);
     }
 
+    if (error instanceof MissingCurpError) {
+      return { fieldErrors: { curp: error.message } };
+    }
+
     throw error;
   }
 
@@ -287,7 +299,7 @@ export const updatePersonAction = async (
     return { error: "No encontramos a esta persona." };
   }
 
-  const parsed = parsePersonForm(formData);
+  const parsed = parsePersonForm(formData, existing.status);
 
   if (isPersonActionState(parsed)) {
     return parsed;
@@ -308,6 +320,10 @@ export const updatePersonAction = async (
 
     if (error instanceof CompanyReferenceError) {
       return referenceState(error);
+    }
+
+    if (error instanceof MissingCurpError) {
+      return { fieldErrors: { curp: error.message } };
     }
 
     if (error instanceof EmploymentError && error.field === "fechaIngreso") {

@@ -8,7 +8,7 @@ import { and, count, desc, eq, gte, lte, or, sql } from "drizzle-orm";
 
 import { tdb, type DbExecutor } from "@/lib/db";
 import { escapeLike } from "@/lib/db/like";
-import { auditEvents, users } from "@/lib/db/schema";
+import { auditEvents, employeeAccounts, people, users } from "@/lib/db/schema";
 
 import { currentAuditContext, noteAuditEvent } from "./context";
 import { AUDIT_COMPENSATION_FIELDS, type AuditPayload } from "./types";
@@ -29,6 +29,7 @@ export const recordAuditEvent = async (
     .values({
       companyId: input.companyId,
       actorUserId: input.actorUserId ?? null,
+      actorEmployeeAccountId: input.actorEmployeeAccountId ?? null,
       resourceType: input.resourceType,
       resourceId: input.resourceId,
       action: input.action,
@@ -110,7 +111,10 @@ export const listAuditEvents = async (options: ListAuditEventsOptions) => {
     .select({
       id: auditEvents.id,
       actorUserId: auditEvents.actorUserId,
-      actorName: users.name,
+      // An employee acting on their own account (W2-01) reads as their name.
+      actorName: sql<
+        string | null
+      >`coalesce(${users.name}, (select ${people.nombres} || ' ' || ${people.apellidoPaterno} from ${employeeAccounts} join ${people} on ${people.companyId} = ${employeeAccounts.companyId} and ${people.id} = ${employeeAccounts.personId} where ${employeeAccounts.id} = ${auditEvents.actorEmployeeAccountId}))`,
       actorEmail: users.email,
       resourceType: auditEvents.resourceType,
       resourceId: auditEvents.resourceId,

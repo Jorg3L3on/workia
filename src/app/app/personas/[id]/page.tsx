@@ -4,6 +4,8 @@ import { Suspense } from "react";
 import { FileSignatureIcon, PencilIcon } from "lucide-react";
 
 import { pageTitles } from "@/lib/brand/chrome-copy";
+import { getEmployeeAccount } from "@/lib/employee-accounts";
+import { getManagerAdmin } from "@/lib/managers";
 
 import { PersonContractsSection } from "@/components/contracts/person-contracts-section";
 import { PersonDocumentsCard } from "@/components/documents/person-documents-card";
@@ -37,6 +39,8 @@ import { PersonHistory } from "@/components/people/person-history";
 import { PersonRehireButton } from "@/components/people/person-rehire-button";
 import { PersonSectionNav } from "@/components/people/person-section-nav";
 import { PersonVacationCard } from "@/components/people/person-vacation-card";
+import { PersonAccountControls } from "@/components/employee-accounts/person-account-card";
+import { PersonManagerControls } from "@/components/manager/person-manager-controls";
 import { SectionSkeleton } from "@/components/loading/page-skeletons";
 import { PageBreadcrumbLabel } from "@/components/layout/app-breadcrumbs";
 import { Badge } from "@/components/ui/badge";
@@ -170,6 +174,7 @@ const PersonaDetailPage = async ({
     canUpdateVacations,
     canReadDocuments,
     canManageDocuments,
+    canManageAccounts,
     positionActivities,
     beneficiaries,
     periods,
@@ -188,6 +193,7 @@ const PersonaDetailPage = async ({
     userHasPermission(session.user.id, "vacations:update"),
     userHasPermission(session.user.id, "documents:read"),
     userHasPermission(session.user.id, "documents:manage"),
+    userHasPermission(session.user.id, "employee_accounts:manage"),
     listActivitiesForPersonPosition(session.companyId, id),
     listPersonBeneficiaries(session.companyId, id),
     listEmploymentPeriods(session.companyId, id),
@@ -198,6 +204,12 @@ const PersonaDetailPage = async ({
   }
 
   const isDeleted = personIsDeleted(person);
+  const [employeeAccount, managerAdmin] = canManageAccounts
+    ? await Promise.all([
+        getEmployeeAccount(session.companyId, id),
+        getManagerAdmin(session.companyId, id),
+      ])
+    : [null, null];
   const isEditing = edit === "1" && canUpdate && !isDeleted;
   const personName = formatPersonName(person);
 
@@ -436,6 +448,7 @@ const PersonaDetailPage = async ({
     "laboral",
     "vacaciones",
     "contacto",
+    ...(canManageAccounts ? (["cuenta"] as const) : []),
     ...(canReadDocuments || canManageDocuments
       ? (["documentos"] as const)
       : []),
@@ -737,6 +750,52 @@ const PersonaDetailPage = async ({
                 personId={person.id}
               />
             </DetailCard>
+
+            {canManageAccounts ? (
+              <DetailCard id="cuenta">
+                <PersonAccountControls
+                  account={
+                    employeeAccount
+                      ? {
+                          status: employeeAccount.status,
+                          email: employeeAccount.email,
+                          emailVerified: Boolean(
+                            employeeAccount.emailVerifiedAt,
+                          ),
+                          hasPassword: employeeAccount.hasPassword,
+                          activatedAt:
+                            employeeAccount.activatedAt?.toISOString() ?? null,
+                          lastLoginAt:
+                            employeeAccount.lastLoginAt?.toISOString() ?? null,
+                          disabledAt:
+                            employeeAccount.disabledAt?.toISOString() ?? null,
+                          disabledReason: employeeAccount.disabledReason,
+                          activationCodeExpiresAt:
+                            employeeAccount.activationCodeExpiresAt?.toISOString() ??
+                            null,
+                        }
+                      : null
+                  }
+                  canManage={!isDeleted && person.status === "activa"}
+                  personEmail={person.email}
+                  personId={person.id}
+                />
+                {managerAdmin && !isDeleted && person.status === "activa" ? (
+                  <PersonManagerControls
+                    personId={person.id}
+                    view={{
+                      grant: managerAdmin.grant
+                        ? {
+                            includeIndirect: managerAdmin.grant.includeIndirect,
+                          }
+                        : null,
+                      directReports: managerAdmin.directReports,
+                      delegations: managerAdmin.delegations,
+                    }}
+                  />
+                ) : null}
+              </DetailCard>
+            ) : null}
           </div>
           <div className="flex min-w-0 flex-col gap-4">
             {canReadDocuments || canManageDocuments ? (

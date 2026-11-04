@@ -57,6 +57,9 @@ const PHASE_3_READ_TOOLS = [
   "list_termination_reasons",
   // WRK-I15-4: the 30-day documents tray.
   "list_expiring_documents",
+  // Workia 2.0 W2-15: aggregates and the quincena close.
+  "get_incidencias_summary",
+  "get_pay_period",
 ];
 const PHASE_3_WRITE_TOOLS = [
   "update_person_schedule_blocks",

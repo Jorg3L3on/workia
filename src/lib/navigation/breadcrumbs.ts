@@ -60,12 +60,38 @@ export const resolveBreadcrumbs = (
     return [{ label: "Reportes" }, { label: "Rotación" }];
   }
 
+  if (path === "/app/periodos") {
+    return [{ label: "Periodos de pago" }];
+  }
+
+  if (path.startsWith("/app/periodos/")) {
+    return [
+      { label: "Periodos de pago", href: "/app/periodos" },
+      { label: labels.current ?? "Quincena" },
+    ];
+  }
+
   if (path === "/app/contratos") {
     return [{ label: "Contratos" }];
   }
 
   if (path === "/app/documentos") {
     return [{ label: "Documentos" }];
+  }
+
+  if (path === "/app/asistencia") {
+    return [{ label: "Asistencia" }];
+  }
+
+  if (path.startsWith("/app/asistencia/qr/")) {
+    return [
+      { label: "Asistencia", href: "/app/asistencia?vista=app" },
+      { label: "Código para checar" },
+    ];
+  }
+
+  if (path === "/app/privacidad") {
+    return [{ label: "Privacidad" }];
   }
 
   if (path === "/app/contratos/plantillas") {

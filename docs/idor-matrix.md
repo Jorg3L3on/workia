@@ -22,6 +22,18 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 
 | Superficie                                                 | Estado | Prueba                                                                                                 | Permiso                     |
 | ---------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------ | --------------------------- |
+| `action:attendance/assignBadgeAction`                      | ✅     | `src/test/idor/attendance.db.test.ts`                                                                  | `attendance:manage`         |
+| `action:attendance/checkInAction`                          | ✅     | `src/test/idor/attendance.db.test.ts`                                                                  | —                           |
+| `action:attendance/dismissUnmatchedAction`                 | ✅     | `src/test/idor/attendance.db.test.ts`                                                                  | `attendance:manage`         |
+| `action:attendance/importChecadorCsvAction`                | ✅     | `src/test/idor/attendance.db.test.ts`                                                                  | `attendance:manage`         |
+| `action:attendance/issueDeviceTokenAction`                 | ✅     | `src/test/idor/attendance.db.test.ts`                                                                  | `attendance:manage`         |
+| `action:attendance/kioskCodeAction`                        | ✅     | `src/test/idor/attendance.db.test.ts`                                                                  | `attendance:manage`         |
+| `action:attendance/removeBadgeAction`                      | ✅     | `src/test/idor/attendance.db.test.ts`                                                                  | `attendance:manage`         |
+| `action:attendance/rotateCheckinSecretAction`              | ✅     | `src/test/idor/attendance.db.test.ts`                                                                  | `attendance:manage`         |
+| `action:attendance/saveAttendanceDeviceAction`             | ✅     | `src/test/idor/attendance.db.test.ts`                                                                  | `attendance:manage`         |
+| `action:attendance/saveCheckinSiteAction`                  | ✅     | `src/test/idor/attendance.db.test.ts`                                                                  | `attendance:manage`         |
+| `action:attendance/searchAttendancePeopleAction`           | ✅     | `src/test/idor/attendance.db.test.ts`                                                                  | `attendance:manage`         |
+| `action:attendance/setAttendanceDeviceActiveAction`        | ✅     | `src/test/idor/attendance.db.test.ts`                                                                  | `attendance:manage`         |
 | `action:catalog/assignActivityToPositionAction`            | ✅     | `src/test/idor/catalog.db.test.ts`                                                                     | `positions:update`          |
 | `action:catalog/createActivityAction`                      | ✅     | `src/test/idor/catalog.db.test.ts`                                                                     | `positions:create`          |
 | `action:catalog/createAreaAction`                          | ✅     | `src/test/idor/catalog.db.test.ts`                                                                     | `areas:create`              |
@@ -43,6 +55,19 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `action:contracts/updateContractTemplateAction`            | ✅     | `src/test/idor/contracts.db.test.ts`                                                                   | `contract_templates:update` |
 | `action:documents/recordDeliveryAction`                    | ✅     | `src/test/idor/documents.db.test.ts`                                                                   | `documents:manage`          |
 | `action:documents/setRequirementsAction`                   | ✅     | `src/test/idor/documents.db.test.ts`                                                                   | `documents:manage`          |
+| `action:employee-accounts/disableEmployeeAccountAction`    | ✅     | `src/test/idor/employee-accounts.db.test.ts`                                                           | `employee_accounts:manage`  |
+| `action:employee-accounts/inviteEmployeeAction`            | ✅     | `src/test/idor/employee-accounts.db.test.ts`                                                           | `employee_accounts:manage`  |
+| `action:employee-accounts/issueActivationCodeAction`       | ✅     | `src/test/idor/employee-accounts.db.test.ts`                                                           | `employee_accounts:manage`  |
+| `action:employee/activateAccountAction`                    | ✅     | `src/test/idor/employee-accounts.db.test.ts`                                                           | —                           |
+| `action:employee/passwordSignInAction`                     | ✅     | `src/test/idor/employee-accounts.db.test.ts`                                                           | —                           |
+| `action:employee/requestLoginCodeAction`                   | ✅     | `src/test/idor/employee-accounts.db.test.ts`                                                           | —                           |
+| `action:employee/signOutEmployeeAction`                    | ✅     | `src/test/idor/employee-accounts.db.test.ts`                                                           | —                           |
+| `action:employee/verifyLoginCodeAction`                    | ✅     | `src/test/idor/employee-accounts.db.test.ts`                                                           | —                           |
+| `action:employee/cancelDelegationAction`                   | ✅     | `src/test/idor/managers.db.test.ts`                                                                    | —                           |
+| `action:employee/createDelegationAction`                   | ✅     | `src/test/idor/managers.db.test.ts`                                                                    | —                           |
+| `action:managers/cancelDelegationByHrAction`               | ✅     | `src/test/idor/managers.db.test.ts`                                                                    | `employee_accounts:manage`  |
+| `action:managers/revokeManagerGrantAction`                 | ✅     | `src/test/idor/managers.db.test.ts`                                                                    | `employee_accounts:manage`  |
+| `action:managers/setManagerGrantAction`                    | ✅     | `src/test/idor/managers.db.test.ts`                                                                    | `employee_accounts:manage`  |
 | `action:mcp/approveConsentAction`                          | ✅     | `src/test/idor/mcp.db.test.ts`                                                                         | `mcp_connections:create`    |
 | `action:mcp/createPersonalTokenAction`                     | ✅     | `src/test/idor/mcp.db.test.ts`                                                                         | `mcp_connections:create`    |
 | `action:mcp/denyConsentAction`                             | ✅     | `src/test/idor/mcp.db.test.ts`                                                                         | —                           |
@@ -66,9 +91,17 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `action:people/updateFiniquitoAction`                      | ✅     | `src/test/idor/employment.db.test.ts`                                                                  | `people:update`             |
 | `action:people/updatePeopleViewAction`                     | ✅     | `src/test/idor/people-views.db.test.ts`                                                                | `people:read`               |
 | `action:people/updatePersonAction`                         | ✅     | `src/test/idor/people.db.test.ts`                                                                      | `people:update`             |
+| `action:privacy/createArcoRequestAction`                   | ✅     | `src/test/idor/privacy.db.test.ts`                                                                     | `privacy:manage`            |
+| `action:privacy/publishPrivacyNoticeAction`                | ✅     | `src/test/idor/privacy.db.test.ts`                                                                     | `privacy:manage`            |
+| `action:privacy/recordPrivacyAcceptanceAction`             | ✅     | `src/test/idor/privacy.db.test.ts`                                                                     | `privacy:manage`            |
+| `action:privacy/resolveArcoRequestAction`                  | ✅     | `src/test/idor/privacy.db.test.ts`                                                                     | `privacy:manage`            |
+| `action:privacy/searchPrivacyPeopleAction`                 | ✅     | `src/test/idor/privacy.db.test.ts`                                                                     | `privacy:manage`            |
 | `action:regions/createRegionAction`                        | ✅     | `src/test/idor/regions.db.test.ts`                                                                     | `sites:create`              |
 | `action:regions/deleteRegionAction`                        | ✅     | `src/test/idor/regions.db.test.ts`                                                                     | `sites:delete`              |
 | `action:regions/updateRegionAction`                        | ✅     | `src/test/idor/regions.db.test.ts`                                                                     | `sites:update`              |
+| `action:reports/createTurnoverViewAction`                  | ✅     | `src/test/idor/turnover.db.test.ts`                                                                    | `reports:read`              |
+| `action:reports/deleteTurnoverViewAction`                  | ✅     | `src/test/idor/turnover.db.test.ts`                                                                    | `reports:read`              |
+| `action:reports/setTurnoverGoalAction`                     | ✅     | `src/test/idor/turnover.db.test.ts`                                                                    | `settings:update`           |
 | `action:resguardo/assertAssetsListAccess`                  | ⏭️     | Exento: guard de lectura sin datos (requireAssetsRead); la lista la cubre lib:resguardo/listAssetsPage | `assets:read`               |
 | `action:resguardo/assignAssetAction`                       | ✅     | `src/test/idor/resguardo.db.test.ts`                                                                   | `assets:update`             |
 | `action:resguardo/createAssetAction`                       | ✅     | `src/test/idor/resguardo.db.test.ts`                                                                   | `assets:create`             |
@@ -88,235 +121,302 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `action:termination-reasons/createTerminationReasonAction` | ✅     | `src/test/idor/employment.db.test.ts`                                                                  | `settings:update`           |
 | `action:termination-reasons/deleteTerminationReasonAction` | ✅     | `src/test/idor/employment.db.test.ts`                                                                  | `settings:update`           |
 | `action:termination-reasons/updateTerminationReasonAction` | ✅     | `src/test/idor/employment.db.test.ts`                                                                  | `settings:update`           |
-| `action:reports/setTurnoverGoalAction`                     | ✅     | `src/test/idor/turnover.db.test.ts`                                                                    | `settings:update`           |
-| `action:reports/createTurnoverViewAction`                  | ✅     | `src/test/idor/turnover.db.test.ts`                                                                    | `reports:read`              |
-| `action:reports/deleteTurnoverViewAction`                  | ✅     | `src/test/idor/turnover.db.test.ts`                                                                    | `reports:read`              |
 | `action:vacations/registerVacationAction`                  | ✅     | `src/test/idor/vacations.db.test.ts`                                                                   | `vacations:create`          |
 | `action:vacations/voidVacationAction`                      | ✅     | `src/test/idor/vacations.db.test.ts`                                                                   | `vacations:update`          |
+| `action:pay-periods/closePayPeriodAction`                  | ✅     | `src/test/idor/period-close.db.test.ts`                                                                | `pay_periods:manage`        |
+| `action:pay-periods/reopenPayPeriodAction`                 | ✅     | `src/test/idor/period-close.db.test.ts`                                                                | `pay_periods:manage`        |
 
 ## Rutas
 
-| Superficie                                                      | Estado | Prueba                                  | Permiso                                |
-| --------------------------------------------------------------- | ------ | --------------------------------------- | -------------------------------------- |
-| `route:DELETE /api/import/personas/[jobId]/apply`               | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                        |
-| `route:DELETE /api/mcp`                                         | ✅     | `src/test/idor/mcp.db.test.ts`          | —                                      |
-| `route:GET /.well-known/oauth-authorization-server/[[...path]]` | ✅     | `src/test/idor/mcp.db.test.ts`          | —                                      |
-| `route:GET /.well-known/oauth-protected-resource/[[...path]]`   | ✅     | `src/test/idor/mcp.db.test.ts`          | —                                      |
-| `route:GET /api/import/personas/[jobId]`                        | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                        |
-| `route:GET /api/import/personas/[jobId]/errors`                 | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                        |
-| `route:GET /api/import/personas/[jobId]/rows`                   | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                        |
-| `route:GET /api/import/personas/[jobId]/undo`                   | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                        |
-| `route:GET /api/mcp`                                            | ✅     | `src/test/idor/mcp.db.test.ts`          | —                                      |
-| `route:GET /api/oauth/authorize`                                | ✅     | `src/test/idor/mcp.db.test.ts`          | —                                      |
-| `route:GET /app/personas/[id]/contratos/[contractId]/pdf`       | ✅     | `src/test/idor/contract-pdf.db.test.ts` | `contracts:read` + `compensation:read` |
-| `route:GET /app/personas/exportar`                              | ✅     | `src/test/idor/import.db.test.ts`       | `people:export`                        |
-| `route:GET /app/reportes/rotacion/exportar`                     | ✅     | `src/test/idor/turnover.db.test.ts`     | `reports:read` + `people:export`       |
-| `route:GET /app/personas/plantilla`                             | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                        |
-| `route:POST /api/import/personas`                               | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                        |
-| `route:POST /api/import/personas/[jobId]/apply`                 | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                        |
-| `route:POST /api/import/personas/[jobId]/finalize`              | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                        |
-| `route:POST /api/import/personas/[jobId]/rows`                  | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                        |
-| `route:POST /api/import/personas/[jobId]/undo`                  | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                        |
-| `route:POST /api/import/personas/[jobId]/validate`              | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                        |
-| `route:POST /api/mcp`                                           | ✅     | `src/test/idor/mcp.db.test.ts`          | —                                      |
-| `route:POST /api/oauth/register`                                | ✅     | `src/test/idor/mcp.db.test.ts`          | —                                      |
-| `route:POST /api/oauth/revoke`                                  | ✅     | `src/test/idor/mcp.db.test.ts`          | —                                      |
-| `route:POST /api/oauth/token`                                   | ✅     | `src/test/idor/mcp.db.test.ts`          | —                                      |
-| `route:PUT /api/import/personas/[jobId]/validate`               | ✅     | `src/test/idor/import.db.test.ts`       | `people:import`                        |
+| Superficie                                                      | Estado | Prueba                                                                 | Permiso                                |
+| --------------------------------------------------------------- | ------ | ---------------------------------------------------------------------- | -------------------------------------- |
+| `route:DELETE /api/import/personas/[jobId]/apply`               | ✅     | `src/test/idor/import.db.test.ts`                                      | `people:import`                        |
+| `route:DELETE /api/mcp`                                         | ✅     | `src/test/idor/mcp.db.test.ts`                                         | —                                      |
+| `route:GET /.well-known/oauth-authorization-server/[[...path]]` | ✅     | `src/test/idor/mcp.db.test.ts`                                         | —                                      |
+| `route:GET /.well-known/oauth-protected-resource/[[...path]]`   | ✅     | `src/test/idor/mcp.db.test.ts`                                         | —                                      |
+| `route:GET /api/cron/retention`                                 | ⏭️     | Exento: sin empresa; usa CRON_SECRET                                   | —                                      |
+| `route:GET /api/import/personas/[jobId]/errors`                 | ✅     | `src/test/idor/import.db.test.ts`                                      | `people:import`                        |
+| `route:GET /api/import/personas/[jobId]/rows`                   | ✅     | `src/test/idor/import.db.test.ts`                                      | `people:import`                        |
+| `route:GET /api/import/personas/[jobId]/undo`                   | ✅     | `src/test/idor/import.db.test.ts`                                      | `people:import`                        |
+| `route:GET /api/import/personas/[jobId]`                        | ✅     | `src/test/idor/import.db.test.ts`                                      | `people:import`                        |
+| `route:GET /api/mcp`                                            | ✅     | `src/test/idor/mcp.db.test.ts`                                         | —                                      |
+| `route:GET /api/mi/google/callback`                             | ✅     | `src/test/idor/employee-accounts.db.test.ts`                           | —                                      |
+| `route:GET /api/mi/google`                                      | ✅     | `src/test/idor/employee-accounts.db.test.ts`                           | —                                      |
+| `route:GET /api/oauth/authorize`                                | ✅     | `src/test/idor/mcp.db.test.ts`                                         | —                                      |
+| `route:GET /app/personas/[id]/contratos/[contractId]/pdf`       | ✅     | `src/test/idor/contract-pdf.db.test.ts`                                | `contracts:read` + `compensation:read` |
+| `route:GET /app/personas/exportar`                              | ✅     | `src/test/idor/import.db.test.ts`                                      | `people:export`                        |
+| `route:GET /app/personas/plantilla`                             | ✅     | `src/test/idor/import.db.test.ts`                                      | `people:import`                        |
+| `route:GET /app/privacidad/arco/[id]/exportar`                  | ✅     | `src/test/idor/privacy.db.test.ts`                                     | `privacy:manage`                       |
+| `route:GET /app/reportes/rotacion/exportar`                     | ✅     | `src/test/idor/turnover.db.test.ts`                                    | `reports:read` + `people:export`       |
+| `route:GET /mi/manifest.webmanifest`                            | ⏭️     | Exento: manifiesto estático de la app de empleados, sin datos          | —                                      |
+| `route:GET /mi/sw.js`                                           | ⏭️     | Exento: service worker estático que no guarda nada en caché, sin datos | —                                      |
+| `route:POST /api/asistencia/checadas`                           | ✅     | `src/test/idor/attendance.db.test.ts`                                  | —                                      |
+| `route:POST /api/import/personas/[jobId]/apply`                 | ✅     | `src/test/idor/import.db.test.ts`                                      | `people:import`                        |
+| `route:POST /api/import/personas/[jobId]/finalize`              | ✅     | `src/test/idor/import.db.test.ts`                                      | `people:import`                        |
+| `route:POST /api/import/personas/[jobId]/rows`                  | ✅     | `src/test/idor/import.db.test.ts`                                      | `people:import`                        |
+| `route:POST /api/import/personas/[jobId]/undo`                  | ✅     | `src/test/idor/import.db.test.ts`                                      | `people:import`                        |
+| `route:POST /api/import/personas/[jobId]/validate`              | ✅     | `src/test/idor/import.db.test.ts`                                      | `people:import`                        |
+| `route:POST /api/import/personas`                               | ✅     | `src/test/idor/import.db.test.ts`                                      | `people:import`                        |
+| `route:POST /api/mcp`                                           | ✅     | `src/test/idor/mcp.db.test.ts`                                         | —                                      |
+| `route:POST /api/oauth/register`                                | ✅     | `src/test/idor/mcp.db.test.ts`                                         | —                                      |
+| `route:POST /api/oauth/revoke`                                  | ✅     | `src/test/idor/mcp.db.test.ts`                                         | —                                      |
+| `route:POST /api/oauth/token`                                   | ✅     | `src/test/idor/mcp.db.test.ts`                                         | —                                      |
+| `route:PUT /api/import/personas/[jobId]/validate`               | ✅     | `src/test/idor/import.db.test.ts`                                      | `people:import`                        |
 
 ## Funciones de datos (lib)
 
-| Superficie                                                    | Estado | Prueba                                        | Permiso |
-| ------------------------------------------------------------- | ------ | --------------------------------------------- | ------- |
-| `lib:audit/listAuditActors`                                   | ✅     | `src/test/idor/tenant.db.test.ts`             | —       |
-| `lib:audit/listAuditEventsKeyset`                             | ✅     | `src/test/idor/mcp-tools.db.test.ts`          | —       |
-| `lib:catalog/assignActivityToPosition`                        | ✅     | `src/test/idor/catalog.db.test.ts`            | —       |
-| `lib:catalog/countCatalogReferences`                          | ✅     | `src/test/idor/catalog.db.test.ts`            | —       |
-| `lib:catalog/createActivity`                                  | ✅     | `src/test/idor/catalog.db.test.ts`            | —       |
-| `lib:catalog/createArea`                                      | ✅     | `src/test/idor/catalog.db.test.ts`            | —       |
-| `lib:catalog/createPosition`                                  | ✅     | `src/test/idor/catalog.db.test.ts`            | —       |
-| `lib:catalog/getActivityById`                                 | ✅     | `src/test/idor/catalog.db.test.ts`            | —       |
-| `lib:catalog/getAreaById`                                     | ✅     | `src/test/idor/catalog.db.test.ts`            | —       |
-| `lib:catalog/getPositionById`                                 | ✅     | `src/test/idor/catalog.db.test.ts`            | —       |
-| `lib:catalog/listActiveAreas`                                 | ✅     | `src/test/idor/catalog.db.test.ts`            | —       |
-| `lib:catalog/listActivePositions`                             | ✅     | `src/test/idor/catalog.db.test.ts`            | —       |
-| `lib:catalog/listActivitiesByPositionIds`                     | ✅     | `src/test/idor/catalog.db.test.ts`            | —       |
-| `lib:catalog/listActivitiesForPersonPosition`                 | ✅     | `src/test/idor/catalog.db.test.ts`            | —       |
-| `lib:catalog/listActivitiesForPosition`                       | ✅     | `src/test/idor/catalog.db.test.ts`            | —       |
-| `lib:catalog/listActivities`                                  | ✅     | `src/test/idor/catalog.db.test.ts`            | —       |
-| `lib:catalog/listAreas`                                       | ✅     | `src/test/idor/catalog.db.test.ts`            | —       |
-| `lib:catalog/listAssignableActivities`                        | ✅     | `src/test/idor/catalog.db.test.ts`            | —       |
-| `lib:catalog/listPositions`                                   | ✅     | `src/test/idor/catalog.db.test.ts`            | —       |
-| `lib:catalog/softDeleteActivity`                              | ✅     | `src/test/idor/catalog.db.test.ts`            | —       |
-| `lib:catalog/softDeleteArea`                                  | ✅     | `src/test/idor/catalog.db.test.ts`            | —       |
-| `lib:catalog/softDeletePosition`                              | ✅     | `src/test/idor/catalog.db.test.ts`            | —       |
-| `lib:catalog/unassignActivityFromPosition`                    | ✅     | `src/test/idor/catalog.db.test.ts`            | —       |
-| `lib:catalog/updateActivity`                                  | ✅     | `src/test/idor/catalog.db.test.ts`            | —       |
-| `lib:catalog/updateArea`                                      | ✅     | `src/test/idor/catalog.db.test.ts`            | —       |
-| `lib:catalog/updatePosition`                                  | ✅     | `src/test/idor/catalog.db.test.ts`            | —       |
-| `lib:contracts/addOfficialTemplates`                          | ✅     | `src/test/idor/official-templates.db.test.ts` | —       |
-| `lib:contracts/countRenewalTrayItems`                         | ✅     | `src/test/idor/contracts.db.test.ts`          | —       |
-| `lib:contracts/createContractTemplate`                        | ✅     | `src/test/idor/contracts.db.test.ts`          | —       |
-| `lib:contracts/createContract`                                | ✅     | `src/test/idor/contracts.db.test.ts`          | —       |
-| `lib:contracts/deactivateContractTemplate`                    | ✅     | `src/test/idor/contracts.db.test.ts`          | —       |
-| `lib:contracts/decideContractRenewal`                         | ✅     | `src/test/idor/renewal-decision.db.test.ts`   | —       |
-| `lib:contracts/getContractById`                               | ✅     | `src/test/idor/contracts.db.test.ts`          | —       |
-| `lib:contracts/getContractTemplateById`                       | ✅     | `src/test/idor/contracts.db.test.ts`          | —       |
-| `lib:contracts/getSeniorityCertificate`                       | ✅     | `src/test/idor/official-templates.db.test.ts` | —       |
-| `lib:contracts/getVigenteContractForPerson`                   | ✅     | `src/test/idor/contracts.db.test.ts`          | —       |
-| `lib:contracts/listActiveContractTemplates`                   | ✅     | `src/test/idor/contracts.db.test.ts`          | —       |
-| `lib:contracts/listContractTemplates`                         | ✅     | `src/test/idor/contracts.db.test.ts`          | —       |
-| `lib:contracts/listContractsByPerson`                         | ✅     | `src/test/idor/contracts.db.test.ts`          | —       |
-| `lib:contracts/listContractsKeyset`                           | ✅     | `src/test/idor/mcp-tools.db.test.ts`          | —       |
-| `lib:contracts/listExpiringContracts`                         | ✅     | `src/test/idor/mcp-tools.db.test.ts`          | —       |
-| `lib:contracts/listRenewalTrayItems`                          | ✅     | `src/test/idor/contracts.db.test.ts`          | —       |
-| `lib:contracts/markContractNoRenew`                           | ✅     | `src/test/idor/contracts.db.test.ts`          | —       |
-| `lib:contracts/previewContract`                               | ✅     | `src/test/idor/mcp-tools.db.test.ts`          | —       |
-| `lib:contracts/renewContract`                                 | ✅     | `src/test/idor/contracts.db.test.ts`          | —       |
-| `lib:contracts/softDeleteContractTemplate`                    | ✅     | `src/test/idor/contracts.db.test.ts`          | —       |
-| `lib:contracts/softDeleteContract`                            | ✅     | `src/test/idor/contracts.db.test.ts`          | —       |
-| `lib:contracts/updateContractTemplate`                        | ✅     | `src/test/idor/contracts.db.test.ts`          | —       |
-| `lib:documents/activateDocumentRequirements`                  | ✅     | `src/test/idor/documents.db.test.ts`          | —       |
-| `lib:documents/getDocumentRequirementById`                    | ✅     | `src/test/idor/documents.db.test.ts`          | —       |
-| `lib:documents/listDocumentRequirements`                      | ✅     | `src/test/idor/documents.db.test.ts`          | —       |
-| `lib:documents/listExpiringDocuments`                         | ✅     | `src/test/idor/documents.db.test.ts`          | —       |
-| `lib:documents/listPersonDocuments`                           | ✅     | `src/test/idor/documents.db.test.ts`          | —       |
-| `lib:documents/listPersonDocumentCard`                        | ✅     | `src/test/idor/documents.db.test.ts`          | —       |
-| `lib:documents/recordDelivery`                                | ✅     | `src/test/idor/documents.db.test.ts`          | —       |
-| `lib:documents/setRequirements`                               | ✅     | `src/test/idor/documents.db.test.ts`          | —       |
-| `lib:import/apply/applyJobStep`                               | ✅     | `src/test/idor/import.db.test.ts`             | —       |
-| `lib:import/apply/pauseApply`                                 | ✅     | `src/test/idor/import.db.test.ts`             | —       |
-| `lib:import/error-report/buildErrorReport`                    | ✅     | `src/test/idor/import.db.test.ts`             | —       |
-| `lib:import/error-report/loadErrorRows`                       | ✅     | `src/test/idor/import.db.test.ts`             | —       |
-| `lib:import/jobs/appendImportRows`                            | ✅     | `src/test/idor/import.db.test.ts`             | —       |
-| `lib:import/jobs/countStagedRows`                             | ✅     | `src/test/idor/import.db.test.ts`             | —       |
-| `lib:import/jobs/createImportJob`                             | ✅     | `src/test/idor/import.db.test.ts`             | —       |
-| `lib:import/jobs/finalizeImportUpload`                        | ✅     | `src/test/idor/import.db.test.ts`             | —       |
-| `lib:import/jobs/findJobsByHash`                              | ✅     | `src/test/idor/import.db.test.ts`             | —       |
-| `lib:import/jobs/getImportJob`                                | ✅     | `src/test/idor/import.db.test.ts`             | —       |
-| `lib:import/jobs/listImportJobs`                              | ✅     | `src/test/idor/import.db.test.ts`             | —       |
-| `lib:import/jobs/listImportRows`                              | ✅     | `src/test/idor/import.db.test.ts`             | —       |
-| `lib:import/route-helpers/loadUploadingJob`                   | ✅     | `src/test/idor/import.db.test.ts`             | —       |
-| `lib:import/undo/previewUndo`                                 | ✅     | `src/test/idor/import.db.test.ts`             | —       |
-| `lib:import/undo/undoJobStep`                                 | ✅     | `src/test/idor/import.db.test.ts`             | —       |
-| `lib:import/validate/countJobRows`                            | ✅     | `src/test/idor/import.db.test.ts`             | —       |
-| `lib:import/validate/loadCatalogIndex`                        | ✅     | `src/test/idor/import.db.test.ts`             | —       |
-| `lib:import/validate/loadLookups`                             | ✅     | `src/test/idor/import.db.test.ts`             | —       |
-| `lib:import/validate/resolveManagers`                         | ✅     | `src/test/idor/import.db.test.ts`             | —       |
-| `lib:import/validate/restartValidation`                       | ✅     | `src/test/idor/import.db.test.ts`             | —       |
-| `lib:import/validate/validateContratosChunk`                  | ✅     | `src/test/idor/import.db.test.ts`             | —       |
-| `lib:import/validate/validateHorariosChunk`                   | ✅     | `src/test/idor/import.db.test.ts`             | —       |
-| `lib:import/validate/validateJobStep`                         | ✅     | `src/test/idor/import.db.test.ts`             | —       |
-| `lib:import/validate/validatePersonasChunk`                   | ✅     | `src/test/idor/import.db.test.ts`             | —       |
-| `lib:mcp/connections/countRecentConnections`                  | ✅     | `src/test/idor/mcp.db.test.ts`                | —       |
-| `lib:mcp/connections/countToolCallErrors`                     | ✅     | `src/test/idor/mcp.db.test.ts`                | —       |
-| `lib:mcp/connections/createAuthCode`                          | ✅     | `src/test/idor/mcp.db.test.ts`                | —       |
-| `lib:mcp/connections/createPersonalToken`                     | ✅     | `src/test/idor/mcp.db.test.ts`                | —       |
-| `lib:mcp/connections/getConnection`                           | ✅     | `src/test/idor/mcp.db.test.ts`                | —       |
-| `lib:mcp/connections/hideConnection`                          | ✅     | `src/test/idor/mcp.db.test.ts`                | —       |
-| `lib:mcp/connections/listConnections`                         | ✅     | `src/test/idor/mcp.db.test.ts`                | —       |
-| `lib:mcp/connections/listToolCalls`                           | ✅     | `src/test/idor/mcp.db.test.ts`                | —       |
-| `lib:mcp/connections/purgeExpiredToolCalls`                   | ✅     | `src/test/idor/mcp.db.test.ts`                | —       |
-| `lib:mcp/connections/revokeConnection`                        | ✅     | `src/test/idor/mcp.db.test.ts`                | —       |
-| `lib:mcp/idempotency/completeIdempotencyKey`                  | ✅     | `src/test/idor/mcp-writes.db.test.ts`         | —       |
-| `lib:mcp/idempotency/findIdempotentReply`                     | ✅     | `src/test/idor/mcp-writes.db.test.ts`         | —       |
-| `lib:mcp/idempotency/releaseIdempotencyKey`                   | ✅     | `src/test/idor/mcp-writes.db.test.ts`         | —       |
-| `lib:mcp/idempotency/reserveIdempotencyKey`                   | ✅     | `src/test/idor/mcp-writes.db.test.ts`         | —       |
-| `lib:mcp/settings/getMcpSettings`                             | ✅     | `src/test/idor/mcp-writes.db.test.ts`         | —       |
-| `lib:mcp/settings/setMcpWritesEnabled`                        | ✅     | `src/test/idor/mcp-writes.db.test.ts`         | —       |
-| `lib:onboarding/approveOnboardingStep`                        | ✅     | `src/test/idor/onboarding.db.test.ts`         | —       |
-| `lib:onboarding/findBlockingOnboarding`                       | ✅     | `src/test/idor/employment.db.test.ts`         | —       |
-| `lib:onboarding/getOnboardingById`                            | ✅     | `src/test/idor/onboarding.db.test.ts`         | —       |
-| `lib:onboarding/getOnboardingByPerson`                        | ✅     | `src/test/idor/onboarding.db.test.ts`         | —       |
-| `lib:onboarding/listOnboardings`                              | ✅     | `src/test/idor/onboarding.db.test.ts`         | —       |
-| `lib:onboarding/rejectOnboarding`                             | ✅     | `src/test/idor/onboarding.db.test.ts`         | —       |
-| `lib:onboarding/startOnboarding`                              | ✅     | `src/test/idor/onboarding.db.test.ts`         | —       |
-| `lib:onboarding/updateOnboarding`                             | ✅     | `src/test/idor/onboarding.db.test.ts`         | —       |
-| `lib:people/countActivePeopleInPosition`                      | ✅     | `src/test/idor/mcp-write-tools.db.test.ts`    | —       |
-| `lib:people/countActivePeople`                                | ✅     | `src/test/idor/people.db.test.ts`             | —       |
-| `lib:people/countPeopleByStatus`                              | ✅     | `src/test/idor/people.db.test.ts`             | —       |
-| `lib:people/createPerson`                                     | ✅     | `src/test/idor/people.db.test.ts`             | —       |
-| `lib:people/employment-menu/getPersonEmploymentMenuData`      | ✅     | `src/test/idor/employment.db.test.ts`         | —       |
-| `lib:people/employment/getEmploymentSummary`                  | ✅     | `src/test/idor/employment.db.test.ts`         | —       |
-| `lib:people/employment/listEmploymentPeriods`                 | ✅     | `src/test/idor/employment.db.test.ts`         | —       |
-| `lib:people/employment/listEmploymentSummaries`               | ✅     | `src/test/idor/employment.db.test.ts`         | —       |
-| `lib:people/employment/rehirePerson`                          | ✅     | `src/test/idor/employment.db.test.ts`         | —       |
-| `lib:people/employment/terminatePerson`                       | ✅     | `src/test/idor/employment.db.test.ts`         | —       |
-| `lib:people/employment/updateFiniquito`                       | ✅     | `src/test/idor/employment.db.test.ts`         | —       |
-| `lib:people/findIdentityConflicts`                            | ✅     | `src/test/idor/people.db.test.ts`             | —       |
-| `lib:people/getPersonById`                                    | ✅     | `src/test/idor/people.db.test.ts`             | —       |
-| `lib:people/getPersonSchedule`                                | ✅     | `src/test/idor/people.db.test.ts`             | —       |
-| `lib:people/getPersonWithRelations`                           | ✅     | `src/test/idor/people.db.test.ts`             | —       |
-| `lib:people/list/countPeopleFilterOptions`                    | ✅     | `src/test/idor/people-filter.db.test.ts`      | —       |
-| `lib:people/list/countPeopleFiltered`                         | ✅     | `src/test/idor/people-filter.db.test.ts`      | —       |
-| `lib:people/list/listPeopleFilteredAfter`                     | ✅     | `src/test/idor/people-filter.db.test.ts`      | —       |
-| `lib:people/list/listPeopleFiltered`                          | ✅     | `src/test/idor/people-filter.db.test.ts`      | —       |
-| `lib:people/list/listPeopleNamesByIds`                        | ✅     | `src/test/idor/people-filter.db.test.ts`      | —       |
-| `lib:people/listActivePeopleForSelect`                        | ✅     | `src/test/idor/people.db.test.ts`             | —       |
-| `lib:people/listPeopleKeyset`                                 | ✅     | `src/test/idor/mcp-tools.db.test.ts`          | —       |
-| `lib:people/listPeoplePage`                                   | ✅     | `src/test/idor/people.db.test.ts`             | —       |
-| `lib:people/listPeople`                                       | ✅     | `src/test/idor/people.db.test.ts`             | —       |
-| `lib:people/listPersonBeneficiaries`                          | ✅     | `src/test/idor/people.db.test.ts`             | —       |
-| `lib:people/searchActivePeopleForSelect`                      | ✅     | `src/test/idor/people.db.test.ts`             | —       |
-| `lib:people/setPersonStatus`                                  | ✅     | `src/test/idor/people.db.test.ts`             | —       |
-| `lib:people/softDeletePerson`                                 | ✅     | `src/test/idor/people.db.test.ts`             | —       |
-| `lib:people/updatePerson`                                     | ✅     | `src/test/idor/people.db.test.ts`             | —       |
-| `lib:people/upsertPersonSchedule`                             | ✅     | `src/test/idor/people.db.test.ts`             | —       |
-| `lib:people/views/createPeopleView`                           | ✅     | `src/test/idor/people-views.db.test.ts`       | —       |
-| `lib:people/views/deletePeopleView`                           | ✅     | `src/test/idor/people-views.db.test.ts`       | —       |
-| `lib:people/views/getPeopleView`                              | ✅     | `src/test/idor/people-views.db.test.ts`       | —       |
-| `lib:people/views/listPeopleViews`                            | ✅     | `src/test/idor/people-views.db.test.ts`       | —       |
-| `lib:people/views/updatePeopleView`                           | ✅     | `src/test/idor/people-views.db.test.ts`       | —       |
-| `lib:regions/createRegion`                                    | ✅     | `src/test/idor/regions.db.test.ts`            | —       |
-| `lib:regions/getRegionById`                                   | ✅     | `src/test/idor/regions.db.test.ts`            | —       |
-| `lib:regions/listRegionsWithSiteCounts`                       | ✅     | `src/test/idor/regions.db.test.ts`            | —       |
-| `lib:regions/listRegions`                                     | ✅     | `src/test/idor/regions.db.test.ts`            | —       |
-| `lib:regions/softDeleteRegion`                                | ✅     | `src/test/idor/regions.db.test.ts`            | —       |
-| `lib:regions/updateRegion`                                    | ✅     | `src/test/idor/regions.db.test.ts`            | —       |
-| `lib:resguardo/assignAsset`                                   | ✅     | `src/test/idor/resguardo.db.test.ts`          | —       |
-| `lib:resguardo/countAssignedAssets`                           | ✅     | `src/test/idor/resguardo.db.test.ts`          | —       |
-| `lib:resguardo/createAsset`                                   | ✅     | `src/test/idor/resguardo.db.test.ts`          | —       |
-| `lib:resguardo/getAssetById`                                  | ✅     | `src/test/idor/resguardo.db.test.ts`          | —       |
-| `lib:resguardo/getAssetWithHolder`                            | ✅     | `src/test/idor/resguardo.db.test.ts`          | —       |
-| `lib:resguardo/listAssetMovements`                            | ✅     | `src/test/idor/resguardo.db.test.ts`          | —       |
-| `lib:resguardo/listAssetsByPerson`                            | ✅     | `src/test/idor/resguardo.db.test.ts`          | —       |
-| `lib:resguardo/listAssetsKeyset`                              | ✅     | `src/test/idor/mcp-tools.db.test.ts`          | —       |
-| `lib:resguardo/listAssetsPage`                                | ✅     | `src/test/idor/resguardo.db.test.ts`          | —       |
-| `lib:resguardo/listAssetsToRecover`                           | ✅     | `src/test/idor/resguardo.db.test.ts`          | —       |
-| `lib:resguardo/returnAsset`                                   | ✅     | `src/test/idor/resguardo.db.test.ts`          | —       |
-| `lib:resguardo/softDeleteAsset`                               | ✅     | `src/test/idor/resguardo.db.test.ts`          | —       |
-| `lib:sites/createSite`                                        | ✅     | `src/test/idor/catalog.db.test.ts`            | —       |
-| `lib:sites/getSiteById`                                       | ✅     | `src/test/idor/catalog.db.test.ts`            | —       |
-| `lib:sites/listActiveSites`                                   | ✅     | `src/test/idor/catalog.db.test.ts`            | —       |
-| `lib:sites/listSites`                                         | ✅     | `src/test/idor/catalog.db.test.ts`            | —       |
-| `lib:sites/setSiteRegion`                                     | ✅     | `src/test/idor/regions.db.test.ts`            | —       |
-| `lib:sites/softDeleteSite`                                    | ✅     | `src/test/idor/catalog.db.test.ts`            | —       |
-| `lib:sites/updateSite`                                        | ✅     | `src/test/idor/catalog.db.test.ts`            | —       |
-| `lib:tenant/members/addMember`                                | ✅     | `src/test/idor/tenant.db.test.ts`             | —       |
-| `lib:tenant/members/changeMemberRole`                         | ✅     | `src/test/idor/tenant.db.test.ts`             | —       |
-| `lib:tenant/members/listCompanyMembers`                       | ✅     | `src/test/idor/tenant.db.test.ts`             | —       |
-| `lib:tenant/members/revokeMember`                             | ✅     | `src/test/idor/tenant.db.test.ts`             | —       |
-| `lib:termination-reasons/createTerminationReason`             | ✅     | `src/test/idor/employment.db.test.ts`         | —       |
-| `lib:termination-reasons/ensureTerminationReasons`            | ✅     | `src/test/idor/employment.db.test.ts`         | —       |
-| `lib:termination-reasons/getTerminationReasonById`            | ✅     | `src/test/idor/employment.db.test.ts`         | —       |
-| `lib:termination-reasons/listTerminationReasonsWithUsage`     | ✅     | `src/test/idor/employment.db.test.ts`         | —       |
-| `lib:termination-reasons/listTerminationReasons`              | ✅     | `src/test/idor/employment.db.test.ts`         | —       |
-| `lib:termination-reasons/softDeleteTerminationReason`         | ✅     | `src/test/idor/employment.db.test.ts`         | —       |
-| `lib:termination-reasons/updateTerminationReason`             | ✅     | `src/test/idor/employment.db.test.ts`         | —       |
-| `lib:reports/turnover/data/getTurnoverGoal`                   | ✅     | `src/test/idor/turnover.db.test.ts`           | —       |
-| `lib:reports/turnover/data/loadTurnoverFacts`                 | ✅     | `src/test/idor/turnover.db.test.ts`           | —       |
-| `lib:reports/turnover/data/loadTurnoverLabels`                | ✅     | `src/test/idor/turnover.db.test.ts`           | —       |
-| `lib:reports/turnover/data/setTurnoverGoal`                   | ✅     | `src/test/idor/turnover.db.test.ts`           | —       |
-| `lib:reports/turnover/data/loadTurnoverFiniquitos`            | ✅     | `src/test/idor/turnover.db.test.ts`           | —       |
-| `lib:reports/turnover/views/createTurnoverView`               | ✅     | `src/test/idor/turnover.db.test.ts`           | —       |
-| `lib:reports/turnover/views/deleteTurnoverView`               | ✅     | `src/test/idor/turnover.db.test.ts`           | —       |
-| `lib:reports/turnover/views/listTurnoverViews`                | ✅     | `src/test/idor/turnover.db.test.ts`           | —       |
-| `lib:reports/turnover/getTurnoverReport`                      | ✅     | `src/test/idor/turnover.db.test.ts`           | —       |
-| `lib:termination-reasons/countUnclassifiedTerminationReasons` | ✅     | `src/test/idor/employment.db.test.ts`         | —       |
-| `lib:vacations/constancia/getVacationConstancia`              | ✅     | `src/test/idor/vacations.db.test.ts`          | —       |
-| `lib:vacations/listVacationRecords`                           | ✅     | `src/test/idor/vacations.db.test.ts`          | —       |
-| `lib:vacations/registerVacationRecord`                        | ✅     | `src/test/idor/vacations.db.test.ts`          | —       |
-| `lib:vacations/voidVacationRecord`                            | ✅     | `src/test/idor/vacations.db.test.ts`          | —       |
+| Superficie                                                    | Estado | Prueba                                                                                                            | Permiso |
+| ------------------------------------------------------------- | ------ | ----------------------------------------------------------------------------------------------------------------- | ------- |
+| `lib:attendance/assignBadge`                                  | ✅     | `src/test/idor/attendance.db.test.ts`                                                                             | —       |
+| `lib:attendance/checkin/checkinSiteFor`                       | ✅     | `src/test/idor/attendance.db.test.ts`                                                                             | —       |
+| `lib:attendance/countOpenUnmatched`                           | ✅     | `src/test/idor/attendance.db.test.ts`                                                                             | —       |
+| `lib:attendance/createAttendanceDevice`                       | ✅     | `src/test/idor/attendance.db.test.ts`                                                                             | —       |
+| `lib:attendance/dismissUnmatched`                             | ✅     | `src/test/idor/attendance.db.test.ts`                                                                             | —       |
+| `lib:attendance/importChecadorCsv`                            | ✅     | `src/test/idor/attendance.db.test.ts`                                                                             | —       |
+| `lib:attendance/ingest/ingestPunches`                         | ✅     | `src/test/idor/attendance.db.test.ts`                                                                             | —       |
+| `lib:attendance/issueDeviceToken`                             | ✅     | `src/test/idor/attendance.db.test.ts`                                                                             | —       |
+| `lib:attendance/listAttendanceBatches`                        | ✅     | `src/test/idor/attendance.db.test.ts`                                                                             | —       |
+| `lib:attendance/listAttendanceDevices`                        | ✅     | `src/test/idor/attendance.db.test.ts`                                                                             | —       |
+| `lib:attendance/listBadges`                                   | ✅     | `src/test/idor/attendance.db.test.ts`                                                                             | —       |
+| `lib:attendance/listCheckinSites`                             | ✅     | `src/test/idor/attendance.db.test.ts`                                                                             | —       |
+| `lib:attendance/listOpenUnmatched`                            | ✅     | `src/test/idor/attendance.db.test.ts`                                                                             | —       |
+| `lib:attendance/markDevicePush`                               | ✅     | `src/test/idor/attendance.db.test.ts`                                                                             | —       |
+| `lib:attendance/removeBadge`                                  | ✅     | `src/test/idor/attendance.db.test.ts`                                                                             | —       |
+| `lib:attendance/rotateCheckinSecret`                          | ✅     | `src/test/idor/attendance.db.test.ts`                                                                             | —       |
+| `lib:attendance/saveCheckinSite`                              | ✅     | `src/test/idor/attendance.db.test.ts`                                                                             | —       |
+| `lib:attendance/setAttendanceDeviceActive`                    | ✅     | `src/test/idor/attendance.db.test.ts`                                                                             | —       |
+| `lib:attendance/updateAttendanceDevice`                       | ✅     | `src/test/idor/attendance.db.test.ts`                                                                             | —       |
+| `lib:audit/listAuditActors`                                   | ✅     | `src/test/idor/tenant.db.test.ts`                                                                                 | —       |
+| `lib:audit/listAuditEventsKeyset`                             | ✅     | `src/test/idor/mcp-tools.db.test.ts`                                                                              | —       |
+| `lib:catalog/assignActivityToPosition`                        | ✅     | `src/test/idor/catalog.db.test.ts`                                                                                | —       |
+| `lib:catalog/countCatalogReferences`                          | ✅     | `src/test/idor/catalog.db.test.ts`                                                                                | —       |
+| `lib:catalog/createActivity`                                  | ✅     | `src/test/idor/catalog.db.test.ts`                                                                                | —       |
+| `lib:catalog/createArea`                                      | ✅     | `src/test/idor/catalog.db.test.ts`                                                                                | —       |
+| `lib:catalog/createPosition`                                  | ✅     | `src/test/idor/catalog.db.test.ts`                                                                                | —       |
+| `lib:catalog/getActivityById`                                 | ✅     | `src/test/idor/catalog.db.test.ts`                                                                                | —       |
+| `lib:catalog/getAreaById`                                     | ✅     | `src/test/idor/catalog.db.test.ts`                                                                                | —       |
+| `lib:catalog/getPositionById`                                 | ✅     | `src/test/idor/catalog.db.test.ts`                                                                                | —       |
+| `lib:catalog/listActiveAreas`                                 | ✅     | `src/test/idor/catalog.db.test.ts`                                                                                | —       |
+| `lib:catalog/listActivePositions`                             | ✅     | `src/test/idor/catalog.db.test.ts`                                                                                | —       |
+| `lib:catalog/listActivitiesByPositionIds`                     | ✅     | `src/test/idor/catalog.db.test.ts`                                                                                | —       |
+| `lib:catalog/listActivitiesForPersonPosition`                 | ✅     | `src/test/idor/catalog.db.test.ts`                                                                                | —       |
+| `lib:catalog/listActivitiesForPosition`                       | ✅     | `src/test/idor/catalog.db.test.ts`                                                                                | —       |
+| `lib:catalog/listActivities`                                  | ✅     | `src/test/idor/catalog.db.test.ts`                                                                                | —       |
+| `lib:catalog/listAreas`                                       | ✅     | `src/test/idor/catalog.db.test.ts`                                                                                | —       |
+| `lib:catalog/listAssignableActivities`                        | ✅     | `src/test/idor/catalog.db.test.ts`                                                                                | —       |
+| `lib:catalog/listPositions`                                   | ✅     | `src/test/idor/catalog.db.test.ts`                                                                                | —       |
+| `lib:catalog/softDeleteActivity`                              | ✅     | `src/test/idor/catalog.db.test.ts`                                                                                | —       |
+| `lib:catalog/softDeleteArea`                                  | ✅     | `src/test/idor/catalog.db.test.ts`                                                                                | —       |
+| `lib:catalog/softDeletePosition`                              | ✅     | `src/test/idor/catalog.db.test.ts`                                                                                | —       |
+| `lib:catalog/unassignActivityFromPosition`                    | ✅     | `src/test/idor/catalog.db.test.ts`                                                                                | —       |
+| `lib:catalog/updateActivity`                                  | ✅     | `src/test/idor/catalog.db.test.ts`                                                                                | —       |
+| `lib:catalog/updateArea`                                      | ✅     | `src/test/idor/catalog.db.test.ts`                                                                                | —       |
+| `lib:catalog/updatePosition`                                  | ✅     | `src/test/idor/catalog.db.test.ts`                                                                                | —       |
+| `lib:contracts/addOfficialTemplates`                          | ✅     | `src/test/idor/official-templates.db.test.ts`                                                                     | —       |
+| `lib:contracts/countRenewalTrayItems`                         | ✅     | `src/test/idor/contracts.db.test.ts`                                                                              | —       |
+| `lib:contracts/createContractTemplate`                        | ✅     | `src/test/idor/contracts.db.test.ts`                                                                              | —       |
+| `lib:contracts/createContract`                                | ✅     | `src/test/idor/contracts.db.test.ts`                                                                              | —       |
+| `lib:contracts/deactivateContractTemplate`                    | ✅     | `src/test/idor/contracts.db.test.ts`                                                                              | —       |
+| `lib:contracts/decideContractRenewal`                         | ✅     | `src/test/idor/renewal-decision.db.test.ts`                                                                       | —       |
+| `lib:contracts/getContractById`                               | ✅     | `src/test/idor/contracts.db.test.ts`                                                                              | —       |
+| `lib:contracts/getContractTemplateById`                       | ✅     | `src/test/idor/contracts.db.test.ts`                                                                              | —       |
+| `lib:contracts/getSeniorityCertificate`                       | ✅     | `src/test/idor/official-templates.db.test.ts`                                                                     | —       |
+| `lib:contracts/getVigenteContractForPerson`                   | ✅     | `src/test/idor/contracts.db.test.ts`                                                                              | —       |
+| `lib:contracts/listActiveContractTemplates`                   | ✅     | `src/test/idor/contracts.db.test.ts`                                                                              | —       |
+| `lib:contracts/listContractTemplates`                         | ✅     | `src/test/idor/contracts.db.test.ts`                                                                              | —       |
+| `lib:contracts/listContractsByPerson`                         | ✅     | `src/test/idor/contracts.db.test.ts`                                                                              | —       |
+| `lib:contracts/listContractsKeyset`                           | ✅     | `src/test/idor/mcp-tools.db.test.ts`                                                                              | —       |
+| `lib:contracts/listExpiringContracts`                         | ✅     | `src/test/idor/mcp-tools.db.test.ts`                                                                              | —       |
+| `lib:contracts/listRenewalTrayItems`                          | ✅     | `src/test/idor/contracts.db.test.ts`                                                                              | —       |
+| `lib:contracts/markContractNoRenew`                           | ✅     | `src/test/idor/contracts.db.test.ts`                                                                              | —       |
+| `lib:contracts/previewContract`                               | ✅     | `src/test/idor/mcp-tools.db.test.ts`                                                                              | —       |
+| `lib:contracts/renewContract`                                 | ✅     | `src/test/idor/contracts.db.test.ts`                                                                              | —       |
+| `lib:contracts/softDeleteContractTemplate`                    | ✅     | `src/test/idor/contracts.db.test.ts`                                                                              | —       |
+| `lib:contracts/softDeleteContract`                            | ✅     | `src/test/idor/contracts.db.test.ts`                                                                              | —       |
+| `lib:contracts/updateContractTemplate`                        | ✅     | `src/test/idor/contracts.db.test.ts`                                                                              | —       |
+| `lib:documents/activateDocumentRequirements`                  | ✅     | `src/test/idor/documents.db.test.ts`                                                                              | —       |
+| `lib:documents/getDocumentRequirementById`                    | ✅     | `src/test/idor/documents.db.test.ts`                                                                              | —       |
+| `lib:documents/listDocumentRequirements`                      | ✅     | `src/test/idor/documents.db.test.ts`                                                                              | —       |
+| `lib:documents/listExpiringDocuments`                         | ✅     | `src/test/idor/documents.db.test.ts`                                                                              | —       |
+| `lib:documents/listPersonDocumentCard`                        | ✅     | `src/test/idor/documents.db.test.ts`                                                                              | —       |
+| `lib:documents/listPersonDocuments`                           | ✅     | `src/test/idor/documents.db.test.ts`                                                                              | —       |
+| `lib:documents/recordDelivery`                                | ✅     | `src/test/idor/documents.db.test.ts`                                                                              | —       |
+| `lib:documents/setRequirements`                               | ✅     | `src/test/idor/documents.db.test.ts`                                                                              | —       |
+| `lib:employee-accounts/disableEmployeeAccount`                | ✅     | `src/test/idor/employee-accounts.db.test.ts`                                                                      | —       |
+| `lib:employee-accounts/getEmployeeAccount`                    | ✅     | `src/test/idor/employee-accounts.db.test.ts`                                                                      | —       |
+| `lib:employee-accounts/inviteEmployee`                        | ✅     | `src/test/idor/employee-accounts.db.test.ts`                                                                      | —       |
+| `lib:employee-accounts/issueActivationCode`                   | ✅     | `src/test/idor/employee-accounts.db.test.ts`                                                                      | —       |
+| `lib:import/apply/applyJobStep`                               | ✅     | `src/test/idor/import.db.test.ts`                                                                                 | —       |
+| `lib:import/apply/pauseApply`                                 | ✅     | `src/test/idor/import.db.test.ts`                                                                                 | —       |
+| `lib:import/error-report/buildErrorReport`                    | ✅     | `src/test/idor/import.db.test.ts`                                                                                 | —       |
+| `lib:import/error-report/loadErrorRows`                       | ✅     | `src/test/idor/import.db.test.ts`                                                                                 | —       |
+| `lib:import/jobs/appendImportRows`                            | ✅     | `src/test/idor/import.db.test.ts`                                                                                 | —       |
+| `lib:import/jobs/countStagedRows`                             | ✅     | `src/test/idor/import.db.test.ts`                                                                                 | —       |
+| `lib:import/jobs/createImportJob`                             | ✅     | `src/test/idor/import.db.test.ts`                                                                                 | —       |
+| `lib:import/jobs/finalizeImportUpload`                        | ✅     | `src/test/idor/import.db.test.ts`                                                                                 | —       |
+| `lib:import/jobs/findJobsByHash`                              | ✅     | `src/test/idor/import.db.test.ts`                                                                                 | —       |
+| `lib:import/jobs/getImportJob`                                | ✅     | `src/test/idor/import.db.test.ts`                                                                                 | —       |
+| `lib:import/jobs/listImportJobs`                              | ✅     | `src/test/idor/import.db.test.ts`                                                                                 | —       |
+| `lib:import/jobs/listImportRows`                              | ✅     | `src/test/idor/import.db.test.ts`                                                                                 | —       |
+| `lib:import/route-helpers/loadUploadingJob`                   | ✅     | `src/test/idor/import.db.test.ts`                                                                                 | —       |
+| `lib:import/undo/previewUndo`                                 | ✅     | `src/test/idor/import.db.test.ts`                                                                                 | —       |
+| `lib:import/undo/undoJobStep`                                 | ✅     | `src/test/idor/import.db.test.ts`                                                                                 | —       |
+| `lib:import/validate/countJobRows`                            | ✅     | `src/test/idor/import.db.test.ts`                                                                                 | —       |
+| `lib:import/validate/loadCatalogIndex`                        | ✅     | `src/test/idor/import.db.test.ts`                                                                                 | —       |
+| `lib:import/validate/loadLookups`                             | ✅     | `src/test/idor/import.db.test.ts`                                                                                 | —       |
+| `lib:import/validate/resolveManagers`                         | ✅     | `src/test/idor/import.db.test.ts`                                                                                 | —       |
+| `lib:import/validate/restartValidation`                       | ✅     | `src/test/idor/import.db.test.ts`                                                                                 | —       |
+| `lib:import/validate/validateContratosChunk`                  | ✅     | `src/test/idor/import.db.test.ts`                                                                                 | —       |
+| `lib:import/validate/validateHorariosChunk`                   | ✅     | `src/test/idor/import.db.test.ts`                                                                                 | —       |
+| `lib:import/validate/validateJobStep`                         | ✅     | `src/test/idor/import.db.test.ts`                                                                                 | —       |
+| `lib:import/validate/validatePersonasChunk`                   | ✅     | `src/test/idor/import.db.test.ts`                                                                                 | —       |
+| `lib:managers/cancelDelegation`                               | ✅     | `src/test/idor/managers.db.test.ts`                                                                               | —       |
+| `lib:managers/getManagerAdmin`                                | ✅     | `src/test/idor/managers.db.test.ts`                                                                               | —       |
+| `lib:managers/listDelegationsGiven`                           | ✅     | `src/test/idor/managers.db.test.ts`                                                                               | —       |
+| `lib:managers/revokeManagerGrant`                             | ✅     | `src/test/idor/managers.db.test.ts`                                                                               | —       |
+| `lib:managers/scope/currentApprover`                          | ✅     | `src/test/idor/managers.db.test.ts`                                                                               | —       |
+| `lib:managers/setManagerGrant`                                | ✅     | `src/test/idor/managers.db.test.ts`                                                                               | —       |
+| `lib:mcp/connections/countRecentConnections`                  | ✅     | `src/test/idor/mcp.db.test.ts`                                                                                    | —       |
+| `lib:mcp/connections/countToolCallErrors`                     | ✅     | `src/test/idor/mcp.db.test.ts`                                                                                    | —       |
+| `lib:mcp/connections/createAuthCode`                          | ✅     | `src/test/idor/mcp.db.test.ts`                                                                                    | —       |
+| `lib:mcp/connections/createPersonalToken`                     | ✅     | `src/test/idor/mcp.db.test.ts`                                                                                    | —       |
+| `lib:mcp/connections/getConnection`                           | ✅     | `src/test/idor/mcp.db.test.ts`                                                                                    | —       |
+| `lib:mcp/connections/hideConnection`                          | ✅     | `src/test/idor/mcp.db.test.ts`                                                                                    | —       |
+| `lib:mcp/connections/listConnections`                         | ✅     | `src/test/idor/mcp.db.test.ts`                                                                                    | —       |
+| `lib:mcp/connections/listToolCalls`                           | ✅     | `src/test/idor/mcp.db.test.ts`                                                                                    | —       |
+| `lib:mcp/connections/purgeExpiredToolCalls`                   | ✅     | `src/test/idor/mcp.db.test.ts`                                                                                    | —       |
+| `lib:mcp/connections/revokeConnection`                        | ✅     | `src/test/idor/mcp.db.test.ts`                                                                                    | —       |
+| `lib:mcp/idempotency/completeIdempotencyKey`                  | ✅     | `src/test/idor/mcp-writes.db.test.ts`                                                                             | —       |
+| `lib:mcp/idempotency/findIdempotentReply`                     | ✅     | `src/test/idor/mcp-writes.db.test.ts`                                                                             | —       |
+| `lib:mcp/idempotency/releaseIdempotencyKey`                   | ✅     | `src/test/idor/mcp-writes.db.test.ts`                                                                             | —       |
+| `lib:mcp/idempotency/reserveIdempotencyKey`                   | ✅     | `src/test/idor/mcp-writes.db.test.ts`                                                                             | —       |
+| `lib:mcp/settings/getMcpSettings`                             | ✅     | `src/test/idor/mcp-writes.db.test.ts`                                                                             | —       |
+| `lib:mcp/settings/setMcpWritesEnabled`                        | ✅     | `src/test/idor/mcp-writes.db.test.ts`                                                                             | —       |
+| `lib:onboarding/approveOnboardingStep`                        | ✅     | `src/test/idor/onboarding.db.test.ts`                                                                             | —       |
+| `lib:onboarding/findBlockingOnboarding`                       | ✅     | `src/test/idor/employment.db.test.ts`                                                                             | —       |
+| `lib:onboarding/getOnboardingById`                            | ✅     | `src/test/idor/onboarding.db.test.ts`                                                                             | —       |
+| `lib:onboarding/getOnboardingByPerson`                        | ✅     | `src/test/idor/onboarding.db.test.ts`                                                                             | —       |
+| `lib:onboarding/listOnboardings`                              | ✅     | `src/test/idor/onboarding.db.test.ts`                                                                             | —       |
+| `lib:onboarding/rejectOnboarding`                             | ✅     | `src/test/idor/onboarding.db.test.ts`                                                                             | —       |
+| `lib:onboarding/startOnboarding`                              | ✅     | `src/test/idor/onboarding.db.test.ts`                                                                             | —       |
+| `lib:onboarding/updateOnboarding`                             | ✅     | `src/test/idor/onboarding.db.test.ts`                                                                             | —       |
+| `lib:pay-periods/closePayPeriod`                              | ✅     | `src/test/idor/pay-periods.db.test.ts`                                                                            | —       |
+| `lib:pay-periods/getPayPeriodDetail`                          | ✅     | `src/test/idor/period-close.db.test.ts`                                                                           | —       |
+| `lib:pay-periods/getPayPeriod`                                | ✅     | `src/test/idor/pay-periods.db.test.ts`                                                                            | —       |
+| `lib:pay-periods/listPayPeriods`                              | ✅     | `src/test/idor/period-close.db.test.ts`                                                                           | —       |
+| `lib:pay-periods/loadPayPeriodIncidencias`                    | ✅     | `src/test/idor/period-close.db.test.ts`                                                                           | —       |
+| `lib:pay-periods/readPeriodSnapshot`                          | ✅     | `src/test/idor/pay-periods.db.test.ts`                                                                            | —       |
+| `lib:pay-periods/reopenPayPeriod`                             | ✅     | `src/test/idor/pay-periods.db.test.ts`                                                                            | —       |
+| `lib:pay-periods/verifyPeriodSnapshot`                        | ✅     | `src/test/idor/period-close.db.test.ts`                                                                           | —       |
+| `lib:people/countActivePeopleInPosition`                      | ✅     | `src/test/idor/mcp-write-tools.db.test.ts`                                                                        | —       |
+| `lib:people/countActivePeople`                                | ✅     | `src/test/idor/people.db.test.ts`                                                                                 | —       |
+| `lib:people/countPeopleByStatus`                              | ✅     | `src/test/idor/people.db.test.ts`                                                                                 | —       |
+| `lib:people/createPerson`                                     | ✅     | `src/test/idor/people.db.test.ts`                                                                                 | —       |
+| `lib:people/employment-menu/getPersonEmploymentMenuData`      | ✅     | `src/test/idor/employment.db.test.ts`                                                                             | —       |
+| `lib:people/employment/getEmploymentSummary`                  | ✅     | `src/test/idor/employment.db.test.ts`                                                                             | —       |
+| `lib:people/employment/listEmploymentPeriods`                 | ✅     | `src/test/idor/employment.db.test.ts`                                                                             | —       |
+| `lib:people/employment/listEmploymentSummaries`               | ✅     | `src/test/idor/employment.db.test.ts`                                                                             | —       |
+| `lib:people/employment/rehirePerson`                          | ✅     | `src/test/idor/employment.db.test.ts`                                                                             | —       |
+| `lib:people/employment/terminatePerson`                       | ✅     | `src/test/idor/employment.db.test.ts`                                                                             | —       |
+| `lib:people/employment/updateFiniquito`                       | ✅     | `src/test/idor/employment.db.test.ts`                                                                             | —       |
+| `lib:people/findIdentityConflicts`                            | ✅     | `src/test/idor/people.db.test.ts`                                                                                 | —       |
+| `lib:people/getPersonById`                                    | ✅     | `src/test/idor/people.db.test.ts`                                                                                 | —       |
+| `lib:people/getPersonSchedule`                                | ✅     | `src/test/idor/people.db.test.ts`                                                                                 | —       |
+| `lib:people/getPersonWithRelations`                           | ✅     | `src/test/idor/people.db.test.ts`                                                                                 | —       |
+| `lib:people/list/countPeopleFilterOptions`                    | ✅     | `src/test/idor/people-filter.db.test.ts`                                                                          | —       |
+| `lib:people/list/countPeopleFiltered`                         | ✅     | `src/test/idor/people-filter.db.test.ts`                                                                          | —       |
+| `lib:people/list/listPeopleFilteredAfter`                     | ✅     | `src/test/idor/people-filter.db.test.ts`                                                                          | —       |
+| `lib:people/list/listPeopleFiltered`                          | ✅     | `src/test/idor/people-filter.db.test.ts`                                                                          | —       |
+| `lib:people/list/listPeopleNamesByIds`                        | ✅     | `src/test/idor/people-filter.db.test.ts`                                                                          | —       |
+| `lib:people/listActivePeopleForSelect`                        | ✅     | `src/test/idor/people.db.test.ts`                                                                                 | —       |
+| `lib:people/listPeopleKeyset`                                 | ✅     | `src/test/idor/mcp-tools.db.test.ts`                                                                              | —       |
+| `lib:people/listPeoplePage`                                   | ✅     | `src/test/idor/people.db.test.ts`                                                                                 | —       |
+| `lib:people/listPeople`                                       | ✅     | `src/test/idor/people.db.test.ts`                                                                                 | —       |
+| `lib:people/listPersonBeneficiaries`                          | ✅     | `src/test/idor/people.db.test.ts`                                                                                 | —       |
+| `lib:people/searchActivePeopleForSelect`                      | ✅     | `src/test/idor/people.db.test.ts`                                                                                 | —       |
+| `lib:people/setPersonStatus`                                  | ✅     | `src/test/idor/people.db.test.ts`                                                                                 | —       |
+| `lib:people/softDeletePerson`                                 | ✅     | `src/test/idor/people.db.test.ts`                                                                                 | —       |
+| `lib:people/updatePerson`                                     | ✅     | `src/test/idor/people.db.test.ts`                                                                                 | —       |
+| `lib:people/upsertPersonSchedule`                             | ✅     | `src/test/idor/people.db.test.ts`                                                                                 | —       |
+| `lib:people/views/createPeopleView`                           | ✅     | `src/test/idor/people-views.db.test.ts`                                                                           | —       |
+| `lib:people/views/deletePeopleView`                           | ✅     | `src/test/idor/people-views.db.test.ts`                                                                           | —       |
+| `lib:people/views/getPeopleView`                              | ✅     | `src/test/idor/people-views.db.test.ts`                                                                           | —       |
+| `lib:people/views/listPeopleViews`                            | ✅     | `src/test/idor/people-views.db.test.ts`                                                                           | —       |
+| `lib:people/views/updatePeopleView`                           | ✅     | `src/test/idor/people-views.db.test.ts`                                                                           | —       |
+| `lib:privacy/buildPersonDataExport`                           | ✅     | `src/test/idor/privacy.db.test.ts`                                                                                | —       |
+| `lib:privacy/createArcoRequest`                               | ✅     | `src/test/idor/privacy.db.test.ts`                                                                                | —       |
+| `lib:privacy/getArcoRequest`                                  | ✅     | `src/test/idor/privacy.db.test.ts`                                                                                | —       |
+| `lib:privacy/getCurrentPrivacyNotice`                         | ✅     | `src/test/idor/privacy.db.test.ts`                                                                                | —       |
+| `lib:privacy/listArcoRequests`                                | ✅     | `src/test/idor/privacy.db.test.ts`                                                                                | —       |
+| `lib:privacy/listPersonalDataAccess`                          | ✅     | `src/test/idor/privacy.db.test.ts`                                                                                | —       |
+| `lib:privacy/listPrivacyNotices`                              | ✅     | `src/test/idor/privacy.db.test.ts`                                                                                | —       |
+| `lib:privacy/pendingPrivacyNotice`                            | ✅     | `src/test/idor/privacy.db.test.ts`                                                                                | —       |
+| `lib:privacy/publishPrivacyNotice`                            | ✅     | `src/test/idor/privacy.db.test.ts`                                                                                | —       |
+| `lib:privacy/recordPersonalDataAccess`                        | ✅     | `src/test/idor/privacy.db.test.ts`                                                                                | —       |
+| `lib:privacy/recordPrivacyAcceptance`                         | ✅     | `src/test/idor/privacy.db.test.ts`                                                                                | —       |
+| `lib:privacy/resolveArcoRequest`                              | ✅     | `src/test/idor/privacy.db.test.ts`                                                                                | —       |
+| `lib:privacy/retention/purgeExpiredPersonalData`              | ✅     | `src/test/idor/privacy.db.test.ts`                                                                                | —       |
+| `lib:privacy/searchPeopleForPrivacy`                          | ✅     | `src/test/idor/privacy.db.test.ts`                                                                                | —       |
+| `lib:regions/createRegion`                                    | ✅     | `src/test/idor/regions.db.test.ts`                                                                                | —       |
+| `lib:regions/getRegionById`                                   | ✅     | `src/test/idor/regions.db.test.ts`                                                                                | —       |
+| `lib:regions/listRegionsWithSiteCounts`                       | ✅     | `src/test/idor/regions.db.test.ts`                                                                                | —       |
+| `lib:regions/listRegions`                                     | ✅     | `src/test/idor/regions.db.test.ts`                                                                                | —       |
+| `lib:regions/softDeleteRegion`                                | ✅     | `src/test/idor/regions.db.test.ts`                                                                                | —       |
+| `lib:regions/updateRegion`                                    | ✅     | `src/test/idor/regions.db.test.ts`                                                                                | —       |
+| `lib:reports/turnover/data/getTurnoverGoal`                   | ✅     | `src/test/idor/turnover.db.test.ts`                                                                               | —       |
+| `lib:reports/turnover/data/loadTurnoverFacts`                 | ✅     | `src/test/idor/turnover.db.test.ts`                                                                               | —       |
+| `lib:reports/turnover/data/loadTurnoverFiniquitos`            | ✅     | `src/test/idor/turnover.db.test.ts`                                                                               | —       |
+| `lib:reports/turnover/data/loadTurnoverLabels`                | ✅     | `src/test/idor/turnover.db.test.ts`                                                                               | —       |
+| `lib:reports/turnover/data/setTurnoverGoal`                   | ✅     | `src/test/idor/turnover.db.test.ts`                                                                               | —       |
+| `lib:reports/turnover/getTurnoverReport`                      | ✅     | `src/test/idor/turnover.db.test.ts`                                                                               | —       |
+| `lib:reports/turnover/views/createTurnoverView`               | ✅     | `src/test/idor/turnover.db.test.ts`                                                                               | —       |
+| `lib:reports/turnover/views/deleteTurnoverView`               | ✅     | `src/test/idor/turnover.db.test.ts`                                                                               | —       |
+| `lib:reports/turnover/views/listTurnoverViews`                | ✅     | `src/test/idor/turnover.db.test.ts`                                                                               | —       |
+| `lib:resguardo/assignAsset`                                   | ✅     | `src/test/idor/resguardo.db.test.ts`                                                                              | —       |
+| `lib:resguardo/countAssignedAssets`                           | ✅     | `src/test/idor/resguardo.db.test.ts`                                                                              | —       |
+| `lib:resguardo/createAsset`                                   | ✅     | `src/test/idor/resguardo.db.test.ts`                                                                              | —       |
+| `lib:resguardo/getAssetById`                                  | ✅     | `src/test/idor/resguardo.db.test.ts`                                                                              | —       |
+| `lib:resguardo/getAssetWithHolder`                            | ✅     | `src/test/idor/resguardo.db.test.ts`                                                                              | —       |
+| `lib:resguardo/listAssetMovements`                            | ✅     | `src/test/idor/resguardo.db.test.ts`                                                                              | —       |
+| `lib:resguardo/listAssetsByPerson`                            | ✅     | `src/test/idor/resguardo.db.test.ts`                                                                              | —       |
+| `lib:resguardo/listAssetsKeyset`                              | ✅     | `src/test/idor/mcp-tools.db.test.ts`                                                                              | —       |
+| `lib:resguardo/listAssetsPage`                                | ✅     | `src/test/idor/resguardo.db.test.ts`                                                                              | —       |
+| `lib:resguardo/listAssetsToRecover`                           | ✅     | `src/test/idor/resguardo.db.test.ts`                                                                              | —       |
+| `lib:resguardo/returnAsset`                                   | ✅     | `src/test/idor/resguardo.db.test.ts`                                                                              | —       |
+| `lib:resguardo/softDeleteAsset`                               | ✅     | `src/test/idor/resguardo.db.test.ts`                                                                              | —       |
+| `lib:sites/createSite`                                        | ✅     | `src/test/idor/catalog.db.test.ts`                                                                                | —       |
+| `lib:sites/getSiteById`                                       | ✅     | `src/test/idor/catalog.db.test.ts`                                                                                | —       |
+| `lib:sites/listActiveSites`                                   | ✅     | `src/test/idor/catalog.db.test.ts`                                                                                | —       |
+| `lib:sites/listSites`                                         | ✅     | `src/test/idor/catalog.db.test.ts`                                                                                | —       |
+| `lib:sites/setSiteRegion`                                     | ✅     | `src/test/idor/regions.db.test.ts`                                                                                | —       |
+| `lib:sites/softDeleteSite`                                    | ✅     | `src/test/idor/catalog.db.test.ts`                                                                                | —       |
+| `lib:sites/updateSite`                                        | ✅     | `src/test/idor/catalog.db.test.ts`                                                                                | —       |
+| `lib:tenant/members/addMember`                                | ✅     | `src/test/idor/tenant.db.test.ts`                                                                                 | —       |
+| `lib:tenant/members/changeMemberRole`                         | ✅     | `src/test/idor/tenant.db.test.ts`                                                                                 | —       |
+| `lib:tenant/members/listCompanyMembers`                       | ✅     | `src/test/idor/tenant.db.test.ts`                                                                                 | —       |
+| `lib:tenant/members/revokeMember`                             | ✅     | `src/test/idor/tenant.db.test.ts`                                                                                 | —       |
+| `lib:termination-reasons/countUnclassifiedTerminationReasons` | ✅     | `src/test/idor/employment.db.test.ts`                                                                             | —       |
+| `lib:termination-reasons/createTerminationReason`             | ✅     | `src/test/idor/employment.db.test.ts`                                                                             | —       |
+| `lib:termination-reasons/ensureTerminationReasons`            | ✅     | `src/test/idor/employment.db.test.ts`                                                                             | —       |
+| `lib:termination-reasons/getTerminationReasonById`            | ✅     | `src/test/idor/employment.db.test.ts`                                                                             | —       |
+| `lib:termination-reasons/listTerminationReasonsWithUsage`     | ✅     | `src/test/idor/employment.db.test.ts`                                                                             | —       |
+| `lib:termination-reasons/listTerminationReasons`              | ✅     | `src/test/idor/employment.db.test.ts`                                                                             | —       |
+| `lib:termination-reasons/softDeleteTerminationReason`         | ✅     | `src/test/idor/employment.db.test.ts`                                                                             | —       |
+| `lib:termination-reasons/updateTerminationReason`             | ✅     | `src/test/idor/employment.db.test.ts`                                                                             | —       |
+| `lib:timeline/aggregates/absenteeismBy`                       | ✅     | `src/test/idor/pay-periods.db.test.ts`                                                                            | —       |
+| `lib:timeline/aggregates/incidenciasBy`                       | ✅     | `src/test/idor/pay-periods.db.test.ts`                                                                            | —       |
+| `lib:timeline/appendPersonEvents`                             | ✅     | `src/test/idor/timeline.db.test.ts`                                                                               | —       |
+| `lib:timeline/listPersonEvents`                               | ✅     | `src/test/idor/timeline.db.test.ts`                                                                               | —       |
+| `lib:timeline/today/listTodayPage`                            | ✅     | `src/test/idor/today.db.test.ts`                                                                                  | —       |
+| `lib:timeline/today/todayCounts`                              | ✅     | `src/test/idor/period-close.db.test.ts`                                                                           | —       |
+| `lib:timeline/today/todayImports`                             | ✅     | `src/test/idor/team-today.db.test.ts`                                                                             | —       |
+| `lib:timeline/writers/appendEmploymentChanges`                | ⏭️     | Exento: escritor de W2-13 para el flujo que ya validó la empresa; probado en `src/lib/timeline/writes.db.test.ts` | —       |
+| `lib:timeline/writers/replacePeriodIncidencias`               | ✅     | `src/test/idor/period-close.db.test.ts`                                                                           | —       |
+| `lib:timeline/writers/writeAttendanceDays`                    | ⏭️     | Exento: escritor de W2-13 para el flujo que ya validó la empresa; probado en `src/lib/timeline/writes.db.test.ts` | —       |
+| `lib:vacations/constancia/getVacationConstancia`              | ✅     | `src/test/idor/vacations.db.test.ts`                                                                              | —       |
+| `lib:vacations/listVacationRecords`                           | ✅     | `src/test/idor/vacations.db.test.ts`                                                                              | —       |
+| `lib:vacations/registerVacationRecord`                        | ✅     | `src/test/idor/vacations.db.test.ts`                                                                              | —       |
+| `lib:vacations/voidVacationRecord`                            | ✅     | `src/test/idor/vacations.db.test.ts`                                                                              | —       |
 
 ## Herramientas MCP
 
@@ -346,6 +446,8 @@ Una conexión de la empresa B llama cada herramienta con ids de la empresa A: la
 | `mcp:list_contracts`                | ✅     | `src/test/idor/mcp-tools.db.test.ts`       | `contracts:read`          |
 | `mcp:list_expiring_contracts`       | ✅     | `src/test/idor/mcp-tools.db.test.ts`       | `contracts:read`          |
 | `mcp:list_expiring_documents`       | ✅     | `src/test/idor/mcp-tools.db.test.ts`       | `documents:read`          |
+| `mcp:get_incidencias_summary`       | ✅     | `src/test/idor/mcp-tools.db.test.ts`       | `pay_periods:read`        |
+| `mcp:get_pay_period`                | ✅     | `src/test/idor/mcp-tools.db.test.ts`       | `pay_periods:read`        |
 | `mcp:list_people`                   | ✅     | `src/test/idor/mcp-tools.db.test.ts`       | `people:read`             |
 | `mcp:list_positions`                | ✅     | `src/test/idor/mcp-tools.db.test.ts`       | `positions:read`          |
 | `mcp:list_regions`                  | ✅     | `src/test/idor/mcp-tools.db.test.ts`       | `sites:read`              |

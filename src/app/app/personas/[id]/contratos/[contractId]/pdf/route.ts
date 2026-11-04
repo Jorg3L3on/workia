@@ -6,6 +6,8 @@ import { requireContractsRead } from "@/lib/contracts/auth";
 import { getContractById } from "@/lib/contracts";
 import { contractScheduleText } from "@/lib/contracts/schema";
 import { ContractPdfGlyphError, renderContractPdf } from "@/lib/contracts/pdf";
+import { withTransaction } from "@/lib/db";
+import { recordPersonalDataAccess } from "@/lib/privacy";
 
 const contractIdParam = z.string().uuid();
 
@@ -18,7 +20,8 @@ type Context = { params: Promise<{ id: string; contractId: string }> };
  * PDF of one contract (WRK-12). Needs contracts:read and compensation:read,
  * because the stored text can include pay. Another company's contract, or a
  * contract that is not this person's, is a 404. Characters the embedded font
- * cannot draw are a 422, not a PDF with holes.
+ * cannot draw are a 422, not a PDF with holes. Every download is in the
+ * audit and in the personal data access log (W2-09).
  */
 export const GET = async (_request: Request, { params }: Context) => {
   const session = await requireContractsRead().catch(() => null);
@@ -60,17 +63,33 @@ export const GET = async (_request: Request, { params }: Context) => {
     throw error;
   }
 
-  await recordAuditEvent({
-    companyId: session.companyId,
-    actorUserId: session.user.id,
-    resourceType: "contract",
-    resourceId: contract.id,
-    action: "export",
-    payload: {
-      summary: "PDF del contrato",
-      after: { format: "pdf" },
-    },
-  });
+  await withTransaction(async (tx) => {
+    await recordAuditEvent(
+      {
+        companyId: session.companyId,
+        actorUserId: session.user.id,
+        resourceType: "contract",
+        resourceId: contract.id,
+        action: "export",
+        payload: {
+          summary: "PDF del contrato",
+          after: { format: "pdf" },
+        },
+      },
+      tx,
+    );
+    await recordPersonalDataAccess(
+      session.companyId,
+      {
+        personId: contract.personId,
+        resource: "contract_pdf",
+        resourceId: contract.id,
+        actorKind: "hr_user",
+        actorUserId: session.user.id,
+      },
+      tx,
+    );
+  }, session.companyId);
 
   return new NextResponse(new Uint8Array(file), {
     headers: {
