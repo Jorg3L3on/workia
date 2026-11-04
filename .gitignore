@@ -51,3 +51,6 @@ next-env.d.ts
 
 # employee email outbox (development and e2e)
 /.outbox/
+
+# local object storage (development and e2e, src/lib/storage)
+/.storage/

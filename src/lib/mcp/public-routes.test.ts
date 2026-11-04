@@ -45,6 +45,12 @@ const PUBLIC_EMPLOYEE_ROUTES = [
 /** Scheduled jobs (W2-09): no session, a Bearer CRON_SECRET instead. */
 const SCHEDULED_JOB_ROUTES = ["/api/cron/retention"];
 
+/**
+ * The local storage driver (development and tests only) serves files for an
+ * HMAC-signed URL, like a bucket's presigned URL, and is off in production.
+ */
+const SIGNED_STORAGE_ROUTES = ["/api/storage/local/[...key]"];
+
 /** A route is guarded when it goes through the company context or Auth.js. */
 const isSessionGuarded = (source: string) =>
   /require(CompanyContext|Auth|PeopleImport|PeopleExport|[A-Z]\w*(Read|Create|Update|Delete|Import|Export|Manage))\b|requireImportRoute|withImportRoute|auth\(\)/.test(
@@ -64,6 +70,7 @@ describe("public routes", () => {
         ...PUBLIC_MCP_ROUTES,
         ...PUBLIC_EMPLOYEE_ROUTES,
         ...SCHEDULED_JOB_ROUTES,
+        ...SIGNED_STORAGE_ROUTES,
       ].sort(),
     );
   });
@@ -74,6 +81,15 @@ describe("public routes", () => {
     )) {
       expect(source, route).toMatch(/env\.CRON_SECRET/);
       expect(source, route).toMatch(/timingSafeEqual/);
+    }
+  });
+
+  it("checks the signature of every signed storage route and turns it off in production", () => {
+    for (const { route, source } of routes.filter((r) =>
+      SIGNED_STORAGE_ROUTES.includes(r.route),
+    )) {
+      expect(source, route).toMatch(/verifyLocalUrl/);
+      expect(source, route).toMatch(/NODE_ENV === "production"/);
     }
   });
 
