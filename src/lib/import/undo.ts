@@ -24,6 +24,7 @@ import {
 import { env } from "@/env";
 
 import { ImportBlockedError, type EmploymentSnapshot } from "./apply";
+import { revokeEmployeeAccess } from "@/lib/employee-accounts/revoke";
 
 export const UNDO_BATCH_SIZE = 200;
 
@@ -453,6 +454,18 @@ const undoBatch = async (
         ids.forEach((id) =>
           event("person", id, "Alta revertida: se deshizo la importación"),
         );
+
+        // W2-01: a reverted alta takes its employee account with it.
+        for (const id of ids) {
+          await revokeEmployeeAccess(
+            tx,
+            job.companyId,
+            id,
+            "borrado",
+            job.actorUserId,
+            "import",
+          );
+        }
       }
 
       if (updated.length > 0) {
