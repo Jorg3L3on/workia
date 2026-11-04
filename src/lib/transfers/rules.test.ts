@@ -30,11 +30,10 @@ describe("dayBefore", () => {
 
 describe("timeline cursor", () => {
   it("round-trips and refuses anything else", () => {
-    const cursor = {
-      occurredAt: new Date("2026-11-16T18:00:00.000Z"),
-      id: "6f1c1a7e-8b0e-4d7a-9a8e-2b8c7f1d0a11",
-    };
-    expect(decodeTimelineCursor(encodeTimelineCursor(cursor))).toEqual(cursor);
+    const cursor = Buffer.from(
+      '["2026-11-16T18:00:00.123456+00:00","6f1c1a7e-8b0e-4d7a-9a8e-2b8c7f1d0a11"]',
+    ).toString("base64url");
+    expect(decodeTimelineCursor(encodeTimelineCursor(cursor))).toBe(cursor);
     expect(decodeTimelineCursor("x~y")).toBeNull();
     expect(decodeTimelineCursor(undefined)).toBeNull();
   });
