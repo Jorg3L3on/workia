@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
 
 import { expect, test, type Page } from "@playwright/test";
+import { e2eCurp } from "./curp";
 
 // The expediente «Credencial»: badge, key facts and section cards, no tabs.
 
@@ -42,6 +43,7 @@ const createDummy = async (
   await page.goto("/app/personas/nueva");
   await page.locator("#nombres").fill("Persona");
   await page.locator("#apellidoPaterno").fill(surname);
+  await page.locator("#curp").fill(e2eCurp());
   if (fechaIngreso) {
     await page.locator("#fechaIngreso").fill(fechaIngreso);
   }
@@ -127,16 +129,17 @@ test.describe("Expediente «Credencial»", () => {
 
     // Missing fields are grouped, and each one opens the form on its field.
     const fiscal = card(page, "Fiscal e IMSS");
+    // The CURP is required at the alta (identity model), so it is never missing.
     await expect(fiscal.getByTestId("missing-fields")).toHaveText(
-      "Falta capturar: RFC, CURP, NSS",
+      "Falta capturar: RFC, NSS",
     );
-    await fiscal.getByRole("link", { name: "CURP", exact: true }).click();
+    await fiscal.getByRole("link", { name: "RFC", exact: true }).click();
     await expect(page).toHaveURL(
       new RegExp(
-        `/app/personas/${personId}\\?edit=1&seccion=identificadores&campo=curp`,
+        `/app/personas/${personId}\\?edit=1&seccion=identificadores&campo=rfc`,
       ),
     );
-    await expect(page.locator("#curp")).toBeFocused();
+    await expect(page.locator("#rfc")).toBeFocused();
     await expect(page.locator("#seccion-identificadores")).toBeInViewport();
 
     // Card «Editar» lands on its section.
@@ -155,7 +158,9 @@ test.describe("Expediente «Credencial»", () => {
     await expect(contrato.locator("#startDate")).toBeVisible();
 
     await page.goto(`/app/personas/${personId}?saved=1`);
-    await expect(page.getByRole("status")).toContainText("Cambios guardados.");
+    await expect(
+      page.getByRole("status").filter({ hasText: "Cambios guardados." }),
+    ).toBeVisible();
   });
 
   test("baja: grey badge, the baja block, «Reingresar» and masking", async ({

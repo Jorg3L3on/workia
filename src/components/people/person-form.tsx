@@ -314,6 +314,7 @@ export const PersonForm = ({
       : updatePersonAction.bind(null, person!.id);
 
   const [state, formAction] = useActionState(action, initialState);
+  const curpRequired = (person?.status ?? "activa") === "activa";
 
   const defaultValues: PersonFormValues = {
     nombres: person?.nombres ?? "",
@@ -605,13 +606,17 @@ export const PersonForm = ({
                 {errorText("rfc")}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="curp">CURP (opcional)</Label>
+                {/* Every active person has a CURP (docs/identity-model.md). */}
+                <Label htmlFor="curp">
+                  {curpRequired ? "CURP" : "CURP (opcional)"}
+                </Label>
                 <Input
                   aria-invalid={Boolean(fieldError("curp"))}
                   defaultValue={defaultValues.curp}
                   id="curp"
                   name="curp"
                   placeholder="XAXX010101HDFXXX00"
+                  required={curpRequired}
                 />
                 {errorText("curp")}
               </div>

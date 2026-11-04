@@ -29,6 +29,10 @@ export const pageTitles = {
   expediente: "Expediente",
   contratos: "Contratos",
   documentos: "Documentos por vencer",
+  solicitudes: "Solicitudes",
+  solicitud: "Solicitud",
+  privacidad: "Privacidad",
+  asistencia: "Asistencia",
   plantillas: "Plantillas",
   nuevaPlantilla: "Nueva plantilla",
   plantilla: "Plantilla",
@@ -44,6 +48,7 @@ export const pageTitles = {
   regiones: "Regiones",
   motivosBaja: "Motivos de baja",
   auditoria: "Auditoría",
+  avisos: "Avisos",
   administracion: "Administración",
   rbac: "Roles y permisos",
   notFound: "Página no encontrada",
@@ -53,6 +58,9 @@ export const pageTitles = {
   miembros: "Miembros",
   conexiones: "Conexiones",
   rotacion: "Rotación",
+  periodos: "Periodos de pago",
+  periodo: "Quincena",
+  reglasIncidencias: "Reglas de incidencias",
 } as const;
 
 export const companyCopy = {

@@ -19,6 +19,7 @@ import {
   employmentPeriods,
   people,
   permissions,
+  personalDataAccessLog,
   rolePermissions,
   roles,
   users,
@@ -36,6 +37,13 @@ import {
   VACATION_COPY,
 } from "@/lib/vacations/balance";
 import { getVacationConstancia } from "@/lib/vacations/constancia";
+import { getPersonVacationBalance } from "@/lib/vacations/person-balance";
+import { composeVacationBalance } from "@/lib/vacations/summary";
+import { getPersonWithRelations } from "@/lib/people";
+import {
+  listEmploymentPeriods,
+  summarizePeriods,
+} from "@/lib/people/employment";
 import {
   listVacationRecords,
   registerVacationRecord,
@@ -623,6 +631,21 @@ describe("vacation constancia stays inside the company", () => {
     expect(html).not.toContain(
       formatDateMx(plusDays(period!.currentAnniversary, 1)),
     );
+
+    // Only the successful view is in the personal data access log (W2-09).
+    const reads = await ownerDb
+      .select()
+      .from(personalDataAccessLog)
+      .where(eq(personalDataAccessLog.personId, companyA.person.id));
+
+    expect(reads).toEqual([
+      expect.objectContaining({
+        companyId: companyA.companyId,
+        resource: "vacation_constancia",
+        actorKind: "hr_user",
+        actorUserId: companyA.admin.id,
+      }),
+    ]);
   });
 
   it("returns notFound with vacations:read and without contracts:read", async () => {
@@ -756,5 +779,69 @@ describe("vacation constancia stays inside the company", () => {
     expect(html).not.toContain(formatDateMx(fechaBaja));
     expect(html).toContain(`>${closed!.serviceYearsCompleted}</dd>`);
     expect(html).toContain("3 días");
+  });
+});
+
+describe("employee vacation balance (W2-05)", () => {
+  it("lib:vacations/person-balance/getPersonVacationBalance", async () => {
+    const today = isoToday();
+    const created = await registerVacationRecord(
+      a.companyId,
+      {
+        personId: a.person.id,
+        startDate: "2026-10-19",
+        endDate: "2026-10-20",
+        days: "2",
+        note: "Nota privada de RH",
+      },
+      a.admin.id,
+    );
+
+    expect(created).toEqual(expect.objectContaining({ ok: true }));
+    const createdId = created && created.ok ? created.id : "";
+
+    expect(
+      await getPersonVacationBalance(b.companyId, a.person.id, today),
+    ).toBeNull();
+    expect(
+      await getPersonVacationBalance(a.companyId, "not-a-uuid", today),
+    ).toBeNull();
+
+    const balance = await getPersonVacationBalance(
+      a.companyId,
+      a.person.id,
+      today,
+    );
+
+    // The expediente's inputs for the HR card, read the way the page reads them.
+    const person = await getPersonWithRelations(a.companyId, a.person.id, true);
+    const employment = summarizePeriods(
+      await listEmploymentPeriods(a.companyId, a.person.id),
+    );
+    const hrCard = composeVacationBalance({
+      seniorityDate: employment
+        ? employment.fechaAntiguedad
+        : (person?.fechaIngreso ?? null),
+      status: person!.status,
+      fechaBaja: employment?.fechaBaja ?? null,
+      today,
+      records: await listVacationRecords(a.companyId, a.person.id),
+    });
+
+    expect(balance).not.toBeNull();
+    expect(balance?.current).toEqual(hrCard.current);
+    expect(balance?.view).toEqual(hrCard.view);
+    expect(balance?.years).toEqual(hrCard.years);
+    expect(balance?.records.map((row) => row.id)).toContain(createdId);
+    expect(JSON.stringify(balance)).not.toContain("Nota privada de RH");
+
+    // Company B's person has no rows of A in their balance.
+    const other = await getPersonVacationBalance(
+      b.companyId,
+      b.person.id,
+      today,
+    );
+
+    expect(other?.records.map((row) => row.id)).not.toContain(createdId);
   });
 });

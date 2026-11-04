@@ -71,6 +71,35 @@ describe("schedule by blocks", () => {
     );
   });
 
+  it("accepts a night shift that ends the next day (W2-14)", () => {
+    expect(
+      messages({
+        bloques: [
+          {
+            ...weekdays,
+            entrada: "22:00",
+            salida: "06:00",
+            comidaInicio: "02:00",
+            comidaFin: "02:30",
+          },
+        ],
+      }),
+    ).toEqual([]);
+    expect(
+      messages({
+        bloques: [
+          {
+            ...weekdays,
+            entrada: "22:00",
+            salida: "06:00",
+            comidaInicio: "07:00",
+            comidaFin: "07:30",
+          },
+        ],
+      }),
+    ).toContain("La comida debe quedar dentro del horario y en orden.");
+  });
+
   it("reads a simple schedule as Monday–Friday and mirrors the first block back", () => {
     const blocks = blocksFromLegacy({
       entrada: "09:00:00",

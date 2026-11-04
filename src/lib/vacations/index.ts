@@ -5,7 +5,7 @@ import {
   recordAuditEvent,
   snapshotVacationRecord,
 } from "@/lib/audit";
-import { withTransaction } from "@/lib/db";
+import { withTransaction, type DbTransaction } from "@/lib/db";
 import {
   employmentPeriods,
   people,
@@ -14,6 +14,11 @@ import {
 } from "@/lib/db/schema";
 import { formatDateMx } from "@/lib/format/date";
 import { withTenant } from "@/lib/tenant/scope";
+import { appendPersonEvents } from "@/lib/timeline";
+import {
+  vacationEnjoymentEvent,
+  vacationVoidEvent,
+} from "@/lib/timeline/events";
 
 import {
   VACATION_COPY,
@@ -99,109 +104,158 @@ export const registerVacationRecord = async (
     return null;
   }
 
-  return withTransaction(async (tx) => {
-    const [person] = await tx
-      .select({
-        id: people.id,
-        fechaIngreso: people.fechaIngreso,
-        deletedAt: people.deletedAt,
-      })
-      .from(people)
-      .where(withTenant(people, companyId, eq(people.id, input.personId)))
-      .for("update");
+  return withTransaction(
+    (tx) =>
+      registerVacationRecordInTx(tx, companyId, input, {
+        userId: actorUserId ?? null,
+      }),
+    companyId,
+  );
+};
 
-    if (!person || person.deletedAt) {
-      return null;
-    }
+/**
+ * Who writes a vacation_records row: HR from the expediente, or a manager
+ * approving a request from the employee app (W2-06), whose account is the
+ * audit actor and who has no users row to put in created_by.
+ */
+export type VacationActor =
+  { userId: string | null } | { employeeAccountId: string };
 
-    const periods = await tx
-      .select({
-        id: employmentPeriods.id,
-        fechaIngreso: employmentPeriods.fechaIngreso,
-        fechaBaja: employmentPeriods.fechaBaja,
-        bajaSinFecha: employmentPeriods.bajaSinFecha,
-        reconoceAntiguedad: employmentPeriods.reconoceAntiguedad,
-        fechaAntiguedadReconocida: employmentPeriods.fechaAntiguedadReconocida,
-      })
-      .from(employmentPeriods)
-      .where(
-        withTenant(
-          employmentPeriods,
-          companyId,
-          eq(employmentPeriods.personId, person.id),
-        ),
-      );
+const auditActor = (actor: VacationActor) =>
+  "employeeAccountId" in actor
+    ? {
+        actorEmployeeAccountId: actor.employeeAccountId,
+        source: "employee" as const,
+      }
+    : { actorUserId: actor.userId };
 
-    const existing = await tx
-      .select({
-        startDate: vacationRecords.startDate,
-        endDate: vacationRecords.endDate,
-        serviceYear: vacationRecords.serviceYear,
-        days: vacationRecords.days,
-        voidedAt: vacationRecords.voidedAt,
-      })
-      .from(vacationRecords)
-      .where(
-        withTenant(
-          vacationRecords,
-          companyId,
-          eq(vacationRecords.personId, person.id),
-        ),
-      )
-      .for("update");
+/**
+ * registerVacationRecord inside the caller's transaction (W2-06 approves a
+ * request and writes the row in one transaction). Locks the person and their
+ * rows, so two approvals of the same person never both pass the checks.
+ */
+export const registerVacationRecordInTx = async (
+  tx: DbTransaction,
+  companyId: string,
+  input: RegisterVacationInput,
+  actor: VacationActor,
+): Promise<VacationMutation | null> => {
+  if (!isUuid(input.personId)) {
+    return null;
+  }
 
-    const preview = previewVacationRegistration({
-      periods,
-      fallbackFechaIngreso: person.fechaIngreso,
-      startDate: input.startDate,
-      endDate: input.endDate,
-      days: input.days,
-      note: input.note,
-      existing: existing.map((row) => ({
-        startDate: row.startDate,
-        endDate: row.endDate,
-        serviceYear: row.serviceYear,
-        days: row.days,
-        voided: row.voidedAt !== null,
-      })),
-    });
+  const [person] = await tx
+    .select({
+      id: people.id,
+      fechaIngreso: people.fechaIngreso,
+      deletedAt: people.deletedAt,
+    })
+    .from(people)
+    .where(withTenant(people, companyId, eq(people.id, input.personId)))
+    .for("update");
 
-    if (!preview.ok) {
-      return preview;
-    }
+  if (!person || person.deletedAt) {
+    return null;
+  }
 
-    const [created] = await tx
-      .insert(vacationRecords)
-      .values({
+  const periods = await tx
+    .select({
+      id: employmentPeriods.id,
+      fechaIngreso: employmentPeriods.fechaIngreso,
+      fechaBaja: employmentPeriods.fechaBaja,
+      bajaSinFecha: employmentPeriods.bajaSinFecha,
+      reconoceAntiguedad: employmentPeriods.reconoceAntiguedad,
+      fechaAntiguedadReconocida: employmentPeriods.fechaAntiguedadReconocida,
+    })
+    .from(employmentPeriods)
+    .where(
+      withTenant(
+        employmentPeriods,
         companyId,
-        personId: person.id,
-        employmentPeriodId: preview.periodId,
-        serviceYear: preview.serviceYear,
-        startDate: input.startDate,
-        endDate: input.endDate,
-        days: preview.days,
-        note: preview.note,
-        createdBy: actorUserId ?? null,
-      })
-      .returning();
-
-    await recordAuditEvent(
-      {
-        companyId,
-        actorUserId,
-        resourceType: "vacation_record",
-        resourceId: created.id,
-        action: "create",
-        payload: {
-          after: snapshotVacationRecord(created),
-          summary: `Vacaciones registradas del ${formatDateMx(created.startDate)} al ${formatDateMx(created.endDate)} (${formatVacationDays(created.days)})`,
-        },
-      },
-      tx,
+        eq(employmentPeriods.personId, person.id),
+      ),
     );
 
-    return { ok: true, id: created.id, warning: preview.warning };
-  }, companyId);
+  const existing = await tx
+    .select({
+      startDate: vacationRecords.startDate,
+      endDate: vacationRecords.endDate,
+      serviceYear: vacationRecords.serviceYear,
+      days: vacationRecords.days,
+      voidedAt: vacationRecords.voidedAt,
+    })
+    .from(vacationRecords)
+    .where(
+      withTenant(
+        vacationRecords,
+        companyId,
+        eq(vacationRecords.personId, person.id),
+      ),
+    )
+    .for("update");
+
+  const preview = previewVacationRegistration({
+    periods,
+    fallbackFechaIngreso: person.fechaIngreso,
+    startDate: input.startDate,
+    endDate: input.endDate,
+    days: input.days,
+    note: input.note,
+    existing: existing.map((row) => ({
+      startDate: row.startDate,
+      endDate: row.endDate,
+      serviceYear: row.serviceYear,
+      days: row.days,
+      voided: row.voidedAt !== null,
+    })),
+  });
+
+  if (!preview.ok) {
+    return preview;
+  }
+
+  const [created] = await tx
+    .insert(vacationRecords)
+    .values({
+      companyId,
+      personId: person.id,
+      employmentPeriodId: preview.periodId,
+      serviceYear: preview.serviceYear,
+      startDate: input.startDate,
+      endDate: input.endDate,
+      days: preview.days,
+      note: preview.note,
+      createdBy: "userId" in actor ? actor.userId : null,
+    })
+    .returning();
+
+  await recordAuditEvent(
+    {
+      companyId,
+      ...auditActor(actor),
+      resourceType: "vacation_record",
+      resourceId: created.id,
+      action: "create",
+      payload: {
+        after: snapshotVacationRecord(created),
+        summary: `Vacaciones registradas del ${formatDateMx(created.startDate)} al ${formatDateMx(created.endDate)} (${formatVacationDays(created.days)})`,
+      },
+    },
+    tx,
+  );
+  // The person timeline (W2-13), in the same transaction.
+  await appendPersonEvents(
+    companyId,
+    [
+      vacationEnjoymentEvent(
+        created,
+        "employeeAccountId" in actor ? "employee" : "app",
+      ),
+    ],
+    tx,
+  );
+
+  return { ok: true, id: created.id, warning: preview.warning };
 };
 
 /**
@@ -217,63 +271,87 @@ export const voidVacationRecord = async (
     return null;
   }
 
-  return withTransaction(async (tx) => {
-    const [current] = await tx
-      .select()
-      .from(vacationRecords)
-      .where(
-        withTenant(
-          vacationRecords,
-          companyId,
-          eq(vacationRecords.id, recordId),
-        ),
-      )
-      .for("update");
+  return withTransaction(
+    (tx) =>
+      voidVacationRecordInTx(tx, companyId, recordId, {
+        userId: actorUserId ?? null,
+      }),
+    companyId,
+  );
+};
 
-    if (!current) {
-      return null;
-    }
+/** voidVacationRecord inside the caller's transaction (W2-06 cancels an approved request). */
+export const voidVacationRecordInTx = async (
+  tx: DbTransaction,
+  companyId: string,
+  recordId: string,
+  actor: VacationActor,
+): Promise<VacationMutation | null> => {
+  if (!isUuid(recordId)) {
+    return null;
+  }
 
-    if (current.voidedAt) {
-      return { ok: false, error: VACATION_COPY.alreadyVoided };
-    }
+  const [current] = await tx
+    .select()
+    .from(vacationRecords)
+    .where(
+      withTenant(vacationRecords, companyId, eq(vacationRecords.id, recordId)),
+    )
+    .for("update");
 
-    const [updated] = await tx
-      .update(vacationRecords)
-      .set({ voidedAt: new Date() })
-      .where(
-        and(
-          eq(vacationRecords.companyId, companyId),
-          eq(vacationRecords.id, current.id),
-          isNull(vacationRecords.voidedAt),
-        ),
-      )
-      .returning();
+  if (!current) {
+    return null;
+  }
 
-    if (!updated) {
-      return { ok: false, error: VACATION_COPY.alreadyVoided };
-    }
+  if (current.voidedAt) {
+    return { ok: false, error: VACATION_COPY.alreadyVoided };
+  }
 
-    const before = snapshotVacationRecord(current);
-    const after = snapshotVacationRecord(updated);
+  const [updated] = await tx
+    .update(vacationRecords)
+    .set({ voidedAt: new Date() })
+    .where(
+      and(
+        eq(vacationRecords.companyId, companyId),
+        eq(vacationRecords.id, current.id),
+        isNull(vacationRecords.voidedAt),
+      ),
+    )
+    .returning();
 
-    await recordAuditEvent(
-      {
-        companyId,
-        actorUserId,
-        resourceType: "vacation_record",
-        resourceId: current.id,
-        action: "delete",
-        payload: {
-          before,
-          after,
-          changes: buildChanges(before, after, ["voidedAt"]),
-          summary: `Vacaciones anuladas del ${formatDateMx(current.startDate)} al ${formatDateMx(current.endDate)}`,
-        },
+  if (!updated) {
+    return { ok: false, error: VACATION_COPY.alreadyVoided };
+  }
+
+  const before = snapshotVacationRecord(current);
+  const after = snapshotVacationRecord(updated);
+
+  await recordAuditEvent(
+    {
+      companyId,
+      ...auditActor(actor),
+      resourceType: "vacation_record",
+      resourceId: current.id,
+      action: "delete",
+      payload: {
+        before,
+        after,
+        changes: buildChanges(before, after, ["voidedAt"]),
+        summary: `Vacaciones anuladas del ${formatDateMx(current.startDate)} al ${formatDateMx(current.endDate)}`,
       },
-      tx,
-    );
+    },
+    tx,
+  );
+  await appendPersonEvents(
+    companyId,
+    [
+      vacationVoidEvent(
+        { ...updated, voidedAt: updated.voidedAt! },
+        "employeeAccountId" in actor ? "employee" : "app",
+      ),
+    ],
+    tx,
+  );
 
-    return { ok: true, id: updated.id, warning: null };
-  }, companyId);
+  return { ok: true, id: updated.id, warning: null };
 };
