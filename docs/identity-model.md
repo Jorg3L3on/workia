@@ -213,7 +213,8 @@ Company RLS separates companies, not employees. Within one company:
   codes, the guard, the email and CURP rules above, revocation inside
   `terminatePerson` and `softDeletePerson`, the account as an audit actor.
 - **P-01 Timeline table:** `person_events` keyed by `(company_id, person_id)`,
-  no CURP, no account id as the key; the actor stays in `audit_events`.
+  no CURP, no account id as the key; the actor stays in `audit_events`. Built:
+  see [timeline.md](timeline.md).
 - **W2-07 Manager scope:** the grant, the live team from `people.manager_id`,
   delegation with an end date.
 - **W2-24 Transfers:** `person_links`, the CURP match, per-company reads merged
