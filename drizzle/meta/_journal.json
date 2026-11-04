@@ -227,6 +227,13 @@
       "breakpoints": true
     },
     {
+      "idx": 33,
+      "version": "7",
+      "when": 1787846400000,
+      "tag": "0033_privacy_arco",
+      "breakpoints": true
+    },
+    {
       "idx": 36,
       "version": "7",
       "when": 1787925600000,
