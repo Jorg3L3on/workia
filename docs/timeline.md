@@ -99,7 +99,9 @@ const older = await listPersonEvents(companyId, personId, {
   nothing for a person of another company. It is an HR/company read; employee
   routes call it with the guard's `personId` only (W2-01).
 
-Writing the events from each flow, and the backfill, is W2-13.
+Writing the events from each flow, and the backfill, is W2-13. The numbers
+over these rows, and the snapshot a pay period freezes when it closes, are in
+[aggregates](aggregates.md) (P-02).
 
 ## Retention
 

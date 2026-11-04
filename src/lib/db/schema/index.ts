@@ -9,6 +9,7 @@ export * from "./employment";
 export * from "./imports";
 export * from "./mcp";
 export * from "./onboardings";
+export * from "./pay-periods";
 export * from "./people";
 export * from "./people-views";
 export * from "./rbac";
