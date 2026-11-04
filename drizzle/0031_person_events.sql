@@ -37,7 +37,7 @@ DO $$
 BEGIN
 	IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'workia_app') THEN
 		GRANT SELECT, INSERT, DELETE ON "person_events" TO workia_app;
-		REVOKE UPDATE, TRUNCATE ON "person_events" FROM workia_app;
+		REVOKE UPDATE ON "person_events" FROM workia_app;
 	END IF;
 END $$;
 
