@@ -1,7 +1,8 @@
-import { and, desc, eq, gt, inArray, lt, or, sql, type SQL } from "drizzle-orm";
+import { and, eq, gt, inArray, lt, sql, type SQL } from "drizzle-orm";
 
 import { db, type DbExecutor, tdb } from "@/lib/db";
 import { CompanyReferenceError } from "@/lib/db/errors";
+import { clampPageSize, defineKeyset } from "@/lib/db/keyset";
 import {
   companies,
   people,
@@ -113,8 +114,6 @@ export const appendPersonEvents = async (
   return inserted;
 };
 
-export type TimelineCursor = { occurredAt: Date; id: string };
-
 export type TimelinePage = {
   events: Array<{
     id: string;
@@ -123,20 +122,27 @@ export type TimelinePage = {
     source: string;
     payload: Record<string, unknown>;
   }>;
-  /** Pass back as `before` for the next (older) page; null on the last one. */
-  next: TimelineCursor | null;
+  /** Opaque cursor: pass back as `cursor` for the next (older) page; null on the last one. */
+  next: string | null;
 };
+
+/** Newest first; `id` breaks ties. Matches person_events_person_time_idx. */
+const personTimeline = defineKeyset([
+  { column: personEvents.occurredAt, type: "timestamptz", direction: "desc" },
+  { column: personEvents.id, type: "uuid", direction: "desc" },
+]);
 
 /**
  * One person's history, newest first, in keyset pages: one range scan of
- * person_events_person_time_idx. Empty for a person outside the company.
+ * person_events_person_time_idx that starts at the cursor. Empty for a person
+ * outside the company.
  */
 export const listPersonEvents = async (
   companyId: string,
   personId: string,
   options: {
     types?: PersonEventType[];
-    before?: TimelineCursor | null;
+    cursor?: string | null;
     limit?: number;
   } = {},
 ): Promise<TimelinePage> => {
@@ -144,24 +150,15 @@ export const listPersonEvents = async (
     return { events: [], next: null };
   }
 
-  const limit = Math.min(Math.max(options.limit ?? 50, 1), MAX_TIMELINE_PAGE);
+  const limit = clampPageSize(options.limit, 50, MAX_TIMELINE_PAGE);
   const conditions: SQL[] = [eq(personEvents.personId, personId)];
 
   if (options.types?.length) {
     conditions.push(inArray(personEvents.type, options.types));
   }
 
-  if (options.before) {
-    conditions.push(
-      or(
-        lt(personEvents.occurredAt, options.before.occurredAt),
-        and(
-          eq(personEvents.occurredAt, options.before.occurredAt),
-          lt(personEvents.id, options.before.id),
-        ),
-      ) as SQL,
-    );
-  }
+  const after = personTimeline.after(options.cursor);
+  if (after) conditions.push(after);
 
   const rows = await tdb(companyId)
     .select({
@@ -170,22 +167,16 @@ export const listPersonEvents = async (
       occurredAt: personEvents.occurredAt,
       source: personEvents.source,
       payload: personEvents.payload,
+      cursor: personTimeline.cursor,
     })
     .from(personEvents)
     .where(withTenant(personEvents, companyId, ...conditions))
-    .orderBy(desc(personEvents.occurredAt), desc(personEvents.id))
+    .orderBy(...personTimeline.orderBy)
     .limit(limit + 1);
 
-  const events = rows.slice(0, limit);
-  const last = events.at(-1);
+  const page = personTimeline.page(rows, limit);
 
-  return {
-    events,
-    next:
-      rows.length > limit && last
-        ? { occurredAt: last.occurredAt, id: last.id }
-        : null,
-  };
+  return { events: page.items, next: page.next };
 };
 
 /**

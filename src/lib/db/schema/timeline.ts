@@ -63,14 +63,8 @@ export const personEvents = pgTable(
       table.occurredAt.desc().nullsFirst(),
       table.id.desc().nullsFirst(),
     ),
-    // The today view: attendance and incidencias of one site.
-    index("person_events_site_day_idx")
-      .on(
-        table.companyId,
-        sql`(${table.payload} ->> 'site_id')`,
-        table.occurredAt,
-      )
-      .where(sql`${table.type} in ('attendance', 'incidencia')`),
+    // The today view has no index of its own: it reads the site's roster
+    // from people and probes the dedupe index per person (P-04, 0036).
     // Idempotent ingestion: a key is written once per person. Person ids are
     // unique across companies, so the company adds nothing but bytes here.
     uniqueIndex("person_events_dedupe_unique")

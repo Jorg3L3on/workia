@@ -1,7 +1,12 @@
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { and, asc, eq, isNull, sql } from "drizzle-orm";
 
 import { db, tdb } from "@/lib/db";
-import { companies, people, type PersonEventType } from "@/lib/db/schema";
+import {
+  companies,
+  people,
+  personEvents,
+  type PersonEventType,
+} from "@/lib/db/schema";
 import type { PermissionSlug } from "@/lib/db/schema/types";
 import {
   getRolePermissionSlugs,
@@ -9,11 +14,9 @@ import {
   listActiveMemberships,
 } from "@/lib/tenant/memberships";
 import { withTenant } from "@/lib/tenant/scope";
-import {
-  listPersonEvents,
-  MAX_TIMELINE_PAGE,
-  type TimelineCursor,
-} from "@/lib/timeline";
+import { listPersonEvents, MAX_TIMELINE_PAGE } from "@/lib/timeline";
+
+import type { TimelineCursor } from "./cursor";
 
 import { listPersonLinks, type PersonLinkRow } from "./index";
 
@@ -198,6 +201,24 @@ export type GroupTimelinePage = {
   next: TimelineCursor | null;
 };
 
+/**
+ * The keyset cursor right after `event`, read from its own company under its
+ * RLS so occurred_at keeps the microseconds Postgres stores.
+ */
+const cursorOf = async (event: GroupTimelineEvent) => {
+  const [row] = await tdb(event.companyId)
+    .select({
+      key: sql<string>`json_build_array(${personEvents.occurredAt}, ${personEvents.id})::text`,
+    })
+    .from(personEvents)
+    .where(
+      withTenant(personEvents, event.companyId, eq(personEvents.id, event.id)),
+    )
+    .limit(1);
+
+  return row ? Buffer.from(row.key, "utf8").toString("base64url") : null;
+};
+
 /** Newest first; ties by id, as person_events_person_time_idx orders them. */
 const newestFirst = (a: GroupTimelineEvent, b: GroupTimelineEvent) =>
   b.occurredAt.getTime() - a.occurredAt.getTime() ||
@@ -230,7 +251,7 @@ export const listGroupTimeline = async (
   const pages = await Promise.all(
     visible.map((row) =>
       listPersonEvents(row.companyId, row.personId, {
-        before: options.before,
+        cursor: options.before,
         limit,
         types: options.types,
       }),
@@ -253,6 +274,6 @@ export const listGroupTimeline = async (
   return {
     rows,
     events,
-    next: more && last ? { occurredAt: last.occurredAt, id: last.id } : null,
+    next: more && last ? await cursorOf(last) : null,
   };
 };

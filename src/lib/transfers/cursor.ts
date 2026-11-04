@@ -1,19 +1,18 @@
-import type { TimelineCursor } from "@/lib/timeline";
+/**
+ * A group timeline cursor: the keyset cursor of listPersonEvents
+ * (src/lib/db/keyset.ts, base64url JSON of occurred_at as Postgres renders it
+ * and the event id) for the last event a page showed. Every linked row is
+ * read with the same one, so the merged pages never skip or repeat; the
+ * timestamp keeps its microseconds, which a JS Date would cut.
+ */
+export type TimelineCursor = string;
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const CURSOR = /^[A-Za-z0-9_-]{1,512}$/;
 
-/** A group timeline cursor in a URL: `<ISO instant>~<event id>`. */
-export const encodeTimelineCursor = (cursor: TimelineCursor) =>
-  `${cursor.occurredAt.toISOString()}~${cursor.id}`;
+/** As it goes in a URL; it is already URL-safe. */
+export const encodeTimelineCursor = (cursor: TimelineCursor) => cursor;
 
-/** Null for anything that is not a cursor this page wrote. */
+/** Null for anything that cannot be a cursor; listPersonEvents rechecks it. */
 export const decodeTimelineCursor = (
   value: string | undefined | null,
-): TimelineCursor | null => {
-  const [instant, id] = (value ?? "").split("~");
-  const occurredAt = new Date(instant ?? "");
-
-  return id && UUID.test(id) && !Number.isNaN(occurredAt.getTime())
-    ? { occurredAt, id }
-    : null;
-};
+): TimelineCursor | null => (value && CURSOR.test(value) ? value : null);
