@@ -39,7 +39,14 @@ vi.mock("@/lib/employee-accounts/session", async (importOriginal) => {
 
 import TeamMemberPage from "@/app/mi/equipo/[personId]/page";
 import TeamTodayPage from "@/app/mi/equipo/hoy/page";
-import { employeeAccounts, people, sites } from "@/lib/db/schema";
+import { DEFAULT_CSV_FORMAT } from "@/lib/attendance/csv-format";
+import {
+  attendanceBatches,
+  attendanceDevices,
+  employeeAccounts,
+  people,
+  sites,
+} from "@/lib/db/schema";
 import { isoToday } from "@/lib/format/date";
 import {
   getManagerAccess,
@@ -76,6 +83,7 @@ type Team = {
   indirect: string;
   otherTeam: string;
   northSite: string;
+  checador: string;
 };
 
 let teamA: Team;
@@ -127,17 +135,47 @@ const seedTeam = async (tenant: Tenant, label: string): Promise<Team> => {
     })
     .returning({ id: employeeAccounts.id });
 
+  // A W2-12 checador that pushed today (last push 08:45) and once yesterday.
+  const [device] = await ownerDb
+    .insert(attendanceDevices)
+    .values({
+      companyId,
+      name: `Entrada ${label}`,
+      csvFormat: DEFAULT_CSV_FORMAT,
+    })
+    .returning({ id: attendanceDevices.id });
+  const yesterday = new Date(new Date(at("12:00")).getTime() - 86_400_000);
+  await ownerDb.insert(attendanceBatches).values([
+    {
+      companyId,
+      deviceId: device.id,
+      source: "device",
+      pushDay: DAY,
+      createdAt: new Date(at("07:01")),
+      updatedAt: new Date(at("08:45")),
+    },
+    {
+      companyId,
+      deviceId: device.id,
+      source: "device",
+      pushDay: yesterday.toISOString().slice(0, 10),
+      createdAt: yesterday,
+      updatedAt: yesterday,
+    },
+  ]);
+  const checador = `checador:${device.id}`;
+
   await writeAttendanceDays(companyId, [
     {
       personId: onShift,
       day: DAY,
-      source: "checador:entrada",
+      source: checador,
       punches: [{ at: at("08:02"), kind: "in" }],
     },
     {
       personId: left,
       day: DAY,
-      source: "checador:entrada",
+      source: checador,
       punches: [
         { at: at("07:00"), kind: "in" },
         { at: at("08:30"), kind: "out" },
@@ -153,7 +191,7 @@ const seedTeam = async (tenant: Tenant, label: string): Promise<Team> => {
     {
       personId: otherTeam,
       day: DAY,
-      source: "checador:entrada",
+      source: checador,
       punches: [{ at: at("10:45"), kind: "in" }],
     },
   ]);
@@ -185,6 +223,7 @@ const seedTeam = async (tenant: Tenant, label: string): Promise<Team> => {
     indirect,
     otherTeam,
     northSite: north.id,
+    checador,
   };
 };
 
@@ -258,8 +297,20 @@ describe("lib:timeline/today with a manager's team", () => {
     expect(await todayImports(a.companyId, { team: access }, DAY)).toEqual({
       onShift: 2,
       sources: [
-        { source: "import", people: 1, lastPunchAt: stored("09:20") },
-        { source: "checador:entrada", people: 2, lastPunchAt: stored("08:30") },
+        {
+          source: "import",
+          deviceName: null,
+          people: 1,
+          lastPunchAt: stored("09:20"),
+          importedAt: null,
+        },
+        {
+          source: teamA.checador,
+          deviceName: "Entrada A",
+          people: 2,
+          lastPunchAt: stored("08:30"),
+          importedAt: stored("08:45"),
+        },
       ],
     });
   });
@@ -414,7 +465,7 @@ describe("the today screens", () => {
     expect(html).toContain("Sin registro");
     expect(html).toContain("Retardo 20 min");
     expect(html).toContain("Importación: último registro a las");
-    expect(html).toContain("Checador entrada: último registro a las");
+    expect(html).toContain("Checador Entrada A: cargado a las");
 
     // A place of the other company is ignored: the whole team shows.
     const filtered = renderToStaticMarkup(

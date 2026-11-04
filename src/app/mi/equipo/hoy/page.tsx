@@ -137,10 +137,26 @@ const TeamTodayPage = async ({ searchParams }: TodayPageProps) => {
         {imports.sources.length > 0 ? (
           imports.sources.map((source) => (
             <p key={source.source}>
-              {sourceLabel(source.source)}: último registro a las{" "}
-              <span className="text-foreground font-medium">
-                {formatClockMx(source.lastPunchAt)}
-              </span>{" "}
+              {source.deviceName
+                ? `Checador ${source.deviceName}`
+                : sourceLabel(source.source)}
+              :{" "}
+              {source.importedAt && source.source !== "app" ? (
+                <>
+                  cargado a las{" "}
+                  <span className="text-foreground font-medium">
+                    {formatClockMx(source.importedAt)}
+                  </span>
+                  , último registro {formatClockMx(source.lastPunchAt)}
+                </>
+              ) : (
+                <>
+                  último registro a las{" "}
+                  <span className="text-foreground font-medium">
+                    {formatClockMx(source.lastPunchAt)}
+                  </span>
+                </>
+              )}{" "}
               · {source.people} {source.people === 1 ? "persona" : "personas"}
             </p>
           ))

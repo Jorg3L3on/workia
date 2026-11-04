@@ -77,10 +77,15 @@ so indirect reports and delegations count exactly as in «Mi equipo»:
 
 - `todayCounts`: roster, present, faltas and retardos from the P-02
   aggregates (never a counter).
-- `todayImports`: per attendance source, the people it covers and its latest
-  punch, which is "as of the last import"; also who is on shift (last punch an
-  entry). One statement through the roster and one probe of
-  `person_events_dedupe_unique` per person.
+- `todayImports`: per attendance source, the people it covers, its latest
+  punch and when it was last imported today; also who is on shift (last punch
+  an entry). For a W2-12 checador (`checador:<device id>`) the import time is
+  the newest `updated_at` of its `attendance_batches` created since local
+  midnight (a CSV upload, or the device's push row of the day, which moves
+  with each push), and the screen names it by `attendance_devices.name`. App
+  check-ins land as they happen, so their time is the latest punch. One
+  statement through the roster and one probe of `person_events_dedupe_unique`
+  per person, then one short read of today's batches of those devices.
 - `listTodayPage`: the keyset list (P-04), with `todayStatus` per row: a falta
   wins, then the last punch (entry = en turno, exit = salió), else sin
   registro. Incidencias follow the P-02 correction contract (highest `rev`
@@ -90,8 +95,7 @@ Each row drills into `/mi/equipo/[personId]`, which now lists the person's
 attendance and incidencias newest first (`listPersonEvents`, keyset), after
 the same team check. A team of 100 people with five years of attendance
 renders in about 100 ms locally (`src/test/idor/team-today.db.test.ts` checks
-under a second). When W2-12 records import runs, "last import" can read them
-instead of the latest punch.
+under a second).
 
 ## For W2-06 (requests and approvals)
 

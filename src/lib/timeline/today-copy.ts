@@ -18,13 +18,20 @@ export const TODAY_INCIDENCIA_LABEL: Record<string, string> = {
   salida_anticipada: "Salida anticipada",
 };
 
-/** "checador:<device>" → "Checador <device>"; "import" → "Importación". */
+/**
+ * A source without a device name: "app" → "Checado en la app", "import" →
+ * "Importación", "checador:<x>" → "Checador <x>". The today view names
+ * W2-12 checadores by their device name instead.
+ */
 export const sourceLabel = (source: string) => {
   if (source === "import") return "Importación";
+  if (source === "app") return "Checado en la app";
   if (source === "backfill") return "Carga inicial";
   if (source === "checador") return "Checador";
   if (source.startsWith("checador:")) {
-    return `Checador ${source.slice("checador:".length)}`;
+    const device = source.slice("checador:".length);
+    // A W2-12 checador id says nothing to a person.
+    return /^[0-9a-f-]{36}$/i.test(device) ? "Checador" : `Checador ${device}`;
   }
   return source;
 };

@@ -1,9 +1,22 @@
-import { and, eq, getTableName, isNull, sql, type SQL } from "drizzle-orm";
+import {
+  and,
+  eq,
+  getTableName,
+  inArray,
+  isNull,
+  sql,
+  type SQL,
+} from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 
 import { db, tdb } from "@/lib/db";
 import { clampPageSize, defineKeyset, type KeysetPage } from "@/lib/db/keyset";
-import { people, personEvents } from "@/lib/db/schema";
+import {
+  attendanceBatches,
+  attendanceDevices,
+  people,
+  personEvents,
+} from "@/lib/db/schema";
 import { DISPLAY_TIME_ZONE } from "@/lib/format/date";
 import { teamCondition, type ManagerAccess } from "@/lib/managers/scope";
 import { withTenant } from "@/lib/tenant/scope";
@@ -257,12 +270,21 @@ export const todayCounts = async (
 };
 
 export type TodaySource = {
-  /** person_events.source of the day's attendance rows: "checador:<device>", "import", ... */
+  /** person_events.source of the day's attendance rows: "checador:<device id>", "app", ... */
   source: string;
+  /** The checador's name, for "checador:<device id>" sources of this company. */
+  deviceName: string | null;
   /** People of the scope whose day came from it. */
   people: number;
   /** The latest punch it brought for the scope (ISO instant), or null. */
   lastPunchAt: string | null;
+  /**
+   * When it last brought punches today (ISO instant): the latest CSV upload
+   * or device push of the checador (W2-12 attendance_batches); for app
+   * check-ins, which land as they happen, the latest punch. Null when no
+   * import of today is recorded (a late match by HR, older data).
+   */
+  importedAt: string | null;
 };
 
 export type TodayImports = {
@@ -272,10 +294,14 @@ export type TodayImports = {
   sources: TodaySource[];
 };
 
+const DEVICE_SOURCE =
+  /^checador:([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
+
 /**
  * Where the day's attendance of a scope came from, and how fresh it is
- * (Workia 2.0 W2-17): per source, the people it covers and its latest punch,
- * which is how far the screen is current. Also counts who is on shift (last
+ * (Workia 2.0 W2-17): per source, the people it covers, its latest punch and
+ * when it was last imported today (W2-12 batches), which is how far the
+ * screen is current. Also counts who is on shift (last
  * punch an entry). One statement: the roster through the scope's people
  * index, one probe of person_events_dedupe_unique per person, then a group by
  * source. It reads the stored tuples ([at, kind, device?], sorted by time),
@@ -322,14 +348,59 @@ export const todayImports = async (
     )
     .groupBy(personEvents.source);
 
+  // Today's imports of the checadores above: a few rows of
+  // attendance_batches_company_created_idx (batches created since local
+  // midnight), and the devices by primary key. A push batch is one row per
+  // device and day whose updated_at moves with each push.
+  const deviceIds = [
+    ...new Set(
+      rows.flatMap((row) => DEVICE_SOURCE.exec(row.source)?.[1] ?? []),
+    ),
+  ];
+  const devices =
+    deviceIds.length === 0
+      ? []
+      : await tdb(companyId)
+          .select({
+            id: attendanceDevices.id,
+            name: attendanceDevices.name,
+            importedAt: sql<string | null>`(
+              select to_char(max(b.updated_at) at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+              from ${attendanceBatches} b
+              where b.company_id = ${outer(attendanceDevices.companyId)}
+                and b.device_id = ${outer(attendanceDevices.id)}
+                and b.created_at >= (${day}::date::timestamp at time zone ${DISPLAY_TIME_ZONE})
+            )`,
+          })
+          .from(attendanceDevices)
+          .where(
+            withTenant(
+              attendanceDevices,
+              companyId,
+              inArray(attendanceDevices.id, deviceIds),
+            ),
+          );
+  const byDevice = new Map(devices.map((device) => [device.id, device]));
+
   return {
     onShift: rows.reduce((sum, row) => sum + row.onShift, 0),
     sources: rows
-      .map(({ source, people: count, lastPunchAt }) => ({
-        source,
-        people: count,
-        lastPunchAt,
-      }))
+      .map(({ source, people: count, lastPunchAt }) => {
+        const deviceId = DEVICE_SOURCE.exec(source)?.[1];
+        const device = deviceId ? byDevice.get(deviceId.toLowerCase()) : null;
+
+        return {
+          source,
+          deviceName: device?.name ?? null,
+          people: count,
+          lastPunchAt,
+          importedAt: device
+            ? device.importedAt
+            : source === "app"
+              ? lastPunchAt
+              : null,
+        };
+      })
       .sort(
         (a, b) =>
           (b.lastPunchAt ?? "").localeCompare(a.lastPunchAt ?? "") ||
