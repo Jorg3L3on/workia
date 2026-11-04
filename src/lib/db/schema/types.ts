@@ -30,7 +30,8 @@ export type PermissionResource =
   | "reports"
   | "documents"
   | "vacations"
-  | "employee_accounts";
+  | "employee_accounts"
+  | "privacy";
 
 export type PermissionSlug = `${PermissionResource}:${PermissionAction}`;
 
@@ -462,6 +463,22 @@ export const PERMISSIONS: Array<{
       "Invite people to the employee app, issue activation codes and disable accounts",
   },
   {
+    slug: "privacy:read",
+    name: "Read Privacy",
+    resource: "privacy",
+    action: "read",
+    description:
+      "View the privacy notice versions, ARCO requests, the retention policy and the personal data access log",
+  },
+  {
+    slug: "privacy:manage",
+    name: "Manage Privacy",
+    resource: "privacy",
+    action: "manage",
+    description:
+      "Publish privacy notice versions, register and answer ARCO requests and download a person's data export",
+  },
+  {
     slug: "companies:read",
     name: "Read Companies",
     resource: "companies",
@@ -565,6 +582,8 @@ export const ROLES = [
       "vacations:create",
       "vacations:update",
       "employee_accounts:manage",
+      "privacy:read",
+      "privacy:manage",
     ] satisfies PermissionSlug[],
   },
   {

@@ -37,6 +37,7 @@ export default async function AppLayout({ children }: AppLayoutProps) {
       }
       canReadReports={session.permissions.has("reports:read")}
       canReadDocuments={session.permissions.has("documents:read")}
+      canReadPrivacy={session.permissions.has("privacy:read")}
       isPlatformAdmin={session.isPlatformAdmin}
     >
       {children}

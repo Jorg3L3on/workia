@@ -23,6 +23,10 @@ export const AUDIT_RESOURCE_TYPES = [
   "person_document",
   "vacation_record",
   "employee_account",
+  "privacy_notice",
+  "privacy_acceptance",
+  "arco_request",
+  "data_retention",
 ] as const;
 
 export type AuditResourceType = (typeof AUDIT_RESOURCE_TYPES)[number];
@@ -118,6 +122,10 @@ export const auditResourceTypeLabels: Record<AuditResourceType, string> = {
   person_document: "Documento de la persona",
   vacation_record: "Vacaciones tomadas",
   employee_account: "Cuenta de empleado",
+  privacy_notice: "Aviso de privacidad",
+  privacy_acceptance: "Aceptación del aviso de privacidad",
+  arco_request: "Solicitud ARCO",
+  data_retention: "Conservación de datos",
 };
 
 export const AUDIT_SOURCES = [

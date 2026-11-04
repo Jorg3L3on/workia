@@ -8,6 +8,7 @@ import {
   PlugIcon,
   PlusIcon,
   ScrollTextIcon,
+  ShieldCheckIcon,
   UploadIcon,
   UserCogIcon,
   UserPlusIcon,
@@ -29,6 +30,8 @@ export type NavAccess = {
   canReadReports: boolean;
   /** documents:read in the active company: shows Documentos. */
   canReadDocuments: boolean;
+  /** privacy:read in the active company: shows Privacidad. */
+  canReadPrivacy: boolean;
 };
 
 export type NavLink = {
@@ -134,6 +137,13 @@ export const NAV_GROUPS: readonly NavGroup[] = [
         icon: PlugIcon,
         keywords: ["mcp", "conector", "claude"],
         requires: "canUseConnections",
+      },
+      {
+        title: "Privacidad",
+        href: "/app/privacidad",
+        icon: ShieldCheckIcon,
+        keywords: ["aviso", "arco", "datos personales", "conservación"],
+        requires: "canReadPrivacy",
       },
       {
         title: "Auditoría",
