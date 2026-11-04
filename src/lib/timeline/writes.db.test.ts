@@ -594,6 +594,12 @@ describe("attendance and incidencias", () => {
         day([{ at: "2026-11-03T14:02:00Z", kind: "in" }]),
       ]),
     ).toEqual({ inserted: 0, merged: 0, unchanged: 1 });
+    // A re-upload that infers another kind for the same instant adds nothing.
+    expect(
+      await writeAttendanceDays(a.companyId, [
+        day([{ at: "2026-11-03T14:02:00Z", kind: "out" }]),
+      ]),
+    ).toEqual({ inserted: 0, merged: 0, unchanged: 1 });
     // The exit arrives later, twice in one call.
     expect(
       await writeAttendanceDays(a.companyId, [

@@ -69,6 +69,9 @@ export class TimelineConflictError extends Error {
   }
 }
 
+// The same instant from the same device is one punch: exports without an
+// entrada/salida column infer the kind by order, so a re-upload can infer
+// another kind for it. The kind stored first wins.
 const punchKey = (punch: Punch) => `${punch.at}|${punch.device_id ?? ""}`;
 
 /** An instant to the second, in UTC, without milliseconds. */
