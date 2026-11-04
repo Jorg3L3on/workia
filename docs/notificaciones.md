@@ -27,6 +27,11 @@ aviso, así que la bandeja se lee igual años después.
 | `document_rejected` | la persona                    | W2-04 documentos                 |
 | `contract_ending`   | su jefe y RH                  | W2-19 alertas LFT                |
 | `request_pending`   | el jefe (`people.manager_id`) | W2-06 bandeja de aprobaciones    |
+| `absence_warning`   | su jefe y RH                  | W2-19 alertas LFT                |
+| `absence_threshold` | su jefe y RH                  | W2-19 alertas LFT                |
+| `document_expiring` | su jefe y RH                  | W2-19 alertas LFT                |
+
+Las tres de W2-19 se agregaron en la migración 0053 (docs/alertas-lft.md).
 
 ## Cómo se usa desde otra tarea
 

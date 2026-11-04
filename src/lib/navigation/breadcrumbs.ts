@@ -216,6 +216,10 @@ export const resolveBreadcrumbs = (
     return [{ label: "Avisos" }];
   }
 
+  if (path === "/app/alertas") {
+    return [{ label: "Alertas LFT" }];
+  }
+
   if (path === "/app/auditoria") {
     return [{ label: "Auditoría" }];
   }

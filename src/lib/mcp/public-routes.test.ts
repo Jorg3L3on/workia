@@ -49,10 +49,14 @@ const PUBLIC_EMPLOYEE_ROUTES = [
 const DEVICE_ROUTES = ["/api/asistencia/checadas"];
 
 /**
- * Scheduled jobs (W2-09, W2-08): sessionless, answer only to the CRON_SECRET
+ * Scheduled jobs (W2-09, W2-08, W2-19): sessionless, answer only to the CRON_SECRET
  * bearer.
  */
-const SCHEDULED_JOB_ROUTES = ["/api/cron/retention", "/api/cron/notifications"];
+const SCHEDULED_JOB_ROUTES = [
+  "/api/cron/retention",
+  "/api/cron/notifications",
+  "/api/cron/lft-alerts",
+];
 
 /** A route is guarded when it goes through the company context or Auth.js. */
 const isSessionGuarded = (source: string) =>

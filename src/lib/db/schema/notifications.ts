@@ -29,6 +29,9 @@ export const NOTIFICATION_TEMPLATES = [
   "document_rejected",
   "contract_ending",
   "request_pending",
+  "absence_warning",
+  "absence_threshold",
+  "document_expiring",
 ] as const;
 
 export type NotificationTemplate = (typeof NOTIFICATION_TEMPLATES)[number];

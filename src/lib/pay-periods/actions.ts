@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { isoToday } from "@/lib/format/date";
 import { runIncidencias } from "@/lib/incidencias";
+import { alertAbsences } from "@/lib/lft-alerts";
 import { AuthorizationError } from "@/lib/rbac/errors";
 import {
   STALE_COMPANY_MESSAGE,
@@ -101,6 +102,8 @@ export const closePayPeriodAction = async (
     const result = await closePayPeriod(companyId, period, {
       actorUserId: auth.session.user.id,
     });
+    // The faltas just frozen may reach an LFT threshold (W2-19).
+    await alertAbsences(companyId);
 
     revalidatePeriod(period);
 

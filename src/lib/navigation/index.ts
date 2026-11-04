@@ -1,4 +1,5 @@
 import {
+  BellRingIcon,
   CalendarCheckIcon,
   ChartLineIcon,
   ClockIcon,
@@ -95,6 +96,12 @@ export const NAV_GROUPS: readonly NavGroup[] = [
         icon: CalendarCheckIcon,
         keywords: ["quincena", "cierre", "incidencias", "pre-nómina"],
         requires: "canReadPayPeriods",
+      },
+      {
+        title: "Alertas LFT",
+        href: "/app/alertas",
+        icon: BellRingIcon,
+        keywords: ["faltas", "rescisión", "artículo 47", "vencimientos"],
       },
       {
         title: "Asistencia",

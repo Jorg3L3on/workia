@@ -1,5 +1,6 @@
 import type { NotificationTemplate } from "@/lib/db/schema/notifications";
 import { formatDateMx } from "@/lib/format/date";
+import { absenceAlertBody } from "@/lib/lft-alerts/copy";
 
 /**
  * The five messages of W2-08, in plain Spanish. Each template turns its data
@@ -33,6 +34,26 @@ export type TemplateData = {
     from: string;
     to: string;
   };
+  /** Three unjustified faltas in 30 days: one more is the LFT threshold (W2-19). */
+  absence_warning: AbsenceAlertData;
+  /** More than three unjustified faltas in 30 days (LFT art. 47-X, W2-19). */
+  absence_threshold: AbsenceAlertData;
+  /** A document of the recipient's team or company expires soon (W2-19). */
+  document_expiring: {
+    personId: string;
+    personName: string;
+    document: string;
+    expiresOn: string;
+  };
+};
+
+/** The faltas an absence alert counts: how many, and the 30 days they fall in. */
+export type AbsenceAlertData = {
+  personId: string;
+  personName: string;
+  count: number;
+  from: string;
+  to: string;
 };
 
 export type NotificationContent = {
@@ -97,6 +118,24 @@ const RENDERERS: Renderers = {
     title: `${requesterName} pide ${REQUEST_LABEL[request]}`,
     body: `Solicitud de ${REQUEST_LABEL[request]} ${dateRange(from, to)}. Espera tu decisión.`,
     url: "/mi",
+  }),
+  absence_warning: (data, recipient) => ({
+    title: `${data.personName} tiene ${data.count} faltas sin justificar en 30 días`,
+    body: absenceAlertBody("absence_warning", data),
+    url: recipient === "user" ? `/app/personas/${data.personId}` : "/mi",
+  }),
+  absence_threshold: (data, recipient) => ({
+    title: `${data.personName} tiene más de tres faltas sin justificar en 30 días`,
+    body: absenceAlertBody("absence_threshold", data),
+    url: recipient === "user" ? `/app/personas/${data.personId}` : "/mi",
+  }),
+  document_expiring: (
+    { personId, personName, document, expiresOn },
+    recipient,
+  ) => ({
+    title: `Vence un documento de ${personName}`,
+    body: `${document} vence el ${formatDateMx(expiresOn)}. Pide la versión vigente antes de esa fecha.`,
+    url: recipient === "user" ? `/app/personas/${personId}` : "/mi",
   }),
 };
 

@@ -10,6 +10,7 @@ import {
 } from "@/lib/db/schema";
 import type { AttendanceBatchSource } from "@/lib/db/schema/attendance";
 import { recomputeAfterAttendance } from "@/lib/incidencias";
+import { alertAbsences } from "@/lib/lft-alerts";
 import { logger } from "@/lib/logger";
 import { withTenant } from "@/lib/tenant/scope";
 import { attendanceDedupeKey } from "@/lib/timeline";
@@ -513,5 +514,13 @@ export const recomputeIncidenciasAfter = async (
       { event: "incidencias.recompute_failed", companyId, err: error },
       "incidencias.recompute_failed",
     );
+    return;
   }
+
+  // LFT absence alerts (W2-19) of the people the punches touched; it logs
+  // its own failures.
+  await alertAbsences(companyId, {
+    personIds: touched.map((row) => row.personId),
+    now: asOf,
+  });
 };

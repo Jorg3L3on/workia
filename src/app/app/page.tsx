@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { after } from "next/server";
 
 import { TodayDashboard } from "@/components/home/today-dashboard";
 import { pageTitles } from "@/lib/brand/chrome-copy";
@@ -9,6 +10,8 @@ import {
   listRenewalTrayItems,
 } from "@/lib/contracts";
 import { isoToday } from "@/lib/format/date";
+import { runLftAlertsIfDue } from "@/lib/lft-alerts";
+import { logger } from "@/lib/logger";
 import { listOnboardings } from "@/lib/onboarding";
 import { countActivePeople } from "@/lib/people";
 import { formatPersonName } from "@/lib/people/schema";
@@ -27,6 +30,19 @@ const HOME_LIST_LIMIT = 5;
 export default async function AppPage() {
   const session = await requireCompanyPage();
   const { companyId } = session;
+
+  // LFT alerts (W2-19) without a cron: at most once a day per company, after
+  // the response, so the home never waits on it.
+  after(async () => {
+    try {
+      await runLftAlertsIfDue(companyId);
+    } catch (error) {
+      logger.error(
+        { event: "lft_alerts.daily_failed", companyId, err: error },
+        "lft_alerts.daily_failed",
+      );
+    }
+  });
   const can = (permission: Parameters<typeof userHasPermission>[1]) =>
     userHasPermission(session.user.id, permission);
 

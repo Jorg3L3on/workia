@@ -125,8 +125,9 @@ describe("0018: row-level security per company", () => {
     // notifications, notification_deliveries, push_subscriptions and
     // notification_opt_outs (0040) + attendance_devices, attendance_badges,
     // attendance_checkin_sites, attendance_batches and attendance_unmatched
-    // (0044) + incidencia_rules and incidencia_justifications (0051).
-    expect(tables.length).toBe(49);
+    // (0044) + incidencia_rules and incidencia_justifications (0051) + lft_alerts
+    // and lft_alert_runs (0053).
+    expect(tables.length).toBe(51);
     for (const table of tables) {
       expect(table, table.table).toMatchObject({
         rls: true,

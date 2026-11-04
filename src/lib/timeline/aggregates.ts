@@ -315,3 +315,37 @@ export const absenteeismBySql = (
     group by 1
     order by 1 nulls last`;
 };
+
+/** The statement unjustifiedFaltaDays runs (exported for the EXPLAIN checks). */
+export const unjustifiedFaltaDaysSql = (
+  companyId: string,
+  range: DayRange,
+  options: Pick<AggregateOptions, "siteId" | "personIds">,
+): SQL => sql`
+  select person_id::text as "personId", day
+  from (${effectiveIncidencias(companyId, range, options)}) eff
+  where kind = 'falta' and not justified
+  order by 1, 2`;
+
+/**
+ * The days each person has a falta in force that is not justified (nor
+ * voided), for the LFT absence alerts (W2-19). Empty for an id outside the
+ * company.
+ */
+export const unjustifiedFaltaDays = async (
+  companyId: string,
+  range: DayRange,
+  options: Pick<AggregateOptions, "siteId" | "personIds" | "executor"> = {},
+): Promise<Array<{ personId: string; day: string }>> => {
+  windowOf(range);
+
+  if (isEmptyScope(options)) {
+    return [];
+  }
+
+  const result = await (options.executor ?? tdb(companyId)).execute(
+    unjustifiedFaltaDaysSql(companyId, range, options),
+  );
+
+  return result.rows as Array<{ personId: string; day: string }>;
+};

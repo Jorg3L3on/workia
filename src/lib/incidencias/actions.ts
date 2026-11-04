@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { alertAbsences } from "@/lib/lft-alerts";
 import { requirePayPeriodsManage } from "@/lib/pay-periods/auth";
 import type { PayPeriodActionState } from "@/lib/pay-periods/copy";
 import { isQuincena, PayPeriodError } from "@/lib/pay-periods/quincena";
@@ -126,6 +127,8 @@ export const recomputePayPeriodAction = async (
 
   try {
     const result = await runIncidencias(auth.companyId, period);
+    // The recomputed faltas may reach an LFT threshold (W2-19).
+    await alertAbsences(auth.companyId);
 
     revalidatePeriods();
 

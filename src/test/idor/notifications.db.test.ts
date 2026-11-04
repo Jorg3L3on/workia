@@ -144,6 +144,26 @@ const SAMPLE_DATA: { [T in NotificationTemplate]: NotifyInput<T>["data"] } = {
     from: "2026-11-10",
     to: "2026-11-10",
   },
+  absence_warning: {
+    personId: "00000000-0000-4000-8000-000000000001",
+    personName: "Ana López",
+    count: 3,
+    from: "2026-10-08",
+    to: "2026-11-06",
+  },
+  absence_threshold: {
+    personId: "00000000-0000-4000-8000-000000000001",
+    personName: "Ana López",
+    count: 4,
+    from: "2026-10-08",
+    to: "2026-11-06",
+  },
+  document_expiring: {
+    personId: "00000000-0000-4000-8000-000000000001",
+    personName: "Ana López",
+    document: "Licencia de manejo",
+    expiresOn: "2026-11-30",
+  },
 };
 
 const notifyPerson = async (
