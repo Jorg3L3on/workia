@@ -53,7 +53,7 @@ const isoDate = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Usa una fecha AAAA-MM-DD");
 
-const isRealIsoDate = (value: string) => {
+export const isRealIsoDate = (value: string) => {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
 
   if (!match) {

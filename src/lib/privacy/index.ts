@@ -731,6 +731,8 @@ export const buildPersonDataExport = async (
         requirement: documentRequirements.name,
         deliveredOn: personDocuments.deliveredOn,
         expiresOn: personDocuments.expiresOn,
+        status: personDocuments.status,
+        hasFile: sql<boolean>`${personDocuments.fileKey} is not null`,
         createdAt: personDocuments.createdAt,
       })
       .from(personDocuments)

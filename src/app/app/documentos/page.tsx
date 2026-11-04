@@ -43,6 +43,7 @@ const DocumentosPage = async ({ searchParams }: DocumentosPageProps) => {
             ? EXPIRING_DOCUMENTS_COPY.expiredDescription
             : EXPIRING_DOCUMENTS_COPY.description
         }
+        secondary={{ label: "Por revisar", href: "/app/documentos/revision" }}
         title={EXPIRING_DOCUMENTS_COPY.title}
       />
       <Suspense

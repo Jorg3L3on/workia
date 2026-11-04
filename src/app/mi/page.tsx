@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { InstallPrompt } from "@/components/employee/install-prompt";
@@ -77,6 +78,16 @@ const EmployeeHomePage = async () => {
           </p>
         )}
       </section>
+
+      <Link
+        className="workia-pass-card flex min-h-11 items-center justify-between gap-3 px-5 py-4"
+        href="/mi/documentos"
+      >
+        <span className="text-base font-semibold">Mis documentos</span>
+        <span aria-hidden className="text-muted-foreground">
+          →
+        </span>
+      </Link>
     </main>
   );
 };

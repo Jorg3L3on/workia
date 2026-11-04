@@ -81,7 +81,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
         title: "Documentos",
         href: "/app/documentos",
         icon: FilesIcon,
-        keywords: ["por vencer", "vencidos", "vigencia"],
+        keywords: ["por vencer", "vencidos", "vigencia", "revisar", "archivos"],
         requires: "canReadDocuments",
       },
       {

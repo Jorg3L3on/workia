@@ -53,7 +53,7 @@ const SIGNED_STORAGE_ROUTES = ["/api/storage/local/[...key]"];
 
 /** A route is guarded when it goes through the company context or Auth.js. */
 const isSessionGuarded = (source: string) =>
-  /require(CompanyContext|Auth|PeopleImport|PeopleExport|[A-Z]\w*(Read|Create|Update|Delete|Import|Export|Manage))\b|requireImportRoute|withImportRoute|auth\(\)/.test(
+  /require(CompanyContext|EmployeeContext|Auth|PeopleImport|PeopleExport|[A-Z]\w*(Read|Create|Update|Delete|Import|Export|Manage))\b|requireImportRoute|withImportRoute|getEmployeeContext\(\)|auth\(\)/.test(
     source,
   );
 
