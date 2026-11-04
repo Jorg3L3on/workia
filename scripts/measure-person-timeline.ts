@@ -3,7 +3,8 @@
  * creates a throwaway company with --people people (default 100), five years
  * of daily attendance each plus a receipt per quincena and a few documents,
  * then times the one-person query with EXPLAIN ANALYZE on --runs people
- * (default 50) and prints the plan, the timings and the table size. The
+ * (default 50) and the today view of one site of 100 people (P-04) on --runs
+ * days, and prints the plans, the timings and the table size. The
  * throwaway company and its rows are deleted at the end (keep them with --keep).
  *
  *   npm run db:measure-timeline
@@ -158,6 +159,49 @@ const main = async () => {
       ]);
     }
 
+    // The today view (P-04): one site of up to 100 people, a day of the load.
+    const todayModule = await import("@/lib/timeline/today");
+    const { db } = await import("@/lib/db");
+    const {
+      rows: [site],
+    } = await client.query<{ id: string }>(
+      "INSERT INTO sites (company_id, name, kind) VALUES ($1, 'Carga', 'sucursal') RETURNING id",
+      [company.id],
+    );
+    await client.query(
+      `UPDATE people SET site_id = $2 WHERE id IN (
+         SELECT id FROM people WHERE company_id = $1 ORDER BY id LIMIT 100)`,
+      [company.id, site.id],
+    );
+    await client.query("ANALYZE people");
+
+    const todayTimings: number[] = [];
+    let todayIndexes = new Set<string>();
+
+    for (let run = 0; run < runs; run += 1) {
+      const day = new Date(Date.now() - (1 + (run % 365)) * 86_400_000)
+        .toISOString()
+        .slice(0, 10);
+      const query = todayModule
+        .todayPageQuery(company.id, { siteId: site.id }, { day }, db)
+        .toSQL();
+      const {
+        rows: [{ "QUERY PLAN": plans }],
+      } = await client.query<{
+        "QUERY PLAN": Array<{ Plan: PlanNode; "Execution Time": number }>;
+      }>(`EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) ${query.sql}`, query.params);
+      todayTimings.push(plans[0]["Execution Time"]);
+      todayIndexes = new Set([
+        ...todayIndexes,
+        ...nodesOf(plans[0].Plan).flatMap((node) => node["Index Name"] ?? []),
+      ]);
+    }
+
+    console.log(`Today view indexes used: ${[...todayIndexes].join(", ")}`);
+    console.log(
+      `Today view of one site (${Math.min(peopleCount, 100)} people) over ${todayTimings.length} days: p50 ${percentile(todayTimings, 0.5).toFixed(2)} ms, p95 ${percentile(todayTimings, 0.95).toFixed(2)} ms, max ${Math.max(...todayTimings).toFixed(2)} ms`,
+    );
+
     const {
       rows: [size],
     } = await client.query<{ table: string; indexes: string }>(
@@ -179,6 +223,9 @@ const main = async () => {
     } else {
       // people → person_events cascades; the company goes last.
       await client.query("DELETE FROM people WHERE company_id = $1", [
+        company.id,
+      ]);
+      await client.query("DELETE FROM sites WHERE company_id = $1", [
         company.id,
       ]);
       await client.query("DELETE FROM companies WHERE id = $1", [company.id]);

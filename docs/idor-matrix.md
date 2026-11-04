@@ -310,6 +310,7 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `lib:timeline/aggregates/incidenciasBy`                       | ✅     | `src/test/idor/pay-periods.db.test.ts`        | —       |
 | `lib:timeline/appendPersonEvents`                             | ✅     | `src/test/idor/timeline.db.test.ts`           | —       |
 | `lib:timeline/listPersonEvents`                               | ✅     | `src/test/idor/timeline.db.test.ts`           | —       |
+| `lib:timeline/today/listTodayPage`                            | ✅     | `src/test/idor/today.db.test.ts`              | —       |
 | `lib:termination-reasons/updateTerminationReason`             | ✅     | `src/test/idor/employment.db.test.ts`         | —       |
 | `lib:reports/turnover/data/getTurnoverGoal`                   | ✅     | `src/test/idor/turnover.db.test.ts`           | —       |
 | `lib:reports/turnover/data/loadTurnoverFacts`                 | ✅     | `src/test/idor/turnover.db.test.ts`           | —       |

@@ -225,6 +225,13 @@
       "when": 1787853600000,
       "tag": "0035_pay_periods",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1787925600000,
+      "tag": "0036_today_view_indexes",
+      "breakpoints": true
     }
   ]
 }
