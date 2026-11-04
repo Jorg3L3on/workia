@@ -16,6 +16,7 @@ import { createPerson, getPersonSchedule, updatePerson } from "@/lib/people";
 import type { PersonFormValues } from "@/lib/people/schema";
 
 import { ownerDb, seedTenant, type Tenant } from "./fixtures";
+import { uniqueCurp } from "@/test/curp";
 
 let t: Tenant;
 
@@ -32,7 +33,7 @@ const form = (overrides: Partial<PersonFormValues> = {}): PersonFormValues => ({
   managerId: "",
   siteId: "",
   rfc: "",
-  curp: "",
+  curp: uniqueCurp(),
   nss: "",
   horarioEntrada: "",
   horarioSalidaComer: "",

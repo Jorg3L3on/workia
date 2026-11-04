@@ -19,6 +19,7 @@ import {
   employmentPeriods,
   people,
   permissions,
+  personalDataAccessLog,
   rolePermissions,
   roles,
   users,
@@ -623,6 +624,21 @@ describe("vacation constancia stays inside the company", () => {
     expect(html).not.toContain(
       formatDateMx(plusDays(period!.currentAnniversary, 1)),
     );
+
+    // Only the successful view is in the personal data access log (W2-09).
+    const reads = await ownerDb
+      .select()
+      .from(personalDataAccessLog)
+      .where(eq(personalDataAccessLog.personId, companyA.person.id));
+
+    expect(reads).toEqual([
+      expect.objectContaining({
+        companyId: companyA.companyId,
+        resource: "vacation_constancia",
+        actorKind: "hr_user",
+        actorUserId: companyA.admin.id,
+      }),
+    ]);
   });
 
   it("returns notFound with vacations:read and without contracts:read", async () => {

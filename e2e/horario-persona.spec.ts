@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import { chooseSelectOption } from "./choose-select-option";
+import { e2eCurp } from "./curp";
 
 const loginAsDemoRrhh = async (page: import("@playwright/test").Page) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
@@ -91,6 +92,7 @@ test.describe("Horario por persona", () => {
     await page.goto("/app/personas/nueva");
     await page.locator("#nombres").fill("Persona");
     await page.locator("#apellidoPaterno").fill(`HorarioA${suffix}`);
+    await page.locator("#curp").fill(e2eCurp());
     await page.locator("#apellidoMaterno").fill("Demo");
     await chooseSelectOption(page.locator("#positionId"), "Analista");
     await chooseSelectOption(
@@ -109,6 +111,7 @@ test.describe("Horario por persona", () => {
     await page.goto("/app/personas/nueva");
     await page.locator("#nombres").fill("Persona");
     await page.locator("#apellidoPaterno").fill(`HorarioB${suffix}`);
+    await page.locator("#curp").fill(e2eCurp());
     await page.locator("#apellidoMaterno").fill("Demo");
     await chooseSelectOption(page.locator("#positionId"), "Analista");
     await chooseSelectOption(

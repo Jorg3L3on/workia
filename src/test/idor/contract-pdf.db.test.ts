@@ -14,6 +14,7 @@ import {
   companyMemberships,
   contracts,
   permissions,
+  personalDataAccessLog,
   rolePermissions,
   roles,
   users,
@@ -119,6 +120,22 @@ describe("contract PDF stays inside the company", () => {
       action: "export",
       resourceType: "contract",
     });
+
+    // The download is in the personal data access log too (W2-09); the
+    // refused one from company B is not.
+    const reads = await ownerDb
+      .select()
+      .from(personalDataAccessLog)
+      .where(eq(personalDataAccessLog.resourceId, contract.id));
+
+    expect(reads).toEqual([
+      expect.objectContaining({
+        companyId: a.companyId,
+        personId: a.person.id,
+        resource: "contract_pdf",
+        actorUserId: a.admin.id,
+      }),
+    ]);
   });
 
   it("rbac:route:GET /app/personas/[id]/contratos/[contractId]/pdf", async () => {

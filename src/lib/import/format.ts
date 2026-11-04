@@ -203,7 +203,7 @@ export const IMPORT_COLUMNS: Record<ImportSheetKey, ImportColumn[]> = {
       label: "CURP",
       aliases: [],
       kind: "text",
-      help: "18 caracteres con dígito verificador.",
+      help: "Obligatoria para toda persona activa. 18 caracteres con dígito verificador.",
       width: 22,
     },
     {
