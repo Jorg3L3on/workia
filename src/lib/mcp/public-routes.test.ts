@@ -41,15 +41,17 @@ const PUBLIC_EMPLOYEE_ROUTES = [
   "/mi/manifest.webmanifest",
   "/mi/sw.js",
 ];
+/** Scheduled jobs (W2-09): no session, a Bearer CRON_SECRET instead. */
+const SCHEDULED_JOB_ROUTES = ["/api/cron/retention"];
 
 /** A route is guarded when it goes through the company context or Auth.js. */
 const isSessionGuarded = (source: string) =>
-  /require(CompanyContext|Auth|PeopleImport|PeopleExport|[A-Z]\w*(Read|Create|Update|Delete|Import|Export))\b|requireImportRoute|withImportRoute|auth\(\)/.test(
+  /require(CompanyContext|Auth|PeopleImport|PeopleExport|[A-Z]\w*(Read|Create|Update|Delete|Import|Export|Manage))\b|requireImportRoute|withImportRoute|auth\(\)/.test(
     source,
   );
 
 describe("public routes", () => {
-  it("adds only /api/mcp, /api/oauth/* and /.well-known/* as routes without a session", () => {
+  it("adds only /api/mcp, /api/oauth/*, /.well-known/* and the scheduled jobs as routes without a session", () => {
     const unguarded = routes
       .filter(({ route }) => !route.startsWith("/api/auth"))
       .filter(({ source }) => !isSessionGuarded(source))
@@ -57,8 +59,21 @@ describe("public routes", () => {
       .sort();
 
     expect(unguarded).toEqual(
-      [...PUBLIC_MCP_ROUTES, ...PUBLIC_EMPLOYEE_ROUTES].sort(),
+      [
+        ...PUBLIC_MCP_ROUTES,
+        ...PUBLIC_EMPLOYEE_ROUTES,
+        ...SCHEDULED_JOB_ROUTES,
+      ].sort(),
     );
+  });
+
+  it("puts every scheduled job behind CRON_SECRET", () => {
+    for (const { route, source } of routes.filter((r) =>
+      SCHEDULED_JOB_ROUTES.includes(r.route),
+    )) {
+      expect(source, route).toMatch(/env\.CRON_SECRET/);
+      expect(source, route).toMatch(/timingSafeEqual/);
+    }
   });
 
   it("puts every public MCP route behind MCP_ENABLED", () => {

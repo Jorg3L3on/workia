@@ -43,6 +43,8 @@ export const env = createEnv({
     EMAIL_OUTBOX_DIR: z.string().optional(),
     // Public base URL for links in emails and the Google redirect (falls back to the request origin).
     APP_PUBLIC_URL: z.string().url().optional(),
+    // Bearer secret of the scheduled jobs (/api/cron/*). Unset turns them off.
+    CRON_SECRET: z.string().min(16).optional(),
     NODE_ENV: z
       .enum(["development", "test", "production"])
       .default("development"),
@@ -57,6 +59,7 @@ export const env = createEnv({
     MCP_ENABLED: process.env.MCP_ENABLED,
     MCP_PUBLIC_URL: process.env.MCP_PUBLIC_URL,
     MCP_ALLOWED_ORIGINS: process.env.MCP_ALLOWED_ORIGINS,
+    CRON_SECRET: process.env.CRON_SECRET,
     DEMO_RRHH_EMAIL: process.env.DEMO_RRHH_EMAIL,
     DEMO_RRHH_PASSWORD: process.env.DEMO_RRHH_PASSWORD,
     DEMO_RRHH_NAME: process.env.DEMO_RRHH_NAME,

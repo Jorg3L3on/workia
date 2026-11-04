@@ -74,6 +74,11 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `action:people/updateFiniquitoAction`                      | ✅     | `src/test/idor/employment.db.test.ts`                                                                  | `people:update`             |
 | `action:people/updatePeopleViewAction`                     | ✅     | `src/test/idor/people-views.db.test.ts`                                                                | `people:read`               |
 | `action:people/updatePersonAction`                         | ✅     | `src/test/idor/people.db.test.ts`                                                                      | `people:update`             |
+| `action:privacy/createArcoRequestAction`                   | ✅     | `src/test/idor/privacy.db.test.ts`                                                                     | `privacy:manage`            |
+| `action:privacy/publishPrivacyNoticeAction`                | ✅     | `src/test/idor/privacy.db.test.ts`                                                                     | `privacy:manage`            |
+| `action:privacy/recordPrivacyAcceptanceAction`             | ✅     | `src/test/idor/privacy.db.test.ts`                                                                     | `privacy:manage`            |
+| `action:privacy/resolveArcoRequestAction`                  | ✅     | `src/test/idor/privacy.db.test.ts`                                                                     | `privacy:manage`            |
+| `action:privacy/searchPrivacyPeopleAction`                 | ✅     | `src/test/idor/privacy.db.test.ts`                                                                     | `privacy:manage`            |
 | `action:regions/createRegionAction`                        | ✅     | `src/test/idor/regions.db.test.ts`                                                                     | `sites:create`              |
 | `action:regions/deleteRegionAction`                        | ✅     | `src/test/idor/regions.db.test.ts`                                                                     | `sites:delete`              |
 | `action:regions/updateRegionAction`                        | ✅     | `src/test/idor/regions.db.test.ts`                                                                     | `sites:update`              |
@@ -135,6 +140,8 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `route:POST /api/oauth/revoke`                                  | ✅     | `src/test/idor/mcp.db.test.ts`                                         | —                                      |
 | `route:POST /api/oauth/token`                                   | ✅     | `src/test/idor/mcp.db.test.ts`                                         | —                                      |
 | `route:PUT /api/import/personas/[jobId]/validate`               | ✅     | `src/test/idor/import.db.test.ts`                                      | `people:import`                        |
+| `route:GET /api/cron/retention`                                 | ⏭️     | Exento: sin empresa; usa CRON_SECRET                                   | —                                      |
+| `route:GET /app/privacidad/arco/[id]/exportar`                  | ✅     | `src/test/idor/privacy.db.test.ts`                                     | `privacy:manage`                       |
 
 ## Funciones de datos (lib)
 
@@ -283,6 +290,20 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `lib:people/views/getPeopleView`                              | ✅     | `src/test/idor/people-views.db.test.ts`       | —       |
 | `lib:people/views/listPeopleViews`                            | ✅     | `src/test/idor/people-views.db.test.ts`       | —       |
 | `lib:people/views/updatePeopleView`                           | ✅     | `src/test/idor/people-views.db.test.ts`       | —       |
+| `lib:privacy/buildPersonDataExport`                           | ✅     | `src/test/idor/privacy.db.test.ts`            | —       |
+| `lib:privacy/createArcoRequest`                               | ✅     | `src/test/idor/privacy.db.test.ts`            | —       |
+| `lib:privacy/getArcoRequest`                                  | ✅     | `src/test/idor/privacy.db.test.ts`            | —       |
+| `lib:privacy/getCurrentPrivacyNotice`                         | ✅     | `src/test/idor/privacy.db.test.ts`            | —       |
+| `lib:privacy/listArcoRequests`                                | ✅     | `src/test/idor/privacy.db.test.ts`            | —       |
+| `lib:privacy/listPersonalDataAccess`                          | ✅     | `src/test/idor/privacy.db.test.ts`            | —       |
+| `lib:privacy/listPrivacyNotices`                              | ✅     | `src/test/idor/privacy.db.test.ts`            | —       |
+| `lib:privacy/pendingPrivacyNotice`                            | ✅     | `src/test/idor/privacy.db.test.ts`            | —       |
+| `lib:privacy/publishPrivacyNotice`                            | ✅     | `src/test/idor/privacy.db.test.ts`            | —       |
+| `lib:privacy/recordPersonalDataAccess`                        | ✅     | `src/test/idor/privacy.db.test.ts`            | —       |
+| `lib:privacy/recordPrivacyAcceptance`                         | ✅     | `src/test/idor/privacy.db.test.ts`            | —       |
+| `lib:privacy/resolveArcoRequest`                              | ✅     | `src/test/idor/privacy.db.test.ts`            | —       |
+| `lib:privacy/retention/purgeExpiredPersonalData`              | ✅     | `src/test/idor/privacy.db.test.ts`            | —       |
+| `lib:privacy/searchPeopleForPrivacy`                          | ✅     | `src/test/idor/privacy.db.test.ts`            | —       |
 | `lib:regions/createRegion`                                    | ✅     | `src/test/idor/regions.db.test.ts`            | —       |
 | `lib:regions/getRegionById`                                   | ✅     | `src/test/idor/regions.db.test.ts`            | —       |
 | `lib:regions/listRegionsWithSiteCounts`                       | ✅     | `src/test/idor/regions.db.test.ts`            | —       |
