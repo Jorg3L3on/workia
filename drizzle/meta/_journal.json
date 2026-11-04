@@ -218,6 +218,13 @@
       "when": 1787835600000,
       "tag": "0030_employee_accounts",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1787835601000,
+      "tag": "0040_notifications",
+      "breakpoints": true
     }
   ]
 }

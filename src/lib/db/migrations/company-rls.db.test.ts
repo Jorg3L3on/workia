@@ -119,8 +119,9 @@ describe("0018: row-level security per company", () => {
     // (0019) + regions (0022) + onboardings (0024) + termination_reasons and
     // employment_periods (0025) + people_views (0026) + document_requirements
     // and person_documents (0028) + vacation_records (0029) + employee_accounts,
-    // employee_sessions and employee_codes (0030).
-    expect(tables.length).toBe(31);
+    // employee_sessions and employee_codes (0030) + notifications,
+    // notification_deliveries, push_subscriptions and notification_opt_outs (0040).
+    expect(tables.length).toBe(35);
     for (const table of tables) {
       expect(table, table.table).toMatchObject({
         rls: true,

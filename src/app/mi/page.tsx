@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { BellIcon } from "lucide-react";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { InstallPrompt } from "@/components/employee/install-prompt";
@@ -7,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { signOutEmployeeAction } from "@/lib/employee/actions";
 import { getEmployeeHome } from "@/lib/employee/home";
 import { requireEmployeeContext } from "@/lib/employee-accounts/session";
+import { countUnread, personRecipient } from "@/lib/notifications";
 
 export const metadata: Metadata = { title: "Inicio" };
 
@@ -16,7 +19,10 @@ export const metadata: Metadata = { title: "Inicio" };
  */
 const EmployeeHomePage = async () => {
   const context = await requireEmployeeContext();
-  const home = await getEmployeeHome(context);
+  const [home, unread] = await Promise.all([
+    getEmployeeHome(context),
+    countUnread(context.companyId, personRecipient(context.personId)),
+  ]);
 
   if (!home) {
     notFound();
@@ -54,6 +60,21 @@ const EmployeeHomePage = async () => {
       </section>
 
       <InstallPrompt />
+
+      <Link
+        className="workia-pass-card flex items-center justify-between gap-3 px-5 py-4"
+        href="/mi/avisos"
+      >
+        <span className="flex items-center gap-2.5 text-base font-semibold">
+          <BellIcon aria-hidden className="size-5" />
+          Avisos
+        </span>
+        <span className="text-muted-foreground text-sm">
+          {unread > 0
+            ? `${unread >= 100 ? "99+" : unread} sin leer`
+            : "Nada nuevo"}
+        </span>
+      </Link>
 
       <section
         aria-labelledby="mi-datos"
