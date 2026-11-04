@@ -54,6 +54,10 @@ export const REQUEST_COPY = {
   deniedDecide: "No tienes permiso para decidir solicitudes.",
   vacationFailed:
     "No se pudo registrar el periodo de vacaciones. Revisa las fechas con RH.",
+  periodClosed:
+    "La quincena de esas fechas ya está cerrada. RH tiene que reabrirla antes.",
+  justificationFailed:
+    "No se pudieron justificar esos días en las incidencias. Revisa las fechas con RH.",
 } as const;
 
 const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;

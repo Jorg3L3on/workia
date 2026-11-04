@@ -17,6 +17,7 @@ import { clampPageSize, defineKeyset, keysetCursor } from "@/lib/db/keyset";
 import {
   employeeAccounts,
   employmentPeriods,
+  incidenciaJustifications,
   people,
   personSchedules,
   timeOffRequests,
@@ -28,6 +29,11 @@ import {
 } from "@/lib/db/schema";
 import type { EmployeeContext } from "@/lib/employee-accounts/sign-in";
 import { formatDateMx, isoToday } from "@/lib/format/date";
+import {
+  cancelJustification,
+  createJustification,
+  IncidenciaError,
+} from "@/lib/incidencias";
 import {
   approverPersonIds,
   canDecideFor,
@@ -41,6 +47,7 @@ import {
   personRecipient,
   sendNotificationsSoon,
 } from "@/lib/notifications";
+import { PayPeriodError } from "@/lib/pay-periods/quincena";
 import { formatPersonName } from "@/lib/people/schema";
 import { withTenant } from "@/lib/tenant/scope";
 import { appendPersonEvents } from "@/lib/timeline";
@@ -96,6 +103,27 @@ export type RequestResult =
   | { ok: false; error: string };
 
 type Employee = Pick<EmployeeContext, "accountId" | "companyId" | "personId">;
+
+/**
+ * An approved permiso justifies its days in the incidencias of W2-14. When
+ * that cannot happen (the quincena is closed, or the incidencias refuse the
+ * dates) it throws out of the transaction, so nothing of the decision is
+ * written, and the caller answers with this copy.
+ */
+const justificationFailure = (error: unknown): RequestResult | null => {
+  if (error instanceof PayPeriodError && error.code === "period_closed") {
+    return { ok: false, error: REQUEST_COPY.periodClosed };
+  }
+
+  if (error instanceof IncidenciaError || error instanceof PayPeriodError) {
+    return { ok: false, error: REQUEST_COPY.justificationFailed };
+  }
+
+  return null;
+};
+
+const isPermiso = (kind: TimeOffKind) =>
+  kind === "permiso_con_goce" || kind === "permiso_sin_goce";
 
 const requester = alias(people, "requester");
 const approver = alias(people, "approver");
@@ -479,7 +507,7 @@ const decide = async (
       ? { kind: "employee", accountId: decider.access.accountId }
       : { kind: "hr", userId: decider.userId };
 
-  const result = await withTransaction(async (tx): Promise<RequestResult> => {
+  const run = async (tx: DbTransaction): Promise<RequestResult> => {
     const [current] = await tx
       .select()
       .from(timeOffRequests)
@@ -547,6 +575,26 @@ const decide = async (
 
       vacationRecordId = written.id;
       warning = written.warning;
+    }
+
+    if (parsed.decision === "approve" && isPermiso(current.kind)) {
+      // W2-14: the days of an approved permiso are justified absences. It
+      // recomputes the quincenas it touches; a closed one throws.
+      await createJustification(
+        companyId,
+        {
+          personId: current.personId,
+          kind: current.kind as "permiso_con_goce" | "permiso_sin_goce",
+          fromDay: current.startDate,
+          toDay: current.endDate,
+          reason:
+            decider.kind === "hr"
+              ? "Solicitud aprobada por RH"
+              : "Solicitud aprobada por su jefe",
+          reference: current.id,
+        },
+        { tx, actorUserId: actor.kind === "hr" ? actor.userId : null },
+      );
     }
 
     const now = new Date();
@@ -634,7 +682,21 @@ const decide = async (
     );
 
     return { ok: true, id: updated.id, warning };
-  }, companyId);
+  };
+
+  let result: RequestResult;
+
+  try {
+    result = await withTransaction(run, companyId);
+  } catch (error) {
+    const failure = justificationFailure(error);
+
+    if (!failure) {
+      throw error;
+    }
+
+    return failure;
+  }
 
   if (result.ok) {
     await sendNotificationsSoon(companyId);
@@ -684,7 +746,7 @@ export const cancelTimeOffRequest = async (
   const { companyId, personId, accountId } = employee;
   const actor: Actor = { kind: "employee", accountId };
 
-  return withTransaction(async (tx): Promise<RequestResult> => {
+  const run = async (tx: DbTransaction): Promise<RequestResult> => {
     const [current] = await tx
       .select()
       .from(timeOffRequests)
@@ -721,6 +783,32 @@ export const cancelTimeOffRequest = async (
         voided.error !== VACATION_COPY.alreadyVoided
       ) {
         return { ok: false, error: voided.error };
+      }
+    }
+
+    if (current.status === "approved" && isPermiso(current.kind)) {
+      // W2-14: its days stop being justified. HR may have cancelled the
+      // justification already; an approval from before W2-14 has none.
+      const justifications = await tx
+        .select({ id: incidenciaJustifications.id })
+        .from(incidenciaJustifications)
+        .where(
+          withTenant(
+            incidenciaJustifications,
+            companyId,
+            eq(incidenciaJustifications.personId, current.personId),
+            eq(incidenciaJustifications.reference, current.id),
+            eq(incidenciaJustifications.kind, current.kind),
+            isNull(incidenciaJustifications.cancelledAt),
+          ),
+        )
+        .for("update");
+
+      for (const justification of justifications) {
+        await cancelJustification(companyId, justification.id, {
+          reason: "Solicitud cancelada por la persona",
+          tx,
+        });
       }
     }
 
@@ -765,7 +853,19 @@ export const cancelTimeOffRequest = async (
     );
 
     return { ok: true, id: updated.id };
-  }, companyId);
+  };
+
+  try {
+    return await withTransaction(run, companyId);
+  } catch (error) {
+    const failure = justificationFailure(error);
+
+    if (!failure) {
+      throw error;
+    }
+
+    return failure;
+  }
 };
 
 // ── Reads ────────────────────────────────────────────────────────────────

@@ -59,8 +59,10 @@ import {
   auditEvents,
   employeeAccounts,
   employmentPeriods,
+  incidenciaJustifications,
   managerDelegations,
   notifications,
+  payPeriods,
   people,
   personEvents,
   personSchedules,
@@ -73,6 +75,7 @@ import {
   decideRequestAction,
 } from "@/lib/employee/request-actions";
 import { isoToday } from "@/lib/format/date";
+import { quincenaOf, quincenaRange } from "@/lib/pay-periods/quincena";
 import {
   createDelegation,
   getManagerAccess,
@@ -293,6 +296,14 @@ beforeEach(async () => {
   await ownerDb.delete(vacationRecords);
   await ownerDb.delete(managerDelegations);
   await ownerDb.delete(notifications);
+  await ownerDb
+    .delete(incidenciaJustifications)
+    .where(
+      inArray(incidenciaJustifications.companyId, [a.companyId, b.companyId]),
+    );
+  await ownerDb
+    .delete(payPeriods)
+    .where(inArray(payPeriods.companyId, [a.companyId, b.companyId]));
   await ownerDb
     .delete(personEvents)
     .where(inArray(personEvents.companyId, [a.companyId, b.companyId]));
@@ -707,6 +718,113 @@ describe("the employee cancels", () => {
       "create",
       "approve",
       "cancel",
+    ]);
+  });
+});
+
+describe("an approved permiso justifies its days (W2-14)", () => {
+  const permiso = (who: Member, kind = "permiso_con_goce") =>
+    ask(a.companyId, who, { kind, days: "2" });
+
+  const justificationsOf = (reference: string) =>
+    ownerDb
+      .select()
+      .from(incidenciaJustifications)
+      .where(eq(incidenciaJustifications.reference, reference));
+
+  it("approval writes the justification in the same transaction, and a cancel undoes it", async () => {
+    const id = await permiso(orgA.ana, "permiso_sin_goce");
+    const access = await accessOf(a.companyId, orgA.boss);
+
+    expect(
+      await decideRequestAsManager(access, id, { decision: "approve" }),
+    ).toMatchObject({ ok: true, id });
+
+    const [justification] = await justificationsOf(id);
+    expect(justification).toMatchObject({
+      companyId: a.companyId,
+      personId: orgA.ana.personId,
+      kind: "permiso_sin_goce",
+      fromDay: addDays(today, 10),
+      toDay: addDays(today, 11),
+      effect: "justify",
+      reason: "Solicitud aprobada por su jefe",
+      createdBy: null,
+      cancelledAt: null,
+    });
+    // No vacation row for a permiso.
+    expect((await requestRow(id)).vacationRecordId).toBeNull();
+
+    expect(
+      await cancelTimeOffRequest(contextOf(a.companyId, orgA.ana), id),
+    ).toMatchObject({ ok: true });
+    const [cancelled] = await justificationsOf(id);
+    expect(cancelled.cancelledAt).not.toBeNull();
+    expect(cancelled.cancelReason).toBe("Solicitud cancelada por la persona");
+    expect(
+      (await auditOf(justification.id)).map((event) => event.action),
+    ).toEqual(["create", "revoke"]);
+  });
+
+  it("HR's approval names HR as the one who justified it", async () => {
+    const id = await permiso(orgA.solo);
+
+    expect(
+      await decideRequestAsHr(
+        a.companyId,
+        id,
+        { decision: "approve" },
+        a.admin.id,
+      ),
+    ).toMatchObject({ ok: true });
+    expect(await justificationsOf(id)).toEqual([
+      expect.objectContaining({
+        kind: "permiso_con_goce",
+        reason: "Solicitud aprobada por RH",
+        createdBy: a.admin.id,
+      }),
+    ]);
+  });
+
+  it("a rejection or an approved vacation writes no justification", async () => {
+    const access = await accessOf(a.companyId, orgA.boss);
+    const rejected = await permiso(orgA.ana);
+    await decideRequestAsManager(access, rejected, {
+      decision: "reject",
+      reason: "Cierre de mes",
+    });
+    const vacation = await ask(a.companyId, orgA.beto);
+    await decideRequestAsManager(access, vacation, { decision: "approve" });
+
+    expect(await justificationsOf(rejected)).toEqual([]);
+    expect(await justificationsOf(vacation)).toEqual([]);
+  });
+
+  it("a closed quincena refuses the approval and leaves the request pending", async () => {
+    const id = await permiso(orgA.ana);
+    const period = quincenaOf(addDays(today, 10));
+    const range = quincenaRange(period);
+    await ownerDb.insert(payPeriods).values({
+      companyId: a.companyId,
+      period,
+      startsOn: range.from,
+      endsOn: range.to,
+      status: "closed",
+      closedAt: new Date(),
+    });
+
+    expect(
+      await decideRequestAsManager(await accessOf(a.companyId, orgA.boss), id, {
+        decision: "approve",
+      }),
+    ).toEqual({ ok: false, error: REQUEST_COPY.periodClosed });
+    expect(await requestRow(id)).toMatchObject({
+      status: "pending",
+      decidedAt: null,
+    });
+    expect(await justificationsOf(id)).toEqual([]);
+    expect((await auditOf(id)).map((event) => event.action)).toEqual([
+      "create",
     ]);
   });
 });
