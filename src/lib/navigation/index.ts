@@ -1,5 +1,6 @@
 import {
   ChartLineIcon,
+  ReceiptTextIcon,
   FilesIcon,
   FileTextIcon,
   FolderTreeIcon,
@@ -32,6 +33,8 @@ export type NavAccess = {
   canReadDocuments: boolean;
   /** privacy:read in the active company: shows Privacidad. */
   canReadPrivacy: boolean;
+  /** payroll_receipts:read in the active company: shows Nómina. */
+  canReadPayroll: boolean;
 };
 
 export type NavLink = {
@@ -83,6 +86,13 @@ export const NAV_GROUPS: readonly NavGroup[] = [
         icon: FilesIcon,
         keywords: ["por vencer", "vencidos", "vigencia"],
         requires: "canReadDocuments",
+      },
+      {
+        title: "Nómina",
+        href: "/app/nomina",
+        icon: ReceiptTextIcon,
+        keywords: ["recibos", "cfdi", "timbrado", "periodo", "quincena"],
+        requires: "canReadPayroll",
       },
       {
         title: "Altas",

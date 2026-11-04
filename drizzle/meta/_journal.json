@@ -225,6 +225,13 @@
       "when": 1787846400000,
       "tag": "0033_privacy_arco",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1787857200000,
+      "tag": "0042_payroll_receipts",
+      "breakpoints": true
     }
   ]
 }

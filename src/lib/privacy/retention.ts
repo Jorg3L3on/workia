@@ -59,6 +59,13 @@ export const RETENTION_POLICY: readonly RetentionRule[] = [
     automaticMonths: null,
   },
   {
+    key: "payroll_receipts",
+    label: "Recibos de nómina (CFDI) y su registro de entrega",
+    period: "Al menos 5 años desde el pago",
+    basis: "CFF art. 30 y LFT art. 804.",
+    automaticMonths: null,
+  },
+  {
     key: "vacation_records",
     label: "Vacaciones tomadas",
     period: "La relación laboral y al menos 1 año después de la baja",

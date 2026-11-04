@@ -41,7 +41,9 @@ la misma transacción que su evento de auditoría. Ya lo hacen:
 
 - el PDF del contrato (`contract_pdf`),
 - la constancia de vacaciones (`vacation_constancia`),
-- la exportación ARCO (`arco_export`).
+- la exportación ARCO (`arco_export`),
+- el PDF y el XML de cada recibo de nómina (`payroll_receipt`, W2-03), por RH
+  o por la persona.
 
 **Para W2-03 (recibos) y W2-04 (archivos de documentos):** cada descarga o
 URL firmada que se entregue escribe `payroll_receipt` o `document_file`, con
@@ -57,7 +59,8 @@ URL firmada que se entregue escribe `payroll_receipt` o `document_file`, con
 - La exportación de acceso se genera al momento con todo lo que Workia tiene
   de la persona: expediente, contratos, periodos, horarios, beneficiarios,
   documentos, vacaciones, resguardo, altas, aceptaciones, solicitudes ARCO,
-  registro de accesos e historial de su expediente. Cada descarga queda en el
+  registro de accesos, recibos de nómina (identificadores y fechas) e historial
+  de su expediente. Cada descarga queda en el
   registro de accesos y en auditoría.
 - La rectificación y la cancelación se ejecutan con las pantallas que ya
   existen (editar o dar de baja el expediente); la solicitud guarda qué se

@@ -56,6 +56,7 @@ const renderShell = (
     canReadReports?: boolean;
     canReadDocuments?: boolean;
     canReadPrivacy?: boolean;
+    canReadPayroll?: boolean;
     isPlatformAdmin?: boolean;
   } = {},
 ) =>
@@ -208,6 +209,7 @@ describe("AppShell", () => {
       canReadReports: true,
       canReadDocuments: true,
       canReadPrivacy: true,
+      canReadPayroll: true,
     });
 
     const sidebar = within(
@@ -223,6 +225,7 @@ describe("AppShell", () => {
       "Personas",
       "Contratos",
       "Documentos",
+      "Nómina",
       "Altas",
       "Resguardo",
     ]);

@@ -51,9 +51,12 @@ const SCHEDULED_JOB_ROUTES = ["/api/cron/retention"];
  */
 const SIGNED_STORAGE_ROUTES = ["/api/storage/local/[...key]"];
 
-/** A route is guarded when it goes through the company context or Auth.js. */
+/**
+ * A route is guarded when it goes through the company context, Auth.js or
+ * the employee session of /mi (W2-01).
+ */
 const isSessionGuarded = (source: string) =>
-  /require(CompanyContext|Auth|PeopleImport|PeopleExport|[A-Z]\w*(Read|Create|Update|Delete|Import|Export|Manage))\b|requireImportRoute|withImportRoute|auth\(\)/.test(
+  /require(CompanyContext|Auth|PeopleImport|PeopleExport|[A-Z]\w*(Read|Create|Update|Delete|Import|Export|Manage))\b|requireImportRoute|withImportRoute|auth\(\)|(get|require)EmployeeContext\(\)/.test(
     source,
   );
 

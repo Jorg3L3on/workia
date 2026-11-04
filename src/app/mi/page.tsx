@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { InstallPrompt } from "@/components/employee/install-prompt";
@@ -7,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { signOutEmployeeAction } from "@/lib/employee/actions";
 import { getEmployeeHome } from "@/lib/employee/home";
 import { requireEmployeeContext } from "@/lib/employee-accounts/session";
+import { countUnopenedEmployeeReceipts } from "@/lib/payroll";
 
 export const metadata: Metadata = { title: "Inicio" };
 
@@ -16,7 +18,10 @@ export const metadata: Metadata = { title: "Inicio" };
  */
 const EmployeeHomePage = async () => {
   const context = await requireEmployeeContext();
-  const home = await getEmployeeHome(context);
+  const [home, unopenedReceipts] = await Promise.all([
+    getEmployeeHome(context),
+    countUnopenedEmployeeReceipts(context),
+  ]);
 
   if (!home) {
     notFound();
@@ -54,6 +59,18 @@ const EmployeeHomePage = async () => {
       </section>
 
       <InstallPrompt />
+
+      <Link
+        className="workia-pass-card flex items-center justify-between gap-3 px-5 py-4"
+        href="/mi/recibos"
+      >
+        <span className="text-base font-semibold">Recibos de nómina</span>
+        <span className="text-muted-foreground text-sm">
+          {unopenedReceipts > 0
+            ? `${unopenedReceipts} ${unopenedReceipts === 1 ? "nuevo" : "nuevos"}`
+            : "Ver"}
+        </span>
+      </Link>
 
       <section
         aria-labelledby="mi-datos"

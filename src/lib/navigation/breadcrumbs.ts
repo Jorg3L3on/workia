@@ -68,6 +68,17 @@ export const resolveBreadcrumbs = (
     return [{ label: "Documentos" }];
   }
 
+  if (path === "/app/nomina") {
+    return [{ label: "Nómina" }];
+  }
+
+  if (path.startsWith("/app/nomina/")) {
+    return [
+      { label: "Nómina", href: "/app/nomina" },
+      { label: labels.current ?? "Periodo" },
+    ];
+  }
+
   if (path === "/app/privacidad") {
     return [{ label: "Privacidad" }];
   }

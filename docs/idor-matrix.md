@@ -74,6 +74,12 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `action:people/updateFiniquitoAction`                      | ✅     | `src/test/idor/employment.db.test.ts`                                                                  | `people:update`             |
 | `action:people/updatePeopleViewAction`                     | ✅     | `src/test/idor/people-views.db.test.ts`                                                                | `people:read`               |
 | `action:people/updatePersonAction`                         | ✅     | `src/test/idor/people.db.test.ts`                                                                      | `people:update`             |
+| `action:payroll/assignPayrollReceiptAction`                | ✅     | `src/test/idor/payroll.db.test.ts`                                                                     | `payroll_receipts:manage`   |
+| `action:payroll/createPayrollPeriodAction`                 | ✅     | `src/test/idor/payroll.db.test.ts`                                                                     | `payroll_receipts:manage`   |
+| `action:payroll/discardPayrollPeriodAction`                | ✅     | `src/test/idor/payroll.db.test.ts`                                                                     | `payroll_receipts:manage`   |
+| `action:payroll/finishPayrollImportAction`                 | ✅     | `src/test/idor/payroll.db.test.ts`                                                                     | `payroll_receipts:manage`   |
+| `action:payroll/publishPayrollPeriodAction`                | ✅     | `src/test/idor/payroll.db.test.ts`                                                                     | `payroll_receipts:manage`   |
+| `action:payroll/searchPayrollPeopleAction`                 | ✅     | `src/test/idor/payroll.db.test.ts`                                                                     | `payroll_receipts:manage`   |
 | `action:privacy/createArcoRequestAction`                   | ✅     | `src/test/idor/privacy.db.test.ts`                                                                     | `privacy:manage`            |
 | `action:privacy/publishPrivacyNoticeAction`                | ✅     | `src/test/idor/privacy.db.test.ts`                                                                     | `privacy:manage`            |
 | `action:privacy/recordPrivacyAcceptanceAction`             | ✅     | `src/test/idor/privacy.db.test.ts`                                                                     | `privacy:manage`            |
@@ -125,11 +131,13 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `route:GET /api/mi/google/callback`                             | ✅     | `src/test/idor/employee-accounts.db.test.ts`                                                                                                       | —                                      |
 | `route:GET /api/storage/local/[...key]`                         | ⏭️     | Exento: solo desarrollo y pruebas (404 en producción); la URL firmada con HMAC y su vencimiento son el control, como una URL prefirmada del bucket | —                                      |
 | `route:GET /api/oauth/authorize`                                | ✅     | `src/test/idor/mcp.db.test.ts`                                                                                                                     | —                                      |
+| `route:GET /app/nomina/recibos/[id]/[archivo]`                  | ✅     | `src/test/idor/payroll.db.test.ts`                                                                                                                 | `payroll_receipts:read`                |
 | `route:GET /app/personas/[id]/contratos/[contractId]/pdf`       | ✅     | `src/test/idor/contract-pdf.db.test.ts`                                                                                                            | `contracts:read` + `compensation:read` |
 | `route:GET /app/personas/exportar`                              | ✅     | `src/test/idor/import.db.test.ts`                                                                                                                  | `people:export`                        |
 | `route:GET /app/privacidad/arco/[id]/exportar`                  | ✅     | `src/test/idor/privacy.db.test.ts`                                                                                                                 | `privacy:manage`                       |
 | `route:GET /app/reportes/rotacion/exportar`                     | ✅     | `src/test/idor/turnover.db.test.ts`                                                                                                                | `reports:read` + `people:export`       |
 | `route:GET /app/personas/plantilla`                             | ✅     | `src/test/idor/import.db.test.ts`                                                                                                                  | `people:import`                        |
+| `route:GET /mi/recibos/[id]/[archivo]`                          | ✅     | `src/test/idor/payroll.db.test.ts`                                                                                                                 | —                                      |
 | `route:GET /mi/manifest.webmanifest`                            | ⏭️     | Exento: manifiesto estático de la app de empleados, sin datos                                                                                      | —                                      |
 | `route:GET /mi/sw.js`                                           | ⏭️     | Exento: service worker estático que no guarda nada en caché, sin datos                                                                             | —                                      |
 | `route:POST /api/import/personas`                               | ✅     | `src/test/idor/import.db.test.ts`                                                                                                                  | `people:import`                        |
@@ -139,6 +147,7 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `route:POST /api/import/personas/[jobId]/undo`                  | ✅     | `src/test/idor/import.db.test.ts`                                                                                                                  | `people:import`                        |
 | `route:POST /api/import/personas/[jobId]/validate`              | ✅     | `src/test/idor/import.db.test.ts`                                                                                                                  | `people:import`                        |
 | `route:POST /api/mcp`                                           | ✅     | `src/test/idor/mcp.db.test.ts`                                                                                                                     | —                                      |
+| `route:POST /api/nomina/periodos/[periodId]/recibos`            | ✅     | `src/test/idor/payroll.db.test.ts`                                                                                                                 | `payroll_receipts:manage`              |
 | `route:POST /api/oauth/register`                                | ✅     | `src/test/idor/mcp.db.test.ts`                                                                                                                     | —                                      |
 | `route:POST /api/oauth/revoke`                                  | ✅     | `src/test/idor/mcp.db.test.ts`                                                                                                                     | —                                      |
 | `route:POST /api/oauth/token`                                   | ✅     | `src/test/idor/mcp.db.test.ts`                                                                                                                     | —                                      |
@@ -291,6 +300,17 @@ escrituras, que un rol sin el permiso no puede). Plania: WRK-I4-15.
 | `lib:people/views/getPeopleView`                              | ✅     | `src/test/idor/people-views.db.test.ts`       | —       |
 | `lib:people/views/listPeopleViews`                            | ✅     | `src/test/idor/people-views.db.test.ts`       | —       |
 | `lib:people/views/updatePeopleView`                           | ✅     | `src/test/idor/people-views.db.test.ts`       | —       |
+| `lib:payroll/assignPayrollReceipt`                            | ✅     | `src/test/idor/payroll.db.test.ts`            | —       |
+| `lib:payroll/createPayrollPeriod`                             | ✅     | `src/test/idor/payroll.db.test.ts`            | —       |
+| `lib:payroll/discardPayrollPeriod`                            | ✅     | `src/test/idor/payroll.db.test.ts`            | —       |
+| `lib:payroll/getPayrollPeriod`                                | ✅     | `src/test/idor/payroll.db.test.ts`            | —       |
+| `lib:payroll/importPayrollReceipt`                            | ✅     | `src/test/idor/payroll.db.test.ts`            | —       |
+| `lib:payroll/listPayrollPeriods`                              | ✅     | `src/test/idor/payroll.db.test.ts`            | —       |
+| `lib:payroll/listPayrollReceipts`                             | ✅     | `src/test/idor/payroll.db.test.ts`            | —       |
+| `lib:payroll/matchReceiptPerson`                              | ✅     | `src/test/idor/payroll.db.test.ts`            | —       |
+| `lib:payroll/openPayrollReceiptFile`                          | ✅     | `src/test/idor/payroll.db.test.ts`            | —       |
+| `lib:payroll/publishPayrollPeriod`                            | ✅     | `src/test/idor/payroll.db.test.ts`            | —       |
+| `lib:payroll/recordPayrollImport`                             | ✅     | `src/test/idor/payroll.db.test.ts`            | —       |
 | `lib:privacy/buildPersonDataExport`                           | ✅     | `src/test/idor/privacy.db.test.ts`            | —       |
 | `lib:privacy/createArcoRequest`                               | ✅     | `src/test/idor/privacy.db.test.ts`            | —       |
 | `lib:privacy/getArcoRequest`                                  | ✅     | `src/test/idor/privacy.db.test.ts`            | —       |

@@ -46,6 +46,10 @@ export const statusTone = {
     active: "success",
     disabled: "neutral",
   },
+  payrollPeriod: {
+    draft: "info",
+    published: "success",
+  },
   arco: {
     received: "info",
     late: "danger",

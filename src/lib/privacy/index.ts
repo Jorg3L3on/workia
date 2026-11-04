@@ -12,6 +12,8 @@ import {
   documentRequirements,
   employmentPeriods,
   onboardings,
+  payrollPeriods,
+  payrollReceipts,
   people,
   personalDataAccessLog,
   personBeneficiaries,
@@ -679,6 +681,7 @@ export const buildPersonDataExport = async (
     arcoRows,
     accessRows,
     historyRows,
+    receiptRows,
   ] = await Promise.all([
     scoped
       .select()
@@ -850,6 +853,33 @@ export const buildPersonDataExport = async (
       )
       .orderBy(desc(auditEvents.occurredAt))
       .limit(EXPORT_SECTION_LIMIT),
+    // Nómina receipts (W2-03): identifiers and dates only; the CFDI files
+    // themselves are in the employee app.
+    scoped
+      .select({
+        period: payrollPeriods.label,
+        cfdiUuid: payrollReceipts.cfdiUuid,
+        paymentDate: payrollReceipts.paymentDate,
+        deliveredAt: payrollReceipts.deliveredAt,
+        openedAt: payrollReceipts.openedAt,
+      })
+      .from(payrollReceipts)
+      .innerJoin(
+        payrollPeriods,
+        and(
+          eq(payrollPeriods.companyId, payrollReceipts.companyId),
+          eq(payrollPeriods.id, payrollReceipts.periodId),
+        ),
+      )
+      .where(
+        withTenant(
+          payrollReceipts,
+          companyId,
+          eq(payrollReceipts.personId, personId),
+        ),
+      )
+      .orderBy(desc(payrollPeriods.periodEnd))
+      .limit(EXPORT_SECTION_LIMIT),
   ]);
 
   return {
@@ -867,5 +897,6 @@ export const buildPersonDataExport = async (
     arcoRequests: arcoRows,
     accessLog: accessRows,
     history: historyRows,
+    payrollReceipts: receiptRows,
   };
 };

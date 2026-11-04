@@ -28,6 +28,7 @@ const resourceLabels: Record<string, string> = {
   mcp_connections: "conexiones",
   members: "miembros",
   payroll: "altas de Nóminas",
+  payroll_receipts: "recibos de nómina",
   people: "personas",
   permissions: "permisos",
   positions: "puestos",

@@ -27,6 +27,8 @@ export const AUDIT_RESOURCE_TYPES = [
   "privacy_acceptance",
   "arco_request",
   "data_retention",
+  "payroll_period",
+  "payroll_receipt",
 ] as const;
 
 export type AuditResourceType = (typeof AUDIT_RESOURCE_TYPES)[number];
@@ -62,6 +64,8 @@ export const AUDIT_ACTIONS = [
   "code_requested",
   "login",
   "logout",
+  // Workia 2.0 W2-03: nómina receipts.
+  "publish",
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
@@ -95,6 +99,7 @@ export const auditActionLabels: Record<AuditAction, string> = {
   code_requested: "Código de acceso enviado",
   login: "Inicio de sesión",
   logout: "Cierre de sesión",
+  publish: "Publicación",
 };
 
 export const auditResourceTypeLabels: Record<AuditResourceType, string> = {
@@ -126,6 +131,8 @@ export const auditResourceTypeLabels: Record<AuditResourceType, string> = {
   privacy_acceptance: "Aceptación del aviso de privacidad",
   arco_request: "Solicitud ARCO",
   data_retention: "Conservación de datos",
+  payroll_period: "Periodo de nómina",
+  payroll_receipt: "Recibo de nómina",
 };
 
 export const AUDIT_SOURCES = [

@@ -17,6 +17,9 @@ describe("permissionLabel", () => {
     expect(permissionLabel("vacations:update")).toBe("Editar vacaciones");
     expect(permissionLabel("privacy:read")).toBe("Leer privacidad");
     expect(permissionLabel("privacy:manage")).toBe("Gestionar privacidad");
+    expect(permissionLabel("payroll_receipts:manage")).toBe(
+      "Gestionar recibos de nómina",
+    );
   });
 
   it("returns an unknown slug unchanged", () => {

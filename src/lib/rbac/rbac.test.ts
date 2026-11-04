@@ -106,6 +106,27 @@ describe("employee accounts permission", () => {
   });
 });
 
+describe("payroll receipts permissions", () => {
+  it("grants read and manage to super_admin and admin only", async () => {
+    const { PERMISSIONS, ROLES } = await import("@/lib/db/schema/types");
+
+    expect(PERMISSIONS.map((permission) => permission.slug)).toEqual(
+      expect.arrayContaining([
+        "payroll_receipts:read",
+        "payroll_receipts:manage",
+      ]),
+    );
+
+    for (const role of ROLES) {
+      const permissions: readonly string[] = role.permissions;
+      const admin = ["super_admin", "admin"].includes(role.slug);
+
+      expect(permissions.includes("payroll_receipts:read")).toBe(admin);
+      expect(permissions.includes("payroll_receipts:manage")).toBe(admin);
+    }
+  });
+});
+
 describe("privacy permissions", () => {
   it("grants read and manage to super_admin and admin only", async () => {
     const { PERMISSIONS, ROLES } = await import("@/lib/db/schema/types");

@@ -31,7 +31,8 @@ export type PermissionResource =
   | "documents"
   | "vacations"
   | "employee_accounts"
-  | "privacy";
+  | "privacy"
+  | "payroll_receipts";
 
 export type PermissionSlug = `${PermissionResource}:${PermissionAction}`;
 
@@ -479,6 +480,22 @@ export const PERMISSIONS: Array<{
       "Publish privacy notice versions, register and answer ARCO requests and download a person's data export",
   },
   {
+    slug: "payroll_receipts:read",
+    name: "Read Payroll Receipts",
+    resource: "payroll_receipts",
+    action: "read",
+    description:
+      "View pay periods, who opened their nómina receipts and download a receipt",
+  },
+  {
+    slug: "payroll_receipts:manage",
+    name: "Manage Payroll Receipts",
+    resource: "payroll_receipts",
+    action: "manage",
+    description:
+      "Import the CFDI of a pay period, match unmatched receipts and publish the period to employees",
+  },
+  {
     slug: "companies:read",
     name: "Read Companies",
     resource: "companies",
@@ -584,6 +601,8 @@ export const ROLES = [
       "employee_accounts:manage",
       "privacy:read",
       "privacy:manage",
+      "payroll_receipts:read",
+      "payroll_receipts:manage",
     ] satisfies PermissionSlug[],
   },
   {
