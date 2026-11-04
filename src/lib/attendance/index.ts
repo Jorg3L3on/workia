@@ -32,7 +32,11 @@ import { formatPersonName } from "@/lib/people/schema";
 import { withTenant } from "@/lib/tenant/scope";
 
 import { normalizeBadge, readChecadorCsv } from "./csv-format";
-import { ingestPunches, type IngestSummary } from "./ingest";
+import {
+  ingestPunches,
+  recomputeIncidenciasAfter,
+  type IngestSummary,
+} from "./ingest";
 
 /**
  * HR's side of attendance ingestion (W2-12): checadores and their tokens,
@@ -688,8 +692,10 @@ export const assignBadge = async (
     };
   }
 
+  const touched: Array<{ personId: string; day: string }> = [];
+
   try {
-    return await withTransaction(async (tx) => {
+    const result = await withTransaction(async (tx) => {
       await tx
         .insert(attendanceBadges)
         .values({ companyId, personId: person.id, badge });
@@ -746,7 +752,7 @@ export const assignBadge = async (
             kind: row.kind === "in" || row.kind === "out" ? row.kind : null,
           })),
           [],
-          { tx, recordBatch: false },
+          { tx, recordBatch: false, touched },
         );
       }
 
@@ -783,6 +789,10 @@ export const assignBadge = async (
 
       return { ok: true as const, placed: waiting.length };
     }, companyId);
+
+    await recomputeIncidenciasAfter(companyId, touched, new Date());
+
+    return result;
   } catch (error) {
     if (isUniqueViolation(error)) {
       return { ok: false, error: ATTENDANCE_COPY.badgeTaken("otra persona") };

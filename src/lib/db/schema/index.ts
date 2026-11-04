@@ -9,6 +9,7 @@ export * from "./documents";
 export * from "./employee-accounts";
 export * from "./employment";
 export * from "./imports";
+export * from "./incidencias";
 export * from "./mcp";
 export * from "./onboardings";
 export * from "./pay-periods";

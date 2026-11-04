@@ -421,9 +421,26 @@ export const replacePeriodIncidencias = async (
         const key = `${event.personId}|${event.dedupeKey}`;
         const current = byKey.get(key);
 
-        if (current && sameJson(current.payload, event.payload)) {
-          keep.add(current.id);
-          result.unchanged += 1;
+        if (current) {
+          const { rev: storedRev, ...stored } = current.payload as {
+            rev?: unknown;
+          };
+
+          if (sameJson(stored, event.payload)) {
+            keep.add(current.id);
+            result.unchanged += 1;
+            continue;
+          }
+
+          // A correction (docs/aggregates.md): the full payload again, one
+          // revision higher than the row it replaces.
+          rows.push({
+            ...event,
+            payload: {
+              ...event.payload,
+              rev: (typeof storedRev === "number" ? storedRev : 0) + 1,
+            },
+          });
           continue;
         }
 

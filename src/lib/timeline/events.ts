@@ -365,6 +365,8 @@ export type IncidenciaInput = {
   minutes?: number | null;
   justified?: boolean;
   justificationRef?: string | null;
+  /** Cancelled by HR (an override); kept so the decision stays on the timeline. */
+  voided?: boolean;
   siteId?: string | null;
   source: Source;
 };
@@ -387,6 +389,7 @@ export const incidenciaEvent = (input: IncidenciaInput): PersonEventInput => ({
     minutes: input.minutes ?? undefined,
     justified: input.justified ?? false,
     justification_ref: input.justificationRef ?? undefined,
+    voided: input.voided ? true : undefined,
     site_id: input.siteId ?? undefined,
   }),
 });

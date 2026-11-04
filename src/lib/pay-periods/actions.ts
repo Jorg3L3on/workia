@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { isoToday } from "@/lib/format/date";
+import { runIncidencias } from "@/lib/incidencias";
 import { AuthorizationError } from "@/lib/rbac/errors";
 import {
   STALE_COMPANY_MESSAGE,
@@ -94,6 +95,9 @@ export const closePayPeriodAction = async (
   }
 
   try {
+    // Freeze the engine's latest output (W2-14): recompute the quincena from
+    // the punches and justifications first, then close it.
+    await runIncidencias(companyId, period);
     const result = await closePayPeriod(companyId, period, {
       actorUserId: auth.session.user.id,
     });

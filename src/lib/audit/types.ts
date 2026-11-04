@@ -23,6 +23,8 @@ export const AUDIT_RESOURCE_TYPES = [
   "person_document",
   "vacation_record",
   "pay_period",
+  "incidencia_rules",
+  "incidencia_justification",
   "employee_account",
   "privacy_notice",
   "privacy_acceptance",
@@ -64,6 +66,8 @@ export const AUDIT_ACTIONS = [
   // Workia 2.0 P-02: cierre de periodo de pago.
   "close",
   "reopen",
+  // Workia 2.0 W2-14: HR decides on one incidencia.
+  "override",
   // Workia 2.0 W2-01: employee accounts.
   "invite",
   "activation_code",
@@ -100,6 +104,7 @@ export const auditActionLabels: Record<AuditAction, string> = {
   terminado: "Contrato terminado",
   close: "Cierre",
   reopen: "Reapertura",
+  override: "Decisión sobre incidencia",
   invite: "Invitación",
   activation_code: "Código de activación",
   code_requested: "Código de acceso enviado",
@@ -132,6 +137,8 @@ export const auditResourceTypeLabels: Record<AuditResourceType, string> = {
   person_document: "Documento de la persona",
   vacation_record: "Vacaciones tomadas",
   pay_period: "Periodo de pago",
+  incidencia_rules: "Reglas de incidencias",
+  incidencia_justification: "Justificación de incidencias",
   employee_account: "Cuenta de empleado",
   privacy_notice: "Aviso de privacidad",
   privacy_acceptance: "Aceptación del aviso de privacidad",

@@ -9,6 +9,8 @@ import {
   personEvents,
 } from "@/lib/db/schema";
 import type { AttendanceBatchSource } from "@/lib/db/schema/attendance";
+import { recomputeAfterAttendance } from "@/lib/incidencias";
+import { logger } from "@/lib/logger";
 import { withTenant } from "@/lib/tenant/scope";
 import { attendanceDedupeKey } from "@/lib/timeline";
 import {
@@ -209,6 +211,8 @@ export const ingestPunches = async (
     tx?: DbTransaction;
     /** False when re-placing punches already reported (no new batch, no report rows). */
     recordBatch?: boolean;
+    /** With tx: collects the person days written, for recomputeIncidenciasAfter. */
+    touched?: Array<{ personId: string; day: string }>;
   } = {},
 ): Promise<IngestSummary> => {
   if (punches.length > MAX_PUNCHES_PER_INGEST) {
@@ -218,6 +222,7 @@ export const ingestPunches = async (
   }
 
   const now = options.now ?? new Date();
+  const touched = options.touched ?? [];
   const deviceId = target.kind === "batch" ? target.deviceId : "app";
   const source =
     target.kind === "batch" ? `checador:${target.deviceId}` : "app";
@@ -382,6 +387,8 @@ export const ingestPunches = async (
     const written =
       days.length > 0 ? await writeAttendanceDays(companyId, days, tx) : null;
 
+    touched.push(...days.map(({ personId, day }) => ({ personId, day })));
+
     let batchId: string | null = null;
     const counts = {
       rows: options.rows ?? punches.length + invalidRows.length,
@@ -473,5 +480,38 @@ export const ingestPunches = async (
     };
   };
 
-  return options.tx ? run(options.tx) : withTransaction(run, companyId);
+  if (options.tx) {
+    // The caller commits; it recomputes the incidencias afterwards
+    // (recomputeIncidenciasAfter) with the days in options.touched.
+    return run(options.tx);
+  }
+
+  const summary = await withTransaction(run, companyId);
+
+  await recomputeIncidenciasAfter(companyId, touched, now);
+
+  return summary;
+};
+
+/**
+ * Recomputes the incidencias (W2-14) of the people and quincenas new punches
+ * touched, after the ingestion committed. The punches are stored whatever
+ * happens here: a failure is logged, and the next ingestion, a recompute
+ * from Periodos de pago or the close recomputes again.
+ */
+export const recomputeIncidenciasAfter = async (
+  companyId: string,
+  touched: Array<{ personId: string; day: string }>,
+  asOf: Date,
+) => {
+  if (touched.length === 0) return;
+
+  try {
+    await recomputeAfterAttendance(companyId, touched, { asOf });
+  } catch (error) {
+    logger.error(
+      { event: "incidencias.recompute_failed", companyId, err: error },
+      "incidencias.recompute_failed",
+    );
+  }
 };

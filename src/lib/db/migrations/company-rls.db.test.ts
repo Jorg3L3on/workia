@@ -123,8 +123,9 @@ describe("0018: row-level security per company", () => {
     // privacy_notices, privacy_notice_acceptances, personal_data_access_log and
     // arco_requests (0033) + pay_periods and incidencias_period_snapshot (0035) +
     // attendance_devices, attendance_badges, attendance_checkin_sites,
-    // attendance_batches and attendance_unmatched (0044).
-    expect(tables.length).toBe(43);
+    // attendance_batches and attendance_unmatched (0044) + incidencia_rules and
+    // incidencia_justifications (0051).
+    expect(tables.length).toBe(45);
     for (const table of tables) {
       expect(table, table.table).toMatchObject({
         rls: true,
