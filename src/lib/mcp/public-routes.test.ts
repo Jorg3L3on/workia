@@ -31,9 +31,26 @@ const PUBLIC_MCP_ROUTES = [
   "/api/oauth/token",
 ];
 
+/**
+ * The employee app (W2-01) signs in without an HR session: Google's start and
+ * callback, and the static manifest and service worker of /mi.
+ */
+const PUBLIC_EMPLOYEE_ROUTES = [
+  "/api/mi/google",
+  "/api/mi/google/callback",
+  "/mi/manifest.webmanifest",
+  "/mi/sw.js",
+];
+
+/**
+ * Scheduled jobs (W2-08): sessionless, answer only to the CRON_SECRET bearer
+ * and 404 while it is unset.
+ */
+const SCHEDULED_JOB_ROUTES = ["/api/cron/notifications"];
+
 /** A route is guarded when it goes through the company context or Auth.js. */
 const isSessionGuarded = (source: string) =>
-  /require(CompanyContext|Auth|PeopleImport|PeopleExport|[A-Z]\w*(Read|Create|Update|Delete|Import|Export))\b|requireImportRoute|withImportRoute|auth\(\)/.test(
+  /getEmployeeContext\(|require(CompanyContext|EmployeeContext|Auth|PeopleImport|PeopleExport|[A-Z]\w*(Read|Create|Update|Delete|Import|Export))\b|requireImportRoute|withImportRoute|auth\(\)/.test(
     source,
   );
 
@@ -45,7 +62,13 @@ describe("public routes", () => {
       .map(({ route }) => route)
       .sort();
 
-    expect(unguarded).toEqual(PUBLIC_MCP_ROUTES);
+    expect(unguarded).toEqual(
+      [
+        ...PUBLIC_MCP_ROUTES,
+        ...PUBLIC_EMPLOYEE_ROUTES,
+        ...SCHEDULED_JOB_ROUTES,
+      ].sort(),
+    );
   });
 
   it("puts every public MCP route behind MCP_ENABLED", () => {
@@ -53,6 +76,14 @@ describe("public routes", () => {
       PUBLIC_MCP_ROUTES.includes(r.route),
     )) {
       expect(source, route).toMatch(/whenEnabled|isMcpEnabled/);
+    }
+  });
+
+  it("puts every scheduled job route behind CRON_SECRET", () => {
+    for (const { route, source } of routes.filter((r) =>
+      SCHEDULED_JOB_ROUTES.includes(r.route),
+    )) {
+      expect(source, route).toMatch(/env\.CRON_SECRET/);
     }
   });
 });

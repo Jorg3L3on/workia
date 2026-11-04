@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { AppShell } from "@/components/layout/app-shell";
 import { pageTitles } from "@/lib/brand/chrome-copy";
+import { countUnread, userRecipient } from "@/lib/notifications";
 import { requireCompanyPage } from "@/lib/tenant/context";
 
 export const metadata: Metadata = {
@@ -18,6 +19,10 @@ type AppLayoutProps = {
 export default async function AppLayout({ children }: AppLayoutProps) {
   // No active company: off to /empresa (pick one, or "no perteneces a ninguna").
   const session = await requireCompanyPage();
+  const unreadNotifications = await countUnread(
+    session.companyId,
+    userRecipient(session.userId),
+  );
 
   const toOption = (membership: (typeof session.memberships)[number]) => ({
     id: membership.companyId,
@@ -38,6 +43,7 @@ export default async function AppLayout({ children }: AppLayoutProps) {
       canReadReports={session.permissions.has("reports:read")}
       canReadDocuments={session.permissions.has("documents:read")}
       isPlatformAdmin={session.isPlatformAdmin}
+      unreadNotifications={unreadNotifications}
     >
       {children}
     </AppShell>
