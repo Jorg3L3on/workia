@@ -22,6 +22,7 @@ export const AUDIT_RESOURCE_TYPES = [
   "document_requirement",
   "person_document",
   "vacation_record",
+  "pay_period",
 ] as const;
 
 export type AuditResourceType = (typeof AUDIT_RESOURCE_TYPES)[number];
@@ -51,6 +52,9 @@ export const AUDIT_ACTIONS = [
   "reingreso",
   "finiquito_actualizado",
   "terminado",
+  // Workia 2.0 P-02: cierre de periodo de pago.
+  "close",
+  "reopen",
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
@@ -79,6 +83,8 @@ export const auditActionLabels: Record<AuditAction, string> = {
   reingreso: "Reingreso",
   finiquito_actualizado: "Finiquito actualizado",
   terminado: "Contrato terminado",
+  close: "Cierre",
+  reopen: "Reapertura",
 };
 
 export const auditResourceTypeLabels: Record<AuditResourceType, string> = {
@@ -105,6 +111,7 @@ export const auditResourceTypeLabels: Record<AuditResourceType, string> = {
   document_requirement: "Requisito de documento",
   person_document: "Documento de la persona",
   vacation_record: "Vacaciones tomadas",
+  pay_period: "Periodo de pago",
 };
 
 export const AUDIT_SOURCES = [

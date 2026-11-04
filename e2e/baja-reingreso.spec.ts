@@ -3,6 +3,7 @@ import { execFileSync } from "node:child_process";
 import { expect, test, type Page } from "@playwright/test";
 
 import { chooseSelectOption } from "./choose-select-option";
+import { e2eCurp } from "./curp";
 
 /**
  * Baja y periodos laborales (Iniciativa 2): a baja with its fields and the
@@ -58,6 +59,7 @@ test("baja → reingreso → historial keeps both periods", async ({ page }) => 
     await page.goto("/app/personas/nueva");
     await page.locator("#nombres").fill("Persona");
     await page.locator("#apellidoPaterno").fill("Borrada");
+    await page.locator("#curp").fill(e2eCurp());
     await page.locator("#apellidoMaterno").fill(`Demo${suffix}`);
     await page.locator("#fechaIngreso").fill(mx(ingreso));
     await page.getByRole("button", { name: "Guardar persona" }).click();
