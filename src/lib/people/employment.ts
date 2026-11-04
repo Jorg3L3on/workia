@@ -23,6 +23,7 @@ import {
 } from "@/lib/db/schema";
 import type { EmploymentPeriod } from "@/lib/db/schema/employment";
 import { formatDateMx } from "@/lib/format/date";
+import { revokeEmployeeAccess } from "@/lib/employee-accounts/revoke";
 import { withTenant } from "@/lib/tenant/scope";
 import { appendPersonEvents } from "@/lib/timeline";
 import {
@@ -503,6 +504,13 @@ export type TerminationResult = {
 /** Where a baja comes from, for the audit: the app (default) or an import. */
 export type TerminationOptions = {
   source?: NonNullable<RecordAuditEventInput["source"]>;
+  /**
+   * A transfer to another subsidiary (W2-24, src/lib/transfers): the period
+   * closes as tipo «traslado» with no motivo of the catalog and no
+   * recontratable, and the summary names the company the person went to.
+   * Only transferPerson() passes it.
+   */
+  transfer?: { toCompanyName: string };
 };
 
 /**
@@ -660,15 +668,26 @@ export const recordTermination = async (
     );
   }
 
-  const reason = await checkTermination(tx, companyId, open, input);
+  const transfer = options.transfer;
+
+  if (transfer && open.fechaIngreso && input.fechaBaja < open.fechaIngreso) {
+    throw new EmploymentError(
+      `El traslado debe ser posterior al ingreso (${formatDateMx(open.fechaIngreso)}).`,
+      "fechaTraslado",
+    );
+  }
+
+  const reason = transfer
+    ? null
+    : await checkTermination(tx, companyId, open, input);
   const [period] = await tx
     .update(employmentPeriods)
     .set({
       fechaBaja: input.fechaBaja,
-      tipoBaja: input.tipoBaja,
-      motivoBajaId: reason.id,
+      tipoBaja: transfer ? "traslado" : input.tipoBaja,
+      motivoBajaId: reason?.id ?? null,
       comentarioBaja: input.comentario?.trim() || null,
-      recontratable: input.recontratable,
+      recontratable: transfer ? null : input.recontratable,
       ...finiquitoValues(input.finiquito),
       ...frozenDimensions(existing),
     })
@@ -687,6 +706,16 @@ export const recordTermination = async (
     .where(withTenant(people, companyId, eq(people.id, personId)))
     .returning();
 
+  // W2-01: the employee account goes off with the baja, in this transaction.
+  await revokeEmployeeAccess(
+    tx,
+    companyId,
+    personId,
+    "baja",
+    actorUserId,
+    options.source,
+  );
+
   const terminated = await terminateVigenteContract(
     tx,
     companyId,
@@ -696,7 +725,7 @@ export const recordTermination = async (
     options,
   );
   const periodBefore = snapshotEmploymentPeriod(open, open.motivoBaja);
-  const periodAfter = snapshotEmploymentPeriod(period, reason.name);
+  const periodAfter = snapshotEmploymentPeriod(period, reason?.name ?? null);
 
   await appendPersonEvents(
     companyId,
@@ -720,13 +749,20 @@ export const recordTermination = async (
           ...periodChanges(periodBefore, periodAfter),
         },
         // Never the amount: the summary is not masked.
-        summary: [
-          `Baja laboral el ${formatDateMx(input.fechaBaja)}`,
-          terminationTypeLabels[input.tipoBaja],
-          reason.name,
-          input.recontratable ? "recontratable" : "no recontratable",
-          terminated ? "contrato terminado" : null,
-        ]
+        summary: (transfer
+          ? [
+              `Baja laboral el ${formatDateMx(input.fechaBaja)}`,
+              `traslado a ${transfer.toCompanyName}`,
+              terminated ? "contrato terminado" : null,
+            ]
+          : [
+              `Baja laboral el ${formatDateMx(input.fechaBaja)}`,
+              terminationTypeLabels[input.tipoBaja],
+              reason?.name,
+              input.recontratable ? "recontratable" : "no recontratable",
+              terminated ? "contrato terminado" : null,
+            ]
+        )
           .filter(Boolean)
           .join(" · "),
       },

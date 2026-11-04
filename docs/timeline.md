@@ -111,19 +111,19 @@ cannot be written, the change rolls back too (`writes.db.test.ts` checks
 that for every writer). The dedupe key names the source row, so the backfill
 builds the same key for the same fact and never writes it twice.
 
-| Event                                   | Written by                                                                          | Dedupe key                                 | `occurred_at`             |
-| --------------------------------------- | ----------------------------------------------------------------------------------- | ------------------------------------------ | ------------------------- |
-| `employment` alta                       | `syncEmploymentPeriods` (alta, edición, importación, alta a nómina), `rehirePerson` | `employment:period:<id>:alta`              | the ingreso               |
-| `employment` baja                       | `recordTermination`; a status set to baja without the dialog («sin fecha»)          | `employment:period:<id>:baja`              | the fecha de baja, or now |
-| `employment` baja corrected             | `correctTermination` (append-only: a new event, `corrected: true`)                  | `employment:audit:<audit id>`              | the fecha de baja         |
-| `employment` cambio                     | `updatePerson`, a renewal with a new puesto, an import that moves a person          | `employment:audit:<audit id>`              | the audit event           |
-| `employment` transfer                   | builder only, for the subsidiary transfers of phase 3                               | `employment:transfer:<id>`                 | the transfer              |
-| `vacation` enjoyment / void             | `registerVacationRecord` / `voidVacationRecord`                                     | `vacation:record:<id>:enjoyment` / `:void` | first day / the void      |
-| `vacation` request, approval, rejection | builder only, for the requests of W2-09/W2-10                                       | `vacation:request:<id>:<kind>`             | the step                  |
-| `document`                              | `recordDelivery` (status `accepted`); uploads and reviews of W2-07 pass theirs      | `document:person_document:<id>:<status>`   | the delivery date         |
-| `receipt`                               | builder only, for the receipts import of W2-03                                      | `receipt:cfdi:<uuid>`                      | delivered at              |
-| `attendance`                            | `writeAttendanceDays`, for the ingestion of W2-12                                   | `attendance:<date>`                        | the first punch           |
-| `incidencia`                            | `replacePeriodIncidencias`, for the engine of W2-14                                 | `incidencia:<period>:<date>:<kind>`        | the day                   |
+| Event                                   | Written by                                                                          | Dedupe key                                 | `occurred_at`                    |
+| --------------------------------------- | ----------------------------------------------------------------------------------- | ------------------------------------------ | -------------------------------- |
+| `employment` alta                       | `syncEmploymentPeriods` (alta, edición, importación, alta a nómina), `rehirePerson` | `employment:period:<id>:alta`              | the ingreso                      |
+| `employment` baja                       | `recordTermination`; a status set to baja without the dialog («sin fecha»)          | `employment:period:<id>:baja`              | the fecha de baja, or now        |
+| `employment` baja corrected             | `correctTermination` (append-only: a new event, `corrected: true`)                  | `employment:audit:<audit id>`              | the fecha de baja                |
+| `employment` cambio                     | `updatePerson`, a renewal with a new puesto, an import that moves a person          | `employment:audit:<audit id>`              | the audit event                  |
+| `employment` transfer                   | `transferPerson` (W2-24, [transfers.md](transfers.md)), one per side                | `employment:transfer:<transfer id>`        | the first day in the new company |
+| `vacation` enjoyment / void             | `registerVacationRecord` / `voidVacationRecord`                                     | `vacation:record:<id>:enjoyment` / `:void` | first day / the void             |
+| `vacation` request, approval, rejection | builder only, for the requests of W2-09/W2-10                                       | `vacation:request:<id>:<kind>`             | the step                         |
+| `document`                              | `recordDelivery` (status `accepted`); uploads and reviews of W2-07 pass theirs      | `document:person_document:<id>:<status>`   | the delivery date                |
+| `receipt`                               | builder only, for the receipts import of W2-03                                      | `receipt:cfdi:<uuid>`                      | delivered at                     |
+| `attendance`                            | `writeAttendanceDays`, for the ingestion of W2-12                                   | `attendance:<date>`                        | the first punch                  |
+| `incidencia`                            | `replacePeriodIncidencias`, for the engine of W2-14                                 | `incidencia:<period>:<date>:<kind>`        | the day                          |
 
 A calendar day is stored as noon in central Mexico (`dayInstant`), so it stays
 on the same date in every Mexican time zone. A «cambio» is any person audit

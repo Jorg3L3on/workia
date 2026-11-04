@@ -31,6 +31,29 @@ const isProtectedPath = (pathname: string) =>
   pathname.startsWith("/admin/") ||
   pathname === "/empresa";
 
+// Employee app (W2-01): its own cookie, independent of Auth.js. The proxy only
+// checks the cookie is there; requireEmployeeContext() checks the session row.
+const EMPLOYEE_SESSION_COOKIE_NAMES = [
+  "workia.employee-session",
+  "__Host-workia.employee-session",
+] as const;
+
+const EMPLOYEE_PUBLIC_PATHS = new Set([
+  "/mi/entrar",
+  "/mi/activar",
+  "/mi/manifest.webmanifest",
+  "/mi/sw.js",
+]);
+
+export const requestHasEmployeeSessionCookie = (request: NextRequest) =>
+  EMPLOYEE_SESSION_COOKIE_NAMES.some((cookieName) =>
+    Boolean(request.cookies.get(cookieName)?.value),
+  );
+
+const isEmployeeProtectedPath = (pathname: string) =>
+  (pathname === "/mi" || pathname.startsWith("/mi/")) &&
+  !EMPLOYEE_PUBLIC_PATHS.has(pathname);
+
 const isAuthPath = (pathname: string) =>
   pathname === "/login" || pathname.startsWith("/api/auth/");
 
@@ -48,6 +71,13 @@ const nextWithSanitizedCookies = (request: NextRequest) => {
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  if (
+    isEmployeeProtectedPath(pathname) &&
+    !requestHasEmployeeSessionCookie(request)
+  ) {
+    return NextResponse.redirect(new URL("/mi/entrar", request.nextUrl));
+  }
 
   if (isProtectedPath(pathname) && !requestHasAuthjsSessionCookie(request)) {
     return finalizeAuthProxyResponse(
@@ -80,5 +110,7 @@ export const config = {
     "/empresa",
     "/login",
     "/api/auth/:path*",
+    "/mi",
+    "/mi/:path*",
   ],
 };

@@ -17,6 +17,12 @@ export const users = pgTable("users", {
   passwordHash: text("password_hash"),
   /** Platform access: manages companies and memberships. Not a company role. */
   isPlatformAdmin: boolean("is_platform_admin").notNull().default(false),
+  /**
+   * Group admin grant (W2-24, migration 0046): reads the linked rows of a
+   * person in every company of the group (group timeline), each read under
+   * that company's row-level security. Given by a platform admin.
+   */
+  isGroupAdmin: boolean("is_group_admin").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),

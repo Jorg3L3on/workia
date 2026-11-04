@@ -65,6 +65,20 @@ export default async function AdminPage() {
         </Card>
         <Card>
           <CardHeader>
+            <CardTitle>Administración del grupo</CardTitle>
+            <CardDescription>
+              Quién consulta el historial de las personas trasladadas entre
+              empresas.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild variant="secondary">
+              <Link href="/admin/grupo">Ver acceso al grupo</Link>
+            </Button>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
             <CardTitle>Tus permisos</CardTitle>
             <CardDescription>
               Lo que tu cuenta puede hacer en la plataforma.

@@ -25,12 +25,17 @@ import { sites } from "./sites";
 /** catalog_key(name): the importer's catalogKey() in SQL (migration 0017). */
 const catalogKeyOf = (column: AnyPgColumn) => sql`catalog_key(${column})`;
 
-/** Tipo de baja (Iniciativa 2). */
+/**
+ * Tipo de baja (Iniciativa 2). «traslado» (migration 0046) closes a period
+ * because the person moved to another subsidiary of the group (W2-24); only
+ * the transfer flow writes it, never the baja dialog or the importer.
+ */
 export const terminationTypeEnum = pgEnum("termination_type", [
   "voluntaria",
   "despido",
   "termino_contrato",
   "otra",
+  "traslado",
 ]);
 
 /** Estado del finiquito of a closed period. */

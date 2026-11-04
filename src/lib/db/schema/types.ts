@@ -6,7 +6,8 @@ export type PermissionAction =
   | "manage"
   | "import"
   | "export"
-  | "approve";
+  | "approve"
+  | "transfer";
 
 export type PermissionResource =
   | "users"
@@ -30,7 +31,8 @@ export type PermissionResource =
   | "reports"
   | "documents"
   | "vacations"
-  | "pay_periods";
+  | "pay_periods"
+  | "employee_accounts";
 
 export type PermissionSlug = `${PermissionResource}:${PermissionAction}`;
 
@@ -173,6 +175,14 @@ export const PERMISSIONS: Array<{
     resource: "people",
     action: "delete",
     description: "Logically delete people records",
+  },
+  {
+    slug: "people:transfer",
+    name: "Transfer People",
+    resource: "people",
+    action: "transfer",
+    description:
+      "Move a person to another company of the group, keeping their seniority (needed in both companies)",
   },
   {
     slug: "people:import",
@@ -470,6 +480,14 @@ export const PERMISSIONS: Array<{
       "Close a quincena (freeze its incidencias) and reopen it with a reason",
   },
   {
+    slug: "employee_accounts:manage",
+    name: "Manage Employee Accounts",
+    resource: "employee_accounts",
+    action: "manage",
+    description:
+      "Invite people to the employee app, issue activation codes and disable accounts",
+  },
+  {
     slug: "companies:read",
     name: "Read Companies",
     resource: "companies",
@@ -533,6 +551,7 @@ export const ROLES = [
       "people:create",
       "people:update",
       "people:delete",
+      "people:transfer",
       "people:import",
       "people:export",
       "audit:read",
@@ -574,6 +593,7 @@ export const ROLES = [
       "vacations:update",
       "pay_periods:read",
       "pay_periods:manage",
+      "employee_accounts:manage",
     ] satisfies PermissionSlug[],
   },
   {

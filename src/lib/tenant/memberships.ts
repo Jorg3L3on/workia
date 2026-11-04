@@ -94,6 +94,17 @@ export const getRolePermissionSlugs = async (
   return rows.map((row) => row.slug as PermissionSlug);
 };
 
+/** Group admin grant (W2-24): may read a person's linked rows in every company. */
+export const isGroupAdmin = async (userId: string) => {
+  const [row] = await db
+    .select({ isGroupAdmin: users.isGroupAdmin })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  return row?.isGroupAdmin ?? false;
+};
+
 export const isPlatformAdmin = async (userId: string) => {
   const [row] = await db
     .select({ isPlatformAdmin: users.isPlatformAdmin })

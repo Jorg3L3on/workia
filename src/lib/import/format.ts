@@ -594,8 +594,10 @@ export const parseContractStatus = (value: unknown) => {
 };
 
 export const parseTerminationType = (value: unknown) => {
+  // «traslado» is read so an exported file imports back unchanged; the row
+  // planner refuses to write or change one (only transfers do, W2-24).
   const lookup = new Map(
-    TERMINATION_TYPES.flatMap((type) => [
+    [...TERMINATION_TYPES, "traslado" as const].flatMap((type) => [
       [catalogKey(terminationTypeLabels[type]), type],
       [catalogKey(type), type],
     ]),

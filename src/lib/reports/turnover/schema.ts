@@ -10,6 +10,7 @@ const TERMINATION_TYPES = [
   "despido",
   "termino_contrato",
   "otra",
+  "traslado",
 ] as const;
 
 const isoDate = z

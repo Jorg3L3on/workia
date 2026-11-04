@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import {
+  ArrowRightLeftIcon,
   FileSignatureIcon,
+  HistoryIcon,
   FileTextIcon,
   ReceiptTextIcon,
   RotateCcwIcon,
@@ -53,6 +55,10 @@ type PersonActionsMenuProps = {
   showStartAlta?: boolean;
   /** The header secondary, folded in below 768px. */
   emitContractHref?: string;
+  /** «Trasladar a otra empresa» (W2-24), when the user may transfer. */
+  transferHref?: string;
+  /** «Historial del grupo», when the person has transfer links. */
+  groupHistoryHref?: string;
 };
 
 /**
@@ -71,6 +77,8 @@ export const PersonActionsMenu = ({
   showConstancia,
   showStartAlta = false,
   emitContractHref,
+  transferHref,
+  groupHistoryHref,
 }: PersonActionsMenuProps) => {
   const [statusOpen, setStatusOpen] = useState(false);
   const [finiquitoOpen, setFiniquitoOpen] = useState(false);
@@ -114,6 +122,16 @@ export const PersonActionsMenu = ({
               icon: isBaja ? RotateCcwIcon : UserMinusIcon,
               onSelect: () => setStatusOpen(true),
             },
+          Boolean(groupHistoryHref) && {
+            label: "Historial del grupo",
+            icon: HistoryIcon,
+            href: groupHistoryHref ?? "",
+          },
+          Boolean(transferHref) && {
+            label: "Trasladar a otra empresa",
+            icon: ArrowRightLeftIcon,
+            href: transferHref ?? "",
+          },
           finiquitoAction &&
             lastBaja && {
               label: "Finiquito",

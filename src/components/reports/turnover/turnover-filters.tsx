@@ -67,7 +67,7 @@ export type TurnoverFilterOptions = {
 };
 
 const TIPO_OPTIONS: FilterOption[] = (
-  ["voluntaria", "despido", "termino_contrato", "otra"] as const
+  ["voluntaria", "despido", "termino_contrato", "otra", "traslado"] as const
 ).map((value) => ({ value, label: terminationTypeLabels[value] }));
 
 const CLASS_OPTIONS: FilterOption[] = TERMINATION_CLASSIFICATIONS.map(

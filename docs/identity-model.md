@@ -171,7 +171,8 @@ A person normally works for one subsidiary. The rare transfer:
    company, which gets its own `people` row. The rows never merge and never
    move.
 2. Records a **link** between the two rows, by id (`person_links`: the two
-   `(company_id, person_id)` pairs with composite foreign keys, who and when).
+   `(company_id, person_id)` pairs with composite foreign keys, who and when;
+   one row per company so each side stays under its own RLS).
    The link is refused when the CURPs of the two rows differ. Both rows are
    active at the moment of the transfer, so both have a valid CURP.
 3. Writes an `employment` event in each company's timeline (P-01).
@@ -217,7 +218,7 @@ Company RLS separates companies, not employees. Within one company:
 - **W2-07 Manager scope:** the grant, the live team from `people.manager_id`,
   delegation with an end date.
 - **W2-24 Transfers:** `person_links`, the CURP match, per-company reads merged
-  in the app, the group admin grant.
+  in the app, the group admin grant. Built: see [transfers.md](transfers.md).
 
 All of it fits Neon Free: a few hundred accounts, sessions and codes deleted by
 expiry in batches, no new extension, no new service.

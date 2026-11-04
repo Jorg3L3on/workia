@@ -509,7 +509,17 @@ export const planEmployment = (
       yesNo(baja.recontratable),
     );
 
-    if (Object.keys(plan.diff).length > 0) {
+    if (
+      Object.keys(plan.diff).length > 0 &&
+      (current?.tipoBaja === "traslado" || baja.tipoBaja === "traslado")
+    ) {
+      // Only the transfer flow writes or changes a traslado (W2-24).
+      plan.errors.push({
+        field: "tipoBaja",
+        message:
+          "Un traslado a otra empresa del grupo no se registra ni se corrige desde la importación. Deja las columnas de baja como están.",
+      });
+    } else if (Object.keys(plan.diff).length > 0) {
       const missing = BAJA_COLUMNS.filter(([key]) =>
         key === "motivoBaja"
           ? merged.motivoBajaId === null
@@ -535,7 +545,11 @@ export const planEmployment = (
           mode: becomesBaja ? "close" : "correct",
           values: {
             fechaBaja: merged.fechaBaja!,
-            tipoBaja: merged.tipoBaja!,
+            // Never «traslado»: refused above.
+            tipoBaja: merged.tipoBaja as Exclude<
+              NonNullable<typeof merged.tipoBaja>,
+              "traslado"
+            >,
             motivoBajaId: merged.motivoBajaId!,
             comentario: merged.comentario,
             recontratable: merged.recontratable!,
