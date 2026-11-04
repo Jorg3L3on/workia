@@ -35,6 +35,7 @@ import {
 } from "@/lib/db/schema";
 import type { PersonStatus } from "@/lib/db/schema/people";
 import { CompanyReferenceError, isUniqueViolation } from "@/lib/db/errors";
+import { revokeEmployeeAccess } from "@/lib/employee-accounts/revoke";
 import { withTenant } from "@/lib/tenant/scope";
 
 import { buildPeopleWhere, peopleFilterContext } from "./filter/query";
@@ -1002,6 +1003,9 @@ export const softDeletePerson = async (
     if (!updated) {
       return null;
     }
+
+    // W2-01: a borrado turns the employee account off in this transaction.
+    await revokeEmployeeAccess(tx, companyId, id, "borrado", actorUserId);
 
     await audit({
       actorUserId,
